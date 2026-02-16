@@ -197,7 +197,7 @@ export default function App() {
         setIsAiProcessing(true);
         try {
             const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-            const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+            const model = genAI.getGenerativeModel({ model: "gemini-3-pro-flash" });
             const prompt = `你是一個旅遊行程轉換器。請將使用者提供的旅遊文字，轉換為符合以下 JSON 格式的陣列。目標 JSON 結構範例: [{ "title": "該日主題", "city": "城市", "items": [{ "time": "HH:MM", "title": "活動", "desc": "簡短描述", "type": "SIGHTSEEING", "location": "地點", "highlight": false }] }] 使用者輸入：${aiInputText}`;
             const result = await model.generateContent(prompt);
             const response = await result.response;
