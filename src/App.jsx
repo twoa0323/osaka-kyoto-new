@@ -40,10 +40,8 @@ const ICON_COMPONENTS = {
     'CARD': ReceiptText
 };
 
-// 為了相容性，讓 ICON_MAP 指向 ICON_COMPONENTS
 const ICON_MAP = ICON_COMPONENTS;
 
-// 天氣圖示對照表
 const WEATHER_ICONS = {
     'sun': Sun,
     'cloud': Cloud,
@@ -82,10 +80,10 @@ export default function App() {
         return i;
     };
     
-    const [days, setDays] = useState(() => load('travel_days_v12', INITIAL_PLAN));
-    const [expenses, setExpenses] = useState(() => load('exp_v12', []));
-    const [infoItems, setInfoItems] = useState(() => load('info_v12', INITIAL_INFO));
-    const [vjwLink, setVjwLink] = useState(() => load('vjw_v12', 'https://www.vjw.digital.go.jp/'));
+    const [days, setDays] = useState(() => load('travel_days_v13', INITIAL_PLAN));
+    const [expenses, setExpenses] = useState(() => load('exp_v13', []));
+    const [infoItems, setInfoItems] = useState(() => load('info_v13', INITIAL_INFO));
+    const [vjwLink, setVjwLink] = useState(() => load('vjw_v13', 'https://www.vjw.digital.go.jp/'));
     
     const [view, setView] = useState('plan');
     const [selectedIdx, setSelectedIdx] = useState(0);
@@ -112,10 +110,10 @@ export default function App() {
 
     // Persistence
     useEffect(() => {
-        localStorage.setItem('travel_days_v12', JSON.stringify(days));
-        localStorage.setItem('exp_v12', JSON.stringify(expenses));
-        localStorage.setItem('info_v12', JSON.stringify(infoItems));
-        localStorage.setItem('vjw_v12', JSON.stringify(vjwLink));
+        localStorage.setItem('travel_days_v13', JSON.stringify(days));
+        localStorage.setItem('exp_v13', JSON.stringify(expenses));
+        localStorage.setItem('info_v13', JSON.stringify(infoItems));
+        localStorage.setItem('vjw_v13', JSON.stringify(vjwLink));
     }, [days, expenses, infoItems, vjwLink]);
 
     // Exchange Rate API
@@ -148,24 +146,19 @@ export default function App() {
         }
     }, [selectedIdx, days]);
 
-    // --- AI Logic (修正版) ---
+    // --- AI Logic ---
     const handleAiAnalyze = async () => {
         if (!aiInputText.trim()) return alert("請輸入行程文字！");
-        
-        // 確保這裡讀取到正確的 Key
         if (!GEMINI_API_KEY) return alert("請先在 .env 設定 VITE_GEMINI_API_KEY");
 
         setIsAiProcessing(true);
 
         try {
             const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-            
-            // *** 修改：移除 apiVersion: 'v1'，只保留模型名稱，讓 SDK 自動處理路由 ***
-            const model = genAI.getGenerativeModel({ model: "gemini-3-flash-preview" });
+            const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
             const prompt = `
                 你是一個旅遊行程轉換器。請將使用者提供的旅遊文字，轉換為符合以下 JSON 格式的陣列。
-                請忽略日期，只專注於產生天數順序的 items。
                 
                 目標 JSON 結構範例 (陣列，代表每一天的行程):
                 [
@@ -227,7 +220,6 @@ export default function App() {
 
         } catch (error) {
             console.error("AI Error:", error);
-            // 顯示更詳細的錯誤資訊
             alert(`AI 分析失敗: ${error.message || "請確認 Key 是否有效"}`);
         } finally {
             setIsAiProcessing(false);
@@ -244,20 +236,16 @@ export default function App() {
         return 'sun'; 
     };
     const getFallbackWeather = () => ["現在", "12:00", "15:00", "18:00", "21:00", "00:00"].map((t, i) => ({ time: t, temp: 18 - i, icon: 'sun' }));
-    
     const currentDay = days[selectedIdx] || days[0];
     const firstItem = currentDay?.items?.[0] || { title: '目的地', location: 'Japan' };
     const totalTWD = expenses.reduce((a, c) => a + (c.currency === 'JPY' ? c.amount * (c.rate || currentRate) : c.amount), 0);
-    
     const openMaps = (q) => { if(q) window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(q)}`, '_blank'); };
     const openJMA = () => window.open('https://www.jma.go.jp/jma/index.html', '_blank');
-    
     const toggleGps = () => {
       const nextState = !gpsOn;
       setGpsOn(nextState);
       if (nextState && firstItem?.location) setTimeout(() => openMaps(firstItem.location), 500);
     };
-    
     const handleUpload = (e, type) => {
         const file = e.target.files[0]; if (!file) return;
         const reader = new FileReader();
@@ -268,39 +256,33 @@ export default function App() {
         };
         reader.readAsDataURL(file);
     };
-
-    // Helper: Render weather icon based on string
     const renderWeatherIcon = (iconName) => {
-        const IconComponent = WEATHER_ICONS[iconName] || WEATHER_ICONS['default'];
-        return <IconComponent className={`w-4.5 h-4.5 opacity-80 ${iconName === 'sun' ? 'text-orange-500' : 'text-stone-400'}`} />;
+        const WeatherIcon = WEATHER_ICONS[iconName] || WEATHER_ICONS['default'];
+        return <WeatherIcon className={`w-4.5 h-4.5 opacity-80 ${iconName === 'sun' ? 'text-orange-500' : 'text-stone-400'}`} />;
     };
 
     return (
         <div className="max-w-md mx-auto min-h-screen relative lg:shadow-2xl">
-            
             {/* FIXED HEADER */}
-            <header className="fixed top-0 left-0 right-0 max-w-md mx-auto z-50 bg-[#EBE7DE] pt-8 px-6 pb-2 border-b border-stone-300">
+            <header className="fixed top-0 left-0 right-0 max-w-md mx-auto z-50 bg-[#EBE7DE] pt-8 px-5 pb-2 border-b border-stone-300/50">
                 <p className="text-[10px] tracking-[0.4em] text-stone-500 uppercase font-bold text-center mb-1">Japan Trip</p>
-                <div className="flex justify-center items-center relative mb-8">
+                <div className="flex justify-center items-center relative mb-6">
                     <div className="flex items-center gap-2 text-stone-900">
                         <h1 className="serif text-xl font-bold tracking-tight">Kyoto <span className="text-[12px] align-middle text-brand-red mx-0.5 opacity-80">●</span> Osaka</h1>
-                        <span className="text-[9px] border border-stone-500 rounded-full px-2.5 py-0.5 italic font-medium text-stone-600">2026</span>
+                        <span className="text-[9px] border border-stone-400 rounded-full px-2.5 py-0.5 italic font-medium text-stone-600">2026</span>
                     </div>
-                    <div className="absolute right-0 bottom-0 flex gap-5">
-                        {/* AI Button */}
-                        <button onClick={() => setIsAiModalOpen(true)} className="flex flex-col items-center gap-1 transition-all text-stone-400 hover:text-purple-600">
+                    <div className="absolute right-0 bottom-0 flex gap-4">
+                        <button onClick={() => setIsAiModalOpen(true)} className="flex flex-col items-center gap-0.5 transition-all text-stone-400 hover:text-purple-600">
                             <Sparkles className="w-4 h-4" />
                             <span className="text-[9px] font-bold" style={{writingMode: 'vertical-lr'}}>智能</span>
                         </button>
-
-                        <button onClick={() => { setView('wallet'); setIsEditMode(false); }} className={`flex flex-col items-center gap-1 transition-all ${view === 'wallet' ? 'text-black font-bold' : 'text-stone-500'}`}><ReceiptText className="w-4 h-4" /><span className="text-[9px] font-bold" style={{writingMode: 'vertical-lr'}}>帳本</span></button>
-                        <button onClick={() => { setView('info'); setIsEditMode(false); }} className={`flex flex-col items-center gap-1 transition-all ${view === 'info' ? 'text-black font-bold' : 'text-stone-500'}`}><Info className="w-4 h-4" /><span className="text-[9px] font-bold" style={{writingMode: 'vertical-lr'}}>資訊</span></button>
+                        <button onClick={() => { setView('wallet'); setIsEditMode(false); }} className={`flex flex-col items-center gap-0.5 transition-all ${view === 'wallet' ? 'text-black font-bold' : 'text-stone-500'}`}><ReceiptText className="w-4 h-4" /><span className="text-[9px] font-bold" style={{writingMode: 'vertical-lr'}}>帳本</span></button>
+                        <button onClick={() => { setView('info'); setIsEditMode(false); }} className={`flex flex-col items-center gap-0.5 transition-all ${view === 'info' ? 'text-black font-bold' : 'text-stone-500'}`}><Info className="w-4 h-4" /><span className="text-[9px] font-bold" style={{writingMode: 'vertical-lr'}}>資訊</span></button>
                     </div>
                 </div>
-
-                <div className="flex flex-col -mt-2">
-                    <span className="text-[9px] tracking-widest text-stone-600 font-bold uppercase mb-1 ml-1">Apr 25 - May 2</span>
-                    <div className="flex overflow-x-auto hide-scrollbar flex gap-8 pt-3 pb-1">
+                <div className="flex flex-col -mt-3">
+                    <span className="text-[9px] tracking-widest text-stone-500 font-bold uppercase mb-1 ml-1">Apr 25 - May 2</span>
+                    <div className="flex overflow-x-auto hide-scrollbar flex gap-6 pt-2 pb-1">
                         {days.map((d, i) => (
                             <div key={d.id} onClick={() => { setSelectedIdx(i); setView('plan'); }} className={`relative flex flex-col items-center min-w-[32px] cursor-pointer transition-all ${view === 'plan' && selectedIdx === i ? 'text-black font-bold active-dot' : 'text-stone-400'}`}>
                                 <span className="text-[10px] mb-0.5">{d.day}</span>
@@ -312,15 +294,15 @@ export default function App() {
             </header>
 
             {/* CONTENT */}
-            <div className="pt-44 px-6 pb-44">
+            <div className="pt-40 px-5 pb-36">
                 {view === 'plan' && (
                     <div className="animate-fade">
-                        <div className="flex justify-between items-center mb-6 px-1">
+                        <div className="flex justify-between items-center mb-5 px-1">
                             <h2 className="serif text-xl font-bold text-stone-900 tracking-tight">{currentDay.title}</h2>
-                            <button onClick={() => setIsEditMode(!isEditMode)} className="text-[9px] font-bold text-stone-600 px-3 py-1 rounded-full border border-stone-300 bg-white/50">{isEditMode ? '完成' : '管理'}</button>
+                            <button onClick={() => setIsEditMode(!isEditMode)} className="text-[10px] font-bold text-stone-500 px-3 py-1 rounded-full border border-stone-300 bg-white/50">{isEditMode ? '完成' : '管理'}</button>
                         </div>
                         
-                        <div className="relative h-56 rounded-[32px] overflow-hidden shadow-xl mb-12" onClick={() => isEditMode && coverRef.current.click()}>
+                        <div className="relative h-48 rounded-[28px] overflow-hidden shadow-lg mb-8" onClick={() => isEditMode && coverRef.current.click()}>
                             {GOOGLE_API_KEY && !currentDay.customImg ? (
                                 <iframe className="map-frame" loading="lazy" allowFullScreen src={`https://www.google.com/maps/embed/v1/place?key=${GOOGLE_API_KEY}&q=${encodeURIComponent(currentDay.city)}+Japan&zoom=13`}></iframe>
                             ) : (
@@ -328,56 +310,73 @@ export default function App() {
                             )}
                             <input type="file" ref={coverRef} className="hidden" accept="image/*" onChange={(e) => handleUpload(e, 'cover')} />
                             <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent pointer-events-none"></div>
-                            <div className="absolute bottom-6 left-7 right-7 pointer-events-none">
-                                <div className="flex items-center gap-2 mb-2">
-                                    <span className="glass-dark px-2.5 py-0.5 rounded text-[8px] font-bold text-white uppercase tracking-widest">Day {selectedIdx + 1}</span>
-                                    <span className="glass-dark px-2.5 py-0.5 rounded text-[8px] font-bold text-white uppercase tracking-widest flex items-center gap-1"><MapPinOff className="w-2 h-2" /> {currentDay.city}</span>
+                            <div className="absolute bottom-5 left-6 right-6 pointer-events-none">
+                                <div className="flex items-center gap-2 mb-1">
+                                    <span className="glass-dark px-2 py-0.5 rounded text-[8px] font-bold text-white uppercase tracking-widest">Day {selectedIdx + 1}</span>
+                                    <span className="glass-dark px-2 py-0.5 rounded text-[8px] font-bold text-white uppercase tracking-widest flex items-center gap-1"><MapPinOff className="w-2 h-2" /> {currentDay.city}</span>
                                 </div>
-                                <h2 className="serif text-2xl text-white font-bold leading-tight">{currentDay.title}</h2>
+                                <h2 className="serif text-xl text-white font-bold leading-tight">{currentDay.title}</h2>
                             </div>
                         </div>
 
-                        <div className="mb-12 px-1">
-                            <div className="flex justify-between items-center mb-8">
+                        <div className="mb-8 px-1">
+                            <div className="flex justify-between items-center mb-6">
                                 <span className="text-[10px] text-stone-600 font-bold tracking-wider uppercase">即時天氣預報</span>
                                 <span className="text-[9px] text-stone-500 tracking-widest uppercase font-mono">OpenWeather</span>
                             </div>
-                            <div className="flex overflow-x-auto gap-8 hide-scrollbar">
+                            <div className="flex overflow-x-auto gap-7 hide-scrollbar">
                                 {weatherData.map((w, idx) => (
-                                    <div key={idx} onClick={openJMA} className="flex flex-col items-center min-w-[42px] gap-4 cursor-pointer">
+                                    <div key={idx} onClick={openJMA} className="flex flex-col items-center min-w-[42px] gap-3 cursor-pointer">
                                         <span className="text-[10px] text-stone-600 font-medium">{w.time}</span>
-                                        {renderWeatherIcon(w.icon)}
+                                        {renderWeatherIcon(w.icon)} 
                                         <span className="serif text-xl text-stone-700 font-bold">{w.temp}°</span>
                                     </div>
                                 ))}
                             </div>
                         </div>
 
-                        <div className="h-[1px] bg-stone-300 mb-12"></div>
+                        <div className="h-[1px] bg-stone-300/50 mb-10"></div>
 
-                        <div className="space-y-10 relative before:absolute before:left-[11px] before:top-2 before:bottom-2 before:w-[0.5px] before:bg-stone-300">
+                        {/* 行程列表 - 參考 IMG_5968 重構 */}
+                        <div className="space-y-12 relative px-1">
+                            {/* 左側淡色線條，可選，視需要移除 */}
+                            <div className="absolute left-[54px] top-4 bottom-4 w-[1px] bg-stone-200"></div>
+
                             {currentDay.items.map((item, i) => {
                                 const ItemIcon = ICON_COMPONENTS[item.type] || MapPinOff;
                                 return (
-                                <div key={item.id} className="flex gap-6 items-start">
+                                <div key={item.id} className="flex gap-4 items-start relative">
                                     {isEditMode && (
-                                        <div className="flex flex-col gap-2 pt-1">
+                                        <div className="flex flex-col gap-2 pt-1 absolute -left-8">
                                             <button onClick={() => { const d = [...days]; const its = d[selectedIdx].items; if(i>0) [its[i], its[i-1]] = [its[i-1], its[i]]; setDays(d); }} className="text-stone-400"><ChevronUp className="w-4 h-4" /></button>
                                             <button onClick={() => { const d = [...days]; const its = d[selectedIdx].items; if(i<its.length-1) [its[i], its[i+1]] = [its[i+1], its[i]]; setDays(d); }} className="text-stone-400"><ChevronDown className="w-4 h-4" /></button>
                                         </div>
                                     )}
-                                    <div onClick={() => isEditMode ? setEditingItem(item) : setDetailItem(item)} className={`flex-1 flex gap-7 cursor-pointer transition-all ${item.highlight ? 'highlight-card p-6 rounded-2xl ml-[-15px] bg-white' : ''}`}>
-                                        <div className={`relative z-10 w-6 h-6 rounded-full border border-stone-200 bg-white flex items-center justify-center text-stone-500 ${item.highlight ? 'bg-brand-red text-white shadow-lg border-none' : ''}`}>
-                                            <ItemIcon className="w-3.5 h-3.5" />
-                                        </div>
-                                        <div className="flex-1">
-                                            <div className="flex justify-between items-start">
-                                                <span className="text-[11px] font-bold text-stone-500 tracking-tighter">{item.time}</span>
-                                                {isEditMode && <button onClick={(e) => { e.stopPropagation(); const d = [...days]; d[selectedIdx].items = d[selectedIdx].items.filter(it => it.id !== item.id); setDays(d); }} className="text-red-400"><Trash2 className="w-3.5 h-3.5" /></button>}
+                                    
+                                    {/* 左側時間 */}
+                                    <div className="w-12 text-right pt-0.5 shrink-0 z-10 bg-[#EBE7DE]">
+                                        <span className="block text-lg font-bold text-stone-800 leading-none">{item.time}</span>
+                                    </div>
+
+                                    {/* 右側內容卡片 */}
+                                    <div onClick={() => isEditMode ? setEditingItem(item) : setDetailItem(item)} 
+                                         className={`flex-1 p-0 cursor-pointer transition-all ${item.highlight ? 'bg-amber-50/50 border border-amber-200 rounded-2xl p-5 shadow-sm highlight-card relative' : ''}`}>
+                                        
+                                        {item.highlight && (
+                                            <div className="absolute -top-3 left-4 flex items-center gap-1 bg-white border border-amber-200 px-2 py-0.5 rounded-full shadow-sm">
+                                                <Sparkles className="w-3 h-3 text-amber-500 fill-amber-500" />
+                                                <span className="text-[9px] font-bold text-amber-600 tracking-widest uppercase">Special Experience</span>
                                             </div>
-                                            <h3 className={`serif text-base font-bold tracking-tight text-stone-900`}>{item.title}</h3>
-                                            <p className="text-xs text-stone-600 mt-1.5 leading-relaxed truncate w-44">{item.desc}</p>
+                                        )}
+
+                                        <div className="flex items-start justify-between mb-1">
+                                            <div className="flex items-center gap-2">
+                                                {!item.highlight && <ItemIcon className="w-4 h-4 text-stone-400" />}
+                                                <h3 className={`serif text-lg font-bold tracking-tight ${item.highlight ? 'text-stone-900 mt-2' : 'text-stone-800'}`}>{item.title}</h3>
+                                            </div>
+                                            {isEditMode && <button onClick={(e) => { e.stopPropagation(); const d = [...days]; d[selectedIdx].items = d[selectedIdx].items.filter(it => it.id !== item.id); setDays(d); }} className="text-red-400"><Trash2 className="w-4 h-4" /></button>}
                                         </div>
+                                        <p className={`text-xs mt-1 leading-relaxed ${item.highlight ? 'text-stone-600' : 'text-stone-500'}`}>{item.desc}</p>
                                     </div>
                                 </div>
                             )})}
@@ -391,7 +390,7 @@ export default function App() {
                 {view === 'wallet' && (
                     <div className="animate-fade">
                         <h2 className="serif text-2xl font-bold mb-6 text-stone-800">旅行帳本</h2>
-                        <div className="bg-stone-900 p-10 rounded-[45px] text-white mb-10 shadow-2xl relative overflow-hidden">
+                        <div className="bg-stone-900 p-8 rounded-[40px] text-white mb-8 shadow-2xl relative overflow-hidden">
                             <p className="text-[10px] opacity-50 uppercase tracking-[0.3em] mb-2 font-bold">Total Budget TWD</p>
                             <h3 className="text-4xl font-light tracking-tighter mb-4">${Math.round(totalTWD).toLocaleString()}</h3>
                             <div className="flex items-center justify-between opacity-30">
@@ -402,9 +401,9 @@ export default function App() {
                             {expenses.map(e => {
                                 const ItemIcon = ICON_COMPONENTS[e.type] || ReceiptText;
                                 return (
-                                <div key={e.id} onClick={() => setEditingExpense(e)} className="p-6 bg-white rounded-[32px] border border-stone-200 flex justify-between items-center shadow-sm cursor-pointer active:scale-[0.98] transition-all">
-                                    <div className="flex items-center gap-5">
-                                        <div className="w-11 h-11 rounded-full bg-stone-100 flex items-center justify-center text-stone-600"><ItemIcon className="w-5 h-5" /></div>
+                                <div key={e.id} onClick={() => setEditingExpense(e)} className="p-5 bg-white rounded-[28px] border border-stone-200 flex justify-between items-center shadow-sm cursor-pointer active:scale-[0.98] transition-all">
+                                    <div className="flex items-center gap-4">
+                                        <div className="w-10 h-10 rounded-full bg-stone-100 flex items-center justify-center text-stone-600"><ItemIcon className="w-4 h-4" /></div>
                                         <div>
                                             <p className="font-bold text-sm tracking-tight text-stone-800">{e.name}</p>
                                             <p className="text-[10px] text-stone-500 font-bold">
@@ -423,13 +422,13 @@ export default function App() {
 
                 {/* INFO PAGE */}
                 {view === 'info' && (
-                    <div className="animate-fade py-2 space-y-8">
+                    <div className="animate-fade py-2 space-y-6">
                         <div className="flex justify-between items-center px-1">
                             <h2 className="serif text-2xl font-bold text-stone-800">資訊與支援</h2>
                             <button onClick={() => setIsEditMode(!isEditMode)} className="text-[9px] font-bold text-stone-500 px-3 py-1 rounded-full border border-stone-300 bg-white/50">{isEditMode ? '完成' : '管理內容'}</button>
                         </div>
                         
-                        <div className="space-y-6">
+                        <div className="space-y-4">
                             {infoItems.map((item, idx) => (
                               <div key={item.id} className="flex gap-4 items-center">
                                   {isEditMode && (
@@ -440,7 +439,7 @@ export default function App() {
                                   )}
                                   
                                   {item.type === 'MAP' && (
-                                    <div onClick={() => isEditMode ? setEditingInfo(item) : openMaps(item.link)} className="flex-1 p-7 bg-stone-900 rounded-[40px] text-white flex items-center justify-between cursor-pointer shadow-xl active:scale-[0.98] transition-all relative">
+                                    <div onClick={() => isEditMode ? setEditingInfo(item) : openMaps(item.link)} className="flex-1 p-6 bg-stone-900 rounded-[32px] text-white flex items-center justify-between cursor-pointer shadow-xl active:scale-[0.98] transition-all relative">
                                         <div className="flex items-center gap-4"><MapIcon className="w-5 h-5 text-blue-400" /><span className="text-sm font-bold tracking-widest uppercase">{item.title}</span></div>
                                         <ExternalLink className="w-4 h-4 opacity-30" />
                                         {isEditMode && <button onClick={(e) => { e.stopPropagation(); setInfoItems(infoItems.filter(i => i.id !== item.id)); }} className="absolute -top-2 -right-2 bg-red-500 text-white p-1.5 rounded-full shadow-lg"><X className="w-3 h-3" /></button>}
@@ -448,10 +447,10 @@ export default function App() {
                                   )}
 
                                   {item.type === 'VJW' && (
-                                    <div onClick={() => isEditMode ? setEditingInfo(item) : item.link && window.open(item.link)} className="flex-1 p-7 bg-[#1A1A1A] rounded-[40px] shadow-lg relative active:scale-[0.98] transition-all overflow-hidden">
-                                        <span className="absolute top-6 left-6 text-[9px] bg-[#E85D75] text-white px-2 py-0.5 rounded font-bold tracking-widest">MUST HAVE</span>
+                                    <div onClick={() => isEditMode ? setEditingInfo(item) : item.link && window.open(item.link)} className="flex-1 p-6 bg-[#1A1A1A] rounded-[32px] shadow-lg relative active:scale-[0.98] transition-all overflow-hidden">
+                                        <span className="absolute top-5 left-6 text-[9px] bg-[#E85D75] text-white px-2 py-0.5 rounded font-bold tracking-widest">MUST HAVE</span>
                                         <div className="mt-8 mb-2">
-                                            <h4 className="serif text-2xl font-bold text-white mb-1">{item.title}</h4>
+                                            <h4 className="serif text-xl font-bold text-white mb-1">{item.title}</h4>
                                             <p className="text-[10px] text-stone-400">{item.content}</p>
                                         </div>
                                         <div className="absolute bottom-6 right-6 w-10 h-10 rounded-full bg-[#E85D75] flex items-center justify-center text-white"><ExternalLink className="w-4 h-4" /></div>
@@ -460,15 +459,15 @@ export default function App() {
                                   )}
 
                                   {item.type === 'EMERGENCY' && (
-                                    <div onClick={() => isEditMode && setEditingInfo(item)} className="flex-1 p-7 bg-red-50 rounded-[40px] border border-red-200 shadow-sm relative">
-                                        <h3 className="serif font-bold text-red-900 mb-5 flex items-center gap-3"><ShieldAlert className="w-4.5 h-4.5 text-red-600" /> {item.title}</h3>
+                                    <div onClick={() => isEditMode && setEditingInfo(item)} className="flex-1 p-6 bg-red-50 rounded-[32px] border border-red-200 shadow-sm relative">
+                                        <h3 className="serif font-bold text-red-900 mb-4 flex items-center gap-3"><ShieldAlert className="w-4.5 h-4.5 text-red-600" /> {item.title}</h3>
                                         <p className="text-sm text-red-800 font-bold">{item.content}</p>
                                         {isEditMode && <button onClick={(e) => { e.stopPropagation(); setInfoItems(infoItems.filter(i => i.id !== item.id)); }} className="absolute -top-2 -right-2 bg-red-500 text-white p-1.5 rounded-full shadow-lg"><X className="w-3 h-3" /></button>}
                                     </div>
                                   )}
 
                                   {item.type === 'CARD' && (
-                                    <div onClick={() => isEditMode ? setEditingInfo(item) : item.link && window.open(item.link)} className="flex-1 p-6 bg-white border border-stone-200 rounded-[24px] shadow-sm relative active:scale-[0.98] transition-all">
+                                    <div onClick={() => isEditMode ? setEditingInfo(item) : item.link && window.open(item.link)} className="flex-1 p-6 bg-white border border-stone-200 rounded-[28px] shadow-sm relative active:scale-[0.98] transition-all">
                                         <h4 className="serif text-lg font-bold text-stone-800 mb-2">{item.title}</h4>
                                         <p className="text-xs text-stone-500 font-medium italic border-b border-stone-50 pb-4">{item.content}</p>
                                         <div className="mt-4 flex justify-between items-center">
@@ -488,7 +487,7 @@ export default function App() {
 
             {/* STATUS BAR - Only show in Plan view */}
             {view === 'plan' && (
-                <div key={gpsOn ? 'gps-active' : 'gps-idle'} className="fixed bottom-10 left-1/2 -translate-x-1/2 w-[92%] max-w-sm glass rounded-[32px] p-3.5 border border-white/60 shadow-2xl flex items-center justify-between z-40 bg-white/80">
+                <div key={gpsOn ? 'gps-active' : 'gps-idle'} className="fixed bottom-8 left-1/2 -translate-x-1/2 w-[92%] max-w-sm glass rounded-[32px] p-3.5 border border-white/60 shadow-2xl flex items-center justify-between z-40 bg-white/80">
                     <div className="flex items-center gap-4 flex-1">
                         <div onClick={toggleGps} className="flex flex-col items-center gap-0.5 border-r border-stone-200 pr-4 cursor-pointer group">
                             <div className={`w-9 h-9 rounded-full flex items-center justify-center transition-all ${gpsOn ? 'bg-red-50 text-red-600 animate-pulse shadow-md' : 'bg-stone-100 text-stone-400'}`}><Target className="w-4 h-4" /></div>
@@ -522,8 +521,38 @@ export default function App() {
                 </div>
             )}
 
-            {/* --- MODALS --- */}
+            {/* --- MODALS (Code shortened for brevity, functionality remains) --- */}
+            {/* ... (Existing Modal components for AI, Info Edit, Detail, Itinerary Edit, Expense Edit) ... */}
             
+            {/* MODAL: INFO EDIT */}
+            {editingInfo && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/70 backdrop-blur-sm">
+                    <div className="bg-white w-full max-w-sm rounded-[40px] p-8 shadow-2xl animate-fade">
+                        <h3 className="serif text-xl font-bold mb-6 text-stone-800">編輯資訊卡片</h3>
+                        <div className="space-y-4">
+                            <div className="w-32"><label className="text-[10px] text-gray-400 font-bold uppercase">類別</label>
+                                <select className="w-full p-3 bg-stone-100 rounded-xl outline-none text-xs font-bold" value={editingInfo.type} onChange={e => setEditingInfo({...editingInfo, type: e.target.value})}>
+                                    <option value="CARD">一般卡片</option>
+                                    <option value="MAP">Google Maps</option>
+                                    <option value="VJW">Visit Japan Web</option>
+                                    <option value="EMERGENCY">緊急聯絡</option>
+                                </select>
+                            </div>
+                            <div><label className="text-[10px] text-gray-400 font-bold uppercase">標題</label><input className="w-full p-3 bg-stone-100 rounded-xl outline-none text-sm font-bold" value={editingInfo.title} onChange={e => setEditingInfo({...editingInfo, title: e.target.value})} /></div>
+                            <div><label className="text-[10px] text-gray-400 font-bold uppercase">內容描述/確認碼</label><input className="w-full p-3 bg-stone-100 rounded-xl outline-none text-sm" value={editingInfo.content} onChange={e => setEditingInfo({...editingInfo, content: e.target.value})} /></div>
+                            <div><label className="text-[10px] text-gray-400 font-bold uppercase">外部連結 (Optional)</label><input className="w-full p-3 bg-stone-100 rounded-xl outline-none text-xs" value={editingInfo.link} onChange={e => setEditingInfo({...editingInfo, link: e.target.value})} placeholder="https://" /></div>
+                            <div className="pt-4 flex gap-3">
+                                <button onClick={() => {
+                                    const ni = editingInfo.id ? infoItems.map(i => i.id === editingInfo.id ? editingInfo : i) : [...infoItems, {...editingInfo, id: Date.now()}];
+                                    setInfoItems(ni); setEditingInfo(null);
+                                }} className="flex-1 bg-stone-900 text-white py-4.5 rounded-[28px] font-bold text-[10px] uppercase">儲存卡片</button>
+                                <button onClick={() => setEditingInfo(null)} className="px-6 border border-stone-200 rounded-[28px] text-stone-400"><X className="w-4 h-4" /></button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {/* AI SMART IMPORT MODAL */}
             {isAiModalOpen && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/70 backdrop-blur-sm animate-fade">
@@ -556,35 +585,6 @@ export default function App() {
                                 <><Sparkles className="w-4 h-4" /> 開始轉換</>
                             )}
                         </button>
-                    </div>
-                </div>
-            )}
-
-            {/* MODAL: INFO EDIT */}
-            {editingInfo && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/70 backdrop-blur-sm">
-                    <div className="bg-white w-full max-w-sm rounded-[40px] p-8 shadow-2xl animate-fade">
-                        <h3 className="serif text-xl font-bold mb-6 text-stone-800">編輯資訊卡片</h3>
-                        <div className="space-y-4">
-                            <div className="w-32"><label className="text-[10px] text-gray-400 font-bold uppercase">類別</label>
-                                <select className="w-full p-3 bg-stone-100 rounded-xl outline-none text-xs font-bold" value={editingInfo.type} onChange={e => setEditingInfo({...editingInfo, type: e.target.value})}>
-                                    <option value="CARD">一般卡片</option>
-                                    <option value="MAP">Google Maps</option>
-                                    <option value="VJW">Visit Japan Web</option>
-                                    <option value="EMERGENCY">緊急聯絡</option>
-                                </select>
-                            </div>
-                            <div><label className="text-[10px] text-gray-400 font-bold uppercase">標題</label><input className="w-full p-3 bg-stone-100 rounded-xl outline-none text-sm font-bold" value={editingInfo.title} onChange={e => setEditingInfo({...editingInfo, title: e.target.value})} /></div>
-                            <div><label className="text-[10px] text-gray-400 font-bold uppercase">內容描述/確認碼</label><input className="w-full p-3 bg-stone-100 rounded-xl outline-none text-sm" value={editingInfo.content} onChange={e => setEditingInfo({...editingInfo, content: e.target.value})} /></div>
-                            <div><label className="text-[10px] text-gray-400 font-bold uppercase">外部連結 (Optional)</label><input className="w-full p-3 bg-stone-100 rounded-xl outline-none text-xs" value={editingInfo.link} onChange={e => setEditingInfo({...editingInfo, link: e.target.value})} placeholder="https://" /></div>
-                            <div className="pt-4 flex gap-3">
-                                <button onClick={() => {
-                                    const ni = editingInfo.id ? infoItems.map(i => i.id === editingInfo.id ? editingInfo : i) : [...infoItems, {...editingInfo, id: Date.now()}];
-                                    setInfoItems(ni); setEditingInfo(null);
-                                }} className="flex-1 bg-stone-900 text-white py-4.5 rounded-[28px] font-bold text-[10px] uppercase">儲存卡片</button>
-                                <button onClick={() => setEditingInfo(null)} className="px-6 border border-stone-200 rounded-[28px] text-stone-400"><X className="w-4 h-4" /></button>
-                            </div>
-                        </div>
                     </div>
                 </div>
             )}
