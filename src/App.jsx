@@ -75,6 +75,7 @@ const INITIAL_INFO = [
 ];
 
 export default function App() {
+    console.log("Gemini Key Exists:", !!import.meta.env.VITE_GEMINI_API_KEY);
     const load = (k, i) => { 
         if (typeof window !== 'undefined') {
             const s = localStorage.getItem(k); 
