@@ -236,7 +236,7 @@ export default function App() {
             </header>
 
             {/* CONTENT */}
-            <div className="pt-44 px-6 pb-44">
+            <div className="pt-52 px-6 pb-44">
                 {view === 'plan' && (
                     <div className="animate-fade">
                         <div className="flex justify-between items-center mb-6 px-1">
