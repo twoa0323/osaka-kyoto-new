@@ -6,11 +6,12 @@ import {
   Target, Navigation, ChevronUp, 
   ChevronDown, Trash2, X, Image as ImageIcon, ReceiptText, 
   Sparkles, Loader2, Clock, MapPinOff,
-  Sun, Cloud, CloudRain, CloudLightning, Snowflake, Fog
+  Sun, Cloud, CloudRain, CloudLightning, Snowflake
 } from 'lucide-react';
 
 // --- API 設定 ---
 const GOOGLE_API_KEY = import.meta.env.VITE_GOOGLE_API_KEY || '';
+const OPENWEATHER_API_KEY = import.meta.env.VITE_WEATHER_API_KEY || '';
 const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY || '';
 
 // --- 靜態資料 ---
@@ -24,17 +25,7 @@ const CITY_COORDS = {
     'Airport': { lat: 34.4320, lon: 135.2304 }
 };
 
-// 行程類型對應顏色 (參考 IMG_5968)
-const TYPE_COLORS = {
-    'FLIGHT': 'bg-blue-400',
-    'TRANSPORT': 'bg-blue-300',
-    'HOTEL': 'bg-indigo-400',
-    'FOOD': 'bg-orange-400', // 類似圖片中的橘色
-    'SIGHTSEEING': 'bg-emerald-400', // 綠色
-    'HIGHLIGHT': 'bg-amber-400',
-    'INFO': 'bg-gray-400'
-};
-
+// 統一變數名稱：定義圖示元件
 const ICON_COMPONENTS = {
     'FLIGHT': Plane,
     'TRANSPORT': Train,
@@ -52,27 +43,15 @@ const ICON_COMPONENTS = {
 const ICON_MAP = ICON_COMPONENTS;
 
 const WEATHER_ICONS = {
-    0: Sun, // Clear sky
-    1: Sun, // Mainly clear
-    2: Cloud, // Partly cloudy
-    3: Cloud, // Overcast
-    45: Fog, // Fog
-    48: Fog, // Depositing rime fog
-    51: CloudRain, // Drizzle: Light
-    53: CloudRain, // Drizzle: Moderate
-    55: CloudRain, // Drizzle: Dense
-    61: CloudRain, // Rain: Slight
-    63: CloudRain, // Rain: Moderate
-    65: CloudRain, // Rain: Heavy
-    71: Snowflake, // Snow: Slight
-    73: Snowflake, // Snow: Moderate
-    75: Snowflake, // Snow: Heavy
-    95: CloudLightning, // Thunderstorm: Slight or moderate
-    96: CloudLightning, // Thunderstorm with slight hail
-    99: CloudLightning  // Thunderstorm with heavy hail
+    'sun': Sun,
+    'cloud': Cloud,
+    'cloud-rain': CloudRain,
+    'cloud-lightning': CloudLightning,
+    'snowflake': Snowflake,
+    'default': Sun
 };
 
-// 初始資料
+// 初始行程資料
 const INITIAL_PLAN = [
     { id: 1, date: '25', day: 'SAT', title: '抵達京都與鴨川', city: 'Kyoto', defaultImg: 'https://images.unsplash.com/photo-1493976040374-85c8e12f0c0e?q=80&w=1000', customImg: null, items: [{ id: 101, time: '13:25', title: '出發 (JX846)', desc: '星宇航空 TPE 直飛 KIX', type: 'FLIGHT', location: '關西國際機場', highlight: false, btnLabel: '官方網站', link: 'https://www.starlux-airlines.com' }, { id: 102, time: '16:00', title: '錦市場巡禮', desc: '品嚐豆乳甜甜圈與三木雞卵', type: 'FOOD', location: '錦市場', highlight: false, btnLabel: '資訊', link: '' }] },
     { id: 2, date: '26', day: 'SUN', title: '嵐山新綠', city: 'Arashiyama', defaultImg: 'https://images.unsplash.com/photo-1590559899731-a382839e5549?q=80&w=1000', customImg: null, items: [{ id: 201, time: '09:30', title: '嵐山竹林之道', desc: '漫步綠意之道', type: 'SIGHTSEEING', location: '嵐山', highlight: false, btnLabel: '資訊', link: '' }] },
@@ -84,6 +63,7 @@ const INITIAL_PLAN = [
     { id: 8, date: '02', day: 'SAT', title: '返程台北', city: 'Airport', defaultImg: 'https://images.unsplash.com/photo-1542224566-6e85f2e6772f?q=80&w=1000', customImg: null, items: [{ id: 801, time: '13:25', title: '回程起飛', desc: '結束愉快 8 天行程', type: 'FLIGHT', location: '關西機場', highlight: false, btnLabel: '資訊', link: '' }] }
 ];
 
+// 初始資訊資料
 const INITIAL_INFO = [
   { id: 'map', type: 'MAP', title: 'Google Maps', content: '開啟地圖導航', link: 'Osaka' },
   { id: 'vjw', type: 'VJW', title: 'Visit Japan Web', content: '入境審查 & 海關申報 (請截圖)', link: 'https://www.vjw.digital.go.jp/' },
@@ -93,6 +73,7 @@ const INITIAL_INFO = [
 ];
 
 export default function App() {
+    // LocalStorage Helper
     const load = (k, i) => { 
         if (typeof window !== 'undefined') {
             const s = localStorage.getItem(k); 
@@ -101,10 +82,10 @@ export default function App() {
         return i;
     };
     
-    const [days, setDays] = useState(() => load('travel_days_v13', INITIAL_PLAN));
-    const [expenses, setExpenses] = useState(() => load('exp_v13', []));
-    const [infoItems, setInfoItems] = useState(() => load('info_v13', INITIAL_INFO));
-    const [vjwLink, setVjwLink] = useState(() => load('vjw_v13', 'https://www.vjw.digital.go.jp/'));
+    const [days, setDays] = useState(() => load('travel_days_v14', INITIAL_PLAN));
+    const [expenses, setExpenses] = useState(() => load('exp_v14', []));
+    const [infoItems, setInfoItems] = useState(() => load('info_v14', INITIAL_INFO));
+    const [vjwLink, setVjwLink] = useState(() => load('vjw_v14', 'https://www.vjw.digital.go.jp/'));
     
     const [view, setView] = useState('plan');
     const [selectedIdx, setSelectedIdx] = useState(0);
@@ -112,10 +93,12 @@ export default function App() {
     const [isMoving, setIsMoving] = useState(false);
     const [isEditMode, setIsEditMode] = useState(false);
     
+    // AI Modal State
     const [isAiModalOpen, setIsAiModalOpen] = useState(false);
     const [aiInputText, setAiInputText] = useState('');
     const [isAiProcessing, setIsAiProcessing] = useState(false);
 
+    // Other Modals
     const [editingItem, setEditingItem] = useState(null);
     const [editingExpense, setEditingExpense] = useState(null);
     const [editingInfo, setEditingInfo] = useState(null);
@@ -127,13 +110,15 @@ export default function App() {
     const fileRef = useRef(null);
     const coverRef = useRef(null);
 
+    // Persistence
     useEffect(() => {
-        localStorage.setItem('travel_days_v13', JSON.stringify(days));
-        localStorage.setItem('exp_v13', JSON.stringify(expenses));
-        localStorage.setItem('info_v13', JSON.stringify(infoItems));
-        localStorage.setItem('vjw_v13', JSON.stringify(vjwLink));
+        localStorage.setItem('travel_days_v14', JSON.stringify(days));
+        localStorage.setItem('exp_v14', JSON.stringify(expenses));
+        localStorage.setItem('info_v14', JSON.stringify(infoItems));
+        localStorage.setItem('vjw_v14', JSON.stringify(vjwLink));
     }, [days, expenses, infoItems, vjwLink]);
 
+    // Exchange Rate API
     useEffect(() => {
         fetch('https://open.er-api.com/v6/latest/JPY')
             .then(res => res.json())
@@ -141,31 +126,20 @@ export default function App() {
             .catch(console.error);
     }, []);
 
-    // Open-Meteo Weather API
+    // Weather API
     useEffect(() => {
         const cityKey = days[selectedIdx]?.city || 'Kyoto';
         const coords = CITY_COORDS[cityKey];
-        if (coords) {
-            // hourly=temperature_2m,weathercode
-            fetch(`https://api.open-meteo.com/v1/forecast?latitude=${coords.lat}&longitude=${coords.lon}&hourly=temperature_2m,weathercode&timezone=auto&forecast_days=1`)
+        if (OPENWEATHER_API_KEY && coords) {
+            fetch(`https://api.openweathermap.org/data/2.5/forecast?lat=${coords.lat}&lon=${coords.lon}&units=metric&appid=${OPENWEATHER_API_KEY}&cnt=8`)
                 .then(res => res.json())
                 .then(data => {
-                    if(data.hourly) {
-                        // 取得未來 24 小時的資料 (目前時間開始)
-                        const currentHour = new Date().getHours();
-                        const next24 = [];
-                        for(let i = currentHour; i < currentHour + 24; i++) {
-                             if (data.hourly.time[i]) {
-                                 const timeStr = data.hourly.time[i].split('T')[1].slice(0, 5); // 00:00
-                                 next24.push({
-                                     time: timeStr,
-                                     temp: Math.round(data.hourly.temperature_2m[i]),
-                                     iconCode: data.hourly.weathercode[i]
-                                 });
-                             }
-                        }
-                        // 取每 3 小時顯示一次，避免太擁擠
-                        setWeatherData(next24.filter((_, i) => i % 3 === 0));
+                    if(data.list) {
+                        setWeatherData(data.list.map(item => ({
+                            time: `${new Date(item.dt * 1000).getHours()}:00`,
+                            temp: Math.round(item.main.temp),
+                            icon: mapWeatherIcon(item.weather[0].icon)
+                        })));
                     }
                 })
                 .catch(() => setWeatherData(getFallbackWeather()));
@@ -174,40 +148,103 @@ export default function App() {
         }
     }, [selectedIdx, days]);
 
+    // AI Logic
     const handleAiAnalyze = async () => {
         if (!aiInputText.trim()) return alert("請輸入行程文字！");
         if (!GEMINI_API_KEY) return alert("請先在 .env 設定 VITE_GEMINI_API_KEY");
+
         setIsAiProcessing(true);
+
         try {
             const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
             const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-            const prompt = `你是一個旅遊行程轉換器。請將使用者提供的旅遊文字，轉換為符合以下 JSON 格式的陣列。請忽略日期，只專注於產生天數順序的 items。目標 JSON 結構範例 (陣列，代表每一天的行程):[{ "title": "該日主題", "city": "城市英文名", "items": [{ "time": "HH:MM", "title": "活動名稱", "desc": "簡短描述", "type": "FLIGHT/TRANSPORT/HOTEL/FOOD/SIGHTSEEING/HIGHLIGHT", "location": "GoogleMap關鍵字", "highlight": false }] }] 規則：1. 回傳純 JSON 字串。使用者輸入：${aiInputText}`;
+
+            const prompt = `
+                你是一個旅遊行程轉換器。請將使用者提供的旅遊文字，轉換為符合以下 JSON 格式的陣列。
+                目標 JSON 結構範例:
+                [{ "title": "該日主題", "city": "城市", "items": [{ "time": "HH:MM", "title": "活動", "desc": "簡短描述", "type": "SIGHTSEEING", "location": "地點", "highlight": false }] }]
+                使用者輸入：${aiInputText}
+            `;
+
             const result = await model.generateContent(prompt);
             const response = await result.response;
             let text = response.text().replace(/```json/g, "").replace(/```/g, "").trim();
             const aiData = JSON.parse(text);
+
             const newDays = days.map((day, index) => {
                 const aiDay = aiData[index];
                 if (!aiDay) return day;
-                return { ...day, title: aiDay.title || day.title, city: aiDay.city || day.city, items: aiDay.items.map((item, i) => ({ id: Date.now() + index * 1000 + i, time: item.time || "09:00", title: item.title || "未命名行程", desc: item.desc || "", type: item.type || "SIGHTSEEING", location: item.location || item.title, highlight: item.highlight || false, btnLabel: '資訊', link: '' })) };
+
+                return {
+                    ...day,
+                    title: aiDay.title || day.title,
+                    city: aiDay.city || day.city,
+                    items: aiDay.items.map((item, i) => ({
+                        id: Date.now() + index * 1000 + i,
+                        time: item.time || "09:00",
+                        title: item.title || "未命名行程",
+                        desc: item.desc || "",
+                        type: item.type || "SIGHTSEEING",
+                        location: item.location || item.title,
+                        highlight: item.highlight || false,
+                        btnLabel: '資訊',
+                        link: ''
+                    }))
+                };
             });
-            setDays(newDays); setIsAiModalOpen(false); setAiInputText(''); alert("行程匯入成功！");
-        } catch (error) { console.error("AI Error:", error); alert(`AI 分析失敗: ${error.message || "請確認 Key 是否有效"}`); } finally { setIsAiProcessing(false); }
+
+            setDays(newDays);
+            setIsAiModalOpen(false);
+            setAiInputText('');
+            alert("行程匯入成功！");
+
+        } catch (error) {
+            console.error("AI Error:", error);
+            alert(`AI 分析失敗: ${error.message || "請確認 Key 是否有效"}`);
+        } finally {
+            setIsAiProcessing(false);
+        }
     };
 
-    const getFallbackWeather = () => ["現在", "12:00", "15:00", "18:00", "21:00", "00:00"].map((t, i) => ({ time: t, temp: 18 - i, iconCode: 1 }));
+    // Helpers
+    const mapWeatherIcon = (code) => {
+        if (code.startsWith('01')) return 'sun';
+        if (code.startsWith('02') || code.startsWith('03') || code.startsWith('04')) return 'cloud';
+        if (code.startsWith('09') || code.startsWith('10')) return 'cloud-rain';
+        if (code.startsWith('11')) return 'cloud-lightning';
+        if (code.startsWith('13')) return 'snowflake';
+        return 'sun'; 
+    };
+    const getFallbackWeather = () => ["現在", "12:00", "15:00", "18:00", "21:00", "00:00"].map((t, i) => ({ time: t, temp: 18 - i, icon: 'sun' }));
     const currentDay = days[selectedIdx] || days[0];
     const firstItem = currentDay?.items?.[0] || { title: '目的地', location: 'Japan' };
     const totalTWD = expenses.reduce((a, c) => a + (c.currency === 'JPY' ? c.amount * (c.rate || currentRate) : c.amount), 0);
     const openMaps = (q) => { if(q) window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(q)}`, '_blank'); };
     const openJMA = () => window.open('https://www.jma.go.jp/jma/index.html', '_blank');
-    const toggleGps = () => { const nextState = !gpsOn; setGpsOn(nextState); if (nextState && firstItem?.location) setTimeout(() => openMaps(firstItem.location), 500); };
-    const handleUpload = (e, type) => { const file = e.target.files[0]; if (!file) return; const reader = new FileReader(); reader.onloadend = () => { const b64 = reader.result; if (type === 'cover') setDays(days.map((d, i) => i === selectedIdx ? { ...d, customImg: b64 } : d)); else if (type === 'item') setEditingItem({ ...editingItem, customImg: b64 }); }; reader.readAsDataURL(file); };
-
-    // Helper: Render weather icon based on Open-Meteo code
-    const renderWeatherIcon = (code) => {
-        const IconComponent = WEATHER_ICONS[code] || WEATHER_ICONS[0]; // Default Sun
-        return <IconComponent className={`w-4.5 h-4.5 opacity-80 ${code <= 1 ? 'text-orange-500' : 'text-stone-400'}`} />;
+    
+    // 修復後的 GPS 切換邏輯
+    const toggleGps = () => {
+      const nextState = !gpsOn;
+      setGpsOn(nextState);
+      if (nextState && firstItem?.location) {
+          setTimeout(() => openMaps(firstItem.location), 500);
+      }
+    };
+    
+    const handleUpload = (e, type) => {
+        const file = e.target.files[0]; if (!file) return;
+        const reader = new FileReader();
+        reader.onloadend = () => {
+            const b64 = reader.result;
+            if (type === 'cover') setDays(days.map((d, i) => i === selectedIdx ? { ...d, customImg: b64 } : d));
+            else if (type === 'item') setEditingItem({ ...editingItem, customImg: b64 });
+        };
+        reader.readAsDataURL(file);
+    };
+    
+    const renderWeatherIcon = (iconName) => {
+        const WeatherIcon = WEATHER_ICONS[iconName] || WEATHER_ICONS['default'];
+        return <WeatherIcon className={`w-4.5 h-4.5 opacity-80 ${iconName === 'sun' ? 'text-orange-500' : 'text-stone-400'}`} />;
     };
 
     return (
@@ -215,20 +252,20 @@ export default function App() {
             {/* FIXED HEADER */}
             <header className="fixed top-0 left-0 right-0 max-w-md mx-auto z-50 bg-[#EBE7DE] pt-8 px-6 pb-2 border-b border-stone-300">
                 <p className="text-[10px] tracking-[0.4em] text-stone-500 uppercase font-bold text-center mb-1">Japan Trip</p>
-                <div className="flex justify-center items-center relative mb-6">
+                <div className="flex justify-center items-center relative mb-8">
                     <div className="flex items-center gap-2 text-stone-900">
                         <h1 className="serif text-xl font-bold tracking-tight">Kyoto <span className="text-[12px] align-middle text-brand-red mx-0.5 opacity-80">●</span> Osaka</h1>
                         <span className="text-[9px] border border-stone-500 rounded-full px-2.5 py-0.5 italic font-medium text-stone-600">2026</span>
                     </div>
-                    <div className="absolute right-0 bottom-0 flex gap-4">
-                        <button onClick={() => setIsAiModalOpen(true)} className="flex flex-col items-center gap-0.5 transition-all text-stone-400 hover:text-purple-600"><Sparkles className="w-4 h-4" /><span className="text-[9px] font-bold" style={{writingMode: 'vertical-lr'}}>智能</span></button>
-                        <button onClick={() => { setView('wallet'); setIsEditMode(false); }} className={`flex flex-col items-center gap-0.5 transition-all ${view === 'wallet' ? 'text-black font-bold' : 'text-stone-500'}`}><ReceiptText className="w-4 h-4" /><span className="text-[9px] font-bold" style={{writingMode: 'vertical-lr'}}>帳本</span></button>
-                        <button onClick={() => { setView('info'); setIsEditMode(false); }} className={`flex flex-col items-center gap-0.5 transition-all ${view === 'info' ? 'text-black font-bold' : 'text-stone-500'}`}><Info className="w-4 h-4" /><span className="text-[9px] font-bold" style={{writingMode: 'vertical-lr'}}>資訊</span></button>
+                    <div className="absolute right-0 bottom-0 flex gap-5">
+                        <button onClick={() => setIsAiModalOpen(true)} className="flex flex-col items-center gap-1 transition-all text-stone-400 hover:text-purple-600"><Sparkles className="w-4 h-4" /><span className="text-[9px] font-bold" style={{writingMode: 'vertical-lr'}}>智能</span></button>
+                        <button onClick={() => { setView('wallet'); setIsEditMode(false); }} className={`flex flex-col items-center gap-1 transition-all ${view === 'wallet' ? 'text-black font-bold' : 'text-stone-500'}`}><ReceiptText className="w-4 h-4" /><span className="text-[9px] font-bold" style={{writingMode: 'vertical-lr'}}>帳本</span></button>
+                        <button onClick={() => { setView('info'); setIsEditMode(false); }} className={`flex flex-col items-center gap-1 transition-all ${view === 'info' ? 'text-black font-bold' : 'text-stone-500'}`}><Info className="w-4 h-4" /><span className="text-[9px] font-bold" style={{writingMode: 'vertical-lr'}}>資訊</span></button>
                     </div>
                 </div>
-                <div className="flex flex-col -mt-3">
+                <div className="flex flex-col -mt-2">
                     <span className="text-[9px] tracking-widest text-stone-600 font-bold uppercase mb-1 ml-1">Apr 25 - May 2</span>
-                    <div className="flex overflow-x-auto hide-scrollbar flex gap-6 pt-2 pb-1">
+                    <div className="flex overflow-x-auto hide-scrollbar flex gap-8 pt-3 pb-1">
                         {days.map((d, i) => (
                             <div key={d.id} onClick={() => { setSelectedIdx(i); setView('plan'); }} className={`relative flex flex-col items-center min-w-[32px] cursor-pointer transition-all ${view === 'plan' && selectedIdx === i ? 'text-black font-bold active-dot' : 'text-stone-400'}`}>
                                 <span className="text-[10px] mb-0.5">{d.day}</span>
@@ -240,15 +277,15 @@ export default function App() {
             </header>
 
             {/* CONTENT */}
-            <div className="pt-40 px-5 pb-36">
+            <div className="pt-44 px-6 pb-44">
                 {view === 'plan' && (
                     <div className="animate-fade">
-                        <div className="flex justify-between items-center mb-5 px-1">
+                        <div className="flex justify-between items-center mb-6 px-1">
                             <h2 className="serif text-xl font-bold text-stone-900 tracking-tight">{currentDay.title}</h2>
-                            <button onClick={() => setIsEditMode(!isEditMode)} className="text-[10px] font-bold text-stone-500 px-3 py-1 rounded-full border border-stone-300 bg-white/50">{isEditMode ? '完成' : '管理'}</button>
+                            <button onClick={() => setIsEditMode(!isEditMode)} className="text-[9px] font-bold text-stone-600 px-3 py-1 rounded-full border border-stone-300 bg-white/50">{isEditMode ? '完成' : '管理'}</button>
                         </div>
                         
-                        <div className="relative h-48 rounded-[28px] overflow-hidden shadow-lg mb-8" onClick={() => isEditMode && coverRef.current.click()}>
+                        <div className="relative h-56 rounded-[32px] overflow-hidden shadow-xl mb-12" onClick={() => isEditMode && coverRef.current.click()}>
                             {GOOGLE_API_KEY && !currentDay.customImg ? (
                                 <iframe className="map-frame" loading="lazy" allowFullScreen src={`https://www.google.com/maps/embed/v1/place?key=${GOOGLE_API_KEY}&q=${encodeURIComponent(currentDay.city)}+Japan&zoom=13`}></iframe>
                             ) : (
@@ -256,98 +293,57 @@ export default function App() {
                             )}
                             <input type="file" ref={coverRef} className="hidden" accept="image/*" onChange={(e) => handleUpload(e, 'cover')} />
                             <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent pointer-events-none"></div>
-                            <div className="absolute bottom-5 left-6 right-6 pointer-events-none">
-                                <div className="flex items-center gap-2 mb-1">
-                                    <span className="glass-dark px-2 py-0.5 rounded text-[8px] font-bold text-white uppercase tracking-widest">Day {selectedIdx + 1}</span>
-                                    <span className="glass-dark px-2 py-0.5 rounded text-[8px] font-bold text-white uppercase tracking-widest flex items-center gap-1"><MapPinOff className="w-2 h-2" /> {currentDay.city}</span>
+                            <div className="absolute bottom-6 left-7 right-7 pointer-events-none">
+                                <div className="flex items-center gap-2 mb-2">
+                                    <span className="glass-dark px-2.5 py-0.5 rounded text-[8px] font-bold text-white uppercase tracking-widest">Day {selectedIdx + 1}</span>
+                                    <span className="glass-dark px-2.5 py-0.5 rounded text-[8px] font-bold text-white uppercase tracking-widest flex items-center gap-1"><MapPinOff className="w-2 h-2" /> {currentDay.city}</span>
                                 </div>
-                                <h2 className="serif text-xl text-white font-bold leading-tight">{currentDay.title}</h2>
+                                <h2 className="serif text-2xl text-white font-bold leading-tight">{currentDay.title}</h2>
                             </div>
                         </div>
 
-                        <div className="mb-8 px-1">
-                            <div className="flex justify-between items-center mb-6">
-                                <span className="text-[10px] text-stone-600 font-bold tracking-wider uppercase">每小時天氣預報</span>
-                                <span className="text-[9px] text-stone-500 tracking-widest uppercase font-mono">Open-Meteo</span>
+                        <div className="mb-12 px-1">
+                            <div className="flex justify-between items-center mb-8">
+                                <span className="text-[10px] text-stone-600 font-bold tracking-wider uppercase">即時天氣預報</span>
+                                <span className="text-[9px] text-stone-500 tracking-widest uppercase font-mono">OpenWeather</span>
                             </div>
-                            <div className="flex overflow-x-auto gap-7 hide-scrollbar">
+                            <div className="flex overflow-x-auto gap-8 hide-scrollbar">
                                 {weatherData.map((w, idx) => (
-                                    <div key={idx} onClick={openJMA} className="flex flex-col items-center min-w-[42px] gap-3 cursor-pointer">
+                                    <div key={idx} onClick={openJMA} className="flex flex-col items-center min-w-[42px] gap-4 cursor-pointer">
                                         <span className="text-[10px] text-stone-600 font-medium">{w.time}</span>
-                                        {renderWeatherIcon(w.iconCode)} 
+                                        {renderWeatherIcon(w.icon)} 
                                         <span className="serif text-xl text-stone-700 font-bold">{w.temp}°</span>
                                     </div>
                                 ))}
                             </div>
                         </div>
 
-                        <div className="h-[1px] bg-stone-300/50 mb-10"></div>
+                        <div className="h-[1px] bg-stone-300 mb-12"></div>
 
-                        {/* --- 重構後的行程時間軸 (參考 IMG_5968) --- */}
-                        <div className="space-y-6 relative px-2">
-                            {/* 左側貫穿的時間軸線 */}
-                            <div className="absolute left-[59px] top-4 bottom-4 w-[1px] bg-stone-300/50"></div>
-
+                        <div className="space-y-10 relative before:absolute before:left-[11px] before:top-2 before:bottom-2 before:w-[0.5px] before:bg-stone-300">
                             {currentDay.items.map((item, i) => {
                                 const ItemIcon = ICON_COMPONENTS[item.type] || MapPinOff;
-                                const colorClass = TYPE_COLORS[item.type] || 'bg-gray-400';
-                                const borderClass = colorClass.replace('bg-', 'border-');
-
                                 return (
-                                <div key={item.id} className="flex gap-4 items-stretch relative">
+                                <div key={item.id} className="flex gap-6 items-start">
                                     {isEditMode && (
-                                        <div className="flex flex-col gap-2 pt-1 absolute -left-8">
+                                        <div className="flex flex-col gap-2 pt-1">
                                             <button onClick={() => { const d = [...days]; const its = d[selectedIdx].items; if(i>0) [its[i], its[i-1]] = [its[i-1], its[i]]; setDays(d); }} className="text-stone-400"><ChevronUp className="w-4 h-4" /></button>
                                             <button onClick={() => { const d = [...days]; const its = d[selectedIdx].items; if(i<its.length-1) [its[i], its[i+1]] = [its[i+1], its[i]]; setDays(d); }} className="text-stone-400"><ChevronDown className="w-4 h-4" /></button>
                                         </div>
                                     )}
-                                    
-                                    {/* 左側：時間 + 圓點 */}
-                                    <div className="w-14 text-right pt-0 z-10 bg-[#EBE7DE] flex flex-col items-end">
-                                        <span className="block text-lg font-bold text-stone-800 leading-none">{item.time}</span>
-                                        {/* 時間點旁邊的裝飾點：Highlight 是菱形，一般是圓形 */}
-                                        <div className={`mt-2 -mr-[5px] ${item.highlight ? 'w-2.5 h-2.5 rotate-45 bg-amber-400' : `w-2 h-2 rounded-full ${colorClass}`}`}></div>
-                                    </div>
-
-                                    {/* 右側：內容卡片 */}
-                                    {/* Highlight 樣式：金框、淺黃底、特殊標籤 (參考 IMG_5974) */}
-                                    {item.highlight ? (
-                                        <div onClick={() => isEditMode ? setEditingItem(item) : setDetailItem(item)} 
-                                             className="flex-1 cursor-pointer bg-amber-50/50 border border-amber-200 rounded-xl p-4 shadow-sm relative ml-2 mb-2">
-                                            
-                                            <div className="flex items-center gap-1 mb-2">
-                                                <Sparkles className="w-3 h-3 text-amber-500 fill-amber-500" />
-                                                <span className="text-[10px] font-bold text-amber-600 tracking-widest uppercase">SPECIAL EXPERIENCE</span>
-                                            </div>
-
+                                    <div onClick={() => isEditMode ? setEditingItem(item) : setDetailItem(item)} className={`flex-1 flex gap-7 cursor-pointer transition-all ${item.highlight ? 'highlight-card p-6 rounded-2xl ml-[-15px] bg-white' : ''}`}>
+                                        <div className={`relative z-10 w-6 h-6 rounded-full border border-stone-200 bg-white flex items-center justify-center text-stone-500 ${item.highlight ? 'bg-brand-red text-white shadow-lg border-none' : ''}`}>
+                                            <ItemIcon className="w-3.5 h-3.5" />
+                                        </div>
+                                        <div className="flex-1">
                                             <div className="flex justify-between items-start">
-                                                <h3 className="serif text-xl font-bold text-stone-900 tracking-tight">{item.title}</h3>
-                                                {isEditMode && <button onClick={(e) => { e.stopPropagation(); const d = [...days]; d[selectedIdx].items = d[selectedIdx].items.filter(it => it.id !== item.id); setDays(d); }} className="text-red-400"><Trash2 className="w-4 h-4" /></button>}
+                                                <span className="text-[11px] font-bold text-stone-500 tracking-tighter">{item.time}</span>
+                                                {isEditMode && <button onClick={(e) => { e.stopPropagation(); const d = [...days]; d[selectedIdx].items = d[selectedIdx].items.filter(it => it.id !== item.id); setDays(d); }} className="text-red-400"><Trash2 className="w-3.5 h-3.5" /></button>}
                                             </div>
-                                            
-                                            <div className="flex items-center gap-2 mt-1 text-stone-600 text-xs">
-                                                <ItemIcon className="w-3.5 h-3.5" />
-                                                <span>{item.type}</span>
-                                            </div>
-                                            <p className="text-sm mt-2 text-stone-600 leading-relaxed border-t border-amber-100 pt-2">{item.desc}</p>
+                                            <h3 className={`serif text-base font-bold tracking-tight text-stone-900`}>{item.title}</h3>
+                                            <p className="text-xs text-stone-600 mt-1.5 leading-relaxed truncate w-44">{item.desc}</p>
                                         </div>
-                                    ) : (
-                                        // 一般樣式：左側彩色線條 (參考 IMG_5968)
-                                        <div onClick={() => isEditMode ? setEditingItem(item) : setDetailItem(item)} 
-                                             className={`flex-1 cursor-pointer bg-white rounded-r-xl rounded-l-sm p-4 shadow-sm relative ml-2 mb-2 border-l-[4px] ${borderClass}`}>
-                                            <div className="flex justify-between items-start mb-1">
-                                                <div className="flex flex-col">
-                                                    <div className="flex items-center gap-2 mb-1">
-                                                        <ItemIcon className="w-3.5 h-3.5 text-stone-400" />
-                                                        <span className="text-[10px] font-bold text-stone-400 uppercase tracking-wider">{item.type}</span>
-                                                    </div>
-                                                    <h3 className="serif text-lg font-bold text-stone-800 tracking-tight">{item.title}</h3>
-                                                </div>
-                                                {isEditMode && <button onClick={(e) => { e.stopPropagation(); const d = [...days]; d[selectedIdx].items = d[selectedIdx].items.filter(it => it.id !== item.id); setDays(d); }} className="text-red-400"><Trash2 className="w-4 h-4" /></button>}
-                                            </div>
-                                            <p className="text-xs text-stone-500 leading-relaxed">{item.desc}</p>
-                                        </div>
-                                    )}
+                                    </div>
                                 </div>
                             )})}
                             {isEditMode && (
@@ -357,7 +353,6 @@ export default function App() {
                     </div>
                 )}
 
-                {/* 其他分頁內容 (Wallet, Info) 保持不變... */}
                 {view === 'wallet' && (
                     <div className="animate-fade">
                         <h2 className="serif text-2xl font-bold mb-6 text-stone-800">旅行帳本</h2>
@@ -391,6 +386,7 @@ export default function App() {
                     </div>
                 )}
 
+                {/* INFO PAGE - 可編輯、移動、新增各類資訊卡片 */}
                 {view === 'info' && (
                     <div className="animate-fade py-2 space-y-8">
                         <div className="flex justify-between items-center px-1">
@@ -455,9 +451,9 @@ export default function App() {
                 )}
             </div>
 
-            {/* STATUS BAR - Only show in Plan view */}
+            {/* STATUS BAR - Only show in Plan view (Fix for Issue 1) */}
             {view === 'plan' && (
-                <div key={gpsOn ? 'gps-active' : 'gps-idle'} className="fixed bottom-8 left-1/2 -translate-x-1/2 w-[92%] max-w-sm glass rounded-[32px] p-3.5 border border-white/60 shadow-2xl flex items-center justify-between z-40 bg-white/80">
+                <div key={gpsOn ? 'gps-active' : 'gps-idle'} className="fixed bottom-10 left-1/2 -translate-x-1/2 w-[92%] max-w-sm glass rounded-[32px] p-3.5 border border-white/60 shadow-2xl flex items-center justify-between z-40 bg-white/80">
                     <div className="flex items-center gap-4 flex-1">
                         <div onClick={toggleGps} className="flex flex-col items-center gap-0.5 border-r border-stone-200 pr-4 cursor-pointer group">
                             <div className={`w-9 h-9 rounded-full flex items-center justify-center transition-all ${gpsOn ? 'bg-red-50 text-red-600 animate-pulse shadow-md' : 'bg-stone-100 text-stone-400'}`}><Target className="w-4 h-4" /></div>
@@ -491,19 +487,40 @@ export default function App() {
                 </div>
             )}
 
-            {/* --- MODALS (Same as before, hidden for brevity) --- */}
-            {/* ... (AI, Info Edit, Detail, Itinerary Edit, Expense Edit Modals) ... */}
-            {/* 為了完整性，這裡包含與之前相同的 Modal 程式碼，確保複製貼上可運作 */}
+            {/* --- MODALS --- */}
             
             {/* AI SMART IMPORT MODAL */}
             {isAiModalOpen && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/70 backdrop-blur-sm animate-fade">
                     <div className="bg-white w-full max-w-sm rounded-[40px] p-8 shadow-2xl relative">
                         <button onClick={() => setIsAiModalOpen(false)} className="absolute top-6 right-6 p-2 bg-stone-100 rounded-full text-stone-400"><X className="w-4 h-4" /></button>
-                        <div className="flex items-center gap-2 mb-2 text-purple-600"><Sparkles className="w-5 h-5" /><h3 className="serif text-xl font-bold">AI 智能匯入</h3></div>
-                        <p className="text-[10px] text-stone-400 mb-6 leading-relaxed">請貼上您的行程文字（例如：ChatGPT 建議、部落格遊記），AI 將自動為您排入行程表。</p>
-                        <textarea className="w-full h-40 p-4 bg-stone-50 rounded-2xl text-xs text-stone-700 outline-none border border-stone-200 resize-none mb-4 focus:border-purple-300 transition-colors" placeholder="貼上文字內容..." value={aiInputText} onChange={(e) => setAiInputText(e.target.value)} />
-                        <button onClick={handleAiAnalyze} disabled={isAiProcessing} className={`w-full py-4 rounded-[28px] font-bold text-[11px] uppercase tracking-widest flex items-center justify-center gap-2 transition-all ${isAiProcessing ? 'bg-stone-200 text-stone-400' : 'bg-purple-600 text-white shadow-lg shadow-purple-200 active:scale-95'}`}>{isAiProcessing ? (<><Loader2 className="w-4 h-4 animate-spin" /> 分析中...</>) : (<><Sparkles className="w-4 h-4" /> 開始轉換</>)}</button>
+                        
+                        <div className="flex items-center gap-2 mb-2 text-purple-600">
+                            <Sparkles className="w-5 h-5" />
+                            <h3 className="serif text-xl font-bold">AI 智能匯入</h3>
+                        </div>
+                        <p className="text-[10px] text-stone-400 mb-6 leading-relaxed">
+                            請貼上您的行程文字（例如：ChatGPT 建議、部落格遊記），AI 將自動為您排入行程表。
+                        </p>
+
+                        <textarea 
+                            className="w-full h-40 p-4 bg-stone-50 rounded-2xl text-xs text-stone-700 outline-none border border-stone-200 resize-none mb-4 focus:border-purple-300 transition-colors"
+                            placeholder="貼上文字內容..."
+                            value={aiInputText}
+                            onChange={(e) => setAiInputText(e.target.value)}
+                        />
+
+                        <button 
+                            onClick={handleAiAnalyze} 
+                            disabled={isAiProcessing}
+                            className={`w-full py-4 rounded-[28px] font-bold text-[11px] uppercase tracking-widest flex items-center justify-center gap-2 transition-all ${isAiProcessing ? 'bg-stone-200 text-stone-400' : 'bg-purple-600 text-white shadow-lg shadow-purple-200 active:scale-95'}`}
+                        >
+                            {isAiProcessing ? (
+                                <><Loader2 className="w-4 h-4 animate-spin" /> 分析中...</>
+                            ) : (
+                                <><Sparkles className="w-4 h-4" /> 開始轉換</>
+                            )}
+                        </button>
                     </div>
                 </div>
             )}
@@ -514,11 +531,24 @@ export default function App() {
                     <div className="bg-white w-full max-w-sm rounded-[40px] p-8 shadow-2xl animate-fade">
                         <h3 className="serif text-xl font-bold mb-6 text-stone-800">編輯資訊卡片</h3>
                         <div className="space-y-4">
-                            <div className="w-32"><label className="text-[10px] text-gray-400 font-bold uppercase">類別</label><select className="w-full p-3 bg-stone-100 rounded-xl outline-none text-xs font-bold" value={editingInfo.type} onChange={e => setEditingInfo({...editingInfo, type: e.target.value})}><option value="CARD">一般卡片</option><option value="MAP">Google Maps</option><option value="VJW">Visit Japan Web</option><option value="EMERGENCY">緊急聯絡</option></select></div>
+                            <div className="w-32"><label className="text-[10px] text-gray-400 font-bold uppercase">類別</label>
+                                <select className="w-full p-3 bg-stone-100 rounded-xl outline-none text-xs font-bold" value={editingInfo.type} onChange={e => setEditingInfo({...editingInfo, type: e.target.value})}>
+                                    <option value="CARD">一般卡片</option>
+                                    <option value="MAP">Google Maps</option>
+                                    <option value="VJW">Visit Japan Web</option>
+                                    <option value="EMERGENCY">緊急聯絡</option>
+                                </select>
+                            </div>
                             <div><label className="text-[10px] text-gray-400 font-bold uppercase">標題</label><input className="w-full p-3 bg-stone-100 rounded-xl outline-none text-sm font-bold" value={editingInfo.title} onChange={e => setEditingInfo({...editingInfo, title: e.target.value})} /></div>
                             <div><label className="text-[10px] text-gray-400 font-bold uppercase">內容描述/確認碼</label><input className="w-full p-3 bg-stone-100 rounded-xl outline-none text-sm" value={editingInfo.content} onChange={e => setEditingInfo({...editingInfo, content: e.target.value})} /></div>
                             <div><label className="text-[10px] text-gray-400 font-bold uppercase">外部連結 (Optional)</label><input className="w-full p-3 bg-stone-100 rounded-xl outline-none text-xs" value={editingInfo.link} onChange={e => setEditingInfo({...editingInfo, link: e.target.value})} placeholder="https://" /></div>
-                            <div className="pt-4 flex gap-3"><button onClick={() => { const ni = editingInfo.id ? infoItems.map(i => i.id === editingInfo.id ? editingInfo : i) : [...infoItems, {...editingInfo, id: Date.now()}]; setInfoItems(ni); setEditingInfo(null); }} className="flex-1 bg-stone-900 text-white py-4.5 rounded-[28px] font-bold text-[10px] uppercase">儲存卡片</button><button onClick={() => setEditingInfo(null)} className="px-6 border border-stone-200 rounded-[28px] text-stone-400"><X className="w-4 h-4" /></button></div>
+                            <div className="pt-4 flex gap-3">
+                                <button onClick={() => {
+                                    const ni = editingInfo.id ? infoItems.map(i => i.id === editingInfo.id ? editingInfo : i) : [...infoItems, {...editingInfo, id: Date.now()}];
+                                    setInfoItems(ni); setEditingInfo(null);
+                                }} className="flex-1 bg-stone-900 text-white py-4.5 rounded-[28px] font-bold text-[10px] uppercase">儲存卡片</button>
+                                <button onClick={() => setEditingInfo(null)} className="px-6 border border-stone-200 rounded-[28px] text-stone-400"><X className="w-4 h-4" /></button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -529,9 +559,14 @@ export default function App() {
                 <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade">
                     <div className="bg-white w-full max-w-sm rounded-[45px] overflow-hidden shadow-2xl relative">
                         <button onClick={() => setDetailItem(null)} className="absolute top-6 right-6 p-2 bg-stone-100 rounded-full z-10"><X className="w-4 h-4 text-stone-500" /></button>
-                        <div className="h-48 bg-stone-100 flex items-center justify-center overflow-hidden">{detailItem.customImg ? <img src={detailItem.customImg} className="w-full h-full object-cover" /> : <MapPinOff className="w-12 h-12 text-stone-200" />}</div>
+                        <div className="h-48 bg-stone-100 flex items-center justify-center overflow-hidden">
+                            {detailItem.customImg ? <img src={detailItem.customImg} className="w-full h-full object-cover" /> : <MapPinOff className="w-12 h-12 text-stone-200" />}
+                        </div>
                         <div className="p-9 pb-12">
-                            <div className="flex items-center gap-2 mb-4"><span className="text-[10px] font-bold text-white bg-brand-red px-2.5 py-1 rounded tracking-tighter uppercase">{detailItem.time}</span><span className="text-[9px] text-stone-400 font-bold tracking-[0.2em] uppercase">{detailItem.type}</span></div>
+                            <div className="flex items-center gap-2 mb-4">
+                                <span className="text-[10px] font-bold text-white bg-brand-red px-2.5 py-1 rounded tracking-tighter uppercase">{detailItem.time}</span>
+                                <span className="text-[9px] text-stone-400 font-bold tracking-[0.2em] uppercase">{detailItem.type}</span>
+                            </div>
                             <h2 className="serif text-2xl font-bold mb-5 text-stone-900 leading-tight">{detailItem.title}</h2>
                             <p className="text-sm text-stone-600 font-medium leading-relaxed mb-10 opacity-90">{detailItem.desc}</p>
                             <div className="flex flex-col gap-3">
@@ -549,14 +584,39 @@ export default function App() {
                     <div className="bg-white w-full max-w-sm rounded-[40px] p-8 shadow-2xl animate-fade overflow-y-auto max-h-[90vh]">
                         <h3 className="serif text-xl font-bold mb-6 text-stone-800">行程編輯</h3>
                         <div className="space-y-4">
-                            <div className="h-28 bg-stone-100 rounded-2xl flex flex-col items-center justify-center border border-dashed border-stone-300 relative overflow-hidden" onClick={() => fileRef.current.click()}>{editingItem.customImg ? <img src={editingItem.customImg} className="w-full h-full object-cover" /> : <div className="text-center"><ImageIcon className="w-5 h-5 text-stone-400 mx-auto" /><p className="text-[8px] text-stone-500 mt-1 uppercase font-bold tracking-widest">更換照片</p></div>}<input type="file" ref={fileRef} className="hidden" accept="image/*" onChange={(e) => handleUpload(e, 'item')} /></div>
-                            <div className="flex gap-4"><div className="flex-1"><label className="text-[10px] text-stone-400 font-bold uppercase mb-1 block">時間</label><input className="w-full p-3 bg-stone-100 rounded-xl outline-none text-sm" value={editingItem.time} onChange={e => setEditingItem({...editingItem, time: e.target.value})} /></div><div className="w-24"><label className="text-[10px] text-stone-400 font-bold uppercase mb-1 block">圖示</label><select className="w-full p-3 bg-stone-100 rounded-xl outline-none text-xs" value={editingItem.type} onChange={e => setEditingItem({...editingItem, type: e.target.value})}>{Object.keys(ICON_MAP).map(k => <option key={k} value={k}>{k}</option>)}</select></div></div>
+                            <div className="h-28 bg-stone-100 rounded-2xl flex flex-col items-center justify-center border border-dashed border-stone-300 relative overflow-hidden" onClick={() => fileRef.current.click()}>
+                                {editingItem.customImg ? <img src={editingItem.customImg} className="w-full h-full object-cover" /> : <div className="text-center"><ImageIcon className="w-5 h-5 text-stone-400 mx-auto" /><p className="text-[8px] text-stone-500 mt-1 uppercase font-bold tracking-widest">更換照片</p></div>}
+                                <input type="file" ref={fileRef} className="hidden" accept="image/*" onChange={(e) => handleUpload(e, 'item')} />
+                            </div>
+                            <div className="flex gap-4">
+                                <div className="flex-1"><label className="text-[10px] text-stone-400 font-bold uppercase mb-1 block">時間</label><input className="w-full p-3 bg-stone-100 rounded-xl outline-none text-sm" value={editingItem.time} onChange={e => setEditingItem({...editingItem, time: e.target.value})} /></div>
+                                <div className="w-24">
+                                    <label className="text-[10px] text-stone-400 font-bold uppercase mb-1 block">圖示</label>
+                                    <select className="w-full p-3 bg-stone-100 rounded-xl outline-none text-xs" value={editingItem.type} onChange={e => setEditingItem({...editingItem, type: e.target.value})}>
+                                        {Object.keys(ICON_MAP).map(k => <option key={k} value={k}>{k}</option>)}
+                                    </select>
+                                </div>
+                            </div>
                             <div><label className="text-[10px] text-stone-400 font-bold uppercase block mb-1">標題</label><input className="w-full p-3 bg-stone-100 rounded-xl outline-none text-sm font-bold" value={editingItem.title} onChange={e => setEditingItem({...editingItem, title: e.target.value})} /></div>
                             <div><label className="text-[10px] text-stone-400 font-bold uppercase block mb-1">內容描述</label><textarea className="w-full p-3 bg-stone-100 rounded-xl outline-none text-xs h-20" value={editingItem.desc} onChange={e => setEditingItem({...editingItem, desc: e.target.value})} /></div>
                             <div><label className="text-[10px] text-stone-400 font-bold uppercase block mb-1">導航地點</label><input className="w-full p-3 bg-stone-100 rounded-xl outline-none text-xs font-bold" value={editingItem.location} onChange={e => setEditingItem({...editingItem, location: e.target.value})} /></div>
-                            <div className="flex gap-3"><div className="flex-1"><label className="text-[10px] text-stone-400 font-bold uppercase mb-1 block">按鈕名稱</label><select className="w-full p-3 bg-stone-100 rounded-xl outline-none text-xs" value={editingItem.btnLabel} onChange={e => setEditingItem({...editingItem, btnLabel: e.target.value})}><option value="官方網站">官方網站</option><option value="資訊">資訊</option></select></div><div className="flex-1"><label className="text-[10px] text-stone-400 font-bold uppercase mb-1 block">連結</label><input className="w-full p-3 bg-stone-100 rounded-xl outline-none text-xs" value={editingItem.link} onChange={e => setEditingItem({...editingItem, link: e.target.value})} placeholder="https://" /></div></div>
-                            <div className="flex items-center justify-between p-3.5 bg-amber-50 rounded-xl"><span className="text-[10px] font-bold text-amber-700 uppercase tracking-widest">Highlight (金邊)</span><input type="checkbox" checked={editingItem.highlight} onChange={e => setEditingItem({...editingItem, highlight: e.target.checked})} /></div>
-                            <div className="pt-4 flex gap-3"><button onClick={() => { const d = [...days]; const dy = d[selectedIdx]; if(editingItem.id) dy.items = dy.items.map(i => i.id === editingItem.id ? editingItem : i); else dy.items.push({...editingItem, id: Date.now()}); setDays(d); setEditingItem(null); }} className="flex-1 bg-stone-900 text-white py-4.5 rounded-[28px] font-bold text-[10px] uppercase tracking-widest">確認儲存</button><button onClick={() => setEditingItem(null)} className="px-7 py-4.5 border border-stone-200 rounded-[28px] text-stone-400"><X className="w-4 h-4" /></button></div>
+                            <div className="flex gap-3">
+                                <div className="flex-1"><label className="text-[10px] text-stone-400 font-bold uppercase mb-1 block">按鈕名稱</label><select className="w-full p-3 bg-stone-100 rounded-xl outline-none text-xs" value={editingItem.btnLabel} onChange={e => setEditingItem({...editingItem, btnLabel: e.target.value})}><option value="官方網站">官方網站</option><option value="資訊">資訊</option></select></div>
+                                <div className="flex-1"><label className="text-[10px] text-stone-400 font-bold uppercase mb-1 block">連結</label><input className="w-full p-3 bg-stone-100 rounded-xl outline-none text-xs" value={editingItem.link} onChange={e => setEditingItem({...editingItem, link: e.target.value})} placeholder="https://" /></div>
+                            </div>
+                            <div className="flex items-center justify-between p-3.5 bg-amber-50 rounded-xl">
+                                <span className="text-[10px] font-bold text-amber-700 uppercase tracking-widest">Highlight (金邊)</span>
+                                <input type="checkbox" checked={editingItem.highlight} onChange={e => setEditingItem({...editingItem, highlight: e.target.checked})} />
+                            </div>
+                            <div className="pt-4 flex gap-3">
+                                <button onClick={() => {
+                                    const d = [...days]; const dy = d[selectedIdx];
+                                    if(editingItem.id) dy.items = dy.items.map(i => i.id === editingItem.id ? editingItem : i);
+                                    else dy.items.push({...editingItem, id: Date.now()});
+                                    setDays(d); setEditingItem(null);
+                                }} className="flex-1 bg-stone-900 text-white py-4.5 rounded-[28px] font-bold text-[10px] uppercase tracking-widest">確認儲存</button>
+                                <button onClick={() => setEditingItem(null)} className="px-7 py-4.5 border border-stone-200 rounded-[28px] text-stone-400"><X className="w-4 h-4" /></button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -568,11 +628,36 @@ export default function App() {
                     <div className="bg-white w-full max-w-xs rounded-[40px] p-8 shadow-2xl animate-fade">
                         <h3 className="serif text-xl font-bold mb-6 text-stone-800">支出編輯</h3>
                         <div className="space-y-4">
-                            <div className="w-20"><label className="text-[10px] text-stone-400 font-bold uppercase">圖標</label><select className="w-full p-3 bg-stone-100 rounded-xl outline-none text-xs font-bold" value={editingExpense.type} onChange={e => setEditingExpense({...editingExpense, type: e.target.value})}>{Object.keys(ICON_MAP).map(k => <option key={k} value={k}>{k}</option>)}</select></div>
+                            <div className="w-20"><label className="text-[10px] text-stone-400 font-bold uppercase">圖標</label>
+                                <select className="w-full p-3 bg-stone-100 rounded-xl outline-none text-xs font-bold" value={editingExpense.type} onChange={e => setEditingExpense({...editingExpense, type: e.target.value})}>
+                                    {Object.keys(ICON_MAP).map(k => <option key={k} value={k}>{k}</option>)}
+                                </select>
+                            </div>
                             <div><label className="text-[10px] text-stone-400 font-bold uppercase">名稱</label><input className="w-full p-3 bg-stone-100 rounded-xl outline-none text-sm font-bold" value={editingExpense.name} onChange={e => setEditingExpense({...editingExpense, name: e.target.value})} /></div>
-                            <div className="flex gap-3"><div className="flex-1"><label className="text-[10px] text-stone-400 font-bold uppercase">金額</label><input type="number" className="w-full p-3 bg-stone-100 rounded-xl outline-none text-base font-bold" value={editingExpense.amount} onChange={e => setEditingExpense({...editingExpense, amount: Number(e.target.value)})} /></div><div className="w-20"><label className="text-[10px] text-stone-400 font-bold uppercase">幣別</label><select className="w-full p-3 bg-stone-100 rounded-xl outline-none text-xs font-bold" value={editingExpense.currency} onChange={e => setEditingExpense({...editingExpense, currency: e.target.value})}><option value="JPY">JPY</option><option value="TWD">TWD</option></select></div></div>
-                            {editingExpense.currency === 'JPY' && (<div><label className="text-[10px] text-stone-400 font-bold uppercase flex justify-between"><span>自訂匯率</span><span className="text-stone-300">即時: {currentRate}</span></label><input type="number" step="0.001" className="w-full p-3 bg-stone-100 rounded-xl outline-none text-sm font-bold" value={editingExpense.rate || currentRate} onChange={e => setEditingExpense({...editingExpense, rate: Number(e.target.value)})} /></div>)}
-                            <div className="pt-4 flex flex-col gap-2"><button onClick={() => { const ne = editingExpense.id ? expenses.map(e => e.id === editingExpense.id ? editingExpense : e) : [...expenses, {...editingExpense, id: Date.now()}]; setExpenses(ne); setEditingExpense(null); }} className="w-full bg-stone-900 text-white py-4.5 rounded-[28px] font-bold text-[10px] uppercase tracking-widest">儲存支出</button>{editingExpense.id && <button onClick={() => { setExpenses(expenses.filter(e => e.id !== editingExpense.id)); setEditingExpense(null); }} className="w-full py-2 text-red-400 text-[9px] font-bold uppercase">刪除</button>}<button onClick={() => setEditingExpense(null)} className="w-full py-2 text-gray-400 text-[9px] font-bold uppercase">取消</button></div>
+                            
+                            <div className="flex gap-3">
+                                <div className="flex-1"><label className="text-[10px] text-stone-400 font-bold uppercase">金額</label><input type="number" className="w-full p-3 bg-stone-100 rounded-xl outline-none text-base font-bold" value={editingExpense.amount} onChange={e => setEditingExpense({...editingExpense, amount: Number(e.target.value)})} /></div>
+                                <div className="w-20"><label className="text-[10px] text-stone-400 font-bold uppercase">幣別</label><select className="w-full p-3 bg-stone-100 rounded-xl outline-none text-xs font-bold" value={editingExpense.currency} onChange={e => setEditingExpense({...editingExpense, currency: e.target.value})}><option value="JPY">JPY</option><option value="TWD">TWD</option></select></div>
+                            </div>
+
+                            {editingExpense.currency === 'JPY' && (
+                                <div>
+                                    <label className="text-[10px] text-stone-400 font-bold uppercase flex justify-between">
+                                        <span>自訂匯率</span>
+                                        <span className="text-stone-300">即時: {currentRate}</span>
+                                    </label>
+                                    <input type="number" step="0.001" className="w-full p-3 bg-stone-100 rounded-xl outline-none text-sm font-bold" value={editingExpense.rate || currentRate} onChange={e => setEditingExpense({...editingExpense, rate: Number(e.target.value)})} />
+                                </div>
+                            )}
+
+                            <div className="pt-4 flex flex-col gap-2">
+                                <button onClick={() => {
+                                    const ne = editingExpense.id ? expenses.map(e => e.id === editingExpense.id ? editingExpense : e) : [...expenses, {...editingExpense, id: Date.now()}];
+                                    setExpenses(ne); setEditingExpense(null);
+                                }} className="w-full bg-stone-900 text-white py-4.5 rounded-[28px] font-bold text-[10px] uppercase tracking-widest">儲存支出</button>
+                                {editingExpense.id && <button onClick={() => { setExpenses(expenses.filter(e => e.id !== editingExpense.id)); setEditingExpense(null); }} className="w-full py-2 text-red-400 text-[9px] font-bold uppercase">刪除</button>}
+                                <button onClick={() => setEditingExpense(null)} className="w-full py-2 text-gray-400 text-[9px] font-bold uppercase">取消</button>
+                            </div>
                         </div>
                     </div>
                 </div>
