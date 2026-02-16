@@ -1,15 +1,15 @@
 import { useState, useEffect, useRef } from 'react';
 import { 
   Plane, Train, Home, Utensils, Camera, Star, Info, 
-  Map as MapIcon, QrCode, ShieldAlert, Copy, ExternalLink, 
-  Settings, Clock, Target, MapPinOff, Navigation, ChevronUp, 
-  ChevronDown, Trash2, Edit3, X, Image as ImageIcon, ReceiptText 
+  Map as MapIcon, ShieldAlert, Copy, ExternalLink, 
+  Target, MapPinOff, Navigation, ChevronUp, 
+  ChevronDown, Trash2, X, Image as ImageIcon, ReceiptText, Clock
 } from 'lucide-react';
 
 // --- API 設定與環境變數讀取 ---
 const GOOGLE_API_KEY = import.meta.env.VITE_GOOGLE_API_KEY || '';
 const OPENWEATHER_API_KEY = import.meta.env.VITE_WEATHER_API_KEY || '';
-const EXCHANGE_API_KEY = import.meta.env.VITE_EXCHANGE_API_KEY || ''; // 若使用付費版可填入
+const EXCHANGE_API_KEY = import.meta.env.VITE_EXCHANGE_API_KEY || ''; 
 
 // --- 靜態資料 ---
 const CITY_COORDS = {
@@ -30,8 +30,15 @@ const ICON_COMPONENTS = {
     'FOOD': Utensils,
     'SIGHTSEEING': Camera,
     'HIGHLIGHT': Star,
-    'INFO': Info
+    'INFO': Info,
+    'MAP': MapIcon,
+    'VJW': ExternalLink,
+    'EMERGENCY': ShieldAlert,
+    'CARD': ReceiptText
 };
+
+// 修正：為了相容下方的程式碼，將 ICON_MAP 指向 ICON_COMPONENTS
+const ICON_MAP = ICON_COMPONENTS;
 
 // 初始資料
 const INITIAL_PLAN = [
@@ -93,8 +100,6 @@ export default function App() {
 
     // 1. Fetch Exchange Rate
     useEffect(() => {
-        // 優先使用環境變數中的 Key (如果使用的是付費 API)
-        // 這裡示範使用 Open ExchangeRate API (免費 Public Endpoit)
         const url = EXCHANGE_API_KEY 
             ? `https://v6.exchangerate-api.com/v6/${EXCHANGE_API_KEY}/latest/JPY`
             : 'https://open.er-api.com/v6/latest/JPY';
@@ -188,24 +193,15 @@ export default function App() {
         reader.readAsDataURL(file);
     };
 
-    // Helper: Render weather icon based on string
-    const renderWeatherIcon = (iconName) => {
-        switch(iconName) {
-            case 'cloud': return <i className="opacity-80" data-lucide="cloud"></i>; // Simplified for this example, usually specific component
-            // 實際使用時，建議直接渲染 Lucide Component
-            default: return <i className="text-orange-500 opacity-80" data-lucide="sun"></i>;
-        }
-    };
-
     return (
         <div className="max-w-md mx-auto min-h-screen relative lg:shadow-2xl">
             
             {/* FIXED HEADER */}
-            <header className="fixed top-0 left-0 right-0 max-w-md mx-auto z-50 bg-bg-creme pt-8 px-6 pb-2 border-b border-stone-300">
+            <header className="fixed top-0 left-0 right-0 max-w-md mx-auto z-50 bg-[#EBE7DE] pt-8 px-6 pb-2 border-b border-stone-300">
                 <p className="text-[10px] tracking-[0.4em] text-stone-500 uppercase font-bold text-center mb-1">Japan Trip</p>
                 <div className="flex justify-center items-center relative mb-8">
                     <div className="flex items-center gap-2 text-stone-900">
-                        <h1 className="serif text-xl font-bold tracking-tight">Kyoto <span className="text-[12px] align-middle text-brand-red mx-0.5 opacity-80">●</span> Osaka</h1>
+                        <h1 className="serif text-xl font-bold tracking-tight">Kyoto <span className="text-[12px] align-middle text-[#8D2B2B] mx-0.5 opacity-80">●</span> Osaka</h1>
                         <span className="text-[9px] border border-stone-500 rounded-full px-2.5 py-0.5 italic font-medium text-stone-600">2026</span>
                     </div>
                     <div className="absolute right-0 bottom-0 flex gap-5">
@@ -238,7 +234,7 @@ export default function App() {
                         
                         <div className="relative h-56 rounded-[32px] overflow-hidden shadow-xl mb-12" onClick={() => isEditMode && coverRef.current.click()}>
                             {GOOGLE_API_KEY && !currentDay.customImg ? (
-                                <iframe className="map-frame" loading="lazy" allowFullScreen src={`https://www.google.com/maps/embed/v1/place?key=${GOOGLE_API_KEY}&q=${encodeURIComponent(currentDay.city)}+Japan&zoom=13`}></iframe>
+                                <iframe className="w-full h-full border-0" loading="lazy" allowFullScreen src={`https://www.google.com/maps/embed/v1/place?key=${GOOGLE_API_KEY}&q=${encodeURIComponent(currentDay.city)}+Japan&zoom=13`}></iframe>
                             ) : (
                                 <img src={currentDay.customImg || currentDay.defaultImg} className="w-full h-full object-cover" />
                             )}
@@ -262,7 +258,6 @@ export default function App() {
                                 {weatherData.map((w, idx) => (
                                     <div key={idx} onClick={openJMA} className="flex flex-col items-center min-w-[42px] gap-4 cursor-pointer">
                                         <span className="text-[10px] text-stone-600 font-medium">{w.time}</span>
-                                        {/* 這裡簡單示範，實際可用 w.icon 動態對應 Lucide 元件 */}
                                         <div className="text-orange-500 opacity-80"><Star className="w-4.5 h-4.5" /></div> 
                                         <span className="serif text-xl text-stone-700 font-bold">{w.temp}°</span>
                                     </div>
@@ -284,7 +279,7 @@ export default function App() {
                                         </div>
                                     )}
                                     <div onClick={() => isEditMode ? setEditingItem(item) : setDetailItem(item)} className={`flex-1 flex gap-7 cursor-pointer transition-all ${item.highlight ? 'highlight-card p-6 rounded-2xl ml-[-15px] bg-white' : ''}`}>
-                                        <div className={`relative z-10 w-6 h-6 rounded-full border border-stone-200 bg-white flex items-center justify-center text-stone-500 ${item.highlight ? 'bg-brand-red text-white shadow-lg border-none' : ''}`}>
+                                        <div className={`relative z-10 w-6 h-6 rounded-full border border-stone-200 bg-white flex items-center justify-center text-stone-500 ${item.highlight ? 'bg-[#8D2B2B] text-white shadow-lg border-none' : ''}`}>
                                             <ItemIcon className="w-3.5 h-3.5" />
                                         </div>
                                         <div className="flex-1">
@@ -358,41 +353,41 @@ export default function App() {
                                   
                                   {item.type === 'MAP' && (
                                     <div onClick={() => isEditMode ? setEditingInfo(item) : openMaps(item.link)} className="flex-1 p-7 bg-stone-900 rounded-[40px] text-white flex items-center justify-between cursor-pointer shadow-xl active:scale-[0.98] transition-all relative">
-                                        <div className="flex items-center gap-4"><MapIcon className="w-5 h-5 text-blue-400" /><span className="text-sm font-bold tracking-widest uppercase">{item.title}</span></div>
-                                        <ExternalLink className="w-4 h-4 opacity-30" />
-                                        {isEditMode && <button onClick={(e) => { e.stopPropagation(); setInfoItems(infoItems.filter(i => i.id !== item.id)); }} className="absolute -top-2 -right-2 bg-red-500 text-white p-1.5 rounded-full shadow-lg"><X className="w-3 h-3" /></button>}
+                                            <div className="flex items-center gap-4"><MapIcon className="w-5 h-5 text-blue-400" /><span className="text-sm font-bold tracking-widest uppercase">{item.title}</span></div>
+                                            <ExternalLink className="w-4 h-4 opacity-30" />
+                                            {isEditMode && <button onClick={(e) => { e.stopPropagation(); setInfoItems(infoItems.filter(i => i.id !== item.id)); }} className="absolute -top-2 -right-2 bg-red-500 text-white p-1.5 rounded-full shadow-lg"><X className="w-3 h-3" /></button>}
                                     </div>
                                   )}
 
                                   {item.type === 'VJW' && (
                                     <div onClick={() => isEditMode ? setEditingInfo(item) : item.link && window.open(item.link)} className="flex-1 p-7 bg-[#1A1A1A] rounded-[40px] shadow-lg relative active:scale-[0.98] transition-all overflow-hidden">
-                                        <span className="absolute top-6 left-6 text-[9px] bg-[#E85D75] text-white px-2 py-0.5 rounded font-bold tracking-widest">MUST HAVE</span>
-                                        <div className="mt-8 mb-2">
-                                            <h4 className="serif text-2xl font-bold text-white mb-1">{item.title}</h4>
-                                            <p className="text-[10px] text-stone-400">{item.content}</p>
-                                        </div>
-                                        <div className="absolute bottom-6 right-6 w-10 h-10 rounded-full bg-[#E85D75] flex items-center justify-center text-white"><ExternalLink className="w-4 h-4" /></div>
-                                        {isEditMode && <button onClick={(e) => { e.stopPropagation(); setInfoItems(infoItems.filter(i => i.id !== item.id)); }} className="absolute -top-2 -right-2 bg-red-500 text-white p-1.5 rounded-full shadow-lg z-10"><X className="w-3 h-3" /></button>}
+                                            <span className="absolute top-6 left-6 text-[9px] bg-[#E85D75] text-white px-2 py-0.5 rounded font-bold tracking-widest">MUST HAVE</span>
+                                            <div className="mt-8 mb-2">
+                                                <h4 className="serif text-2xl font-bold text-white mb-1">{item.title}</h4>
+                                                <p className="text-[10px] text-stone-400">{item.content}</p>
+                                            </div>
+                                            <div className="absolute bottom-6 right-6 w-10 h-10 rounded-full bg-[#E85D75] flex items-center justify-center text-white"><ExternalLink className="w-4 h-4" /></div>
+                                            {isEditMode && <button onClick={(e) => { e.stopPropagation(); setInfoItems(infoItems.filter(i => i.id !== item.id)); }} className="absolute -top-2 -right-2 bg-red-500 text-white p-1.5 rounded-full shadow-lg z-10"><X className="w-3 h-3" /></button>}
                                     </div>
                                   )}
 
                                   {item.type === 'EMERGENCY' && (
                                     <div onClick={() => isEditMode && setEditingInfo(item)} className="flex-1 p-7 bg-red-50 rounded-[40px] border border-red-200 shadow-sm relative">
-                                        <h3 className="serif font-bold text-red-900 mb-5 flex items-center gap-3"><ShieldAlert className="w-4.5 h-4.5 text-red-600" /> {item.title}</h3>
-                                        <p className="text-sm text-red-800 font-bold">{item.content}</p>
-                                        {isEditMode && <button onClick={(e) => { e.stopPropagation(); setInfoItems(infoItems.filter(i => i.id !== item.id)); }} className="absolute -top-2 -right-2 bg-red-500 text-white p-1.5 rounded-full shadow-lg"><X className="w-3 h-3" /></button>}
+                                            <h3 className="serif font-bold text-red-900 mb-5 flex items-center gap-3"><ShieldAlert className="w-4.5 h-4.5 text-red-600" /> {item.title}</h3>
+                                            <p className="text-sm text-red-800 font-bold">{item.content}</p>
+                                            {isEditMode && <button onClick={(e) => { e.stopPropagation(); setInfoItems(infoItems.filter(i => i.id !== item.id)); }} className="absolute -top-2 -right-2 bg-red-500 text-white p-1.5 rounded-full shadow-lg"><X className="w-3 h-3" /></button>}
                                     </div>
                                   )}
 
                                   {item.type === 'CARD' && (
                                     <div onClick={() => isEditMode ? setEditingInfo(item) : item.link && window.open(item.link)} className="flex-1 p-6 bg-white border border-stone-200 rounded-[24px] shadow-sm relative active:scale-[0.98] transition-all">
-                                        <h4 className="serif text-lg font-bold text-stone-800 mb-2">{item.title}</h4>
-                                        <p className="text-xs text-stone-500 font-medium italic border-b border-stone-50 pb-4">{item.content}</p>
-                                        <div className="mt-4 flex justify-between items-center">
-                                          <span className="text-[9px] font-bold text-stone-300 uppercase tracking-tighter">Open Link →</span>
-                                          <button onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(item.content); }} className="text-stone-300"><Copy className="w-4 h-4" /></button>
-                                        </div>
-                                        {isEditMode && <button onClick={(e) => { e.stopPropagation(); setInfoItems(infoItems.filter(i => i.id !== item.id)); }} className="absolute -top-2 -right-2 bg-red-500 text-white p-1.5 rounded-full shadow-lg"><X className="w-3 h-3" /></button>}
+                                            <h4 className="serif text-lg font-bold text-stone-800 mb-2">{item.title}</h4>
+                                            <p className="text-xs text-stone-500 font-medium italic border-b border-stone-50 pb-4">{item.content}</p>
+                                            <div className="mt-4 flex justify-between items-center">
+                                              <span className="text-[9px] font-bold text-stone-300 uppercase tracking-tighter">Open Link →</span>
+                                              <button onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(item.content); }} className="text-stone-300"><Copy className="w-4 h-4" /></button>
+                                            </div>
+                                            {isEditMode && <button onClick={(e) => { e.stopPropagation(); setInfoItems(infoItems.filter(i => i.id !== item.id)); }} className="absolute -top-2 -right-2 bg-red-500 text-white p-1.5 rounded-full shadow-lg"><X className="w-3 h-3" /></button>}
                                     </div>
                                   )}
                               </div>
@@ -440,7 +435,6 @@ export default function App() {
             )}
 
             {/* --- MODALS --- */}
-            {/* Same editing modals as before, just ensuring imports are correct */}
             
             {/* MODAL: INFO EDIT */}
             {editingInfo && (
@@ -481,7 +475,7 @@ export default function App() {
                         </div>
                         <div className="p-9 pb-12">
                             <div className="flex items-center gap-2 mb-4">
-                                <span className="text-[10px] font-bold text-white bg-brand-red px-2.5 py-1 rounded tracking-tighter uppercase">{detailItem.time}</span>
+                                <span className="text-[10px] font-bold text-white bg-[#8D2B2B] px-2.5 py-1 rounded tracking-tighter uppercase">{detailItem.time}</span>
                                 <span className="text-[9px] text-stone-400 font-bold tracking-[0.2em] uppercase">{detailItem.type}</span>
                             </div>
                             <h2 className="serif text-2xl font-bold mb-5 text-stone-900 leading-tight">{detailItem.title}</h2>
@@ -582,6 +576,3 @@ export default function App() {
         </div>
     );
 }
-    </script>
-</body>
-</html>

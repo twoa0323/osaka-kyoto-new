@@ -2,7 +2,21 @@
 @tailwind components;
 @tailwind utilities;
 
+/* 1. 確保引入 Google Fonts (Inter + Noto Serif TC) */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Noto+Serif+TC:wght@400;500;600;700&display=swap');
+
+@layer base {
+  body {
+    background-color: #EBE7DE; /* 背景色 */
+    color: #1F1F1F;            /* 主要文字色 */
+    font-family: 'Inter', sans-serif; /* 預設全站使用 Inter 字體 */
+    -webkit-tap-highlight-color: transparent;
+    margin: 0;
+  }
+}
+
 @layer utilities {
+  /* 隱藏滾動條 */
   .hide-scrollbar::-webkit-scrollbar {
     display: none;
   }
@@ -10,14 +24,16 @@
     -ms-overflow-style: none;
     scrollbar-width: none;
   }
+
+  /* 2. [關鍵修正] 定義襯線字體，讓 "Kyoto" 等標題恢復質感 */
+  .serif {
+    font-family: 'Noto Serif TC', serif;
+  }
 }
 
-body {
-  background-color: #EBE7DE; /* Fallback */
-  color: #1F1F1F;
-  -webkit-tap-highlight-color: transparent;
-}
+/* --- 自定義組件樣式 --- */
 
+/* 下方紅點 (Active Dot) */
 .active-dot::after {
   content: '';
   position: absolute;
@@ -30,6 +46,7 @@ body {
   border-radius: 50%;
 }
 
+/* 玻璃質感 (淺色) */
 .glass {
   background: rgba(255, 255, 255, 0.65);
   backdrop-filter: blur(16px);
@@ -37,12 +54,14 @@ body {
   border: 1px solid rgba(255,255,255,0.2);
 }
 
+/* 玻璃質感 (深色) */
 .glass-dark {
   background: rgba(30, 30, 30, 0.5);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
 }
 
+/* 金邊高亮卡片 */
 .highlight-card {
   border: 1px solid transparent;
   background: linear-gradient(white, white) padding-box,
@@ -50,14 +69,15 @@ body {
   box-shadow: 0 4px 20px rgba(141, 43, 43, 0.08);
 }
 
+/* 地圖 iframe 樣式 */
 .map-frame {
   width: 100%;
   height: 100%;
   border: 0;
-  filter: grayscale(20%) contrast(1.1);
+  filter: grayscale(20%) contrast(1.1); /* 讓地圖顏色比較柔和 */
 }
 
-/* Animation */
+/* 動畫設定 */
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(8px); }
   to { opacity: 1; transform: translateY(0); }
