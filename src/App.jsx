@@ -161,7 +161,7 @@ export default function App() {
             const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
             
             // *** 修改：移除 apiVersion: 'v1'，只保留模型名稱，讓 SDK 自動處理路由 ***
-            const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+            const model = genAI.getGenerativeModel({ model: "gemini-3-pro-preview" });
 
             const prompt = `
                 你是一個旅遊行程轉換器。請將使用者提供的旅遊文字，轉換為符合以下 JSON 格式的陣列。
