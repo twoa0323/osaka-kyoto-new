@@ -6,7 +6,6 @@ import {
   Target, Navigation, ChevronUp, 
   ChevronDown, Trash2, X, Image as ImageIcon, ReceiptText, 
   Sparkles, Loader2, Clock, MapPinOff,
-  // 補回天氣圖示
   Sun, Cloud, CloudRain, CloudLightning, Snowflake
 } from 'lucide-react';
 
@@ -75,7 +74,6 @@ const INITIAL_INFO = [
 ];
 
 export default function App() {
-    console.log("Gemini Key Exists:", !!import.meta.env.VITE_GEMINI_API_KEY);
     const load = (k, i) => { 
         if (typeof window !== 'undefined') {
             const s = localStorage.getItem(k); 
@@ -150,16 +148,20 @@ export default function App() {
         }
     }, [selectedIdx, days]);
 
-    // --- AI Logic ---
+    // --- AI Logic (修正版) ---
     const handleAiAnalyze = async () => {
         if (!aiInputText.trim()) return alert("請輸入行程文字！");
+        
+        // 確保這裡讀取到正確的 Key
         if (!GEMINI_API_KEY) return alert("請先在 .env 設定 VITE_GEMINI_API_KEY");
 
         setIsAiProcessing(true);
 
         try {
             const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-            const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" },{apiVersion: 'v1' });
+            
+            // *** 修改：移除 apiVersion: 'v1'，只保留模型名稱，讓 SDK 自動處理路由 ***
+            const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
             const prompt = `
                 你是一個旅遊行程轉換器。請將使用者提供的旅遊文字，轉換為符合以下 JSON 格式的陣列。
@@ -225,7 +227,8 @@ export default function App() {
 
         } catch (error) {
             console.error("AI Error:", error);
-            alert("AI 分析失敗，請確認格式或 API Key。");
+            // 顯示更詳細的錯誤資訊
+            alert(`AI 分析失敗: ${error.message || "請確認 Key 是否有效"}`);
         } finally {
             setIsAiProcessing(false);
         }
@@ -266,6 +269,12 @@ export default function App() {
         reader.readAsDataURL(file);
     };
 
+    // Helper: Render weather icon based on string
+    const renderWeatherIcon = (iconName) => {
+        const IconComponent = WEATHER_ICONS[iconName] || WEATHER_ICONS['default'];
+        return <IconComponent className={`w-4.5 h-4.5 opacity-80 ${iconName === 'sun' ? 'text-orange-500' : 'text-stone-400'}`} />;
+    };
+
     return (
         <div className="max-w-md mx-auto min-h-screen relative lg:shadow-2xl">
             
@@ -274,7 +283,7 @@ export default function App() {
                 <p className="text-[10px] tracking-[0.4em] text-stone-500 uppercase font-bold text-center mb-1">Japan Trip</p>
                 <div className="flex justify-center items-center relative mb-8">
                     <div className="flex items-center gap-2 text-stone-900">
-                        <h1 className="serif text-xl font-bold tracking-tight">Kyoto <span className="text-[12px] align-middle text-[#8D2B2B] mx-0.5 opacity-80">●</span> Osaka</h1>
+                        <h1 className="serif text-xl font-bold tracking-tight">Kyoto <span className="text-[12px] align-middle text-brand-red mx-0.5 opacity-80">●</span> Osaka</h1>
                         <span className="text-[9px] border border-stone-500 rounded-full px-2.5 py-0.5 italic font-medium text-stone-600">2026</span>
                     </div>
                     <div className="absolute right-0 bottom-0 flex gap-5">
@@ -334,19 +343,13 @@ export default function App() {
                                 <span className="text-[9px] text-stone-500 tracking-widest uppercase font-mono">OpenWeather</span>
                             </div>
                             <div className="flex overflow-x-auto gap-8 hide-scrollbar">
-                                {weatherData.map((w, idx) => {
-                                    // 動態決定要顯示哪個 Icon
-                                    const WeatherIcon = WEATHER_ICONS[w.icon] || WEATHER_ICONS['default'];
-                                    return (
-                                        <div key={idx} onClick={openJMA} className="flex flex-col items-center min-w-[42px] gap-4 cursor-pointer">
-                                            <span className="text-[10px] text-stone-600 font-medium">{w.time}</span>
-                                            <div className={`opacity-80 ${w.icon === 'sun' ? 'text-orange-500' : 'text-stone-400'}`}>
-                                                <WeatherIcon className="w-4.5 h-4.5" />
-                                            </div> 
-                                            <span className="serif text-xl text-stone-700 font-bold">{w.temp}°</span>
-                                        </div>
-                                    );
-                                })}
+                                {weatherData.map((w, idx) => (
+                                    <div key={idx} onClick={openJMA} className="flex flex-col items-center min-w-[42px] gap-4 cursor-pointer">
+                                        <span className="text-[10px] text-stone-600 font-medium">{w.time}</span>
+                                        {renderWeatherIcon(w.icon)}
+                                        <span className="serif text-xl text-stone-700 font-bold">{w.temp}°</span>
+                                    </div>
+                                ))}
                             </div>
                         </div>
 
@@ -354,7 +357,6 @@ export default function App() {
 
                         <div className="space-y-10 relative before:absolute before:left-[11px] before:top-2 before:bottom-2 before:w-[0.5px] before:bg-stone-300">
                             {currentDay.items.map((item, i) => {
-                                // 使用統一的 ICON_COMPONENTS
                                 const ItemIcon = ICON_COMPONENTS[item.type] || MapPinOff;
                                 return (
                                 <div key={item.id} className="flex gap-6 items-start">
@@ -398,7 +400,6 @@ export default function App() {
                         </div>
                         <div className="space-y-4">
                             {expenses.map(e => {
-                                // 使用統一的 ICON_COMPONENTS
                                 const ItemIcon = ICON_COMPONENTS[e.type] || ReceiptText;
                                 return (
                                 <div key={e.id} onClick={() => setEditingExpense(e)} className="p-6 bg-white rounded-[32px] border border-stone-200 flex justify-between items-center shadow-sm cursor-pointer active:scale-[0.98] transition-all">
@@ -440,41 +441,41 @@ export default function App() {
                                   
                                   {item.type === 'MAP' && (
                                     <div onClick={() => isEditMode ? setEditingInfo(item) : openMaps(item.link)} className="flex-1 p-7 bg-stone-900 rounded-[40px] text-white flex items-center justify-between cursor-pointer shadow-xl active:scale-[0.98] transition-all relative">
-                                            <div className="flex items-center gap-4"><MapIcon className="w-5 h-5 text-blue-400" /><span className="text-sm font-bold tracking-widest uppercase">{item.title}</span></div>
-                                            <ExternalLink className="w-4 h-4 opacity-30" />
-                                            {isEditMode && <button onClick={(e) => { e.stopPropagation(); setInfoItems(infoItems.filter(i => i.id !== item.id)); }} className="absolute -top-2 -right-2 bg-red-500 text-white p-1.5 rounded-full shadow-lg"><X className="w-3 h-3" /></button>}
+                                        <div className="flex items-center gap-4"><MapIcon className="w-5 h-5 text-blue-400" /><span className="text-sm font-bold tracking-widest uppercase">{item.title}</span></div>
+                                        <ExternalLink className="w-4 h-4 opacity-30" />
+                                        {isEditMode && <button onClick={(e) => { e.stopPropagation(); setInfoItems(infoItems.filter(i => i.id !== item.id)); }} className="absolute -top-2 -right-2 bg-red-500 text-white p-1.5 rounded-full shadow-lg"><X className="w-3 h-3" /></button>}
                                     </div>
                                   )}
 
                                   {item.type === 'VJW' && (
                                     <div onClick={() => isEditMode ? setEditingInfo(item) : item.link && window.open(item.link)} className="flex-1 p-7 bg-[#1A1A1A] rounded-[40px] shadow-lg relative active:scale-[0.98] transition-all overflow-hidden">
-                                            <span className="absolute top-6 left-6 text-[9px] bg-[#E85D75] text-white px-2 py-0.5 rounded font-bold tracking-widest">MUST HAVE</span>
-                                            <div className="mt-8 mb-2">
-                                                <h4 className="serif text-2xl font-bold text-white mb-1">{item.title}</h4>
-                                                <p className="text-[10px] text-stone-400">{item.content}</p>
-                                            </div>
-                                            <div className="absolute bottom-6 right-6 w-10 h-10 rounded-full bg-[#E85D75] flex items-center justify-center text-white"><ExternalLink className="w-4 h-4" /></div>
-                                            {isEditMode && <button onClick={(e) => { e.stopPropagation(); setInfoItems(infoItems.filter(i => i.id !== item.id)); }} className="absolute -top-2 -right-2 bg-red-500 text-white p-1.5 rounded-full shadow-lg z-10"><X className="w-3 h-3" /></button>}
+                                        <span className="absolute top-6 left-6 text-[9px] bg-[#E85D75] text-white px-2 py-0.5 rounded font-bold tracking-widest">MUST HAVE</span>
+                                        <div className="mt-8 mb-2">
+                                            <h4 className="serif text-2xl font-bold text-white mb-1">{item.title}</h4>
+                                            <p className="text-[10px] text-stone-400">{item.content}</p>
+                                        </div>
+                                        <div className="absolute bottom-6 right-6 w-10 h-10 rounded-full bg-[#E85D75] flex items-center justify-center text-white"><ExternalLink className="w-4 h-4" /></div>
+                                        {isEditMode && <button onClick={(e) => { e.stopPropagation(); setInfoItems(infoItems.filter(i => i.id !== item.id)); }} className="absolute -top-2 -right-2 bg-red-500 text-white p-1.5 rounded-full shadow-lg z-10"><X className="w-3 h-3" /></button>}
                                     </div>
                                   )}
 
                                   {item.type === 'EMERGENCY' && (
                                     <div onClick={() => isEditMode && setEditingInfo(item)} className="flex-1 p-7 bg-red-50 rounded-[40px] border border-red-200 shadow-sm relative">
-                                            <h3 className="serif font-bold text-red-900 mb-5 flex items-center gap-3"><ShieldAlert className="w-4.5 h-4.5 text-red-600" /> {item.title}</h3>
-                                            <p className="text-sm text-red-800 font-bold">{item.content}</p>
-                                            {isEditMode && <button onClick={(e) => { e.stopPropagation(); setInfoItems(infoItems.filter(i => i.id !== item.id)); }} className="absolute -top-2 -right-2 bg-red-500 text-white p-1.5 rounded-full shadow-lg"><X className="w-3 h-3" /></button>}
+                                        <h3 className="serif font-bold text-red-900 mb-5 flex items-center gap-3"><ShieldAlert className="w-4.5 h-4.5 text-red-600" /> {item.title}</h3>
+                                        <p className="text-sm text-red-800 font-bold">{item.content}</p>
+                                        {isEditMode && <button onClick={(e) => { e.stopPropagation(); setInfoItems(infoItems.filter(i => i.id !== item.id)); }} className="absolute -top-2 -right-2 bg-red-500 text-white p-1.5 rounded-full shadow-lg"><X className="w-3 h-3" /></button>}
                                     </div>
                                   )}
 
                                   {item.type === 'CARD' && (
                                     <div onClick={() => isEditMode ? setEditingInfo(item) : item.link && window.open(item.link)} className="flex-1 p-6 bg-white border border-stone-200 rounded-[24px] shadow-sm relative active:scale-[0.98] transition-all">
-                                            <h4 className="serif text-lg font-bold text-stone-800 mb-2">{item.title}</h4>
-                                            <p className="text-xs text-stone-500 font-medium italic border-b border-stone-50 pb-4">{item.content}</p>
-                                            <div className="mt-4 flex justify-between items-center">
-                                              <span className="text-[9px] font-bold text-stone-300 uppercase tracking-tighter">Open Link →</span>
-                                              <button onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(item.content); }} className="text-stone-300"><Copy className="w-4 h-4" /></button>
-                                            </div>
-                                            {isEditMode && <button onClick={(e) => { e.stopPropagation(); setInfoItems(infoItems.filter(i => i.id !== item.id)); }} className="absolute -top-2 -right-2 bg-red-500 text-white p-1.5 rounded-full shadow-lg"><X className="w-3 h-3" /></button>}
+                                        <h4 className="serif text-lg font-bold text-stone-800 mb-2">{item.title}</h4>
+                                        <p className="text-xs text-stone-500 font-medium italic border-b border-stone-50 pb-4">{item.content}</p>
+                                        <div className="mt-4 flex justify-between items-center">
+                                          <span className="text-[9px] font-bold text-stone-300 uppercase tracking-tighter">Open Link →</span>
+                                          <button onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(item.content); }} className="text-stone-300"><Copy className="w-4 h-4" /></button>
+                                        </div>
+                                        {isEditMode && <button onClick={(e) => { e.stopPropagation(); setInfoItems(infoItems.filter(i => i.id !== item.id)); }} className="absolute -top-2 -right-2 bg-red-500 text-white p-1.5 rounded-full shadow-lg"><X className="w-3 h-3" /></button>}
                                     </div>
                                   )}
                               </div>
@@ -598,7 +599,7 @@ export default function App() {
                         </div>
                         <div className="p-9 pb-12">
                             <div className="flex items-center gap-2 mb-4">
-                                <span className="text-[10px] font-bold text-white bg-[#8D2B2B] px-2.5 py-1 rounded tracking-tighter uppercase">{detailItem.time}</span>
+                                <span className="text-[10px] font-bold text-white bg-brand-red px-2.5 py-1 rounded tracking-tighter uppercase">{detailItem.time}</span>
                                 <span className="text-[9px] text-stone-400 font-bold tracking-[0.2em] uppercase">{detailItem.type}</span>
                             </div>
                             <h2 className="serif text-2xl font-bold mb-5 text-stone-900 leading-tight">{detailItem.title}</h2>
