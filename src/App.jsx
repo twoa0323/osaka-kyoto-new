@@ -3,7 +3,9 @@ import {
   Plane, Train, Home, Utensils, Camera, Star, Info, 
   Map as MapIcon, ShieldAlert, Copy, ExternalLink, 
   Target, MapPinOff, Navigation, ChevronUp, 
-  ChevronDown, Trash2, X, Image as ImageIcon, ReceiptText, Clock
+  ChevronDown, Trash2, X, Image as ImageIcon, ReceiptText, Clock,
+  // 新增天氣圖示
+  Sun, Cloud, CloudRain, CloudLightning, Snowflake
 } from 'lucide-react';
 
 // --- API 設定與環境變數讀取 ---
@@ -22,7 +24,7 @@ const CITY_COORDS = {
     'Airport': { lat: 34.4320, lon: 135.2304 }
 };
 
-// Lucide Icon 元件對照表
+// Lucide Icon 元件對照表 (行程用)
 const ICON_COMPONENTS = {
     'FLIGHT': Plane,
     'TRANSPORT': Train,
@@ -37,7 +39,17 @@ const ICON_COMPONENTS = {
     'CARD': ReceiptText
 };
 
-// 修正：為了相容下方的程式碼，將 ICON_MAP 指向 ICON_COMPONENTS
+// 天氣圖示對照表 (新增)
+const WEATHER_ICONS = {
+    'sun': Sun,
+    'cloud': Cloud,
+    'cloud-rain': CloudRain,
+    'cloud-lightning': CloudLightning,
+    'snowflake': Snowflake,
+    'default': Sun
+};
+
+// 讓舊程式碼也能運作的別名
 const ICON_MAP = ICON_COMPONENTS;
 
 // 初始資料
@@ -255,13 +267,21 @@ export default function App() {
                                 <span className="text-[9px] text-stone-500 tracking-widest uppercase font-mono">OpenWeather</span>
                             </div>
                             <div className="flex overflow-x-auto gap-8 hide-scrollbar">
-                                {weatherData.map((w, idx) => (
-                                    <div key={idx} onClick={openJMA} className="flex flex-col items-center min-w-[42px] gap-4 cursor-pointer">
-                                        <span className="text-[10px] text-stone-600 font-medium">{w.time}</span>
-                                        <div className="text-orange-500 opacity-80"><Star className="w-4.5 h-4.5" /></div> 
-                                        <span className="serif text-xl text-stone-700 font-bold">{w.temp}°</span>
-                                    </div>
-                                ))}
+                                {weatherData.map((w, idx) => {
+                                    // 動態決定要顯示哪個 Icon
+                                    const WeatherIcon = WEATHER_ICONS[w.icon] || WEATHER_ICONS['default'];
+                                    
+                                    return (
+                                        <div key={idx} onClick={openJMA} className="flex flex-col items-center min-w-[42px] gap-4 cursor-pointer">
+                                            <span className="text-[10px] text-stone-600 font-medium">{w.time}</span>
+                                            {/* 根據天氣狀態變色：晴天橘色，其他灰色 */}
+                                            <div className={`opacity-80 ${w.icon === 'sun' ? 'text-orange-500' : 'text-stone-400'}`}>
+                                                <WeatherIcon className="w-4.5 h-4.5" />
+                                            </div> 
+                                            <span className="serif text-xl text-stone-700 font-bold">{w.temp}°</span>
+                                        </div>
+                                    );
+                                })}
                             </div>
                         </div>
 
