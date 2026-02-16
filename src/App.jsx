@@ -6,13 +6,13 @@ import {
   Target, Navigation, ChevronUp, 
   ChevronDown, Trash2, X, Image as ImageIcon, ReceiptText, 
   Sparkles, Loader2, Clock, MapPinOff,
-  Sun, Cloud, CloudRain, CloudLightning, Snowflake
+  Sun, Cloud, CloudRain, CloudLightning, Snowflake, Fog // 新增 Fog
 } from 'lucide-react';
 
 // --- API 設定 ---
 const GOOGLE_API_KEY = import.meta.env.VITE_GOOGLE_API_KEY || '';
-const OPENWEATHER_API_KEY = import.meta.env.VITE_WEATHER_API_KEY || '';
 const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY || '';
+// Open-Meteo 不需要 API Key
 
 // --- 靜態資料 ---
 const CITY_COORDS = {
@@ -23,6 +23,29 @@ const CITY_COORDS = {
     'USJ': { lat: 34.6654, lon: 135.4323 },
     'Minoo': { lat: 34.8266, lon: 135.4707 },
     'Airport': { lat: 34.4320, lon: 135.2304 }
+};
+
+// 行程類型對應的顏色 (參考 IMG_5968)
+const TYPE_COLORS = {
+    'FLIGHT': 'border-blue-400',
+    'TRANSPORT': 'border-indigo-400',
+    'HOTEL': 'border-purple-400',
+    'FOOD': 'border-orange-400',       // 橘色
+    'SIGHTSEEING': 'border-emerald-500', // 綠色
+    'HIGHLIGHT': 'border-amber-400',
+    'INFO': 'border-gray-400',
+    'DEFAULT': 'border-stone-300'
+};
+
+const TYPE_BG_COLORS = {
+    'FLIGHT': 'bg-blue-400',
+    'TRANSPORT': 'bg-indigo-400',
+    'HOTEL': 'bg-purple-400',
+    'FOOD': 'bg-orange-400',
+    'SIGHTSEEING': 'bg-emerald-500',
+    'HIGHLIGHT': 'bg-amber-400',
+    'INFO': 'bg-gray-400',
+    'DEFAULT': 'bg-stone-300'
 };
 
 // 統一變數名稱：定義圖示元件
@@ -42,13 +65,16 @@ const ICON_COMPONENTS = {
 
 const ICON_MAP = ICON_COMPONENTS;
 
-const WEATHER_ICONS = {
-    'sun': Sun,
-    'cloud': Cloud,
-    'cloud-rain': CloudRain,
-    'cloud-lightning': CloudLightning,
-    'snowflake': Snowflake,
-    'default': Sun
+// WMO Weather Code 轉換
+const mapWeatherIcon = (code) => {
+    if (code === 0 || code === 1) return Sun;
+    if (code === 2 || code === 3) return Cloud;
+    if (code >= 45 && code <= 48) return Fog;
+    if (code >= 51 && code <= 67) return CloudRain;
+    if (code >= 71 && code <= 77) return Snowflake;
+    if (code >= 80 && code <= 82) return CloudRain;
+    if (code >= 95) return CloudLightning;
+    return Sun; 
 };
 
 // 初始行程資料
@@ -63,7 +89,6 @@ const INITIAL_PLAN = [
     { id: 8, date: '02', day: 'SAT', title: '返程台北', city: 'Airport', defaultImg: 'https://images.unsplash.com/photo-1542224566-6e85f2e6772f?q=80&w=1000', customImg: null, items: [{ id: 801, time: '13:25', title: '回程起飛', desc: '結束愉快 8 天行程', type: 'FLIGHT', location: '關西機場', highlight: false, btnLabel: '資訊', link: '' }] }
 ];
 
-// 初始資訊資料
 const INITIAL_INFO = [
   { id: 'map', type: 'MAP', title: 'Google Maps', content: '開啟地圖導航', link: 'Osaka' },
   { id: 'vjw', type: 'VJW', title: 'Visit Japan Web', content: '入境審查 & 海關申報 (請截圖)', link: 'https://www.vjw.digital.go.jp/' },
@@ -73,7 +98,6 @@ const INITIAL_INFO = [
 ];
 
 export default function App() {
-    // LocalStorage Helper
     const load = (k, i) => { 
         if (typeof window !== 'undefined') {
             const s = localStorage.getItem(k); 
@@ -82,10 +106,10 @@ export default function App() {
         return i;
     };
     
-    const [days, setDays] = useState(() => load('travel_days_v14', INITIAL_PLAN));
-    const [expenses, setExpenses] = useState(() => load('exp_v14', []));
-    const [infoItems, setInfoItems] = useState(() => load('info_v14', INITIAL_INFO));
-    const [vjwLink, setVjwLink] = useState(() => load('vjw_v14', 'https://www.vjw.digital.go.jp/'));
+    const [days, setDays] = useState(() => load('travel_days_v15', INITIAL_PLAN));
+    const [expenses, setExpenses] = useState(() => load('exp_v15', []));
+    const [infoItems, setInfoItems] = useState(() => load('info_v15', INITIAL_INFO));
+    const [vjwLink, setVjwLink] = useState(() => load('vjw_v15', 'https://www.vjw.digital.go.jp/'));
     
     const [view, setView] = useState('plan');
     const [selectedIdx, setSelectedIdx] = useState(0);
@@ -93,12 +117,10 @@ export default function App() {
     const [isMoving, setIsMoving] = useState(false);
     const [isEditMode, setIsEditMode] = useState(false);
     
-    // AI Modal State
     const [isAiModalOpen, setIsAiModalOpen] = useState(false);
     const [aiInputText, setAiInputText] = useState('');
     const [isAiProcessing, setIsAiProcessing] = useState(false);
 
-    // Other Modals
     const [editingItem, setEditingItem] = useState(null);
     const [editingExpense, setEditingExpense] = useState(null);
     const [editingInfo, setEditingInfo] = useState(null);
@@ -110,15 +132,13 @@ export default function App() {
     const fileRef = useRef(null);
     const coverRef = useRef(null);
 
-    // Persistence
     useEffect(() => {
-        localStorage.setItem('travel_days_v14', JSON.stringify(days));
-        localStorage.setItem('exp_v14', JSON.stringify(expenses));
-        localStorage.setItem('info_v14', JSON.stringify(infoItems));
-        localStorage.setItem('vjw_v14', JSON.stringify(vjwLink));
+        localStorage.setItem('travel_days_v15', JSON.stringify(days));
+        localStorage.setItem('exp_v15', JSON.stringify(expenses));
+        localStorage.setItem('info_v15', JSON.stringify(infoItems));
+        localStorage.setItem('vjw_v15', JSON.stringify(vjwLink));
     }, [days, expenses, infoItems, vjwLink]);
 
-    // Exchange Rate API
     useEffect(() => {
         fetch('https://open.er-api.com/v6/latest/JPY')
             .then(res => res.json())
@@ -126,126 +146,81 @@ export default function App() {
             .catch(console.error);
     }, []);
 
-    // Weather API
+    // --- Open-Meteo Weather API Implementation ---
     useEffect(() => {
         const cityKey = days[selectedIdx]?.city || 'Kyoto';
         const coords = CITY_COORDS[cityKey];
-        if (OPENWEATHER_API_KEY && coords) {
-            fetch(`https://api.openweathermap.org/data/2.5/forecast?lat=${coords.lat}&lon=${coords.lon}&units=metric&appid=${OPENWEATHER_API_KEY}&cnt=8`)
+        
+        // Open-Meteo API doesn't need an API Key
+        if (coords) {
+            const url = `https://api.open-meteo.com/v1/forecast?latitude=${coords.lat}&longitude=${coords.lon}&hourly=temperature_2m,weathercode&timezone=auto&forecast_days=2`;
+            
+            fetch(url)
                 .then(res => res.json())
                 .then(data => {
-                    if(data.list) {
-                        setWeatherData(data.list.map(item => ({
-                            time: `${new Date(item.dt * 1000).getHours()}:00`,
-                            temp: Math.round(item.main.temp),
-                            icon: mapWeatherIcon(item.weather[0].icon)
-                        })));
+                    if(data.hourly) {
+                        // Find current hour index
+                        const now = new Date();
+                        const currentHourStr = now.toISOString().slice(0, 13) + ':00';
+                        let startIndex = data.hourly.time.findIndex(t => t.startsWith(currentHourStr));
+                        if(startIndex === -1) startIndex = 0; // Fallback
+
+                        // Get next 24 hours
+                        const next24 = [];
+                        for(let i = startIndex; i < startIndex + 24; i++) {
+                            if(data.hourly.time[i]) {
+                                const dateObj = new Date(data.hourly.time[i]);
+                                const timeDisplay = dateObj.getHours().toString().padStart(2, '0') + ':00';
+                                next24.push({
+                                    time: timeDisplay,
+                                    temp: Math.round(data.hourly.temperature_2m[i]),
+                                    icon: mapWeatherIcon(data.hourly.weathercode[i])
+                                });
+                            }
+                        }
+                        setWeatherData(next24);
                     }
                 })
-                .catch(() => setWeatherData(getFallbackWeather()));
+                .catch(err => {
+                    console.error("Weather fetch error:", err);
+                    setWeatherData(getFallbackWeather());
+                });
         } else {
             setWeatherData(getFallbackWeather());
         }
     }, [selectedIdx, days]);
 
-    // AI Logic
     const handleAiAnalyze = async () => {
         if (!aiInputText.trim()) return alert("請輸入行程文字！");
         if (!GEMINI_API_KEY) return alert("請先在 .env 設定 VITE_GEMINI_API_KEY");
 
         setIsAiProcessing(true);
-
         try {
             const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
             const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-
-            const prompt = `
-                你是一個旅遊行程轉換器。請將使用者提供的旅遊文字，轉換為符合以下 JSON 格式的陣列。
-                目標 JSON 結構範例:
-                [{ "title": "該日主題", "city": "城市", "items": [{ "time": "HH:MM", "title": "活動", "desc": "簡短描述", "type": "SIGHTSEEING", "location": "地點", "highlight": false }] }]
-                使用者輸入：${aiInputText}
-            `;
-
+            const prompt = `你是一個旅遊行程轉換器。請將使用者提供的旅遊文字，轉換為符合以下 JSON 格式的陣列。目標 JSON 結構範例: [{ "title": "該日主題", "city": "城市", "items": [{ "time": "HH:MM", "title": "活動", "desc": "簡短描述", "type": "SIGHTSEEING", "location": "地點", "highlight": false }] }] 使用者輸入：${aiInputText}`;
             const result = await model.generateContent(prompt);
             const response = await result.response;
             let text = response.text().replace(/```json/g, "").replace(/```/g, "").trim();
             const aiData = JSON.parse(text);
-
             const newDays = days.map((day, index) => {
                 const aiDay = aiData[index];
                 if (!aiDay) return day;
-
-                return {
-                    ...day,
-                    title: aiDay.title || day.title,
-                    city: aiDay.city || day.city,
-                    items: aiDay.items.map((item, i) => ({
-                        id: Date.now() + index * 1000 + i,
-                        time: item.time || "09:00",
-                        title: item.title || "未命名行程",
-                        desc: item.desc || "",
-                        type: item.type || "SIGHTSEEING",
-                        location: item.location || item.title,
-                        highlight: item.highlight || false,
-                        btnLabel: '資訊',
-                        link: ''
-                    }))
-                };
+                return { ...day, title: aiDay.title || day.title, city: aiDay.city || day.city, items: aiDay.items.map((item, i) => ({ id: Date.now() + index * 1000 + i, time: item.time || "09:00", title: item.title || "未命名行程", desc: item.desc || "", type: item.type || "SIGHTSEEING", location: item.location || item.title, highlight: item.highlight || false, btnLabel: '資訊', link: '' })) };
             });
-
-            setDays(newDays);
-            setIsAiModalOpen(false);
-            setAiInputText('');
-            alert("行程匯入成功！");
-
-        } catch (error) {
-            console.error("AI Error:", error);
-            alert(`AI 分析失敗: ${error.message || "請確認 Key 是否有效"}`);
-        } finally {
-            setIsAiProcessing(false);
-        }
+            setDays(newDays); setIsAiModalOpen(false); setAiInputText(''); alert("行程匯入成功！");
+        } catch (error) { console.error("AI Error:", error); alert(`AI 分析失敗: ${error.message || "請確認 Key 是否有效"}`); } finally { setIsAiProcessing(false); }
     };
 
-    // Helpers
-    const mapWeatherIcon = (code) => {
-        if (code.startsWith('01')) return 'sun';
-        if (code.startsWith('02') || code.startsWith('03') || code.startsWith('04')) return 'cloud';
-        if (code.startsWith('09') || code.startsWith('10')) return 'cloud-rain';
-        if (code.startsWith('11')) return 'cloud-lightning';
-        if (code.startsWith('13')) return 'snowflake';
-        return 'sun'; 
-    };
-    const getFallbackWeather = () => ["現在", "12:00", "15:00", "18:00", "21:00", "00:00"].map((t, i) => ({ time: t, temp: 18 - i, icon: 'sun' }));
+    const getFallbackWeather = () => ["現在", "12:00", "15:00", "18:00", "21:00", "00:00"].map((t, i) => ({ time: t, temp: 18 - i, icon: Sun }));
     const currentDay = days[selectedIdx] || days[0];
     const firstItem = currentDay?.items?.[0] || { title: '目的地', location: 'Japan' };
     const totalTWD = expenses.reduce((a, c) => a + (c.currency === 'JPY' ? c.amount * (c.rate || currentRate) : c.amount), 0);
+    
     const openMaps = (q) => { if(q) window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(q)}`, '_blank'); };
     const openJMA = () => window.open('https://www.jma.go.jp/jma/index.html', '_blank');
-    
-    // 修復後的 GPS 切換邏輯
-    const toggleGps = () => {
-      const nextState = !gpsOn;
-      setGpsOn(nextState);
-      if (nextState && firstItem?.location) {
-          setTimeout(() => openMaps(firstItem.location), 500);
-      }
-    };
-    
-    const handleUpload = (e, type) => {
-        const file = e.target.files[0]; if (!file) return;
-        const reader = new FileReader();
-        reader.onloadend = () => {
-            const b64 = reader.result;
-            if (type === 'cover') setDays(days.map((d, i) => i === selectedIdx ? { ...d, customImg: b64 } : d));
-            else if (type === 'item') setEditingItem({ ...editingItem, customImg: b64 });
-        };
-        reader.readAsDataURL(file);
-    };
-    
-    const renderWeatherIcon = (iconName) => {
-        const WeatherIcon = WEATHER_ICONS[iconName] || WEATHER_ICONS['default'];
-        return <WeatherIcon className={`w-4.5 h-4.5 opacity-80 ${iconName === 'sun' ? 'text-orange-500' : 'text-stone-400'}`} />;
-    };
+    const toggleGps = () => { const nextState = !gpsOn; setGpsOn(nextState); if (nextState && firstItem?.location) setTimeout(() => openMaps(firstItem.location), 500); };
+    const handleUpload = (e, type) => { const file = e.target.files[0]; if (!file) return; const reader = new FileReader(); reader.onloadend = () => { const b64 = reader.result; if (type === 'cover') setDays(days.map((d, i) => i === selectedIdx ? { ...d, customImg: b64 } : d)); else if (type === 'item') setEditingItem({ ...editingItem, customImg: b64 }); }; reader.readAsDataURL(file); };
 
     return (
         <div className="max-w-md mx-auto min-h-screen relative lg:shadow-2xl">
@@ -304,14 +279,14 @@ export default function App() {
 
                         <div className="mb-12 px-1">
                             <div className="flex justify-between items-center mb-8">
-                                <span className="text-[10px] text-stone-600 font-bold tracking-wider uppercase">即時天氣預報</span>
-                                <span className="text-[9px] text-stone-500 tracking-widest uppercase font-mono">OpenWeather</span>
+                                <span className="text-[10px] text-stone-600 font-bold tracking-wider uppercase">每小時天氣預報</span>
+                                <span className="text-[9px] text-stone-500 tracking-widest uppercase font-mono">Open-Meteo</span>
                             </div>
                             <div className="flex overflow-x-auto gap-8 hide-scrollbar">
                                 {weatherData.map((w, idx) => (
                                     <div key={idx} onClick={openJMA} className="flex flex-col items-center min-w-[42px] gap-4 cursor-pointer">
                                         <span className="text-[10px] text-stone-600 font-medium">{w.time}</span>
-                                        {renderWeatherIcon(w.icon)} 
+                                        <w.icon className="w-4.5 h-4.5 text-orange-500 opacity-80" />
                                         <span className="serif text-xl text-stone-700 font-bold">{w.temp}°</span>
                                     </div>
                                 ))}
@@ -320,29 +295,60 @@ export default function App() {
 
                         <div className="h-[1px] bg-stone-300 mb-12"></div>
 
-                        <div className="space-y-10 relative before:absolute before:left-[11px] before:top-2 before:bottom-2 before:w-[0.5px] before:bg-stone-300">
+                        <div className="space-y-8 relative px-2">
+                            {/* 左側貫穿線 */}
+                            <div className="absolute left-[64px] top-3 bottom-3 w-[1px] bg-stone-300/60 z-0"></div>
+
                             {currentDay.items.map((item, i) => {
                                 const ItemIcon = ICON_COMPONENTS[item.type] || MapPinOff;
+                                // 根據類型決定左側線條顏色
+                                const borderClass = TYPE_COLORS[item.type] || 'border-stone-300';
+                                // 根據類型決定圓點顏色
+                                const dotColorClass = TYPE_BG_COLORS[item.type] || 'bg-stone-300';
+
                                 return (
-                                <div key={item.id} className="flex gap-6 items-start">
+                                <div key={item.id} className="flex gap-4 items-stretch relative z-10">
                                     {isEditMode && (
-                                        <div className="flex flex-col gap-2 pt-1">
+                                        <div className="flex flex-col gap-2 pt-1 absolute -left-8">
                                             <button onClick={() => { const d = [...days]; const its = d[selectedIdx].items; if(i>0) [its[i], its[i-1]] = [its[i-1], its[i]]; setDays(d); }} className="text-stone-400"><ChevronUp className="w-4 h-4" /></button>
                                             <button onClick={() => { const d = [...days]; const its = d[selectedIdx].items; if(i<its.length-1) [its[i], its[i+1]] = [its[i+1], its[i]]; setDays(d); }} className="text-stone-400"><ChevronDown className="w-4 h-4" /></button>
                                         </div>
                                     )}
-                                    <div onClick={() => isEditMode ? setEditingItem(item) : setDetailItem(item)} className={`flex-1 flex gap-7 cursor-pointer transition-all ${item.highlight ? 'highlight-card p-6 rounded-2xl ml-[-15px] bg-white' : ''}`}>
-                                        <div className={`relative z-10 w-6 h-6 rounded-full border border-stone-200 bg-white flex items-center justify-center text-stone-500 ${item.highlight ? 'bg-brand-red text-white shadow-lg border-none' : ''}`}>
-                                            <ItemIcon className="w-3.5 h-3.5" />
+                                    
+                                    {/* 左側：時間 + 圓點/菱形 */}
+                                    <div className="w-[60px] text-right pt-1 shrink-0 flex flex-col items-end bg-[#EBE7DE]">
+                                        <span className="block text-lg font-bold text-stone-800 leading-none">{item.time}</span>
+                                        {/* Highlight: 菱形 / 一般: 圓形 */}
+                                        <div className={`mt-3 -mr-[3.5px] z-20 ${item.highlight 
+                                            ? 'w-2.5 h-2.5 rotate-45 bg-amber-400 border border-amber-500' 
+                                            : `w-2 h-2 rounded-full ${dotColorClass} border border-white shadow-sm`}`}>
                                         </div>
-                                        <div className="flex-1">
-                                            <div className="flex justify-between items-start">
-                                                <span className="text-[11px] font-bold text-stone-500 tracking-tighter">{item.time}</span>
-                                                {isEditMode && <button onClick={(e) => { e.stopPropagation(); const d = [...days]; d[selectedIdx].items = d[selectedIdx].items.filter(it => it.id !== item.id); setDays(d); }} className="text-red-400"><Trash2 className="w-3.5 h-3.5" /></button>}
+                                    </div>
+
+                                    {/* 右側：內容卡片 */}
+                                    <div onClick={() => isEditMode ? setEditingItem(item) : setDetailItem(item)} 
+                                         className={`flex-1 cursor-pointer transition-all ml-4 relative
+                                            ${item.highlight 
+                                                ? 'bg-amber-50/60 border border-amber-200 rounded-xl p-5 shadow-sm highlight-card' 
+                                                : `bg-white rounded-r-xl rounded-l-sm p-4 shadow-sm border-l-[5px] ${borderClass}`
+                                            }`}>
+                                        
+                                        {item.highlight && (
+                                            <div className="mb-2 flex items-center gap-1">
+                                                <Sparkles className="w-3 h-3 text-amber-500 fill-amber-500" />
+                                                <span className="text-[9px] font-bold text-amber-600 tracking-widest uppercase">Special Experience</span>
                                             </div>
-                                            <h3 className={`serif text-base font-bold tracking-tight text-stone-900`}>{item.title}</h3>
-                                            <p className="text-xs text-stone-600 mt-1.5 leading-relaxed truncate w-44">{item.desc}</p>
+                                        )}
+
+                                        <div className="flex justify-between items-start mb-1">
+                                            <div className="flex items-center gap-2">
+                                                {/* 一般行程才顯示 Icon，Highlight 不顯示以免雜亂 */}
+                                                {!item.highlight && <ItemIcon className="w-3.5 h-3.5 text-stone-400" />}
+                                                <h3 className={`serif font-bold tracking-tight ${item.highlight ? 'text-xl text-stone-900' : 'text-lg text-stone-800'}`}>{item.title}</h3>
+                                            </div>
+                                            {isEditMode && <button onClick={(e) => { e.stopPropagation(); const d = [...days]; d[selectedIdx].items = d[selectedIdx].items.filter(it => it.id !== item.id); setDays(d); }} className="text-red-400"><Trash2 className="w-4 h-4" /></button>}
                                         </div>
+                                        <p className={`text-xs mt-1 leading-relaxed ${item.highlight ? 'text-stone-600 border-t border-amber-100/50 pt-2' : 'text-stone-500'}`}>{item.desc}</p>
                                     </div>
                                 </div>
                             )})}
@@ -353,6 +359,7 @@ export default function App() {
                     </div>
                 )}
 
+                {/* --- 其他頁面保持不變 --- */}
                 {view === 'wallet' && (
                     <div className="animate-fade">
                         <h2 className="serif text-2xl font-bold mb-6 text-stone-800">旅行帳本</h2>
@@ -386,7 +393,7 @@ export default function App() {
                     </div>
                 )}
 
-                {/* INFO PAGE - 可編輯、移動、新增各類資訊卡片 */}
+                {/* INFO PAGE */}
                 {view === 'info' && (
                     <div className="animate-fade py-2 space-y-8">
                         <div className="flex justify-between items-center px-1">
@@ -451,7 +458,7 @@ export default function App() {
                 )}
             </div>
 
-            {/* STATUS BAR - Only show in Plan view (Fix for Issue 1) */}
+            {/* STATUS BAR */}
             {view === 'plan' && (
                 <div key={gpsOn ? 'gps-active' : 'gps-idle'} className="fixed bottom-10 left-1/2 -translate-x-1/2 w-[92%] max-w-sm glass rounded-[32px] p-3.5 border border-white/60 shadow-2xl flex items-center justify-between z-40 bg-white/80">
                     <div className="flex items-center gap-4 flex-1">
@@ -487,8 +494,8 @@ export default function App() {
                 </div>
             )}
 
-            {/* --- MODALS --- */}
-            
+            {/* ... (MODALS 保持不變) ... */}
+            {/* 為了節省篇幅，Modals 程式碼部分與之前相同，請確保複製貼上時保留原有的 Modal 部分 */}
             {/* AI SMART IMPORT MODAL */}
             {isAiModalOpen && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/70 backdrop-blur-sm animate-fade">
