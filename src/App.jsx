@@ -99,35 +99,7 @@ export default function App() {
             .catch(console.error);
     }, []);
 
-    // --- Open-Meteo 每小時天氣預報 ---
-    useEffect(() => {
-        const cityKey = days[selectedIdx]?.city || 'Kyoto';
-        const coords = CITY_COORDS[cityKey];
-        if (coords) {
-            const url = `https://api.open-meteo.com/v1/forecast?latitude=${coords.lat}&longitude=${coords.lon}&hourly=temperature_2m,weathercode&timezone=auto&forecast_days=1`;
-            fetch(url)
-                .then(res => res.json())
-                .then(data => {
-                    if(data.hourly) {
-                        const now = new Date();
-                        const currentHour = now.getHours();
-                        const hours = [];
-                        for(let i = currentHour; i < currentHour + 24; i++) {
-                            if(data.hourly.time[i]) {
-                                hours.push({
-                                    time: i === currentHour ? "現在" : `${new Date(data.hourly.time[i]).getHours()}:00`,
-                                    temp: Math.round(data.hourly.temperature_2m[i]),
-                                    icon: mapWmoToIcon(data.hourly.weathercode[i])
-                                });
-                            }
-                        }
-                        setWeatherData(hours.filter((_, idx) => idx % 3 === 0)); // 每3小時顯示一次較清爽
-                    }
-                })
-                .catch(() => setWeatherData(getFallbackWeather()));
-        }
-    }, [selectedIdx, days]);
-
+    // --- 天氣圖示對照表 ---
     const mapWmoToIcon = (code) => {
         if (code === 0 || code === 1) return Sun;
         if (code === 2 || code === 3) return Cloud;
@@ -139,7 +111,63 @@ export default function App() {
         return Sun;
     };
 
-    const getFallbackWeather = () => ["現在", "12:00", "15:00", "18:00", "21:00", "00:00"].map((t, i) => ({ time: t, temp: 18 - i, icon: Sun }));
+    // --- Open-Meteo Weather API ---
+    useEffect(() => {
+        const cityKey = days[selectedIdx]?.city || 'Kyoto';
+        const coords = CITY_COORDS[cityKey];
+        
+        if (coords) {
+            const url = `https://api.open-meteo.com/v1/forecast?latitude=${coords.lat}&longitude=${coords.lon}&hourly=temperature_2m,weathercode&timezone=auto&forecast_days=14`;
+            
+            fetch(url)
+                .then(res => res.json())
+                .then(data => {
+                    if(data.hourly) {
+                        const currentHour = new Date().getHours();
+                        let startIndex = selectedIdx * 24;
+                        
+                        if (selectedIdx === 0) {
+                            startIndex += currentHour;
+                        }
+
+                        const count = 24;
+                        const maxLen = data.hourly.time.length;
+                        if (startIndex + count > maxLen) {
+                            startIndex = maxLen - count;
+                        }
+
+                        const slicedTimes = data.hourly.time.slice(startIndex, startIndex + count);
+                        const slicedTemps = data.hourly.temperature_2m.slice(startIndex, startIndex + count);
+                        const slicedCodes = data.hourly.weathercode.slice(startIndex, startIndex + count);
+
+                        const formattedData = slicedTimes.map((t, i) => {
+                            const date = new Date(t);
+                            const timeStr = `${date.getHours().toString().padStart(2, '0')}:00`;
+                            return {
+                                time: timeStr,
+                                temp: Math.round(slicedTemps[i]),
+                                icon: mapWmoToIcon(slicedCodes[i]) // [修正] 使用正確的函式名稱 mapWmoToIcon
+                            };
+                        });
+                        setWeatherData(formattedData);
+                    }
+                })
+                .catch(err => {
+                    console.error("Weather fetch error", err);
+                    setWeatherData(getFallbackWeather());
+                });
+        } else {
+            setWeatherData(getFallbackWeather());
+        }
+    }, [selectedIdx, days]);
+    
+    // [修正] 移除重複宣告的 getFallbackWeather，保留這個 24 小時版本
+    const getFallbackWeather = () => Array.from({ length: 24 }, (_, i) => ({ 
+        time: `${i}:00`, 
+        temp: 20 + (i % 5), 
+        icon: Sun 
+    }));
+
     const currentDay = days[selectedIdx] || days[0];
     const firstItem = currentDay?.items?.[0] || { title: '目的地', location: 'Japan' };
     const totalTWD = expenses.reduce((a, c) => a + (c.currency === 'JPY' ? c.amount * (c.rate || currentRate) : c.amount), 0);
@@ -200,7 +228,7 @@ export default function App() {
             </header>
 
             {/* CONTENT */}
-            <div className="pt-40 px-5 pb-36">
+            <div className="pt-48 px-5 pb-36">
                 {view === 'plan' && (
                     <div className="animate-fade">
                         <div className="flex justify-between items-center mb-5 px-1">
@@ -243,9 +271,8 @@ export default function App() {
 
                         <div className="h-[1px] bg-stone-300/50 mb-10"></div>
 
-                        {/* --- 重構行程列表 (完全符合 IMG_5968 & IMG_5974) --- */}
+                        {/* --- 重構行程列表 --- */}
                         <div className="space-y-4 relative">
-                            {/* 背景貫穿線 */}
                             <div className="absolute left-[54px] top-4 bottom-4 w-[1px] bg-stone-300/50"></div>
 
                             {currentDay.items.map((item, i) => {
@@ -261,7 +288,6 @@ export default function App() {
                                         </div>
                                     )}
                                     
-                                    {/* 左側：時間與節點圖示 */}
                                     <div className="w-14 text-right pt-1 shrink-0 z-10">
                                         <span className="block text-lg font-bold text-stone-800 leading-none">{item.time}</span>
                                         <div className="flex justify-end mt-3 mr-[-4.5px]">
@@ -273,9 +299,7 @@ export default function App() {
                                         </div>
                                     </div>
 
-                                    {/* 右側：內容卡片 */}
                                     {item.highlight ? (
-                                        /* HIGHLIGHT 樣貌 (參考 IMG_5974) */
                                         <div onClick={() => isEditMode ? setEditingItem(item) : setDetailItem(item)} 
                                              className="flex-1 bg-amber-50/50 border border-amber-200 rounded-xl p-5 shadow-sm highlight-card relative ml-2 mb-2">
                                             <div className="flex items-center gap-1.5 mb-2">
@@ -289,7 +313,6 @@ export default function App() {
                                             <p className="text-sm mt-3 text-stone-600 leading-relaxed border-t border-amber-200/50 pt-3">{item.desc}</p>
                                         </div>
                                     ) : (
-                                        /* 一般樣貌 (參考 IMG_5968) */
                                         <div onClick={() => isEditMode ? setEditingItem(item) : setDetailItem(item)} 
                                              className="flex-1 bg-white rounded-r-xl rounded-l-sm p-4 shadow-sm relative ml-2 mb-2 border-l-[4.5px]"
                                              style={{ borderLeftColor: cfg.color }}>
@@ -437,25 +460,7 @@ export default function App() {
                 </div>
             )}
 
-            {/* 編輯 & 詳情 Modal ... 這裡保持您原本的視窗邏輯，確保修改、新增功能不變 ... */}
-            {/* [其餘 Detail / Edit Modal 程式碼請保留您目前的內容] */}
-            {editingItem && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/70 backdrop-blur-sm">
-                    <div className="bg-white w-full max-w-sm rounded-[40px] p-8 shadow-2xl animate-fade overflow-y-auto max-h-[90vh]">
-                        <h3 className="serif text-xl font-bold mb-6 text-stone-800">行程編輯</h3>
-                        <div className="space-y-4">
-                            <div className="h-28 bg-stone-100 rounded-2xl flex flex-col items-center justify-center border border-dashed border-stone-300 relative overflow-hidden" onClick={() => fileRef.current.click()}>{editingItem.customImg ? <img src={editingItem.customImg} className="w-full h-full object-cover" /> : <div className="text-center"><ImageIcon className="w-5 h-5 text-stone-400 mx-auto" /><p className="text-[8px] text-stone-500 mt-1 uppercase font-bold tracking-widest">更換照片</p></div>}<input type="file" ref={fileRef} className="hidden" accept="image/*" onChange={(e) => handleUpload(e, 'item')} /></div>
-                            <div className="flex gap-4"><div className="flex-1"><label className="text-[10px] text-stone-400 font-bold uppercase mb-1 block">時間</label><input className="w-full p-3 bg-stone-100 rounded-xl outline-none text-sm" value={editingItem.time} onChange={e => setEditingItem({...editingItem, time: e.target.value})} /></div><div className="w-24"><label className="text-[10px] text-stone-400 font-bold uppercase mb-1 block">類型</label><select className="w-full p-3 bg-stone-100 rounded-xl outline-none text-xs" value={editingItem.type} onChange={e => setEditingItem({...editingItem, type: e.target.value})}>{Object.keys(ICON_MAP).map(k => <option key={k} value={k}>{k}</option>)}</select></div></div>
-                            <div><label className="text-[10px] text-stone-400 font-bold uppercase block mb-1">標題</label><input className="w-full p-3 bg-stone-100 rounded-xl outline-none text-sm font-bold" value={editingItem.title} onChange={e => setEditingItem({...editingItem, title: e.target.value})} /></div>
-                            <div><label className="text-[10px] text-stone-400 font-bold uppercase block mb-1">內容描述</label><textarea className="w-full p-3 bg-stone-100 rounded-xl outline-none text-xs h-20" value={editingItem.desc} onChange={e => setEditingItem({...editingItem, desc: e.target.value})} /></div>
-                            <div><label className="text-[10px] text-stone-400 font-bold uppercase block mb-1">導航地點</label><input className="w-full p-3 bg-stone-100 rounded-xl outline-none text-xs font-bold" value={editingItem.location} onChange={e => setEditingItem({...editingItem, location: e.target.value})} /></div>
-                            <div className="flex items-center justify-between p-3.5 bg-amber-50 rounded-xl"><span className="text-[10px] font-bold text-amber-700 uppercase tracking-widest">Highlight (金邊)</span><input type="checkbox" checked={editingItem.highlight} onChange={e => setEditingItem({...editingItem, highlight: e.target.checked})} /></div>
-                            <div className="pt-4 flex gap-3"><button onClick={() => { const d = [...days]; const dy = d[selectedIdx]; if(editingItem.id) dy.items = dy.items.map(i => i.id === editingItem.id ? editingItem : i); else dy.items.push({...editingItem, id: Date.now()}); setDays(d); setEditingItem(null); }} className="flex-1 bg-stone-900 text-white py-4.5 rounded-[28px] font-bold text-[10px] uppercase tracking-widest">確認儲存</button><button onClick={() => setEditingItem(null)} className="px-7 py-4.5 border border-stone-200 rounded-[28px] text-stone-400"><X className="w-4 h-4" /></button></div>
-                        </div>
-                    </div>
-                </div>
-            )}
-            
+            {/* Detail Modal */}
             {detailItem && (
                 <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade">
                     <div className="bg-white w-full max-w-sm rounded-[45px] overflow-hidden shadow-2xl relative">
@@ -469,6 +474,28 @@ export default function App() {
                                 <button onClick={() => openMaps(detailItem.location)} className="w-full bg-stone-900 text-white py-4.5 rounded-[24px] font-bold text-[11px] flex items-center justify-center gap-2 active:scale-95 transition-all tracking-widest uppercase"><Navigation className="w-4 h-4" /> Google Maps 導航</button>
                                 <button onClick={() => detailItem.link && window.open(detailItem.link)} className="w-full border border-stone-200 text-stone-800 py-4.5 rounded-[24px] font-bold text-[11px] uppercase active:scale-95 transition-all">{detailItem.btnLabel || '資訊'}</button>
                             </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Editing Modal */}
+            {editingItem && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/70 backdrop-blur-sm">
+                    <div className="bg-white w-full max-w-sm rounded-[40px] p-8 shadow-2xl animate-fade overflow-y-auto max-h-[90vh]">
+                        <h3 className="serif text-xl font-bold mb-6 text-stone-800">行程編輯</h3>
+                        <div className="space-y-4">
+                            <div className="h-28 bg-stone-100 rounded-2xl flex flex-col items-center justify-center border border-dashed border-stone-300 relative overflow-hidden" onClick={() => fileRef.current.click()}>{editingItem.customImg ? <img src={editingItem.customImg} className="w-full h-full object-cover" /> : <div className="text-center"><ImageIcon className="w-5 h-5 text-stone-400 mx-auto" /><p className="text-[8px] text-stone-500 mt-1 uppercase font-bold tracking-widest">更換照片</p></div>}<input type="file" ref={fileRef} className="hidden" accept="image/*" onChange={(e) => handleUpload(e, 'item')} /></div>
+                            <div className="flex gap-4">
+                                <div className="flex-1"><label className="text-[10px] text-stone-400 font-bold uppercase mb-1 block">時間</label><input className="w-full p-3 bg-stone-100 rounded-xl outline-none text-sm" value={editingItem.time} onChange={e => setEditingItem({...editingItem, time: e.target.value})} /></div>
+                                {/* [修正] 這裡原本用 ICON_MAP，改成正確的 TYPE_CONFIG */}
+                                <div className="w-24"><label className="text-[10px] text-stone-400 font-bold uppercase mb-1 block">類型</label><select className="w-full p-3 bg-stone-100 rounded-xl outline-none text-xs" value={editingItem.type} onChange={e => setEditingItem({...editingItem, type: e.target.value})}>{Object.keys(TYPE_CONFIG).map(k => <option key={k} value={k}>{k}</option>)}</select></div>
+                            </div>
+                            <div><label className="text-[10px] text-stone-400 font-bold uppercase block mb-1">標題</label><input className="w-full p-3 bg-stone-100 rounded-xl outline-none text-sm font-bold" value={editingItem.title} onChange={e => setEditingItem({...editingItem, title: e.target.value})} /></div>
+                            <div><label className="text-[10px] text-stone-400 font-bold uppercase block mb-1">內容描述</label><textarea className="w-full p-3 bg-stone-100 rounded-xl outline-none text-xs h-20" value={editingItem.desc} onChange={e => setEditingItem({...editingItem, desc: e.target.value})} /></div>
+                            <div><label className="text-[10px] text-stone-400 font-bold uppercase block mb-1">導航地點</label><input className="w-full p-3 bg-stone-100 rounded-xl outline-none text-xs font-bold" value={editingItem.location} onChange={e => setEditingItem({...editingItem, location: e.target.value})} /></div>
+                            <div className="flex items-center justify-between p-3.5 bg-amber-50 rounded-xl"><span className="text-[10px] font-bold text-amber-700 uppercase tracking-widest">Highlight (金邊)</span><input type="checkbox" checked={editingItem.highlight} onChange={e => setEditingItem({...editingItem, highlight: e.target.checked})} /></div>
+                            <div className="pt-4 flex gap-3"><button onClick={() => { const d = [...days]; const dy = d[selectedIdx]; if(editingItem.id) dy.items = dy.items.map(i => i.id === editingItem.id ? editingItem : i); else dy.items.push({...editingItem, id: Date.now()}); setDays(d); setEditingItem(null); }} className="flex-1 bg-stone-900 text-white py-4.5 rounded-[28px] font-bold text-[10px] uppercase tracking-widest">確認儲存</button><button onClick={() => setEditingItem(null)} className="px-7 py-4.5 border border-stone-200 rounded-[28px] text-stone-400"><X className="w-4 h-4" /></button></div>
                         </div>
                     </div>
                 </div>
