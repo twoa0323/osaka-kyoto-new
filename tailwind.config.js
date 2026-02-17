@@ -1,23 +1,24 @@
 /** @type {import('tailwindcss').Config} */
 export default {
-  content: [
-    "./index.html",
-    "./src/**/*.{js,ts,jsx,tsx}",
-  ],
+  content: ["./index.html", "./src/**/*.{js,ts,jsx,tsx}"],
   theme: {
     extend: {
       colors: {
-        'brand-red': '#8D2B2B',
-        'bg-creme': '#EBE7DE',
-        'text-dark': '#1F1F1F',
-        'text-mid': '#595755',
-        'text-muted': '#787570',
+        'ac-bg': '#F7F4EB',       // 米色背景
+        'ac-green': '#7EAB83',    // 動森綠
+        'ac-orange': '#E9A178',   // 大地橘
+        'ac-brown': '#8D775F',    // 文字深啡
+        'ac-border': '#E0E5D5',   // 陰影/邊框色
       },
-      fontFamily: {
-        sans: ['Inter', 'sans-serif'],
-        serif: ['"Noto Serif TC"', 'serif'],
-      }
+      boxShadow: {
+        'zakka': '4px 4px 0px #E0E5D5', // 你要求的硬質軟陰影
+        'zakka-active': '2px 2px 0px #E0E5D5',
+      },
+      borderRadius: {
+        '3xl': '1.5rem',
+        '4xl': '2rem',
+      },
     },
   },
   plugins: [],
-}
+};

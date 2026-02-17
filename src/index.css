@@ -1,109 +1,31 @@
+@import url('https://fonts.googleapis.com/css2?family=Kosugi+Maru&family=Noto+Sans+TC:wght@400;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* 1. 確保引入字體 */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Noto+Serif+TC:wght@400;500;600;700&display=swap');
-
 @layer base {
   body {
-    background-color: #EBE7DE; /* 背景加深為復古米色 */
-    color: #1F1F1F;
-    font-family: 'Inter', sans-serif;
-    -webkit-tap-highlight-color: transparent;
+    @apply bg-ac-bg text-ac-brown;
+    font-family: 'Kosugi Maru', 'Noto Sans TC', sans-serif;
+    /* 加入淡淡的格紋或點狀背紋 */
+    background-image: radial-gradient(#E0E5D5 1px, transparent 1px);
+    background-size: 20px 20px;
   }
 }
 
 @layer components {
-  /* 2. 重點：Highlight 行程的金邊漸層特效 (參考 IMG_5974) */
-  .highlight-card {
-    border: 1.5px solid transparent;
-    background: linear-gradient(rgba(255, 252, 240, 0.8), rgba(255, 252, 240, 0.8)) padding-box,
-                linear-gradient(to right, #D4AF37, #F9E29C, #D4AF37) border-box;
-    box-shadow: 0 10px 20px -5px rgba(212, 175, 55, 0.2);
-  }
-
-  /* 3. 玻璃質感 (Hero 圖片上的標籤) */
-  .glass {
-    background: rgba(255, 255, 255, 0.6);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    border: 1px solid rgba(255, 255, 255, 0.3);
-  }
-
-  .glass-dark {
-    background: rgba(0, 0, 0, 0.4);
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
-  }
-}
-
-@layer utilities {
-  .serif {
-    font-family: 'Noto Serif TC', serif;
-  }
-
-  .hide-scrollbar::-webkit-scrollbar {
-    display: none;
-  }
-  .hide-scrollbar {
-    -ms-overflow-style: none;
-    scrollbar-width: none;
-  }
-
-  /* 4. 日期下方的紅色實心圓點 */
-  .active-dot::after {
-    content: '';
-    position: absolute;
-    bottom: -6px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 5px;
-    height: 5px;
-    background-color: #8D2B2B;
-    border-radius: 50%;
-  }
-}
-
-/* 針對地圖 iframe 的微調 */
-.map-frame {
-  width: 100%;
-  height: 100%;
-  border: 0;
-  filter: grayscale(10%) contrast(1.1);
-}
-
-/* 列表進入動畫 */
-.animate-fade {
-  animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-}
-
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-/* 針對預定頁面與記帳頁面的補充樣式 */
-@layer components {
-  .btn-pill {
-    @apply px-4 py-2 rounded-xl text-xs font-bold transition-all border;
-  }
-  .btn-pill-active {
-    @apply bg-[#E2F1E7] border-[#A8D1B7] text-[#4A785D];
-  }
-  .btn-pill-inactive {
-    @apply bg-white border-stone-200 text-stone-400;
+  .card-zakka {
+    @apply bg-white border-2 border-ac-border rounded-3xl shadow-zakka p-4;
   }
   
-  /* 模仿 IMG_6018 的機票卡片數字 */
-  .flight-no {
-    font-family: 'Inter', sans-serif;
-    letter-spacing: -0.05em;
-    font-weight: 800;
-  }
-
-  /* 記帳頁面圓形頭像組 */
-  .avatar-ring {
-    @apply w-10 h-10 rounded-full border-2 border-white shadow-sm object-cover;
+  .btn-zakka {
+    @apply bg-ac-green text-white rounded-full px-6 py-2 shadow-zakka 
+           active:shadow-zakka-active active:translate-x-[2px] active:translate-y-[2px] 
+           transition-all duration-75 font-bold;
   }
 }
+
+/* 隱藏捲軸但保留功能 */
+.hide-scrollbar::-webkit-scrollbar { display: none; }
+.hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
