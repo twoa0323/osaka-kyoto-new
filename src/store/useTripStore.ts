@@ -4,6 +4,10 @@ import { Trip, ScheduleItem, BookingItem, ExpenseItem, JournalItem, ShoppingItem
 import { db } from '../services/firebase';
 import { doc, setDoc } from 'firebase/firestore';
 
+// 輔助函式：移除物件中的 undefined (解決 Firestore 寫入失敗導致資料消失的主因)
+const sanitize = (data: any) => JSON.parse(JSON.stringify(data));
+
+// ... Interface 保持不變 ...
 interface TripState {
   trips: Trip[];
   currentTripId: string | null;
@@ -31,10 +35,10 @@ interface TripState {
   deleteInfoItem: (tripId: string, itemId: string) => void;
 }
 
-// 輔助函式：自動同步單個行程到 Firestore
 const syncToCloud = async (trip: Trip) => {
   try {
-    await setDoc(doc(db, "trips", trip.id), trip);
+    // 關鍵修正：sanitize 確保沒有 undefined
+    await setDoc(doc(db, "trips", trip.id), sanitize(trip));
   } catch (e) {
     console.error("雲端同步失敗:", e);
   }
@@ -48,6 +52,7 @@ export const useTripStore = create<TripState>()(
       activeTab: 'schedule',
       exchangeRate: 1,
       setTrips: (trips) => set({ trips }),
+      
       addTrip: (trip) => {
         set((state) => ({ trips: [trip, ...state.trips].slice(0, 3), currentTripId: trip.id }));
         syncToCloud(trip);
@@ -59,75 +64,82 @@ export const useTripStore = create<TripState>()(
       }),
       setActiveTab: (tab) => set({ activeTab: tab }),
       setExchangeRate: (rate) => set({ exchangeRate: rate }),
+
+      // 通用 CRUD 樣板 (已加入 sanitize 保護)
       addScheduleItem: (tripId, item) => {
         set((state) => ({ trips: state.trips.map(t => t.id === tripId ? { ...t, items: [...(t.items || []), item] } : t) }));
-        const updatedTrip = get().trips.find(t => t.id === tripId);
-        if (updatedTrip) syncToCloud(updatedTrip);
+        const t = get().trips.find(t => t.id === tripId);
+        if (t) syncToCloud(t);
       },
       updateScheduleItem: (tripId, itemId, newItem) => {
         set((state) => ({ trips: state.trips.map(t => t.id === tripId ? { ...t, items: (t.items || []).map(i => i.id === itemId ? newItem : i) } : t) }));
-        const updatedTrip = get().trips.find(t => t.id === tripId);
-        if (updatedTrip) syncToCloud(updatedTrip);
+        const t = get().trips.find(t => t.id === tripId);
+        if (t) syncToCloud(t);
       },
       deleteScheduleItem: (tripId, itemId) => {
         set((state) => ({ trips: state.trips.map(t => t.id === tripId ? { ...t, items: (t.items || []).filter(i => i.id !== itemId) } : t) }));
-        const updatedTrip = get().trips.find(t => t.id === tripId);
-        if (updatedTrip) syncToCloud(updatedTrip);
+        const t = get().trips.find(t => t.id === tripId);
+        if (t) syncToCloud(t);
       },
+
       addBookingItem: (tripId, item) => {
         set((state) => ({ trips: state.trips.map(t => t.id === tripId ? { ...t, bookings: [...(t.bookings || []), item] } : t) }));
-        const updatedTrip = get().trips.find(t => t.id === tripId);
-        if (updatedTrip) syncToCloud(updatedTrip);
+        const t = get().trips.find(t => t.id === tripId);
+        if (t) syncToCloud(t);
       },
       deleteBookingItem: (tripId, itemId) => {
         set((state) => ({ trips: state.trips.map(t => t.id === tripId ? { ...t, bookings: (t.bookings || []).filter(i => i.id !== itemId) } : t) }));
-        const updatedTrip = get().trips.find(t => t.id === tripId);
-        if (updatedTrip) syncToCloud(updatedTrip);
+        const t = get().trips.find(t => t.id === tripId);
+        if (t) syncToCloud(t);
       },
+
       addExpenseItem: (tripId, item) => {
         set((state) => ({ trips: state.trips.map(t => t.id === tripId ? { ...t, expenses: [...(t.expenses || []), item] } : t) }));
-        const updatedTrip = get().trips.find(t => t.id === tripId);
-        if (updatedTrip) syncToCloud(updatedTrip);
+        const t = get().trips.find(t => t.id === tripId);
+        if (t) syncToCloud(t);
       },
       deleteExpenseItem: (tripId, itemId) => {
         set((state) => ({ trips: state.trips.map(t => t.id === tripId ? { ...t, expenses: (t.expenses || []).filter(i => i.id !== itemId) } : t) }));
-        const updatedTrip = get().trips.find(t => t.id === tripId);
-        if (updatedTrip) syncToCloud(updatedTrip);
+        const t = get().trips.find(t => t.id === tripId);
+        if (t) syncToCloud(t);
       },
+
       addJournalItem: (tripId, item) => {
         set((state) => ({ trips: state.trips.map(t => t.id === tripId ? { ...t, journals: [item, ...(t.journals || [])] } : t) }));
-        const updatedTrip = get().trips.find(t => t.id === tripId);
-        if (updatedTrip) syncToCloud(updatedTrip);
+        const t = get().trips.find(t => t.id === tripId);
+        if (t) syncToCloud(t);
       },
       deleteJournalItem: (tripId, itemId) => {
         set((state) => ({ trips: state.trips.map(t => t.id === tripId ? { ...t, journals: (t.journals || []).filter(i => i.id !== itemId) } : t) }));
-        const updatedTrip = get().trips.find(t => t.id === tripId);
-        if (updatedTrip) syncToCloud(updatedTrip);
+        const t = get().trips.find(t => t.id === tripId);
+        if (t) syncToCloud(t);
       },
+
       addShoppingItem: (tripId, item) => {
         set((state) => ({ trips: state.trips.map(t => t.id === tripId ? { ...t, shoppingList: [...(t.shoppingList || []), item] } : t) }));
-        const updatedTrip = get().trips.find(t => t.id === tripId);
-        if (updatedTrip) syncToCloud(updatedTrip);
+        const t = get().trips.find(t => t.id === tripId);
+        if (t) syncToCloud(t);
       },
       toggleShoppingItem: (tripId, itemId) => {
         set((state) => ({ trips: state.trips.map(t => t.id === tripId ? { ...t, shoppingList: (t.shoppingList || []).map(i => i.id === itemId ? { ...i, isBought: !i.isBought } : i) } : t) }));
-        const updatedTrip = get().trips.find(t => t.id === tripId);
-        if (updatedTrip) syncToCloud(updatedTrip);
+        const t = get().trips.find(t => t.id === tripId);
+        if (t) syncToCloud(t);
       },
       deleteShoppingItem: (tripId, itemId) => {
         set((state) => ({ trips: state.trips.map(t => t.id === tripId ? { ...t, shoppingList: (t.shoppingList || []).filter(i => i.id !== itemId) } : t) }));
-        const updatedTrip = get().trips.find(t => t.id === tripId);
-        if (updatedTrip) syncToCloud(updatedTrip);
+        const t = get().trips.find(t => t.id === tripId);
+        if (t) syncToCloud(t);
       },
+
       addInfoItem: (tripId, item) => {
         set((state) => ({ trips: state.trips.map(t => t.id === tripId ? { ...t, infoItems: [item, ...(t.infoItems || [])] } : t) }));
-        const updatedTrip = get().trips.find(t => t.id === tripId);
-        if (updatedTrip) syncToCloud(updatedTrip);
+        const t = get().trips.find(t => t.id === tripId);
+        if (t) syncToCloud(t);
       },
       deleteInfoItem: (tripId, itemId) => {
         set((state) => ({ trips: state.trips.map(t => t.id === tripId ? { ...t, infoItems: (t.infoItems || []).filter(i => i.id !== itemId) } : t) }));
-        const updatedTrip = get().trips.find(t => t.id === tripId);
-        if (updatedTrip) syncToCloud(updatedTrip);
+        const t = get().trips.find(t => t.id === tripId);
+        if (t) syncToCloud(t);
       },
     }),
     { name: 'zakka-trip-storage' }
