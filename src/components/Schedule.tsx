@@ -13,6 +13,7 @@ interface EditorProps {
   onClose: () => void;
 }
 
+// 注意這裡不用 export，或是你可以保留 export 但 App.tsx 不會用到它
 const ScheduleEditor: React.FC<EditorProps> = ({ tripId, item, onClose }) => {
   const { addScheduleItem, updateScheduleItem } = useTripStore();
   
@@ -131,7 +132,7 @@ const ScheduleEditor: React.FC<EditorProps> = ({ tripId, item, onClose }) => {
 };
 
 // ==========================================
-// 2. 主列表元件 (App.tsx 真正要 import 的)
+// 2. 主列表元件 (這才是 App.tsx 要 import 的)
 // ==========================================
 export const Schedule: React.FC = () => {
   const { trips, currentTripId, deleteScheduleItem } = useTripStore();
@@ -149,7 +150,7 @@ export const Schedule: React.FC = () => {
   return (
     <div className="pb-24">
       {/* 列表內容 */}
-      <div className="space-y-4">
+      <div className="space-y-4 p-4"> {/* 這裡加了 p-4 避免貼邊 */}
         {items.length === 0 ? (
           <div className="text-center py-20 text-ac-brown/40 font-bold italic">
             還沒有行程，按右下角新增吧！
