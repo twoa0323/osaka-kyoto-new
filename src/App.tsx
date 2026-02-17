@@ -5,8 +5,9 @@ import { Schedule } from './components/Schedule';
 import { Booking } from './components/Booking';
 import { Expense } from './components/Expense';
 import { Journal } from './components/Journal';
-import { Shopping } from './components/Shopping'; // 新增
-import { Plus, ChevronDown, Trash2, Calendar, CreditCard, Wallet, Utensils, ShoppingBag, Info } from 'lucide-react';
+import { Shopping } from './components/Shopping'; // 確保檔案存在！
+import { Info } from './components/Info'; // 新增
+import { Plus, ChevronDown, Trash2, Calendar, CreditCard, Wallet, Utensils, ShoppingBag, Info as InfoIcon } from 'lucide-react';
 
 const App: React.FC = () => {
   const { trips, currentTripId, switchTrip, deleteTrip, activeTab, setActiveTab } = useTripStore();
@@ -20,7 +21,7 @@ const App: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-ac-bg pb-32 font-sans">
+    <div className="min-h-screen bg-ac-bg pb-32 font-sans overflow-x-hidden">
       <header className="p-6 flex justify-between items-start sticky top-0 bg-ac-bg/90 backdrop-blur-md z-40">
         <div className="relative text-left">
           <h2 className="text-[10px] font-black text-ac-green uppercase tracking-[0.2em] mb-1">
@@ -55,8 +56,8 @@ const App: React.FC = () => {
         {activeTab === 'booking' && <Booking />}
         {activeTab === 'expense' && <Expense />}
         {activeTab === 'food' && <Journal />}
-        {activeTab === 'shop' && <Shopping />} {/* 接入購物清單 */}
-        {activeTab === 'info' && <div className="p-10 text-center italic text-ac-border font-bold italic">最後一個模組開發中...</div>}
+        {activeTab === 'shop' && <Shopping />}
+        {activeTab === 'info' && <Info />}
       </main>
 
       <nav className="fixed bottom-6 left-1/2 -translate-x-1/2 w-[92%] max-w-md bg-white border-4 border-ac-border rounded-full shadow-zakka px-4 py-3 flex justify-between items-center z-50">
@@ -65,7 +66,7 @@ const App: React.FC = () => {
         <NavIcon icon={<Wallet />} label="記帳" id="expense" active={activeTab} onClick={setActiveTab} />
         <NavIcon icon={<Utensils />} label="美食" id="food" active={activeTab} onClick={setActiveTab} />
         <NavIcon icon={<ShoppingBag />} label="購物" id="shop" active={activeTab} onClick={setActiveTab} />
-        <NavIcon icon={<Info />} label="資訊" id="info" active={activeTab} onClick={setActiveTab} />
+        <NavIcon icon={<InfoIcon />} label="資訊" id="info" active={activeTab} onClick={setActiveTab} />
       </nav>
     </div>
   );

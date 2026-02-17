@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { Trip, ScheduleItem, BookingItem, ExpenseItem, JournalItem, ShoppingItem } from '../types';
+import { Trip, ScheduleItem, BookingItem, ExpenseItem, JournalItem, ShoppingItem, InfoItem } from '../types';
 
 interface TripState {
   trips: Trip[];
@@ -22,10 +22,12 @@ interface TripState {
   deleteExpenseItem: (tripId: string, itemId: string) => void;
   addJournalItem: (tripId: string, item: JournalItem) => void;
   deleteJournalItem: (tripId: string, itemId: string) => void;
-  // 購物清單操作
   addShoppingItem: (tripId: string, item: ShoppingItem) => void;
   toggleShoppingItem: (tripId: string, itemId: string) => void;
   deleteShoppingItem: (tripId: string, itemId: string) => void;
+  // 資訊操作
+  addInfoItem: (tripId: string, item: InfoItem) => void;
+  deleteInfoItem: (tripId: string, itemId: string) => void;
 }
 
 export const useTripStore = create<TripState>()(
@@ -53,21 +55,15 @@ export const useTripStore = create<TripState>()(
       deleteExpenseItem: (tripId, itemId) => set((state) => ({ trips: state.trips.map(t => t.id === tripId ? { ...t, expenses: (t.expenses || []).filter(i => i.id !== itemId) } : t) })),
       addJournalItem: (tripId, item) => set((state) => ({ trips: state.trips.map(t => t.id === tripId ? { ...t, journals: [item, ...(t.journals || [])] } : t) })),
       deleteJournalItem: (tripId, itemId) => set((state) => ({ trips: state.trips.map(t => t.id === tripId ? { ...t, journals: (t.journals || []).filter(i => i.id !== itemId) } : t) })),
-      // 購物實作
-      addShoppingItem: (tripId, item) => set((state) => ({
-        trips: state.trips.map(t => t.id === tripId ? { ...t, shoppingList: [...(t.shoppingList || []), item] } : t)
+      addShoppingItem: (tripId, item) => set((state) => ({ trips: state.trips.map(t => t.id === tripId ? { ...t, shoppingList: [...(t.shoppingList || []), item] } : t) })),
+      toggleShoppingItem: (tripId, itemId) => set((state) => ({ trips: state.trips.map(t => t.id === tripId ? { ...t, shoppingList: (t.shoppingList || []).map(i => i.id === itemId ? { ...i, isBought: !i.isBought } : i) } : t) })),
+      deleteShoppingItem: (tripId, itemId) => set((state) => ({ trips: state.trips.map(t => t.id === tripId ? { ...t, shoppingList: (t.shoppingList || []).filter(i => i.id !== itemId) } : t) })),
+      // 資訊實作
+      addInfoItem: (tripId, item) => set((state) => ({
+        trips: state.trips.map(t => t.id === tripId ? { ...t, infoItems: [item, ...(t.infoItems || [])] } : t)
       })),
-      toggleShoppingItem: (tripId, itemId) => set((state) => ({
-        trips: state.trips.map(t => t.id === tripId ? { 
-          ...t, 
-          shoppingList: (t.shoppingList || []).map(i => i.id === itemId ? { ...i, isBought: !i.isBought } : i) 
-        } : t)
-      })),
-      deleteShoppingItem: (tripId, itemId) => set((state) => ({
-        trips: state.trips.map(t => t.id === tripId ? { 
-          ...t, 
-          shoppingList: (t.shoppingList || []).filter(i => i.id !== itemId) 
-        } : t)
+      deleteInfoItem: (tripId, itemId) => set((state) => ({
+        trips: state.trips.map(t => t.id === tripId ? { ...t, infoItems: (t.infoItems || []).filter(i => i.id !== itemId) } : t)
       })),
     }),
     { name: 'zakka-trip-storage' }
