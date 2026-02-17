@@ -15,7 +15,6 @@ export const Schedule = () => {
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<ScheduleItem | undefined>();
 
-  // 增加日期有效性檢查
   const dateRange = useMemo(() => {
     if (!trip || !trip.startDate || !trip.endDate) return [];
     const start = parseISO(trip.startDate);
@@ -25,8 +24,7 @@ export const Schedule = () => {
     return Array.from({ length: diff }, (_, i) => addDays(start, i));
   }, [trip]);
 
-  if (!trip) return <div className="p-10 text-center animate-pulse">載入手帳中...</div>;
-  if (dateRange.length === 0) return <div className="p-10 text-center italic opacity-40">日期設定有誤，請刪除行程重新建立唷！</div>;
+  if (!trip) return null;
 
   const selectedDateStr = format(dateRange[selectedDateIdx], 'yyyy-MM-dd');
   const items = (trip.items || [])
@@ -35,7 +33,6 @@ export const Schedule = () => {
 
   return (
     <div className="space-y-6 animate-fade-in pb-10">
-      {/* 倒數卡片 */}
       <div className="px-6 flex gap-4">
         <div className="card-zakka flex-1 bg-ac-orange border-none text-white flex flex-col items-center justify-center py-4">
           <span className="text-[10px] font-black opacity-80 uppercase tracking-widest">Countdown</span>
@@ -44,14 +41,13 @@ export const Schedule = () => {
             <span className="text-xs font-bold">DAYS</span>
           </div>
         </div>
-        <div className="card-zakka flex-1 flex flex-col items-center justify-center py-4">
+        <div className="card-zakka flex-1 flex flex-col items-center justify-center py-4 text-ac-brown">
           <Sun className="text-ac-orange mb-1" size={24} />
-          <span className="text-lg font-black text-ac-brown">24°C</span>
-          <span className="text-[10px] font-bold text-ac-border uppercase">Sunny</span>
+          <span className="text-lg font-black italic">24°C</span>
+          <span className="text-[10px] font-bold text-ac-border uppercase tracking-widest">Sunny</span>
         </div>
       </div>
 
-      {/* 日期選擇 */}
       <div className="flex overflow-x-auto gap-4 px-6 py-2 hide-scrollbar">
         {dateRange.map((date, i) => (
           <button key={i} onClick={() => setSelectedDateIdx(i)} className={`flex flex-col items-center min-w-[65px] p-4 rounded-3xl border-4 transition-all ${selectedDateIdx === i ? 'bg-ac-green border-ac-green text-white shadow-zakka -translate-y-1' : 'bg-white border-ac-border text-ac-brown/40'}`}>
@@ -61,11 +57,10 @@ export const Schedule = () => {
         ))}
       </div>
 
-      {/* 時間軸 */}
       <div className="px-6 space-y-6 relative text-left">
         <div className="absolute left-10 top-4 bottom-4 w-1.5 bg-ac-border/30 rounded-full" />
         {items.length === 0 ? (
-          <div className="ml-12 py-10 text-ac-border italic font-bold">這天還空空的，點下方新增計畫吧！</div>
+          <div className="ml-12 py-10 text-ac-border italic font-black opacity-30">這天還沒有計畫唷...📓</div>
         ) : (
           items.map((item) => {
             const Icon = ICON_MAP[item.category] || Camera;
@@ -79,7 +74,7 @@ export const Schedule = () => {
                       <Icon size={14} className="text-ac-brown/40" />
                       <h3 className="font-black text-ac-brown text-lg leading-tight">{item.title}</h3>
                     </div>
-                    <button onClick={(e) => { e.stopPropagation(); if(confirm('刪除這項計畫？')) deleteScheduleItem(trip.id, item.id); }} className="text-ac-orange/40 hover:text-ac-orange"><Trash2 size={16} /></button>
+                    <button onClick={(e) => { e.stopPropagation(); if(confirm('要刪除嗎？')) deleteScheduleItem(trip.id, item.id); }} className="text-ac-orange/40 hover:text-ac-orange"><Trash2 size={16} /></button>
                   </div>
                   <div className="flex items-center gap-1 text-ac-brown/50 text-xs font-bold mt-2"><MapPin size={12} /> {item.location || '尚未設定地點'}</div>
                 </div>
@@ -87,7 +82,7 @@ export const Schedule = () => {
             );
           })
         )}
-        <button onClick={() => { setEditingItem(undefined); setIsEditorOpen(true); }} className="flex items-center gap-3 w-[calc(100%-48px)] p-5 border-4 border-dashed border-ac-border rounded-[32px] text-ac-border font-black text-sm hover:border-ac-green hover:text-ac-green transition-all active:scale-95 ml-12"><Plus size={20} /> 新增行程項目</button>
+        <button onClick={() => { setEditingItem(undefined); setIsEditorOpen(true); }} className="flex items-center gap-3 w-[calc(100%-48px)] p-5 border-4 border-dashed border-ac-border rounded-[32px] text-ac-border font-black flex items-center justify-center gap-3 active:scale-95 transition-all ml-12"><Plus size={20} /> 新增行程項目</button>
       </div>
 
       {isEditorOpen && <ScheduleEditor tripId={trip.id} date={selectedDateStr} item={editingItem} onClose={() => setIsEditorOpen(false)} />}
