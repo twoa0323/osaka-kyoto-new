@@ -7,20 +7,18 @@ export interface ScheduleItem {
   title: string;
   location: string;
   category: 'sightseeing' | 'food' | 'transport' | 'hotel';
-  note?: string;
+  note: string;
 }
 
 export interface BookingItem {
   id: string;
   type: 'flight' | 'hotel' | 'car' | 'voucher';
   title: string;
-  confirmationNo?: string;
+  confirmationNo: string;
   date: string;
-  endDate?: string;
-  location?: string;
-  price?: number;
-  note?: string;
-  images: string[]; // 支援多圖
+  location: string;
+  note: string;
+  images: string[]; 
   flightNo?: string;
   depIata?: string;
   arrIata?: string;
@@ -35,42 +33,16 @@ export interface ExpenseItem {
   amount: number;
   currency: CurrencyCode;
   method: '現金' | '信用卡' | '行動支付';
-  location?: string;
-  category: string;
+  location: string;
   payerId: string;
   splitWith: string[];
-  images: string[]; // 支援照片紀錄
+  images: string[]; 
 }
 
-export interface JournalItem {
-  id: string;
-  date: string;
-  title: string;
-  content: string;
-  images: string[];
-  location?: string;
-  rating: number;
-}
-
-export interface ShoppingItem {
-  id: string;
-  title: string;
-  price?: number;
-  currency: CurrencyCode;
-  isBought: boolean;
-  images: string[];
-  note?: string;
-  category: 'must-buy' | 'beauty' | 'luxury' | 'souvenir' | 'general';
-}
-
-export interface InfoItem {
-  id: string;
-  type: 'link' | 'emergency' | 'note';
-  title: string;
-  content: string;
-  images: string[];
-  url?: string;
-}
+// 其餘 JournalItem, ShoppingItem, InfoItem 確保 images: string[]
+export interface JournalItem { id: string; date: string; title: string; content: string; images: string[]; rating: number; location: string; }
+export interface ShoppingItem { id: string; title: string; price: number; currency: CurrencyCode; isBought: boolean; images: string[]; note: string; category: string; }
+export interface InfoItem { id: string; type: string; title: string; content: string; images: string[]; url: string; }
 
 export interface Trip {
   id: string;
