@@ -2,14 +2,15 @@ export type CurrencyCode = 'TWD' | 'JPY' | 'KRW' | 'USD' | 'EUR' | 'THB' | 'GBP'
 
 // ... 其他型別保持不變
 
-export interface JournalItem {
+export interface ShoppingItem {
   id: string;
-  date: string;
   title: string;
-  content: string;
-  images: string[]; // Base64 或 URL 陣列
-  location?: string;
-  rating: number; // 1-5 星
+  price?: number;
+  currency: CurrencyCode;
+  isBought: boolean;
+  images: string[];
+  note?: string;
+  category: 'must-buy' | 'beauty' | 'luxury' | 'souvenir' | 'general';
 }
 
 export interface Trip {
@@ -24,5 +25,6 @@ export interface Trip {
   items: ScheduleItem[];
   bookings: BookingItem[];
   expenses: ExpenseItem[];
-  journals: JournalItem[]; // 新增
+  journals: JournalItem[];
+  shoppingList: ShoppingItem[]; // 新增
 }

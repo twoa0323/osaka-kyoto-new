@@ -4,7 +4,8 @@ import { Onboarding } from './components/Onboarding';
 import { Schedule } from './components/Schedule';
 import { Booking } from './components/Booking';
 import { Expense } from './components/Expense';
-import { Journal } from './components/Journal'; // 新增
+import { Journal } from './components/Journal';
+import { Shopping } from './components/Shopping'; // 新增
 import { Plus, ChevronDown, Trash2, Calendar, CreditCard, Wallet, Utensils, ShoppingBag, Info } from 'lucide-react';
 
 const App: React.FC = () => {
@@ -53,12 +54,9 @@ const App: React.FC = () => {
         {activeTab === 'schedule' && <Schedule />}
         {activeTab === 'booking' && <Booking />}
         {activeTab === 'expense' && <Expense />}
-        {activeTab === 'food' && <Journal />} {/* 接入美食手帳 */}
-        {activeTab !== 'schedule' && activeTab !== 'booking' && activeTab !== 'expense' && activeTab !== 'food' && (
-          <div className="p-10 text-center italic text-ac-border font-bold">
-            {activeTab.toUpperCase()} 模組開發中...
-          </div>
-        )}
+        {activeTab === 'food' && <Journal />}
+        {activeTab === 'shop' && <Shopping />} {/* 接入購物清單 */}
+        {activeTab === 'info' && <div className="p-10 text-center italic text-ac-border font-bold italic">最後一個模組開發中...</div>}
       </main>
 
       <nav className="fixed bottom-6 left-1/2 -translate-x-1/2 w-[92%] max-w-md bg-white border-4 border-ac-border rounded-full shadow-zakka px-4 py-3 flex justify-between items-center z-50">
