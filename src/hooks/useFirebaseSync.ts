@@ -8,7 +8,6 @@ export const useFirebaseSync = () => {
   const { setTrips } = useTripStore();
 
   useEffect(() => {
-    // 監聽 Firestore 的 trips 集合
     const q = query(collection(db, "trips"));
     
     const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -17,9 +16,8 @@ export const useFirebaseSync = () => {
         tripsData.push(doc.data() as Trip);
       });
       
+      // 關鍵修正：只有當雲端真的有資料時才更新本地
       if (tripsData.length > 0) {
-        // 如果雲端有資料，更新 Zustand Store
-        // 這裡可以視需求決定是要覆蓋本地還是合併
         setTrips(tripsData);
       }
     });
