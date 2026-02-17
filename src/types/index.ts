@@ -1,44 +1,15 @@
 export type CurrencyCode = 'TWD' | 'JPY' | 'KRW' | 'USD' | 'EUR' | 'THB' | 'GBP' | 'CNY' | 'HKD' | 'SGD' | 'VND';
 
-export interface ScheduleItem {
-  id: string;
-  date: string;
-  time: string;
-  title: string;
-  location: string;
-  category: 'sightseeing' | 'food' | 'transport' | 'hotel';
-  note?: string;
-}
+// ... 其他型別保持不變
 
-export interface BookingItem {
-  id: string;
-  type: 'flight' | 'hotel' | 'car' | 'voucher';
-  title: string;
-  confirmationNo?: string;
-  date: string;
-  endDate?: string;
-  location?: string;
-  price?: number;
-  note?: string;
-  flightNo?: string;
-  depIata?: string;
-  arrIata?: string;
-  depTime?: string;
-  arrTime?: string;
-}
-
-// 新增記帳型別
-export interface ExpenseItem {
+export interface JournalItem {
   id: string;
   date: string;
   title: string;
-  amount: number;
-  currency: CurrencyCode;
-  method: '現金' | '信用卡' | '行動支付' | 'WOWPASS';
+  content: string;
+  images: string[]; // Base64 或 URL 陣列
   location?: string;
-  category: string;
-  payerId: string;
-  splitWith: string[]; // 分攤成員 ID 列表
+  rating: number; // 1-5 星
 }
 
 export interface Trip {
@@ -52,5 +23,6 @@ export interface Trip {
   pin: string;
   items: ScheduleItem[];
   bookings: BookingItem[];
-  expenses: ExpenseItem[]; // 新增
+  expenses: ExpenseItem[];
+  journals: JournalItem[]; // 新增
 }

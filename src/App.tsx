@@ -3,7 +3,8 @@ import { useTripStore } from './store/useTripStore';
 import { Onboarding } from './components/Onboarding';
 import { Schedule } from './components/Schedule';
 import { Booking } from './components/Booking';
-import { Expense } from './components/Expense'; // 新增
+import { Expense } from './components/Expense';
+import { Journal } from './components/Journal'; // 新增
 import { Plus, ChevronDown, Trash2, Calendar, CreditCard, Wallet, Utensils, ShoppingBag, Info } from 'lucide-react';
 
 const App: React.FC = () => {
@@ -30,15 +31,15 @@ const App: React.FC = () => {
           </div>
 
           {menuOpen && (
-            <div className="absolute top-14 left-0 w-64 bg-white border-4 border-ac-border rounded-3xl shadow-zakka overflow-hidden z-50">
+            <div className="absolute top-14 left-0 w-64 bg-white border-4 border-ac-border rounded-3xl shadow-zakka overflow-hidden z-50 animate-in fade-in slide-in-from-top-2">
               {trips.map(t => (
-                <div key={t.id} className="flex items-center justify-between border-b border-ac-border last:border-0 p-4 hover:bg-ac-bg">
+                <div key={t.id} className="flex items-center justify-between border-b border-ac-border last:border-0 p-4 hover:bg-ac-bg transition-colors">
                   <button className={`flex-1 text-left font-bold text-sm ${t.id === currentTripId ? 'text-ac-green' : 'text-ac-brown'}`} onClick={() => { switchTrip(t.id); setMenuOpen(false); }}>{t.dest}</button>
-                  <button onClick={() => deleteTrip(t.id)} className="text-ac-orange/40 hover:text-ac-orange p-1"><Trash2 size={16}/></button>
+                  <button onClick={() => deleteTrip(t.id)} className="text-ac-orange/40 hover:text-ac-orange p-1 transition-colors"><Trash2 size={16}/></button>
                 </div>
               ))}
               {trips.length < 3 && (
-                <button onClick={() => { setShowOnboarding(true); setMenuOpen(false); }} className="w-full p-4 bg-ac-green text-white text-xs font-black flex items-center justify-center gap-2"><Plus size={14} /> 新增行程</button>
+                <button onClick={() => { setShowOnboarding(true); setMenuOpen(false); }} className="w-full p-4 bg-ac-green text-white text-xs font-black flex items-center justify-center gap-2 active:bg-ac-brown"><Plus size={14} /> 新增行程</button>
               )}
             </div>
           )}
@@ -51,10 +52,11 @@ const App: React.FC = () => {
       <main>
         {activeTab === 'schedule' && <Schedule />}
         {activeTab === 'booking' && <Booking />}
-        {activeTab === 'expense' && <Expense />} {/* 接入記帳頁面 */}
-        {activeTab !== 'schedule' && activeTab !== 'booking' && activeTab !== 'expense' && (
+        {activeTab === 'expense' && <Expense />}
+        {activeTab === 'food' && <Journal />} {/* 接入美食手帳 */}
+        {activeTab !== 'schedule' && activeTab !== 'booking' && activeTab !== 'expense' && activeTab !== 'food' && (
           <div className="p-10 text-center italic text-ac-border font-bold">
-            {activeTab.toUpperCase()} 開發中...
+            {activeTab.toUpperCase()} 模組開發中...
           </div>
         )}
       </main>
@@ -72,7 +74,7 @@ const App: React.FC = () => {
 };
 
 const NavIcon = ({ icon, label, id, active, onClick }: any) => (
-  <button onClick={() => onClick(id)} className={`flex flex-col items-center gap-1 flex-1 transition-all duration-300 ${active === id ? 'text-ac-green scale-110 -translate-y-1' : 'text-ac-border'}`}>
+  <button onClick={() => onClick(id)} className={`flex flex-col items-center gap-1 flex-1 transition-all duration-300 ${active === id ? 'text-ac-green scale-110 -translate-y-1' : 'text-ac-border hover:text-ac-green/50'}`}>
     {React.cloneElement(icon, { size: 20, strokeWidth: active === id ? 3 : 2 })}
     <span className="text-[9px] font-black">{label}</span>
   </button>
