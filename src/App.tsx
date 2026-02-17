@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useTripStore } from './store/useTripStore';
 import { Onboarding } from './components/Onboarding';
 import { Schedule } from './components/Schedule';
+import { Booking } from './components/Booking'; // 新增
 import { Plus, ChevronDown, Trash2, Calendar, CreditCard, Wallet, Utensils, ShoppingBag, Info } from 'lucide-react';
 
 const App: React.FC = () => {
@@ -48,7 +49,12 @@ const App: React.FC = () => {
 
       <main>
         {activeTab === 'schedule' && <Schedule />}
-        {activeTab !== 'schedule' && <div className="p-10 text-center italic text-ac-border font-bold">{activeTab.toUpperCase()} 開發中...</div>}
+        {activeTab === 'booking' && <Booking />} {/* 接入預訂頁面 */}
+        {activeTab !== 'schedule' && activeTab !== 'booking' && (
+          <div className="p-10 text-center italic text-ac-border font-bold">
+            {activeTab.toUpperCase()} 開發中...
+          </div>
+        )}
       </main>
 
       <nav className="fixed bottom-6 left-1/2 -translate-x-1/2 w-[92%] max-w-md bg-white border-4 border-ac-border rounded-full shadow-zakka px-4 py-3 flex justify-between items-center z-50">
