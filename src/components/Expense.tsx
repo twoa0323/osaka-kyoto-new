@@ -1,11 +1,11 @@
 import React, { useState, useMemo, useRef } from 'react';
 import { useTripStore } from '../store/useTripStore';
-import { Wallet, Coins, MapPin, Image as ImageIcon, Plus, Trash2, Users, Camera, X } from 'lucide-react';
+import { Wallet, Coins, MapPin, Image as ImageIcon, Trash2, Users, Camera, X } from 'lucide-react';
 import { ExpenseItem, CurrencyCode } from '../types';
 import { compressImage } from '../utils/imageUtils';
 
 export const Expense = () => {
-  const { trips, currentTripId, exchangeRate, addExpenseItem, deleteExpenseItem, updateExpenseItem } = useTripStore(); // 需確認 Store 有 updateExpenseItem
+  const { trips, currentTripId, exchangeRate, addExpenseItem, deleteExpenseItem } = useTripStore();
   const trip = trips.find(t => t.id === currentTripId);
   
   const [viewMode, setViewMode] = useState<'input' | 'list'>('input');
@@ -22,7 +22,7 @@ export const Expense = () => {
     title: '',
     location: '',
     splitWith: trip?.members || ['Admin'],
-    images: [] // 這裡雖然 ExpenseItem 定義沒強制，但為了擴充性可保留
+    images: [] 
   });
 
   if (!trip) return null;
@@ -37,15 +37,15 @@ export const Expense = () => {
       amount: Number(form.amount),
       currency: form.currency as CurrencyCode,
       method: form.method as any,
-      location: form.location,
+      location: form.location || '',
       category: 'general',
       payerId: trip.members[0],
-      splitWith: form.splitWith!,
-      // 如果你的 ExpenseItem 有 images 欄位請加上，若無則忽略
+      splitWith: form.splitWith || [],
+      images: form.images || []
     };
 
     if (editingId) {
-      // 呼叫更新 (Store 需支援，若無則先刪後加)
+      // 簡單的更新邏輯：先刪後加 (確保 ID 不變)
       deleteExpenseItem(trip.id, editingId);
       addExpenseItem(trip.id, itemData);
       alert("更新成功！");
@@ -54,8 +54,16 @@ export const Expense = () => {
       alert("記帳成功！");
     }
 
-    // 重置表單
-    setForm({ ...form, title: '', amount: 0, location: '', images: [] });
+    setForm({ 
+      date: form.date, // 保留日期方便連續記帳
+      currency: form.currency,
+      method: '現金',
+      title: '', 
+      amount: 0, 
+      location: '', 
+      images: [],
+      splitWith: trip.members
+    });
     setEditingId(null);
   };
 
@@ -67,12 +75,13 @@ export const Expense = () => {
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
-      // 這裡僅做示意，若 ExpenseItem 尚未支援 images，可先忽略
-      alert("圖片已選擇 (需確認資料庫欄位支援)");
+      const files = Array.from(e.target.files);
+      const compressed = await Promise.all(files.map(f => compressImage(f)));
+      setForm(prev => ({ ...prev, images: [...(prev.images || []), ...compressed] }));
     }
   };
 
-  // 幣別清單：去重並只保留 當地貨幣 與 TWD
+  // 幣別：只保留 當地貨幣 與 TWD
   const currencies = [trip.baseCurrency, 'TWD'].filter((v, i, a) => a.indexOf(v) === i);
 
   // 總額計算
@@ -120,13 +129,13 @@ export const Expense = () => {
             <h2 className="text-xl font-black text-ac-brown italic">{editingId ? '編輯消費' : '記帳輸入'}</h2>
           </div>
 
-          {/* 日期 (修正對齊: text-left pl-6) */}
+          {/* 1. 日期修正對齊 */}
           <div className="space-y-1">
             <label className="text-[10px] font-black text-ac-brown/40 uppercase tracking-widest">日期</label>
             <input type="date" value={form.date} onChange={e => setForm({...form, date: e.target.value})} className="w-full p-4 bg-ac-bg border-2 border-ac-border rounded-2xl font-black text-ac-brown text-left pl-6" />
           </div>
 
-          {/* 幣別 (限制顯示) */}
+          {/* 3. 幣別限制 */}
           <div className="space-y-1">
             <label className="text-[10px] font-black text-ac-brown/40 uppercase tracking-widest">幣別</label>
             <div className="flex gap-3">
@@ -136,6 +145,7 @@ export const Expense = () => {
             </div>
           </div>
 
+          {/* 3. 金額自動換算 */}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1">
               <label className="text-[10px] font-black text-ac-orange uppercase tracking-widest">* 金額</label>
@@ -149,7 +159,7 @@ export const Expense = () => {
             </div>
           </div>
 
-          {/* 支付方式 (移除 WOWPASS) */}
+          {/* 4. 支付方式 (移除 WOWPASS) */}
           <div className="space-y-1">
             <label className="text-[10px] font-black text-ac-brown/40 uppercase tracking-widest">支付方式</label>
             <div className="flex flex-wrap gap-2">
@@ -167,16 +177,20 @@ export const Expense = () => {
             </div>
           </div>
 
-          {/* 消費項目與圖片上傳修復 */}
+          {/* 2. 照片上傳修復 */}
           <div className="space-y-1">
             <label className="text-[10px] font-black text-ac-orange uppercase tracking-widest">* 消費項目</label>
             <div className="flex gap-3">
               <input placeholder="例如：午餐" value={form.title} onChange={e => setForm({...form, title: e.target.value})} className="flex-1 p-5 bg-ac-bg border-2 border-ac-border rounded-2xl font-black text-ac-brown outline-none focus:border-ac-green" />
               <button 
                 onClick={() => fileInputRef.current?.click()} 
-                className="w-16 h-16 bg-[#E2F1E7] border-2 border-ac-green rounded-2xl flex items-center justify-center text-ac-green active:scale-95 hover:bg-ac-green hover:text-white transition-colors"
+                className="w-16 h-16 bg-[#E2F1E7] border-2 border-ac-green rounded-2xl flex items-center justify-center text-ac-green active:scale-95 hover:bg-ac-green hover:text-white transition-colors relative overflow-hidden"
               >
-                <ImageIcon size={28} />
+                {form.images && form.images.length > 0 ? (
+                  <img src={form.images[0]} className="w-full h-full object-cover" alt="preview" />
+                ) : (
+                  <ImageIcon size={28} />
+                )}
                 <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
               </button>
             </div>
@@ -222,7 +236,13 @@ export const Expense = () => {
                 className="card-zakka bg-white flex justify-between items-center group cursor-pointer active:scale-[0.98] transition-all hover:border-ac-green"
               >
                 <div className="flex items-center gap-4 text-left">
-                  <div className="w-10 h-10 bg-ac-bg rounded-full flex items-center justify-center text-ac-orange"><Coins size={20}/></div>
+                  {e.images && e.images.length > 0 ? (
+                    <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-ac-bg">
+                      <img src={e.images[0]} className="w-full h-full object-cover" alt="item" />
+                    </div>
+                  ) : (
+                    <div className="w-10 h-10 bg-ac-bg rounded-full flex items-center justify-center text-ac-orange"><Coins size={20}/></div>
+                  )}
                   <div>
                     <h3 className="font-black text-ac-brown">{e.title}</h3>
                     <p className="text-[10px] font-bold text-ac-brown/40 uppercase">{e.date} • {e.method}</p>

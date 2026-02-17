@@ -4,10 +4,6 @@ import { Trip, ScheduleItem, BookingItem, ExpenseItem, JournalItem, ShoppingItem
 import { db } from '../services/firebase';
 import { doc, setDoc } from 'firebase/firestore';
 
-// 輔助函式：移除物件中的 undefined (解決 Firestore 寫入失敗導致資料消失的主因)
-const sanitize = (data: any) => JSON.parse(JSON.stringify(data));
-
-// ... Interface 保持不變 ...
 interface TripState {
   trips: Trip[];
   currentTripId: string | null;
@@ -19,25 +15,35 @@ interface TripState {
   deleteTrip: (id: string) => void;
   setActiveTab: (tab: string) => void;
   setExchangeRate: (rate: number) => void;
+  
+  // CRUD Methods
   addScheduleItem: (tripId: string, item: ScheduleItem) => void;
   updateScheduleItem: (tripId: string, itemId: string, newItem: ScheduleItem) => void;
   deleteScheduleItem: (tripId: string, itemId: string) => void;
+  
   addBookingItem: (tripId: string, item: BookingItem) => void;
+  updateBookingItem: (tripId: string, itemId: string, newItem: BookingItem) => void; // 新增更新方法
   deleteBookingItem: (tripId: string, itemId: string) => void;
+  
   addExpenseItem: (tripId: string, item: ExpenseItem) => void;
   deleteExpenseItem: (tripId: string, itemId: string) => void;
+  
   addJournalItem: (tripId: string, item: JournalItem) => void;
   deleteJournalItem: (tripId: string, itemId: string) => void;
+  
   addShoppingItem: (tripId: string, item: ShoppingItem) => void;
   toggleShoppingItem: (tripId: string, itemId: string) => void;
   deleteShoppingItem: (tripId: string, itemId: string) => void;
+  
   addInfoItem: (tripId: string, item: InfoItem) => void;
   deleteInfoItem: (tripId: string, itemId: string) => void;
 }
 
+// 關鍵修復：移除 undefined，解決 Firebase 寫入失敗導致資料回滾的問題
+const sanitize = (data: any) => JSON.parse(JSON.stringify(data));
+
 const syncToCloud = async (trip: Trip) => {
   try {
-    // 關鍵修正：sanitize 確保沒有 undefined
     await setDoc(doc(db, "trips", trip.id), sanitize(trip));
   } catch (e) {
     console.error("雲端同步失敗:", e);
@@ -65,7 +71,7 @@ export const useTripStore = create<TripState>()(
       setActiveTab: (tab) => set({ activeTab: tab }),
       setExchangeRate: (rate) => set({ exchangeRate: rate }),
 
-      // 通用 CRUD 樣板 (已加入 sanitize 保護)
+      // --- Schedule ---
       addScheduleItem: (tripId, item) => {
         set((state) => ({ trips: state.trips.map(t => t.id === tripId ? { ...t, items: [...(t.items || []), item] } : t) }));
         const t = get().trips.find(t => t.id === tripId);
@@ -82,8 +88,14 @@ export const useTripStore = create<TripState>()(
         if (t) syncToCloud(t);
       },
 
+      // --- Booking ---
       addBookingItem: (tripId, item) => {
         set((state) => ({ trips: state.trips.map(t => t.id === tripId ? { ...t, bookings: [...(t.bookings || []), item] } : t) }));
+        const t = get().trips.find(t => t.id === tripId);
+        if (t) syncToCloud(t);
+      },
+      updateBookingItem: (tripId, itemId, newItem) => {
+        set((state) => ({ trips: state.trips.map(t => t.id === tripId ? { ...t, bookings: (t.bookings || []).map(b => b.id === itemId ? newItem : b) } : t) }));
         const t = get().trips.find(t => t.id === tripId);
         if (t) syncToCloud(t);
       },
@@ -93,6 +105,7 @@ export const useTripStore = create<TripState>()(
         if (t) syncToCloud(t);
       },
 
+      // --- Expense ---
       addExpenseItem: (tripId, item) => {
         set((state) => ({ trips: state.trips.map(t => t.id === tripId ? { ...t, expenses: [...(t.expenses || []), item] } : t) }));
         const t = get().trips.find(t => t.id === tripId);
@@ -104,6 +117,7 @@ export const useTripStore = create<TripState>()(
         if (t) syncToCloud(t);
       },
 
+      // --- Journal ---
       addJournalItem: (tripId, item) => {
         set((state) => ({ trips: state.trips.map(t => t.id === tripId ? { ...t, journals: [item, ...(t.journals || [])] } : t) }));
         const t = get().trips.find(t => t.id === tripId);
@@ -115,6 +129,7 @@ export const useTripStore = create<TripState>()(
         if (t) syncToCloud(t);
       },
 
+      // --- Shopping ---
       addShoppingItem: (tripId, item) => {
         set((state) => ({ trips: state.trips.map(t => t.id === tripId ? { ...t, shoppingList: [...(t.shoppingList || []), item] } : t) }));
         const t = get().trips.find(t => t.id === tripId);
@@ -131,6 +146,7 @@ export const useTripStore = create<TripState>()(
         if (t) syncToCloud(t);
       },
 
+      // --- Info ---
       addInfoItem: (tripId, item) => {
         set((state) => ({ trips: state.trips.map(t => t.id === tripId ? { ...t, infoItems: [item, ...(t.infoItems || [])] } : t) }));
         const t = get().trips.find(t => t.id === tripId);
