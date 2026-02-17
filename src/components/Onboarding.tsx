@@ -1,133 +1,104 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useTripStore } from '../store/useTripStore';
-import { fetchExchangeRate } from '../utils/exchange';
-import { Plane, MapPin, Calendar as CalendarIcon, Coins } from 'lucide-react';
-import { db } from '../services/firebase';
-import { collection, addDoc } from 'firebase/firestore';
+import { getCurrencyByCountry } from '../utils/currencyMapping';
+import { Plane, Search, Calendar, MapPin, Loader2 } from 'lucide-react';
+import axios from 'axios';
 
-const CURRENCY_MAP: Record<string, any> = {
-  '日本': 'JPY', '韓國': 'KRW', '泰國': 'THB', '美國': 'USD', '歐洲': 'EUR', '台灣': 'TWD'
-};
-
-export const Onboarding: React.FC = () => {
-  const setTrip = useTripStore((state) => state.setTrip);
-  const setRate = useTripStore((state) => state.setExchangeRate);
-  
+export const Onboarding = () => {
+  const addTrip = useTripStore((state) => state.addTrip);
+  const [query, setQuery] = useState('');
+  const [suggestions, setSuggestions] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
   const [form, setForm] = useState({
-    dest: '', start: '', end: '', currency: 'JPY' as any
+    selectedPlace: null as any,
+    start: '',
+    end: '',
+    currency: 'TWD' as any
   });
-  const [loading, setLoading] = useState(false); // 新增 loading 狀態
 
-  const handleCreate = async () => {
-    if (!form.dest || !form.start || !form.end) return alert("請填寫完整資訊內容唷！");
+  // Photon API 搜尋建議 (Debounced)
+  useEffect(() => {
+    const timer = setTimeout(async () => {
+      if (query.length > 1) {
+        setLoading(true);
+        try {
+          const res = await axios.get(`https://photon.komoot.io/api/?q=${query}&limit=5`);
+          setSuggestions(res.data.features);
+        } catch (e) { console.error(e); }
+        setLoading(false);
+      } else { setSuggestions([]); }
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [query]);
+
+  const handleCreate = () => {
+    if (!form.selectedPlace || !form.start || !form.end) return alert("請填完所有資訊內容唷！");
     
-    setLoading(true); // 開始 loading
-    try {
-      // 1. 抓取匯率
-      const rate = await fetchExchangeRate(form.currency);
-      setRate(rate);
-
-      const tripData = {
-        ...form,
-        id: Date.now().toString(),
-        members: ['Admin'],
-        pin: '007'
-      };
-
-      // 2. 儲存至 Firestore (最容易失敗的地方)
-      console.log("嘗試寫入資料庫...", tripData);
-      await addDoc(collection(db, "trips"), tripData);
-      console.log("寫入成功！");
-
-      // 3. 更新狀態，進入下一步
-      setTrip(tripData as any);
-    } catch (error: any) {
-      console.error("建立行程失敗:", error);
-      // 顯示具體錯誤訊息
-      let msg = "建立失敗，請檢查 Console 錯誤訊息。";
-      if (error.code === 'permission-denied') {
-        msg = "權限不足！請檢查 Firebase Firestore Rules 是否已設為公開 (Test Mode)。";
-      } else if (error.code === 'unavailable') {
-        msg = "連線失敗，請檢查網路或 Firebase Config 設定。";
-      }
-      alert(msg + "\n" + error.message);
-    } finally {
-      setLoading(false); // 結束 loading
-    }
+    const country = form.selectedPlace.properties.country;
+    addTrip({
+      id: Date.now().toString(),
+      dest: form.selectedPlace.properties.name,
+      destination: form.selectedPlace.properties.name,
+      startDate: form.start,
+      endDate: form.end,
+      baseCurrency: getCurrencyByCountry(country),
+      members: ['小冒險家'],
+      pin: '007'
+    });
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-ac-bg">
+    <div className="min-h-screen bg-ac-bg p-6 flex items-center justify-center">
       <div className="w-full max-w-sm space-y-6">
-        {/* ... 省略標題部分，保持不變 ... */}
-        <div className="text-center space-y-2">
-          <div className="inline-block p-4 bg-ac-green rounded-full shadow-zakka mb-4">
-            <Plane className="text-white w-8 h-8 rotate-45" />
+        <div className="text-center">
+          <div className="bg-ac-green p-4 rounded-full inline-block shadow-zakka mb-4">
+            <Plane className="text-white rotate-45" size={32} />
           </div>
-          <h1 className="text-2xl font-bold text-ac-brown">準備好出發了嗎？</h1>
-          <p className="text-ac-brown opacity-70 italic">讓我們開始規畫你的手帳行程</p>
+          <h1 className="text-2xl font-bold text-ac-brown italic">新旅程的起點</h1>
         </div>
 
-        <div className="card-zakka space-y-5">
-          {/* 地點選擇 */}
-          <div className="space-y-2">
-            <label className="text-sm font-bold flex items-center gap-2">
-              <MapPin size={16} /> 目的地
-            </label>
-            <input 
-              className="w-full p-4 bg-ac-bg border-2 border-ac-border rounded-2xl focus:outline-none focus:border-ac-green transition-all"
-              placeholder="要去哪裡旅行呢？"
-              value={form.dest}
-              onChange={(e) => {
-                const val = e.target.value;
-                const matched = Object.keys(CURRENCY_MAP).find(k => val.includes(k));
-                setForm({...form, dest: val, currency: matched ? CURRENCY_MAP[matched] : 'TWD'});
-              }}
-            />
-          </div>
-
-          {/* 日期選擇 */}
-          <div className="flex gap-3">
-            <div className="flex-1 space-y-2">
-              <label className="text-sm font-bold flex items-center gap-2">
-                <CalendarIcon size={16} /> 開始
-              </label>
+        <div className="card-zakka space-y-4">
+          {/* Photon 搜尋框 */}
+          <div className="relative">
+            <label className="text-xs font-bold mb-1 block">目的地 (全球城市搜尋)</label>
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-ac-border" size={16} />
               <input 
-                type="date"
-                className="w-full p-3 bg-ac-bg border-2 border-ac-border rounded-2xl text-sm"
-                onChange={(e) => setForm({...form, start: e.target.value})}
+                className="w-full pl-10 pr-4 py-3 bg-ac-bg border-2 border-ac-border rounded-xl font-bold"
+                placeholder="輸入城市..."
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
               />
+              {loading && <Loader2 className="absolute right-3 top-3 animate-spin text-ac-green" size={16} />}
             </div>
-            <div className="flex-1 space-y-2">
-              <label className="text-sm font-bold flex items-center gap-2">
-                <CalendarIcon size={16} /> 結束
-              </label>
-              <input 
-                type="date"
-                className="w-full p-3 bg-ac-bg border-2 border-ac-border rounded-2xl text-sm"
-                onChange={(e) => setForm({...form, end: e.target.value})}
-              />
-            </div>
+
+            {/* 建議列表 */}
+            {suggestions.length > 0 && (
+              <div className="absolute w-full mt-2 bg-white border-2 border-ac-border rounded-2xl shadow-zakka z-50 overflow-hidden">
+                {suggestions.map((s, i) => (
+                  <button 
+                    key={i}
+                    onClick={() => {
+                      setForm({...form, selectedPlace: s});
+                      setQuery(`${s.properties.name}, ${s.properties.country}`);
+                      setSuggestions([]);
+                    }}
+                    className="w-full text-left px-4 py-3 hover:bg-ac-bg transition-colors border-b last:border-0 border-ac-border text-sm"
+                  >
+                    <span className="font-bold">{s.properties.name}</span>
+                    <span className="text-xs text-ac-brown/50 ml-2">{s.properties.country}</span>
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
-          {/* 幣別顯示 */}
-          <div className="p-4 bg-ac-bg/50 border-2 border-dashed border-ac-border rounded-2xl flex justify-between items-center">
-            <div className="flex items-center gap-3">
-              <Coins className="text-ac-orange" />
-              <span className="font-bold">幣別自動設定</span>
-            </div>
-            <span className="bg-ac-orange text-white px-3 py-1 rounded-full text-xs font-bold">
-              {form.currency}
-            </span>
+          <div className="flex gap-2">
+            <input type="date" className="flex-1 p-3 bg-ac-bg border-2 border-ac-border rounded-xl text-xs" onChange={e => setForm({...form, start: e.target.value})} />
+            <input type="date" className="flex-1 p-3 bg-ac-bg border-2 border-ac-border rounded-xl text-xs" onChange={e => setForm({...form, end: e.target.value})} />
           </div>
 
-          <button 
-            onClick={handleCreate} 
-            disabled={loading}
-            className={`btn-zakka w-full py-4 text-lg mt-4 flex justify-center items-center ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
-          >
-            {loading ? "處理中..." : "建立旅行計畫 ➔"}
-          </button>
+          <button onClick={handleCreate} className="btn-zakka w-full py-4 mt-2">建立計畫 ➔</button>
         </div>
       </div>
     </div>

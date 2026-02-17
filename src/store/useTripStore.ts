@@ -1,28 +1,39 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware'; // 加入持久化插件
+import { persist } from 'zustand/middleware';
 import { Trip } from '../types';
 
 interface TripState {
-  currentTrip: Trip | null;
-  exchangeRate: number;
+  trips: Trip[];             // 儲存最多 3 個行程
+  currentTripId: string | null;
   activeTab: string;
-  setTrip: (trip: Trip) => void;
-  setExchangeRate: (rate: number) => void;
+  setTrips: (trips: Trip[]) => void;
+  addTrip: (trip: Trip) => void;
+  switchTrip: (id: string) => void;
+  deleteTrip: (id: string) => void;
   setActiveTab: (tab: string) => void;
 }
 
 export const useTripStore = create<TripState>()(
   persist(
     (set) => ({
-      currentTrip: null,
-      exchangeRate: 1,
+      trips: [],
+      currentTripId: null,
       activeTab: 'schedule',
-      setTrip: (trip) => set({ currentTrip: trip }),
-      setExchangeRate: (rate) => set({ exchangeRate: rate }),
+      setTrips: (trips) => set({ trips }),
+      addTrip: (trip) => set((state) => {
+        const newTrips = [trip, ...state.trips].slice(0, 3); // 限制最多 3 個
+        return { trips: newTrips, currentTripId: trip.id };
+      }),
+      switchTrip: (id) => set({ currentTripId: id }),
+      deleteTrip: (id) => set((state) => {
+        const newTrips = state.trips.filter(t => t.id !== id);
+        return { 
+          trips: newTrips, 
+          currentTripId: newTrips.length > 0 ? newTrips[0].id : null 
+        };
+      }),
       setActiveTab: (tab) => set({ activeTab: tab }),
     }),
-    {
-      name: 'trip-storage', // 儲存於 LocalStorage 的 Key
-    }
+    { name: 'zakka-trip-storage' }
   )
 );
