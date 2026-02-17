@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useTripStore } from '../store/useTripStore';
+// 1. 補上 Plus, Edit2, Trash2 的引入
 import { X, Clock, MapPin, Tag, AlignLeft, Image as ImageIcon, Plus, Edit2, Trash2 } from 'lucide-react';
 import { ScheduleItem } from '../types';
 
@@ -12,6 +13,7 @@ interface EditorProps {
   onClose: () => void;
 }
 
+// 這裡不需要 export，因為只給內部使用 (或者你可以保留 export 沒關係)
 const ScheduleEditor: React.FC<EditorProps> = ({ tripId, item, onClose }) => {
   const { addScheduleItem, updateScheduleItem } = useTripStore();
   
@@ -27,6 +29,7 @@ const ScheduleEditor: React.FC<EditorProps> = ({ tripId, item, onClose }) => {
   const handleSave = () => {
     if (!form.title) return alert("請輸入行程標題唷！");
     
+    // 簡單的資料清理
     const cleanForm = { ...form, note: form.note || '' };
 
     if (item) {
@@ -57,7 +60,6 @@ const ScheduleEditor: React.FC<EditorProps> = ({ tripId, item, onClose }) => {
         </div>
 
         <div className="p-6 space-y-5 max-h-[70vh] overflow-y-auto hide-scrollbar">
-          {/* 時間與類別 */}
           <div className="flex gap-4">
             <div className="flex-1 space-y-2">
               <label className="text-[10px] font-black text-ac-border flex items-center gap-1 uppercase"><Clock size={12}/> Time</label>
@@ -80,7 +82,6 @@ const ScheduleEditor: React.FC<EditorProps> = ({ tripId, item, onClose }) => {
             </div>
           </div>
 
-          {/* 標題 */}
           <div className="space-y-2">
             <label className="text-[10px] font-black text-ac-border flex items-center gap-1 uppercase"><Plus size={12}/> Title</label>
             <input 
@@ -91,7 +92,6 @@ const ScheduleEditor: React.FC<EditorProps> = ({ tripId, item, onClose }) => {
             />
           </div>
 
-          {/* 地點 */}
           <div className="space-y-2">
             <label className="text-[10px] font-black text-ac-border flex items-center gap-1 uppercase"><MapPin size={12}/> Location</label>
             <input 
@@ -102,7 +102,6 @@ const ScheduleEditor: React.FC<EditorProps> = ({ tripId, item, onClose }) => {
             />
           </div>
 
-          {/* 備註 */}
           <div className="space-y-2">
             <label className="text-[10px] font-black text-ac-border flex items-center gap-1 uppercase"><AlignLeft size={12}/> Notes</label>
             <textarea 
@@ -130,22 +129,24 @@ const ScheduleEditor: React.FC<EditorProps> = ({ tripId, item, onClose }) => {
 };
 
 // ==========================================
-// 2. 主列表元件 (這才是 App.tsx 要 import 的關鍵)
+// 2. 主列表元件 (這就是 App.tsx 找不到的那個元件！)
 // ==========================================
 export const Schedule: React.FC = () => {
   const { trips, currentTripId, deleteScheduleItem } = useTripStore();
   const currentTrip = trips.find(t => t.id === currentTripId);
 
+  // 控制編輯器狀態
   const [isEditing, setIsEditing] = useState(false);
   const [editingItem, setEditingItem] = useState<ScheduleItem | undefined>(undefined);
 
   if (!currentTrip) return <div className="text-center p-10 opacity-50">尚未選擇行程</div>;
 
-  // 安全存取 items
+  // 安全存取 items (避免 undefined 報錯)
   const items = (currentTrip.items || []).sort((a, b) => a.time.localeCompare(b.time));
 
   return (
     <div className="pb-24">
+      {/* 列表內容 */}
       <div className="space-y-4 p-4">
         {items.length === 0 ? (
           <div className="text-center py-20 text-ac-brown/40 font-bold italic">
@@ -173,6 +174,7 @@ export const Schedule: React.FC = () => {
                 {item.note && <p className="text-xs text-ac-brown/80 mt-2 bg-ac-bg p-2 rounded-lg">{item.note}</p>}
               </div>
 
+              {/* 操作按鈕 */}
               <div className="flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                 <button 
                   onClick={() => { setEditingItem(item); setIsEditing(true); }}
@@ -192,6 +194,7 @@ export const Schedule: React.FC = () => {
         )}
       </div>
 
+      {/* 浮動新增按鈕 */}
       <button 
         onClick={() => { setEditingItem(undefined); setIsEditing(true); }}
         className="fixed bottom-24 right-6 w-14 h-14 bg-ac-brown text-white rounded-full shadow-zakka flex items-center justify-center active:scale-95 transition-all z-40"
@@ -199,6 +202,7 @@ export const Schedule: React.FC = () => {
         <Plus size={28} />
       </button>
 
+      {/* 編輯器 Modal */}
       {isEditing && (
         <ScheduleEditor 
           tripId={currentTrip.id} 
