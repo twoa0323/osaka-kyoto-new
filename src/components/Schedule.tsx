@@ -1,107 +1,135 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState } from 'react';
 import { useTripStore } from '../store/useTripStore';
-import { format, addDays, differenceInDays, parseISO } from 'date-fns';
-import { zhTW } from 'date-fns/locale';
-import { Sun, Cloud, CloudRain, Clock, MapPin, Plus } from 'lucide-react';
+// 1. [修正] 補上 Plus 的引入
+import { X, Clock, MapPin, Tag, AlignLeft, Image as ImageIcon, Plus } from 'lucide-react';
+import { ScheduleItem } from '../types';
 
-export const Schedule = () => {
-  const { trips, currentTripId } = useTripStore();
-  const trip = trips.find(t => t.id === currentTripId);
-  const [selectedDateIdx, setSelectedDateIdx] = useState(0);
+interface Props {
+  tripId: string;
+  item?: ScheduleItem; // 如果有傳入代表編輯，沒有則代表新增
+  onClose: () => void;
+}
 
-  // 計算行程日期陣列與出發倒數
-  const { dateRange, countdown } = useMemo(() => {
-    if (!trip) return { dateRange: [], countdown: 0 };
-    const start = parseISO(trip.startDate);
-    const end = parseISO(trip.endDate);
-    const diff = differenceInDays(end, start) + 1;
-    const days = Array.from({ length: diff }, (_, i) => addDays(start, i));
+export const ScheduleEditor: React.FC<Props> = ({ tripId, item, onClose }) => {
+  const { addScheduleItem, updateScheduleItem } = useTripStore();
+  
+  const [form, setForm] = useState<ScheduleItem>(item || {
+    id: Date.now().toString(),
+    time: '09:00',
+    title: '',
+    location: '',
+    category: 'sightseeing',
+    note: ''
+  });
+
+  const handleSave = () => {
+    if (!form.title) return alert("請輸入行程標題唷！");
     
-    const today = new Date();
-    const daysToTrip = differenceInDays(start, today);
-    
-    return { dateRange: days, countdown: daysToTrip };
-  }, [trip]);
+    // 簡單的資料清理 (防呆)
+    const cleanForm = {
+        ...form,
+        // 確保 note 是字串 (即便原本是 undefined)
+        note: form.note || '' 
+    };
 
-  if (!trip) return null;
+    if (item) {
+      updateScheduleItem(tripId, item.id, cleanForm);
+    } else {
+      addScheduleItem(tripId, cleanForm);
+    }
+    onClose();
+  };
+
+  const categories = [
+    { id: 'sightseeing', label: '景點', color: 'bg-ac-green' },
+    { id: 'food', label: '美食', color: 'bg-ac-orange' },
+    { id: 'transport', label: '交通', color: 'bg-blue-400' },
+    { id: 'hotel', label: '住宿', color: 'bg-purple-400' }
+  ];
 
   return (
-    <div className="space-y-6 animate-fade-in">
-      {/* 1. 倒數計時與天氣卡片 */}
-      <div className="px-6 flex gap-3">
-        <div className="card-zakka flex-1 bg-ac-orange text-white border-ac-orange/20 flex flex-col items-center justify-center py-4">
-          <span className="text-[10px] font-black opacity-80 uppercase tracking-widest">Countdown</span>
-          <div className="flex items-baseline gap-1">
-            <span className="text-3xl font-black">{countdown > 0 ? countdown : 0}</span>
-            <span className="text-xs font-bold">DAYS</span>
-          </div>
-        </div>
-        <div className="card-zakka flex-1 flex flex-col items-center justify-center py-4">
-          <Sun className="text-ac-orange mb-1" size={24} />
-          <span className="text-lg font-black text-ac-brown">24°C</span>
-          <span className="text-[10px] font-bold text-ac-border uppercase">Sunny</span>
-        </div>
-      </div>
-
-      {/* 2. 橫向日期選擇器 */}
-      <div className="flex overflow-x-auto gap-4 px-6 py-2 hide-scrollbar">
-        {dateRange.map((date, i) => (
-          <button
-            key={i}
-            onClick={() => setSelectedDateIdx(i)}
-            className={`flex flex-col items-center min-w-[60px] p-3 rounded-2xl border-2 transition-all ${
-              selectedDateIdx === i 
-                ? 'bg-ac-green border-ac-green text-white shadow-zakka -translate-y-1' 
-                : 'bg-white border-ac-border text-ac-brown opacity-60'
-            }`}
-          >
-            <span className="text-[10px] font-black mb-1">{format(date, 'EEE', { locale: zhTW })}</span>
-            <span className="text-xl font-black leading-none">{format(date, 'dd')}</span>
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[150] flex items-end sm:items-center justify-center p-4">
+      <div className="bg-ac-bg w-full max-w-md rounded-t-[40px] sm:rounded-[40px] shadow-2xl overflow-hidden animate-in slide-in-from-bottom-10">
+        {/* Header */}
+        <div className="p-6 flex justify-between items-center border-b-2 border-ac-border">
+          <h2 className="text-xl font-black text-ac-brown italic">
+            {item ? '編輯手帳' : '新增計畫'}
+          </h2>
+          <button onClick={onClose} className="p-2 bg-white rounded-full shadow-zakka text-ac-border">
+            <X size={20} />
           </button>
-        ))}
-      </div>
+        </div>
 
-      {/* 3. 行程時間軸 (Timeline) */}
-      <div className="px-6 space-y-4 relative">
-        {/* 垂直線裝飾 */}
-        <div className="absolute left-10 top-4 bottom-4 w-1 bg-ac-border/30 rounded-full" />
-        
-        {/* 假資料示意 (之後會連動資料庫) */}
-        {[
-          { time: '09:00', title: '關西國際機場抵達', loc: 'KIX Airport', cat: 'transport' },
-          { time: '12:30', title: '黑門市場美食巡禮', loc: 'Kuromon Market', cat: 'food' },
-          { time: '15:00', title: '大阪城公園散策', loc: 'Osaka Castle', cat: 'sightseeing' }
-        ].map((item, i) => (
-          <div key={i} className="flex gap-4 items-start relative group">
-            <div className="w-8 pt-1 text-right">
-              <span className="text-[10px] font-black text-ac-brown/40">{item.time}</span>
+        <div className="p-6 space-y-5 max-h-[70vh] overflow-y-auto hide-scrollbar">
+          {/* 時間與類別 */}
+          <div className="flex gap-4">
+            <div className="flex-1 space-y-2">
+              <label className="text-[10px] font-black text-ac-border flex items-center gap-1 uppercase"><Clock size={12}/> Time</label>
+              <input 
+                type="time" 
+                className="w-full p-4 bg-white border-2 border-ac-border rounded-2xl font-bold text-ac-brown outline-none"
+                value={form.time}
+                onChange={e => setForm({...form, time: e.target.value})}
+              />
             </div>
-            
-            {/* 圓圈節點 */}
-            <div className={`w-4 h-4 rounded-full border-4 border-white shadow-sm z-10 mt-1.5 ${
-              item.cat === 'food' ? 'bg-ac-orange' : item.cat === 'transport' ? 'bg-blue-400' : 'bg-ac-green'
-            }`} />
-            
-            <div className="card-zakka flex-1 hover:border-ac-green transition-colors cursor-pointer">
-              <div className="flex justify-between items-start mb-1">
-                <h3 className="font-black text-ac-brown leading-tight">{item.title}</h3>
-                <span className={`text-[8px] font-black px-2 py-0.5 rounded-full text-white uppercase ${
-                  item.cat === 'food' ? 'bg-ac-orange' : item.cat === 'transport' ? 'bg-blue-400' : 'bg-ac-green'
-                }`}>
-                  {item.cat}
-                </span>
-              </div>
-              <div className="flex items-center gap-1 text-ac-brown/50 text-[10px] font-bold">
-                <MapPin size={10} /> {item.loc}
-              </div>
+            <div className="flex-1 space-y-2">
+              <label className="text-[10px] font-black text-ac-border flex items-center gap-1 uppercase"><Tag size={12}/> Category</label>
+              <select 
+                className="w-full p-4 bg-white border-2 border-ac-border rounded-2xl font-bold text-ac-brown outline-none appearance-none"
+                value={form.category}
+                onChange={e => setForm({...form, category: e.target.value as any})}
+              >
+                {categories.map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
+              </select>
             </div>
           </div>
-        ))}
 
-        {/* 新增按鈕 */}
-        <button className="flex items-center gap-3 w-full p-4 border-2 border-dashed border-ac-border rounded-3xl text-ac-border font-black text-sm hover:border-ac-green hover:text-ac-green transition-all active:scale-95 ml-12 w-[calc(100%-48px)]">
-          <Plus size={18} /> 新增行程項目
-        </button>
+          {/* 標題 (這裡使用了 Plus Icon) */}
+          <div className="space-y-2">
+            <label className="text-[10px] font-black text-ac-border flex items-center gap-1 uppercase"><Plus size={12}/> Title</label>
+            <input 
+              placeholder="要去哪裡呢？"
+              className="w-full p-4 bg-white border-2 border-ac-border rounded-2xl font-bold text-ac-brown outline-none"
+              value={form.title}
+              onChange={e => setForm({...form, title: e.target.value})}
+            />
+          </div>
+
+          {/* 地點 */}
+          <div className="space-y-2">
+            <label className="text-[10px] font-black text-ac-border flex items-center gap-1 uppercase"><MapPin size={12}/> Location</label>
+            <input 
+              placeholder="輸入具體地址或地名"
+              className="w-full p-4 bg-white border-2 border-ac-border rounded-2xl font-bold text-ac-brown outline-none"
+              value={form.location}
+              onChange={e => setForm({...form, location: e.target.value})}
+            />
+          </div>
+
+          {/* 備註 */}
+          <div className="space-y-2">
+            <label className="text-[10px] font-black text-ac-border flex items-center gap-1 uppercase"><AlignLeft size={12}/> Notes</label>
+            <textarea 
+              placeholder="寫點什麼筆記吧..."
+              className="w-full p-4 bg-white border-2 border-ac-border rounded-2xl font-bold text-ac-brown outline-none h-24 resize-none"
+              value={form.note}
+              onChange={e => setForm({...form, note: e.target.value})}
+            />
+          </div>
+
+          {/* 圖片上傳區域 (示意) */}
+          <div className="border-4 border-dashed border-ac-border rounded-3xl p-8 flex flex-col items-center justify-center text-ac-border gap-2 hover:bg-white transition-colors cursor-pointer">
+             <ImageIcon size={32} />
+             <span className="text-xs font-bold">上傳照片記錄當下吧！</span>
+          </div>
+        </div>
+
+        {/* Action Button */}
+        <div className="p-6">
+          <button onClick={handleSave} className="btn-zakka w-full py-4 text-lg">
+            儲存至手帳 ➔
+          </button>
+        </div>
       </div>
     </div>
   );
