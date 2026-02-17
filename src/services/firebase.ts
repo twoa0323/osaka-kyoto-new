@@ -9,7 +9,7 @@ import { getStorage } from "firebase/storage";
 
 // 1. 改用環境變數 (與你的 Vite 設定一致)
 const firebaseConfig = {
-  apiKey: import.meta.env.VITE_GOOGLE_API_KEY,
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
   authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
   projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
   storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
