@@ -82,3 +82,28 @@
   from { opacity: 0; transform: translateY(10px); }
   to { opacity: 1; transform: translateY(0); }
 }
+
+/* 針對預定頁面與記帳頁面的補充樣式 */
+@layer components {
+  .btn-pill {
+    @apply px-4 py-2 rounded-xl text-xs font-bold transition-all border;
+  }
+  .btn-pill-active {
+    @apply bg-[#E2F1E7] border-[#A8D1B7] text-[#4A785D];
+  }
+  .btn-pill-inactive {
+    @apply bg-white border-stone-200 text-stone-400;
+  }
+  
+  /* 模仿 IMG_6018 的機票卡片數字 */
+  .flight-no {
+    font-family: 'Inter', sans-serif;
+    letter-spacing: -0.05em;
+    font-weight: 800;
+  }
+
+  /* 記帳頁面圓形頭像組 */
+  .avatar-ring {
+    @apply w-10 h-10 rounded-full border-2 border-white shadow-sm object-cover;
+  }
+}
