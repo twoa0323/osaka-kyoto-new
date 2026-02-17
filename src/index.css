@@ -26,6 +26,16 @@
   }
 }
 
+@layer base {
+  body {
+    /* 確保 body 背景色與 App 頂部一致，防止橡皮筋效果露白 */
+    @apply bg-[#328383]; 
+    min-h-[100dvh];
+    /* 處理 iOS Safe Area */
+    padding-top: env(safe-area-inset-top);
+  }
+}
+
 /* 隱藏捲軸但保留功能 */
 .hide-scrollbar::-webkit-scrollbar { display: none; }
 .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
