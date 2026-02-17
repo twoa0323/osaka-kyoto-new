@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useTripStore } from '../store/useTripStore';
+// 匯入幣別映射邏輯 (確保 src/utils/currencyMapping.ts 存在)
 import { getCurrencyByCountry } from '../utils/currencyMapping';
+// 匯入匯率 API 邏輯 (確保 src/utils/exchange.ts 存在)
 import { fetchExchangeRate } from '../utils/exchange';
 import { Plane, MapPin, Calendar, Banknote, RefreshCw, Rocket, Loader2 } from 'lucide-react';
 import axios from 'axios';
@@ -14,10 +16,8 @@ export const Onboarding = ({ onComplete }: { onComplete: () => void }) => {
   const [suggestions, setSuggestions] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [rate, setRate] = useState<number>(1.0);
-  // 防止提交時重複點擊
   const [submitting, setSubmitting] = useState(false);
   
-  // 防止選取後再次觸發搜尋
   const isSelecting = useRef(false);
 
   const [form, setForm] = useState({
@@ -25,7 +25,6 @@ export const Onboarding = ({ onComplete }: { onComplete: () => void }) => {
     start: new Date().toISOString().split('T')[0],
     end: new Date().toISOString().split('T')[0],
     currency: 'TWD' as any,
-    currencyName: '台幣'
   });
 
   // 使用 Photon API 進行地點搜尋
@@ -39,15 +38,23 @@ export const Onboarding = ({ onComplete }: { onComplete: () => void }) => {
       if (query.length > 1) {
         setLoading(true);
         try {
-          // [關鍵修改] 加入 layer 參數進行過濾，只顯示行政區劃
-          // layer=country: 國家
-          // layer=state: 省/州/縣
-          // layer=city: 城市
-          // layer=town: 城鎮
+          // 限制只搜尋國家、州/省、城市、城鎮，排除街道與景點
           const res = await axios.get(
-            `https://photon.komoot.io/api/?q=${encodeURIComponent(query)}&limit=5&lang=en&layer=country&layer=state&layer=city&layer=town`
+            `https://photon.komoot.io/api/?q=${encodeURIComponent(query)}&limit=8&lang=en&layer=country&layer=state&layer=city&layer=town`
           );
-          setSuggestions(res.data.features || []);
+          
+          const rawFeatures = res.data.features || [];
+          
+          // 前端去重：依據 "名稱 + 國家" 進行過濾
+          const uniqueFeatures = new Map();
+          rawFeatures.forEach((f: any) => {
+            const key = `${f.properties.name}-${f.properties.country}`;
+            if (!uniqueFeatures.has(key)) {
+              uniqueFeatures.set(key, f);
+            }
+          });
+
+          setSuggestions(Array.from(uniqueFeatures.values()));
         } catch (e) { console.error("搜尋錯誤:", e); }
         setLoading(false);
       } else {
@@ -58,31 +65,38 @@ export const Onboarding = ({ onComplete }: { onComplete: () => void }) => {
     return () => clearTimeout(timer);
   }, [query]);
 
+  // 當使用者選取地點時觸發
   const handleSelectPlace = async (place: any) => {
     isSelecting.current = true;
     
     const props = place.properties;
     const country = props.country || '';
-    // 取得對應幣別 (需確保 utils/currencyMapping.ts 存在)
-    const currency = getCurrencyByCountry(country);
     const placeName = props.name;
 
+    // 1. 自動依地點更換幣別
+    const currency = getCurrencyByCountry(country);
+    
+    // 更新表單狀態
     setForm(prev => ({ ...prev, selectedPlace: place, currency }));
-    // 組合顯示名稱，讓使用者知道選到了哪個國家
     setQuery(`${placeName}, ${country}`);
     setSuggestions([]);
 
+    // 2. 依照 Exchange API 抓取最新匯率
     try {
+      setLoading(true); // 顯示讀取中
       const currentRate = await fetchExchangeRate(currency);
       setRate(currentRate);
     } catch (e) {
-      setRate(1.0);
+      console.error("匯率抓取失敗", e);
+      setRate(1.0); // 失敗時回退預設值
+    } finally {
+      setLoading(false);
     }
   };
 
   const handleCreate = async () => {
     if (!form.selectedPlace) return alert("請先從建議清單中選擇一個城市唷！");
-    if (submitting) return; // 防止重複提交
+    if (submitting) return;
     
     setSubmitting(true);
     const props = form.selectedPlace.properties;
@@ -90,26 +104,25 @@ export const Onboarding = ({ onComplete }: { onComplete: () => void }) => {
     try {
       const tripData = {
         id: Date.now().toString(),
-        // 統一使用 destination 欄位名稱
         destination: `${props.name}, ${props.country || ''}`,
         startDate: form.start,
         endDate: form.end,
         baseCurrency: form.currency,
-        members: ['Admin'], // 預設成員
+        members: ['Admin'],
         pin: '007',
-        items: [] // 初始化空陣列，避免後續操作錯誤
+        items: []
       };
 
       console.log("正在建立行程...", tripData);
 
-      // 1. 寫入 Firestore 資料庫 (確保資料持久化)
+      // 3. 寫入 Firebase 資料庫
       await addDoc(collection(db, "trips"), tripData);
       
-      // 2. 更新本地 Store (讓 UI 即時反應)
+      // 更新本地 Store
       addTrip(tripData as any);
       
       console.log("建立成功！");
-      onComplete(); // 通知父元件切換頁面
+      onComplete();
     } catch (error: any) {
       console.error("建立失敗:", error);
       alert(`建立失敗：${error.message || "請檢查網路連線或 Firebase 設定"}`);
@@ -130,7 +143,7 @@ export const Onboarding = ({ onComplete }: { onComplete: () => void }) => {
 
         <div className="bg-white rounded-[40px] w-full p-8 shadow-2xl space-y-4">
           
-          {/* DESTINATION */}
+          {/* 地點搜尋欄位 */}
           <div className="bg-[#EDF1F7] rounded-2xl p-4 relative">
             <label className="text-[10px] font-black text-[#8E99AF] uppercase tracking-widest mb-1 block">Destination</label>
             <div className="flex items-center gap-3">
@@ -144,9 +157,9 @@ export const Onboarding = ({ onComplete }: { onComplete: () => void }) => {
               {loading && <Loader2 size={16} className="animate-spin text-[#5C6B89]" />}
             </div>
 
-            {/* 建議列表 */}
+            {/* 搜尋建議列表 */}
             {suggestions.length > 0 && (
-              <div className="absolute left-0 right-0 top-[105%] bg-white rounded-2xl shadow-2xl z-[110] overflow-hidden border border-[#EDF1F7]">
+              <div className="absolute left-0 right-0 top-[105%] bg-white rounded-2xl shadow-2xl z-[110] overflow-hidden border border-[#EDF1F7] max-h-60 overflow-y-auto">
                 {suggestions.map((s, i) => (
                   <button 
                     key={i} 
@@ -155,7 +168,10 @@ export const Onboarding = ({ onComplete }: { onComplete: () => void }) => {
                   >
                     <div className="font-bold text-sm">{s.properties.name}</div>
                     <div className="text-[10px] text-[#8E99AF]">
-                      {[s.properties.city, s.properties.state, s.properties.country].filter(Boolean).join(', ')}
+                      {[s.properties.city, s.properties.state, s.properties.country]
+                        .filter(p => p && p !== s.properties.name)
+                        .filter((item, index, self) => self.indexOf(item) === index)
+                        .join(', ')}
                     </div>
                   </button>
                 ))}
@@ -163,7 +179,7 @@ export const Onboarding = ({ onComplete }: { onComplete: () => void }) => {
             )}
           </div>
 
-          {/* START & END */}
+          {/* 日期選擇 */}
           <div className="grid grid-cols-2 gap-4 w-full">
             <div className="bg-[#EDF1F7] rounded-2xl p-4">
               <label className="text-[10px] font-black text-[#8E99AF] uppercase tracking-widest mb-1 block">Start</label>
@@ -191,7 +207,7 @@ export const Onboarding = ({ onComplete }: { onComplete: () => void }) => {
             </div>
           </div>
 
-          {/* CURRENCY */}
+          {/* 幣別與匯率顯示 */}
           <div className="bg-[#EDF1F7] rounded-2xl p-4">
             <label className="text-[10px] font-black text-[#8E99AF] uppercase tracking-widest mb-1 block">Currency</label>
             <div className="flex items-center justify-between mb-2">
