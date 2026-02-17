@@ -1,11 +1,10 @@
 import React, { useState } from 'react';
 import { useTripStore } from '../store/useTripStore';
-// 記得引入 Plus
 import { X, Clock, MapPin, Tag, AlignLeft, Image as ImageIcon, Plus, Edit2, Trash2 } from 'lucide-react';
 import { ScheduleItem } from '../types';
 
 // ==========================================
-// 1. 編輯器元件 (原本的內容，負責新增/修改)
+// 1. 編輯器元件 (Modal)
 // ==========================================
 interface EditorProps {
   tripId: string;
@@ -13,7 +12,6 @@ interface EditorProps {
   onClose: () => void;
 }
 
-// 注意這裡不用 export，或是你可以保留 export 但 App.tsx 不會用到它
 const ScheduleEditor: React.FC<EditorProps> = ({ tripId, item, onClose }) => {
   const { addScheduleItem, updateScheduleItem } = useTripStore();
   
@@ -132,25 +130,23 @@ const ScheduleEditor: React.FC<EditorProps> = ({ tripId, item, onClose }) => {
 };
 
 // ==========================================
-// 2. 主列表元件 (這才是 App.tsx 要 import 的)
+// 2. 主列表元件 (這才是 App.tsx 要 import 的關鍵)
 // ==========================================
 export const Schedule: React.FC = () => {
   const { trips, currentTripId, deleteScheduleItem } = useTripStore();
   const currentTrip = trips.find(t => t.id === currentTripId);
 
-  // 控制編輯器狀態
   const [isEditing, setIsEditing] = useState(false);
   const [editingItem, setEditingItem] = useState<ScheduleItem | undefined>(undefined);
 
   if (!currentTrip) return <div className="text-center p-10 opacity-50">尚未選擇行程</div>;
 
-  // 依時間排序
+  // 安全存取 items
   const items = (currentTrip.items || []).sort((a, b) => a.time.localeCompare(b.time));
 
   return (
     <div className="pb-24">
-      {/* 列表內容 */}
-      <div className="space-y-4 p-4"> {/* 這裡加了 p-4 避免貼邊 */}
+      <div className="space-y-4 p-4">
         {items.length === 0 ? (
           <div className="text-center py-20 text-ac-brown/40 font-bold italic">
             還沒有行程，按右下角新增吧！
@@ -177,7 +173,6 @@ export const Schedule: React.FC = () => {
                 {item.note && <p className="text-xs text-ac-brown/80 mt-2 bg-ac-bg p-2 rounded-lg">{item.note}</p>}
               </div>
 
-              {/* 操作按鈕 */}
               <div className="flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                 <button 
                   onClick={() => { setEditingItem(item); setIsEditing(true); }}
@@ -197,7 +192,6 @@ export const Schedule: React.FC = () => {
         )}
       </div>
 
-      {/* 浮動新增按鈕 */}
       <button 
         onClick={() => { setEditingItem(undefined); setIsEditing(true); }}
         className="fixed bottom-24 right-6 w-14 h-14 bg-ac-brown text-white rounded-full shadow-zakka flex items-center justify-center active:scale-95 transition-all z-40"
@@ -205,7 +199,6 @@ export const Schedule: React.FC = () => {
         <Plus size={28} />
       </button>
 
-      {/* 編輯器 Modal */}
       {isEditing && (
         <ScheduleEditor 
           tripId={currentTrip.id} 
