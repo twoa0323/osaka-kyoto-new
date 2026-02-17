@@ -16,28 +16,50 @@ export const Onboarding: React.FC = () => {
   const [form, setForm] = useState({
     dest: '', start: '', end: '', currency: 'JPY' as any
   });
+  const [loading, setLoading] = useState(false); // 新增 loading 狀態
 
   const handleCreate = async () => {
     if (!form.dest || !form.start || !form.end) return alert("請填寫完整資訊內容唷！");
     
-    const rate = await fetchExchangeRate(form.currency);
-    setRate(rate);
+    setLoading(true); // 開始 loading
+    try {
+      // 1. 抓取匯率
+      const rate = await fetchExchangeRate(form.currency);
+      setRate(rate);
 
-    const tripData = {
-      ...form,
-      id: Date.now().toString(),
-      members: ['Admin'],
-      pin: '007'
-    };
+      const tripData = {
+        ...form,
+        id: Date.now().toString(),
+        members: ['Admin'],
+        pin: '007'
+      };
 
-    // 儲存至 Firestore
-    await addDoc(collection(db, "trips"), tripData);
-    setTrip(tripData as any);
+      // 2. 儲存至 Firestore (最容易失敗的地方)
+      console.log("嘗試寫入資料庫...", tripData);
+      await addDoc(collection(db, "trips"), tripData);
+      console.log("寫入成功！");
+
+      // 3. 更新狀態，進入下一步
+      setTrip(tripData as any);
+    } catch (error: any) {
+      console.error("建立行程失敗:", error);
+      // 顯示具體錯誤訊息
+      let msg = "建立失敗，請檢查 Console 錯誤訊息。";
+      if (error.code === 'permission-denied') {
+        msg = "權限不足！請檢查 Firebase Firestore Rules 是否已設為公開 (Test Mode)。";
+      } else if (error.code === 'unavailable') {
+        msg = "連線失敗，請檢查網路或 Firebase Config 設定。";
+      }
+      alert(msg + "\n" + error.message);
+    } finally {
+      setLoading(false); // 結束 loading
+    }
   };
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-ac-bg">
       <div className="w-full max-w-sm space-y-6">
+        {/* ... 省略標題部分，保持不變 ... */}
         <div className="text-center space-y-2">
           <div className="inline-block p-4 bg-ac-green rounded-full shadow-zakka mb-4">
             <Plane className="text-white w-8 h-8 rotate-45" />
@@ -55,6 +77,7 @@ export const Onboarding: React.FC = () => {
             <input 
               className="w-full p-4 bg-ac-bg border-2 border-ac-border rounded-2xl focus:outline-none focus:border-ac-green transition-all"
               placeholder="要去哪裡旅行呢？"
+              value={form.dest}
               onChange={(e) => {
                 const val = e.target.value;
                 const matched = Object.keys(CURRENCY_MAP).find(k => val.includes(k));
@@ -98,8 +121,12 @@ export const Onboarding: React.FC = () => {
             </span>
           </div>
 
-          <button onClick={handleCreate} className="btn-zakka w-full py-4 text-lg mt-4">
-            建立旅行計畫 ➔
+          <button 
+            onClick={handleCreate} 
+            disabled={loading}
+            className={`btn-zakka w-full py-4 text-lg mt-4 flex justify-center items-center ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
+          >
+            {loading ? "處理中..." : "建立旅行計畫 ➔"}
           </button>
         </div>
       </div>
