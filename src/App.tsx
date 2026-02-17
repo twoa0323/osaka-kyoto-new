@@ -11,9 +11,9 @@ import { Info } from './components/Info';
 import { 
   Plus, ChevronDown, Trash2, Calendar, CreditCard, 
   Wallet, Utensils, ShoppingBag, Info as InfoIcon,
-  Loader2, Skull 
+  Loader2
 } from 'lucide-react';
-import { deleteDoc, doc, getDocs, collection } from 'firebase/firestore'; // 新增 getDocs, collection
+import { deleteDoc, doc } from 'firebase/firestore';
 import { db } from './services/firebase';
 
 const App: React.FC = () => {
@@ -23,77 +23,44 @@ const App: React.FC = () => {
     switchTrip, 
     deleteTrip, 
     activeTab, 
-    setActiveTab,
-    setTrips // 需要手動清空 Store
+    setActiveTab 
   } = useTripStore();
 
   const [menuOpen, setMenuOpen] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
-  const [isResetting, setIsResetting] = useState(false); // 重置狀態
 
   // 啟用雲端同步
   useFirebaseSync();
 
   const currentTrip = trips.find(t => t.id === currentTripId);
 
-  // 自動校正
+  // 自動校正：如果 ID 失效，切換到第一個
   useEffect(() => {
     if (trips.length > 0 && !currentTrip) {
       switchTrip(trips[0].id);
     }
   }, [trips, currentTrip, switchTrip]);
 
-  // --- [核彈級重置功能] ---
-  // 這會刪除 Firebase 中 "trips" 集合裡的所有文件，並清空本地快取
-  const handleNuclearReset = async () => {
-    if (!confirm('⚠️ 危險操作 ⚠️\n這將會「永久刪除」資料庫裡的所有行程資料！\n\n確定要清空一切重新開始嗎？')) return;
-    
-    setIsResetting(true);
-    try {
-      // 1. 抓取雲端所有資料
-      const querySnapshot = await getDocs(collection(db, "trips"));
-      console.log(`正在刪除 ${querySnapshot.size} 筆資料...`);
-      
-      // 2. 刪除每一筆資料
-      const deletePromises = querySnapshot.docs.map(document => 
-        deleteDoc(doc(db, "trips", document.id))
-      );
-      await Promise.all(deletePromises);
-
-      // 3. 清空本地 Store
-      setTrips([]);
-      localStorage.clear();
-      
-      alert('🧹 清理完畢！頁面將重新整理...');
-      window.location.reload();
-      
-    } catch (error) {
-      console.error("重置失敗:", error);
-      alert("重置失敗，請檢查 Console");
-      setIsResetting(false);
-    }
-  };
-
-  // 顯示 Onboarding 條件：沒有行程 或 正在重置
-  if ((trips.length === 0 && !isResetting) || showOnboarding) {
+  // 如果完全沒行程，或強制顯示新增頁面
+  if (trips.length === 0 || showOnboarding) {
     return <Onboarding onComplete={() => setShowOnboarding(false)} />;
   }
 
   // 載入中畫面
-  if (!currentTrip || isResetting) {
+  if (!currentTrip) {
     return (
       <div className="min-h-screen bg-ac-bg flex flex-col items-center justify-center text-ac-brown">
-        <Loader2 className="animate-spin mb-4" size={48} />
-        <p className="font-black text-lg">{isResetting ? "正在銷毀所有資料..." : "正在同步手帳..."}</p>
+        <Loader2 className="animate-spin mb-2" size={32} />
+        <p className="font-black text-sm">正在同步手帳...</p>
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col min-h-screen bg-ac-bg font-sans text-ac-brown relative">
+    <div className="flex flex-col min-h-screen bg-ac-bg font-sans text-ac-brown">
       
       {/* 1. Header */}
-      <header className="p-6 pb-2 sticky top-0 bg-ac-bg/90 backdrop-blur-md z-50 w-full max-w-md mx-auto">
+      <header className="p-6 pb-2 sticky top-0 bg-ac-bg/90 backdrop-blur-md z-50 w-full max-w-md mx-auto transition-all">
         <div className="flex justify-between items-start">
           <div className="relative text-left">
             <h2 className="text-[10px] font-black text-ac-green uppercase tracking-[0.2em] mb-1">
@@ -133,9 +100,11 @@ const App: React.FC = () => {
                       </button>
                     </div>
                   ))}
-                  <button onClick={() => { setShowOnboarding(true); setMenuOpen(false); }} className="w-full mt-2 p-4 bg-ac-green text-white text-xs font-black flex items-center justify-center gap-2 rounded-2xl active:bg-ac-brown transition-colors">
-                    <Plus size={14} /> 新增行程
-                  </button>
+                  {trips.length < 5 && (
+                    <button onClick={() => { setShowOnboarding(true); setMenuOpen(false); }} className="w-full mt-2 p-4 bg-ac-green text-white text-xs font-black flex items-center justify-center gap-2 rounded-2xl active:bg-ac-brown transition-colors">
+                      <Plus size={14} /> 新增行程
+                    </button>
+                  )}
                 </div>
               </div>
             )}
@@ -155,15 +124,6 @@ const App: React.FC = () => {
         {activeTab === 'food'     && <Journal />}
         {activeTab === 'shop'     && <Shopping />}
         {activeTab === 'info'     && <Info />}
-
-        {/* [核彈級重置按鈕] - 只在開發時使用 */}
-        <button 
-          onClick={handleNuclearReset}
-          className="fixed bottom-24 right-4 bg-purple-600 text-white p-4 rounded-full shadow-2xl z-[100] active:scale-90 hover:bg-purple-700 transition-all flex items-center justify-center"
-          title="開發者功能：清空所有資料庫資料"
-        >
-          <Skull size={24} />
-        </button>
       </main>
 
       {/* 3. Bottom Nav */}
