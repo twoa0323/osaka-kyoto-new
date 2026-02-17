@@ -1,213 +1,143 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useTripStore } from '../store/useTripStore';
-// 1. 補上 Plus, Edit2, Trash2 的引入
-import { X, Clock, MapPin, Tag, AlignLeft, Image as ImageIcon, Plus, Edit2, Trash2 } from 'lucide-react';
+import { format, addDays, differenceInDays, parseISO } from 'date-fns';
+import { zhTW } from 'date-fns/locale';
+import { Sun, MapPin, Plus, Trash2, Edit3 } from 'lucide-react';
+import { ScheduleEditor } from './ScheduleEditor';
 import { ScheduleItem } from '../types';
 
-// ==========================================
-// 1. 編輯器元件 (Modal)
-// ==========================================
-interface EditorProps {
-  tripId: string;
-  item?: ScheduleItem;
-  onClose: () => void;
-}
-
-// 這裡不需要 export，因為只給內部使用 (或者你可以保留 export 沒關係)
-const ScheduleEditor: React.FC<EditorProps> = ({ tripId, item, onClose }) => {
-  const { addScheduleItem, updateScheduleItem } = useTripStore();
+export const Schedule = () => {
+  const { trips, currentTripId, deleteScheduleItem } = useTripStore();
+  const trip = trips.find(t => t.id === currentTripId);
   
-  const [form, setForm] = useState<ScheduleItem>(item || {
-    id: Date.now().toString(),
-    time: '09:00',
-    title: '',
-    location: '',
-    category: 'sightseeing',
-    note: ''
-  });
+  const [selectedDateIdx, setSelectedDateIdx] = useState(0);
+  const [isEditorOpen, setIsEditorOpen] = useState(false);
+  const [editingItem, setEditingItem] = useState<ScheduleItem | undefined>();
 
-  const handleSave = () => {
-    if (!form.title) return alert("請輸入行程標題唷！");
-    
-    // 簡單的資料清理
-    const cleanForm = { ...form, note: form.note || '' };
+  // 計算日期區間
+  const dateRange = useMemo(() => {
+    if (!trip) return [];
+    const start = parseISO(trip.startDate);
+    const end = parseISO(trip.endDate);
+    const diff = differenceInDays(end, start) + 1;
+    return Array.from({ length: diff }, (_, i) => addDays(start, i));
+  }, [trip]);
 
-    if (item) {
-      updateScheduleItem(tripId, item.id, cleanForm);
-    } else {
-      addScheduleItem(tripId, cleanForm);
-    }
-    onClose();
-  };
+  if (!trip) return null;
 
-  const categories = [
-    { id: 'sightseeing', label: '景點', color: 'bg-ac-green' },
-    { id: 'food', label: '美食', color: 'bg-ac-orange' },
-    { id: 'transport', label: '交通', color: 'bg-blue-400' },
-    { id: 'hotel', label: '住宿', color: 'bg-purple-400' }
-  ];
+  const selectedDateStr = format(dateRange[selectedDateIdx], 'yyyy-MM-dd');
+  // 過濾當天行程 (這裡之後可以加入日期欄位到 ScheduleItem，目前我們先顯示全部以利測試)
+  const items = trip.items || [];
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[150] flex items-end sm:items-center justify-center p-4">
-      <div className="bg-ac-bg w-full max-w-md rounded-t-[40px] sm:rounded-[40px] shadow-2xl overflow-hidden animate-in slide-in-from-bottom-10">
-        <div className="p-6 flex justify-between items-center border-b-2 border-ac-border">
-          <h2 className="text-xl font-black text-ac-brown italic">
-            {item ? '編輯手帳' : '新增計畫'}
-          </h2>
-          <button onClick={onClose} className="p-2 bg-white rounded-full shadow-zakka text-ac-border">
-            <X size={20} />
-          </button>
-        </div>
-
-        <div className="p-6 space-y-5 max-h-[70vh] overflow-y-auto hide-scrollbar">
-          <div className="flex gap-4">
-            <div className="flex-1 space-y-2">
-              <label className="text-[10px] font-black text-ac-border flex items-center gap-1 uppercase"><Clock size={12}/> Time</label>
-              <input 
-                type="time" 
-                className="w-full p-4 bg-white border-2 border-ac-border rounded-2xl font-bold text-ac-brown outline-none"
-                value={form.time}
-                onChange={e => setForm({...form, time: e.target.value})}
-              />
-            </div>
-            <div className="flex-1 space-y-2">
-              <label className="text-[10px] font-black text-ac-border flex items-center gap-1 uppercase"><Tag size={12}/> Category</label>
-              <select 
-                className="w-full p-4 bg-white border-2 border-ac-border rounded-2xl font-bold text-ac-brown outline-none appearance-none"
-                value={form.category}
-                onChange={e => setForm({...form, category: e.target.value as any})}
-              >
-                {categories.map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
-              </select>
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <label className="text-[10px] font-black text-ac-border flex items-center gap-1 uppercase"><Plus size={12}/> Title</label>
-            <input 
-              placeholder="要去哪裡呢？"
-              className="w-full p-4 bg-white border-2 border-ac-border rounded-2xl font-bold text-ac-brown outline-none"
-              value={form.title}
-              onChange={e => setForm({...form, title: e.target.value})}
-            />
-          </div>
-
-          <div className="space-y-2">
-            <label className="text-[10px] font-black text-ac-border flex items-center gap-1 uppercase"><MapPin size={12}/> Location</label>
-            <input 
-              placeholder="輸入具體地址或地名"
-              className="w-full p-4 bg-white border-2 border-ac-border rounded-2xl font-bold text-ac-brown outline-none"
-              value={form.location}
-              onChange={e => setForm({...form, location: e.target.value})}
-            />
-          </div>
-
-          <div className="space-y-2">
-            <label className="text-[10px] font-black text-ac-border flex items-center gap-1 uppercase"><AlignLeft size={12}/> Notes</label>
-            <textarea 
-              placeholder="寫點什麼筆記吧..."
-              className="w-full p-4 bg-white border-2 border-ac-border rounded-2xl font-bold text-ac-brown outline-none h-24 resize-none"
-              value={form.note}
-              onChange={e => setForm({...form, note: e.target.value})}
-            />
-          </div>
-
-          <div className="border-4 border-dashed border-ac-border rounded-3xl p-8 flex flex-col items-center justify-center text-ac-border gap-2 hover:bg-white transition-colors cursor-pointer">
-             <ImageIcon size={32} />
-             <span className="text-xs font-bold">上傳照片記錄當下吧！</span>
+    <div className="space-y-6 animate-fade-in pb-10">
+      
+      {/* 1. 倒數卡片與天氣 */}
+      <div className="px-6 flex gap-4">
+        <div className="card-zakka flex-1 bg-ac-orange border-none text-white flex flex-col items-center justify-center py-4">
+          <span className="text-[10px] font-black opacity-80 uppercase tracking-widest">Countdown</span>
+          <div className="flex items-baseline gap-1">
+            <span className="text-3xl font-black">
+              {Math.max(0, differenceInDays(parseISO(trip.startDate), new Date()))}
+            </span>
+            <span className="text-xs font-bold">DAYS</span>
           </div>
         </div>
-
-        <div className="p-6">
-          <button onClick={handleSave} className="btn-zakka w-full py-4 text-lg">
-            儲存至手帳 ➔
-          </button>
+        <div className="card-zakka flex-1 flex flex-col items-center justify-center py-4">
+          <Sun className="text-ac-orange mb-1" size={24} />
+          <span className="text-lg font-black text-ac-brown">24°C</span>
+          <span className="text-[10px] font-bold text-ac-border uppercase">Sunny</span>
         </div>
       </div>
-    </div>
-  );
-};
 
-// ==========================================
-// 2. 主列表元件 (這就是 App.tsx 找不到的那個元件！)
-// ==========================================
-export const Schedule: React.FC = () => {
-  const { trips, currentTripId, deleteScheduleItem } = useTripStore();
-  const currentTrip = trips.find(t => t.id === currentTripId);
+      {/* 2. 橫向日期選擇 */}
+      <div className="flex overflow-x-auto gap-4 px-6 py-2 hide-scrollbar">
+        {dateRange.map((date, i) => (
+          <button
+            key={i}
+            onClick={() => setSelectedDateIdx(i)}
+            className={`flex flex-col items-center min-w-[65px] p-4 rounded-3xl border-4 transition-all ${
+              selectedDateIdx === i 
+                ? 'bg-ac-green border-ac-green text-white shadow-zakka -translate-y-1' 
+                : 'bg-white border-ac-border text-ac-brown/40'
+            }`}
+          >
+            <span className="text-[10px] font-black mb-1 uppercase">
+              {format(date, 'EEE', { locale: zhTW })}
+            </span>
+            <span className="text-2xl font-black">{format(date, 'dd')}</span>
+          </button>
+        ))}
+      </div>
 
-  // 控制編輯器狀態
-  const [isEditing, setIsEditing] = useState(false);
-  const [editingItem, setEditingItem] = useState<ScheduleItem | undefined>(undefined);
-
-  if (!currentTrip) return <div className="text-center p-10 opacity-50">尚未選擇行程</div>;
-
-  // 安全存取 items (避免 undefined 報錯)
-  const items = (currentTrip.items || []).sort((a, b) => a.time.localeCompare(b.time));
-
-  return (
-    <div className="pb-24">
-      {/* 列表內容 */}
-      <div className="space-y-4 p-4">
+      {/* 3. 行程時間軸 */}
+      <div className="px-6 space-y-6 relative">
+        <div className="absolute left-10 top-4 bottom-4 w-1.5 bg-ac-border/30 rounded-full" />
+        
         {items.length === 0 ? (
-          <div className="text-center py-20 text-ac-brown/40 font-bold italic">
-            還沒有行程，按右下角新增吧！
+          <div className="ml-12 py-10 text-ac-border italic font-bold">
+            這天還空空的，點下方按鈕新增計畫吧！
           </div>
         ) : (
           items.map((item) => (
-            <div key={item.id} className="card-zakka flex gap-4 items-start group">
-              <div className="flex flex-col items-center min-w-[50px]">
-                <span className="text-lg font-black text-ac-brown">{item.time}</span>
-                <div className={`w-3 h-3 rounded-full mt-2 ${
-                  item.category === 'food' ? 'bg-ac-orange' : 
-                  item.category === 'transport' ? 'bg-blue-400' : 
-                  item.category === 'hotel' ? 'bg-purple-400' : 'bg-ac-green'
-                }`} />
+            <div key={item.id} className="flex gap-4 items-start relative">
+              <div className="w-10 pt-2 text-right">
+                <span className="text-[10px] font-black text-ac-brown/30">{item.time}</span>
               </div>
               
-              <div className="flex-1 space-y-1">
-                <h3 className="font-bold text-lg text-ac-brown">{item.title}</h3>
-                {item.location && (
-                  <p className="text-xs text-ac-brown/60 flex items-center gap-1">
-                    <MapPin size={10} /> {item.location}
+              {/* 節點圓圈 */}
+              <div className={`w-5 h-5 rounded-full border-4 border-white shadow-sm z-10 mt-1.5 shrink-0 ${
+                item.category === 'food' ? 'bg-ac-orange' : 
+                item.category === 'transport' ? 'bg-blue-400' : 
+                item.category === 'hotel' ? 'bg-purple-400' : 'bg-ac-green'
+              }`} />
+              
+              <div 
+                className="card-zakka flex-1 active:scale-[0.98] transition-transform cursor-pointer group"
+                onClick={() => { setEditingItem(item); setIsEditorOpen(true); }}
+              >
+                <div className="flex justify-between items-start">
+                  <h3 className="font-black text-ac-brown text-lg leading-tight">{item.title}</h3>
+                  <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if(confirm('確定要刪除這個行程嗎？')) deleteScheduleItem(trip.id, item.id);
+                      }}
+                      className="text-ac-orange/40 hover:text-ac-orange"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
+                </div>
+                <div className="flex items-center gap-1 text-ac-brown/50 text-xs font-bold mt-2">
+                  <MapPin size={12} /> {item.location || '尚未設定地點'}
+                </div>
+                {item.note && (
+                  <p className="mt-3 text-xs text-ac-brown/60 leading-relaxed border-t border-ac-border/50 pt-2 italic">
+                    {item.note}
                   </p>
                 )}
-                {item.note && <p className="text-xs text-ac-brown/80 mt-2 bg-ac-bg p-2 rounded-lg">{item.note}</p>}
-              </div>
-
-              {/* 操作按鈕 */}
-              <div className="flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                <button 
-                  onClick={() => { setEditingItem(item); setIsEditing(true); }}
-                  className="p-2 bg-ac-bg rounded-full text-ac-brown hover:bg-ac-green hover:text-white transition-colors"
-                >
-                  <Edit2 size={14} />
-                </button>
-                <button 
-                  onClick={() => deleteScheduleItem(currentTrip.id, item.id)}
-                  className="p-2 bg-ac-bg rounded-full text-ac-brown hover:bg-red-400 hover:text-white transition-colors"
-                >
-                  <Trash2 size={14} />
-                </button>
               </div>
             </div>
           ))
         )}
+
+        {/* 新增按鈕 */}
+        <button 
+          onClick={() => { setEditingItem(undefined); setIsEditorOpen(true); }}
+          className="flex items-center gap-3 w-[calc(100%-48px)] p-5 border-4 border-dashed border-ac-border rounded-[32px] text-ac-border font-black text-sm hover:border-ac-green hover:text-ac-green transition-all active:scale-95 ml-12"
+        >
+          <Plus size={20} /> 新增行程項目
+        </button>
       </div>
 
-      {/* 浮動新增按鈕 */}
-      <button 
-        onClick={() => { setEditingItem(undefined); setIsEditing(true); }}
-        className="fixed bottom-24 right-6 w-14 h-14 bg-ac-brown text-white rounded-full shadow-zakka flex items-center justify-center active:scale-95 transition-all z-40"
-      >
-        <Plus size={28} />
-      </button>
-
-      {/* 編輯器 Modal */}
-      {isEditing && (
+      {/* Editor Modal */}
+      {isEditorOpen && (
         <ScheduleEditor 
-          tripId={currentTrip.id} 
-          item={editingItem} 
-          onClose={() => setIsEditing(false)} 
+          tripId={trip.id} 
+          item={editingItem}
+          onClose={() => setIsEditorOpen(false)} 
         />
       )}
     </div>
