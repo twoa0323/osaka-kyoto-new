@@ -20,8 +20,7 @@ export interface BookingItem {
   location?: string;
   price?: number;
   note?: string;
-  images?: string[]; // 新增：支援照片
-  // 機票專用
+  images: string[]; // 支援多圖
   flightNo?: string;
   depIata?: string;
   arrIata?: string;
@@ -40,7 +39,7 @@ export interface ExpenseItem {
   category: string;
   payerId: string;
   splitWith: string[];
-  images?: string[]; // 新增：支援照片
+  images: string[]; // 支援照片紀錄
 }
 
 export interface JournalItem {
