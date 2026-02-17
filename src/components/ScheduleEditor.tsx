@@ -16,7 +16,7 @@ const CATEGORIES = [
   { id: 'hotel', label: '住宿', color: 'bg-purple-400' }
 ] as const;
 
-export const ScheduleEditor: React.FC<Props> = ({ tripId, item, onClose }) => {
+export const ScheduleEditor: React.FC<EditorProps> = ({ tripId, item, onClose }) => {
   const { addScheduleItem, updateScheduleItem } = useTripStore();
   
   const [form, setForm] = useState<ScheduleItem>(item || {

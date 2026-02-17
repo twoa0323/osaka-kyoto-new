@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useTripStore } from './store/useTripStore';
 import { useFirebaseSync } from './hooks/useFirebaseSync';
 import { Onboarding } from './components/Onboarding';
@@ -17,11 +17,20 @@ import {
   Wallet, 
   Utensils, 
   ShoppingBag, 
-  Info as InfoIcon 
+  Info as InfoIcon,
+  Loader2
 } from 'lucide-react';
 
 const App: React.FC = () => {
-  const { trips, currentTripId, switchTrip, deleteTrip, activeTab, setActiveTab } = useTripStore();
+  const { 
+    trips, 
+    currentTripId, 
+    switchTrip, 
+    deleteTrip, 
+    activeTab, 
+    setActiveTab 
+  } = useTripStore();
+
   const [menuOpen, setMenuOpen] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
 
@@ -30,28 +39,47 @@ const App: React.FC = () => {
 
   const currentTrip = trips.find(t => t.id === currentTripId);
 
+  // [關鍵修復]：自動校正機制
+  // 如果有行程列表，但 currentTrip 卻抓不到 (ID失效)，自動切換到第一個行程
+  useEffect(() => {
+    if (trips.length > 0 && !currentTrip) {
+      console.log("偵測到 ID 失效，自動切換至最新行程");
+      switchTrip(trips[0].id);
+    }
+  }, [trips, currentTrip, switchTrip]);
+
   // 如果完全沒行程，或強制顯示新增頁面
   if (trips.length === 0 || showOnboarding) {
     return <Onboarding onComplete={() => setShowOnboarding(false)} />;
   }
 
+  // 如果正在自動校正中 (有行程但還沒選到)，顯示過渡畫面
+  if (!currentTrip) {
+    return (
+      <div className="min-h-screen bg-ac-bg flex flex-col items-center justify-center text-ac-brown">
+        <Loader2 className="animate-spin mb-2" size={32} />
+        <p className="font-black text-sm">正在同步手帳...</p>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col min-h-screen bg-ac-bg font-sans text-ac-brown">
       
-      {/* 1. 頂部 Header - 增加 z-index 並固定寬度 */}
-      <header className="p-6 pb-2 sticky top-0 bg-ac-bg/90 backdrop-blur-md z-50 w-full max-w-md mx-auto">
+      {/* 1. 頂部 Header */}
+      <header className="p-6 pb-2 sticky top-0 bg-ac-bg/90 backdrop-blur-md z-50 w-full max-w-md mx-auto transition-all">
         <div className="flex justify-between items-start">
           <div className="relative text-left">
             <h2 className="text-[10px] font-black text-ac-green uppercase tracking-[0.2em] mb-1">
-              {currentTrip?.startDate || "Loading..."} — {currentTrip?.endDate || ""}
+              {currentTrip.startDate} — {currentTrip.endDate}
             </h2>
             
             <div 
               className="flex items-center gap-1 cursor-pointer group active:scale-95 transition-transform" 
               onClick={() => setMenuOpen(!menuOpen)}
             >
-              <h1 className="text-2xl font-black text-ac-brown tracking-tight">
-                {currentTrip?.dest || "載入中..."}
+              <h1 className="text-2xl font-black text-ac-brown tracking-tight line-clamp-1">
+                {currentTrip.dest}
               </h1>
               <ChevronDown 
                 size={20} 
@@ -62,7 +90,7 @@ const App: React.FC = () => {
             {/* 行程選單 */}
             {menuOpen && (
               <div className="absolute top-14 left-0 w-64 bg-white border-4 border-ac-border rounded-[32px] shadow-zakka overflow-hidden z-[60] animate-in fade-in slide-in-from-top-2">
-                <div className="p-2">
+                <div className="p-2 max-h-[60vh] overflow-y-auto hide-scrollbar">
                   {trips.map(t => (
                     <div key={t.id} className={`flex items-center justify-between rounded-2xl p-4 transition-colors ${t.id === currentTripId ? 'bg-ac-bg' : 'hover:bg-ac-bg/50'}`}>
                       <button className={`flex-1 text-left font-bold text-sm ${t.id === currentTripId ? 'text-ac-green' : 'text-ac-brown'}`} onClick={() => { switchTrip(t.id); setMenuOpen(false); }}>
@@ -73,9 +101,9 @@ const App: React.FC = () => {
                       </button>
                     </div>
                   ))}
-                  {trips.length < 3 && (
+                  {trips.length < 5 && (
                     <button onClick={() => { setShowOnboarding(true); setMenuOpen(false); }} className="w-full mt-2 p-4 bg-ac-green text-white text-xs font-black flex items-center justify-center gap-2 rounded-2xl active:bg-ac-brown transition-colors">
-                      <Plus size={14} /> 新增行程 ({trips.length}/3)
+                      <Plus size={14} /> 新增行程
                     </button>
                   )}
                 </div>
@@ -84,12 +112,12 @@ const App: React.FC = () => {
           </div>
 
           <div className="w-10 h-10 rounded-full border-4 border-white shadow-zakka overflow-hidden bg-white shrink-0">
-            <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${currentTripId || 'default'}`} alt="avatar" />
+            <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${currentTripId}`} alt="avatar" />
           </div>
         </div>
       </header>
 
-      {/* 2. 主內容區域 - 限制寬度並置中 */}
+      {/* 2. 主內容區域 */}
       <main className="flex-1 w-full max-w-md mx-auto overflow-x-hidden">
         {activeTab === 'schedule' && <Schedule />}
         {activeTab === 'booking'  && <Booking />}
@@ -99,7 +127,7 @@ const App: React.FC = () => {
         {activeTab === 'info'     && <Info />}
       </main>
 
-      {/* 3. 底部導航列 - 鎖定寬度與置中 */}
+      {/* 3. 底部導航列 */}
       <div className="fixed bottom-6 left-0 right-0 z-50 px-4">
         <nav className="w-full max-w-md mx-auto bg-white border-4 border-ac-border rounded-full shadow-zakka px-4 py-3 flex justify-between items-center">
           <NavIcon icon={<Calendar />} label="行程" id="schedule" active={activeTab} onClick={setActiveTab} />
