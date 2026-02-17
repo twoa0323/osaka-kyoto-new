@@ -1,6 +1,8 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { Trip, ScheduleItem, BookingItem, ExpenseItem, JournalItem, ShoppingItem, InfoItem } from '../types';
+import { db } from '../services/firebase';
+import { doc, setDoc } from 'firebase/firestore';
 
 interface TripState {
   trips: Trip[];
@@ -25,20 +27,31 @@ interface TripState {
   addShoppingItem: (tripId: string, item: ShoppingItem) => void;
   toggleShoppingItem: (tripId: string, itemId: string) => void;
   deleteShoppingItem: (tripId: string, itemId: string) => void;
-  // 資訊操作
   addInfoItem: (tripId: string, item: InfoItem) => void;
   deleteInfoItem: (tripId: string, itemId: string) => void;
 }
 
+// 輔助函式：自動同步單個行程到 Firestore
+const syncToCloud = async (trip: Trip) => {
+  try {
+    await setDoc(doc(db, "trips", trip.id), trip);
+  } catch (e) {
+    console.error("雲端同步失敗:", e);
+  }
+};
+
 export const useTripStore = create<TripState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       trips: [],
       currentTripId: null,
       activeTab: 'schedule',
       exchangeRate: 1,
       setTrips: (trips) => set({ trips }),
-      addTrip: (trip) => set((state) => ({ trips: [trip, ...state.trips].slice(0, 3), currentTripId: trip.id })),
+      addTrip: (trip) => {
+        set((state) => ({ trips: [trip, ...state.trips].slice(0, 3), currentTripId: trip.id }));
+        syncToCloud(trip);
+      },
       switchTrip: (id) => set({ currentTripId: id }),
       deleteTrip: (id) => set((state) => {
         const newTrips = state.trips.filter(t => t.id !== id);
@@ -46,25 +59,76 @@ export const useTripStore = create<TripState>()(
       }),
       setActiveTab: (tab) => set({ activeTab: tab }),
       setExchangeRate: (rate) => set({ exchangeRate: rate }),
-      addScheduleItem: (tripId, item) => set((state) => ({ trips: state.trips.map(t => t.id === tripId ? { ...t, items: [...(t.items || []), item] } : t) })),
-      updateScheduleItem: (tripId, itemId, newItem) => set((state) => ({ trips: state.trips.map(t => t.id === tripId ? { ...t, items: (t.items || []).map(i => i.id === itemId ? newItem : i) } : t) })),
-      deleteScheduleItem: (tripId, itemId) => set((state) => ({ trips: state.trips.map(t => t.id === tripId ? { ...t, items: (t.items || []).filter(i => i.id !== itemId) } : t) })),
-      addBookingItem: (tripId, item) => set((state) => ({ trips: state.trips.map(t => t.id === tripId ? { ...t, bookings: [...(t.bookings || []), item] } : t) })),
-      deleteBookingItem: (tripId, itemId) => set((state) => ({ trips: state.trips.map(t => t.id === tripId ? { ...t, bookings: (t.bookings || []).filter(i => i.id !== itemId) } : t) })),
-      addExpenseItem: (tripId, item) => set((state) => ({ trips: state.trips.map(t => t.id === tripId ? { ...t, expenses: [...(t.expenses || []), item] } : t) })),
-      deleteExpenseItem: (tripId, itemId) => set((state) => ({ trips: state.trips.map(t => t.id === tripId ? { ...t, expenses: (t.expenses || []).filter(i => i.id !== itemId) } : t) })),
-      addJournalItem: (tripId, item) => set((state) => ({ trips: state.trips.map(t => t.id === tripId ? { ...t, journals: [item, ...(t.journals || [])] } : t) })),
-      deleteJournalItem: (tripId, itemId) => set((state) => ({ trips: state.trips.map(t => t.id === tripId ? { ...t, journals: (t.journals || []).filter(i => i.id !== itemId) } : t) })),
-      addShoppingItem: (tripId, item) => set((state) => ({ trips: state.trips.map(t => t.id === tripId ? { ...t, shoppingList: [...(t.shoppingList || []), item] } : t) })),
-      toggleShoppingItem: (tripId, itemId) => set((state) => ({ trips: state.trips.map(t => t.id === tripId ? { ...t, shoppingList: (t.shoppingList || []).map(i => i.id === itemId ? { ...i, isBought: !i.isBought } : i) } : t) })),
-      deleteShoppingItem: (tripId, itemId) => set((state) => ({ trips: state.trips.map(t => t.id === tripId ? { ...t, shoppingList: (t.shoppingList || []).filter(i => i.id !== itemId) } : t) })),
-      // 資訊實作
-      addInfoItem: (tripId, item) => set((state) => ({
-        trips: state.trips.map(t => t.id === tripId ? { ...t, infoItems: [item, ...(t.infoItems || [])] } : t)
-      })),
-      deleteInfoItem: (tripId, itemId) => set((state) => ({
-        trips: state.trips.map(t => t.id === tripId ? { ...t, infoItems: (t.infoItems || []).filter(i => i.id !== itemId) } : t)
-      })),
+      addScheduleItem: (tripId, item) => {
+        set((state) => ({ trips: state.trips.map(t => t.id === tripId ? { ...t, items: [...(t.items || []), item] } : t) }));
+        const updatedTrip = get().trips.find(t => t.id === tripId);
+        if (updatedTrip) syncToCloud(updatedTrip);
+      },
+      updateScheduleItem: (tripId, itemId, newItem) => {
+        set((state) => ({ trips: state.trips.map(t => t.id === tripId ? { ...t, items: (t.items || []).map(i => i.id === itemId ? newItem : i) } : t) }));
+        const updatedTrip = get().trips.find(t => t.id === tripId);
+        if (updatedTrip) syncToCloud(updatedTrip);
+      },
+      deleteScheduleItem: (tripId, itemId) => {
+        set((state) => ({ trips: state.trips.map(t => t.id === tripId ? { ...t, items: (t.items || []).filter(i => i.id !== itemId) } : t) }));
+        const updatedTrip = get().trips.find(t => t.id === tripId);
+        if (updatedTrip) syncToCloud(updatedTrip);
+      },
+      addBookingItem: (tripId, item) => {
+        set((state) => ({ trips: state.trips.map(t => t.id === tripId ? { ...t, bookings: [...(t.bookings || []), item] } : t) }));
+        const updatedTrip = get().trips.find(t => t.id === tripId);
+        if (updatedTrip) syncToCloud(updatedTrip);
+      },
+      deleteBookingItem: (tripId, itemId) => {
+        set((state) => ({ trips: state.trips.map(t => t.id === tripId ? { ...t, bookings: (t.bookings || []).filter(i => i.id !== itemId) } : t) }));
+        const updatedTrip = get().trips.find(t => t.id === tripId);
+        if (updatedTrip) syncToCloud(updatedTrip);
+      },
+      addExpenseItem: (tripId, item) => {
+        set((state) => ({ trips: state.trips.map(t => t.id === tripId ? { ...t, expenses: [...(t.expenses || []), item] } : t) }));
+        const updatedTrip = get().trips.find(t => t.id === tripId);
+        if (updatedTrip) syncToCloud(updatedTrip);
+      },
+      deleteExpenseItem: (tripId, itemId) => {
+        set((state) => ({ trips: state.trips.map(t => t.id === tripId ? { ...t, expenses: (t.expenses || []).filter(i => i.id !== itemId) } : t) }));
+        const updatedTrip = get().trips.find(t => t.id === tripId);
+        if (updatedTrip) syncToCloud(updatedTrip);
+      },
+      addJournalItem: (tripId, item) => {
+        set((state) => ({ trips: state.trips.map(t => t.id === tripId ? { ...t, journals: [item, ...(t.journals || [])] } : t) }));
+        const updatedTrip = get().trips.find(t => t.id === tripId);
+        if (updatedTrip) syncToCloud(updatedTrip);
+      },
+      deleteJournalItem: (tripId, itemId) => {
+        set((state) => ({ trips: state.trips.map(t => t.id === tripId ? { ...t, journals: (t.journals || []).filter(i => i.id !== itemId) } : t) }));
+        const updatedTrip = get().trips.find(t => t.id === tripId);
+        if (updatedTrip) syncToCloud(updatedTrip);
+      },
+      addShoppingItem: (tripId, item) => {
+        set((state) => ({ trips: state.trips.map(t => t.id === tripId ? { ...t, shoppingList: [...(t.shoppingList || []), item] } : t) }));
+        const updatedTrip = get().trips.find(t => t.id === tripId);
+        if (updatedTrip) syncToCloud(updatedTrip);
+      },
+      toggleShoppingItem: (tripId, itemId) => {
+        set((state) => ({ trips: state.trips.map(t => t.id === tripId ? { ...t, shoppingList: (t.shoppingList || []).map(i => i.id === itemId ? { ...i, isBought: !i.isBought } : i) } : t) }));
+        const updatedTrip = get().trips.find(t => t.id === tripId);
+        if (updatedTrip) syncToCloud(updatedTrip);
+      },
+      deleteShoppingItem: (tripId, itemId) => {
+        set((state) => ({ trips: state.trips.map(t => t.id === tripId ? { ...t, shoppingList: (t.shoppingList || []).filter(i => i.id !== itemId) } : t) }));
+        const updatedTrip = get().trips.find(t => t.id === tripId);
+        if (updatedTrip) syncToCloud(updatedTrip);
+      },
+      addInfoItem: (tripId, item) => {
+        set((state) => ({ trips: state.trips.map(t => t.id === tripId ? { ...t, infoItems: [item, ...(t.infoItems || [])] } : t) }));
+        const updatedTrip = get().trips.find(t => t.id === tripId);
+        if (updatedTrip) syncToCloud(updatedTrip);
+      },
+      deleteInfoItem: (tripId, itemId) => {
+        set((state) => ({ trips: state.trips.map(t => t.id === tripId ? { ...t, infoItems: (t.infoItems || []).filter(i => i.id !== itemId) } : t) }));
+        const updatedTrip = get().trips.find(t => t.id === tripId);
+        if (updatedTrip) syncToCloud(updatedTrip);
+      },
     }),
     { name: 'zakka-trip-storage' }
   )

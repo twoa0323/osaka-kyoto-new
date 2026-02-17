@@ -1,36 +1,36 @@
 import { initializeApp } from "firebase/app";
-import { getAuth } from "firebase/auth";
-import { 
-  initializeFirestore, 
-  persistentLocalCache, 
-  persistentMultipleTabManager 
-} from "firebase/firestore";
+import { getFirestore, enableIndexedDbPersistence } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
+import { getAuth, signInAnonymously } from "firebase/auth";
 
-// 1. 改用環境變數 (與你的 Vite 設定一致)
+// 請在此處填入你的 Firebase SDK 設定
 const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
-  appId: import.meta.env.VITE_FIREBASE_APP_ID
+  apiKey: "YOUR_API_KEY",
+  authDomain: "YOUR_PROJECT.firebaseapp.com",
+  projectId: "YOUR_PROJECT",
+  storageBucket: "YOUR_PROJECT.appspot.com",
+  messagingSenderId: "...",
+  appId: "..."
 };
 
-// 初始化 App
 const app = initializeApp(firebaseConfig);
 
-// 2. 匯出 Auth
+export const db = getFirestore(app);
+export const storage = getStorage(app);
 export const auth = getAuth(app);
 
-// 3. [關鍵修正] 使用 initializeFirestore 啟用離線支援
-// 這取代了舊版的 getFirestore() + enableIndexedDbPersistence()
-// persistentMultipleTabManager() 會自動處理多視窗同步，不會再報錯
-export const db = initializeFirestore(app, {
-  localCache: persistentLocalCache({
-    tabManager: persistentMultipleTabManager() 
-  })
+// 啟用匿名登入 (讓使用者不需要輸入密碼即可擁有獨立 ID)
+signInAnonymously(auth).catch((error) => {
+  console.error("Firebase 匿名登入失敗:", error);
 });
 
-// 4. 匯出 Storage
-export const storage = getStorage(app);
+// 啟用離線持久化 (重要：確保旅遊途中沒網路也能讀取)
+if (typeof window !== "undefined") {
+  enableIndexedDbPersistence(db).catch((err) => {
+    if (err.code === 'failed-precondition') {
+      console.warn("離線同步失敗：多個分頁同時開啟中");
+    } else if (err.code === 'unimplemented') {
+      console.warn("此瀏覽器不支援離線同步");
+    }
+  });
+}
