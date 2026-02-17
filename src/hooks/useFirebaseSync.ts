@@ -1,17 +1,21 @@
 import { useEffect } from 'react';
 import { useTripStore } from '../store/useTripStore';
 import { db } from '../services/firebase';
-import { collection, onSnapshot, query, orderBy } from 'firebase/firestore'; // 加入 orderBy
+import { collection, onSnapshot, query, orderBy, limit } from 'firebase/firestore'; // 引入 limit
 import { Trip } from '../types';
 
 export const useFirebaseSync = () => {
   const { setTrips } = useTripStore();
 
   useEffect(() => {
-    // 加入 orderBy 確保資料順序一致 (這能減少跳動)
-    // 假設 id 是時間戳，或你可以加一個 createdAt 欄位
-    // 這裡暫時先直接抓取
-    const q = query(collection(db, "trips"));
+    // [關鍵修復]
+    // 1. orderBy("id", "desc"): 依照 ID 倒序排列 (假設 ID 是時間戳，越大的越新)
+    // 2. limit(5): 只抓取最新的 5 筆資料，忽略之前產生的大量髒資料
+    const q = query(
+      collection(db, "trips"), 
+      orderBy("id", "desc"), 
+      limit(5)
+    );
     
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const tripsData: Trip[] = [];
@@ -19,14 +23,12 @@ export const useFirebaseSync = () => {
         tripsData.push(doc.data() as Trip);
       });
       
-      // 只有當雲端有資料時才更新，避免把本地新建立的資料瞬間清空
-      // 這裡採用「雲端覆蓋本地」策略，適合單人使用
+      // 更新 Store
       if (tripsData.length > 0) {
-        // 我們將新的行程排在最前面 (假設 ID 越大越新)
-        tripsData.sort((a, b) => Number(b.id) - Number(a.id));
         setTrips(tripsData);
       }
     }, (error) => {
+      // 這裡可能會因為還沒建立索引報錯，但通常 Firebase 會自動處理單欄位排序
       console.error("Firebase 同步錯誤:", error);
     });
 
