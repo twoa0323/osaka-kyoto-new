@@ -8,6 +8,7 @@ import axios from 'axios';
 export const Onboarding = ({ onComplete }: { onComplete: () => void }) => {
   const addTrip = useTripStore((state) => state.addTrip);
   
+  // 搜尋與表單狀態
   const [query, setQuery] = useState('');
   const [suggestions, setSuggestions] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
@@ -20,15 +21,14 @@ export const Onboarding = ({ onComplete }: { onComplete: () => void }) => {
     selectedPlace: null as any,
     start: new Date().toISOString().split('T')[0],
     end: new Date().toISOString().split('T')[0],
-    currency: 'TWD' as any,
-    currencyName: '台幣'
+    currency: 'TWD' as any
   });
 
-  // 使用 OpenStreetMap (Nominatim) API - 最穩定，不會報 400 錯誤
+  // 使用 OpenStreetMap (Nominatim) API
   useEffect(() => {
-    // 如果正在選取模式，直接跳過搜尋
+    // 如果正在選取模式，直接跳過搜尋，防止無限迴圈
     if (isSelecting.current) {
-      isSelecting.current = false; // 重置標記
+      isSelecting.current = false; 
       return;
     }
 
@@ -41,7 +41,7 @@ export const Onboarding = ({ onComplete }: { onComplete: () => void }) => {
             params: {
               q: query,
               format: 'json',
-              addressdetails: 1,
+              addressdetails: 1, // 必須開啟，才能取得 country_code
               limit: 5,
               'accept-language': 'zh-TW,en' // 優先顯示中文
             }
@@ -49,13 +49,12 @@ export const Onboarding = ({ onComplete }: { onComplete: () => void }) => {
           setSuggestions(res.data);
         } catch (e) { 
           console.error("搜尋錯誤:", e); 
-          // Nominatim 幾乎不會報 400，除非網路問題
         }
         setLoading(false);
       } else {
         setSuggestions([]);
       }
-    }, 600); // 延遲 600ms，減少打字時的請求頻率
+    }, 600); // Debounce 延遲
 
     return () => clearTimeout(timer);
   }, [query]);
@@ -64,17 +63,22 @@ export const Onboarding = ({ onComplete }: { onComplete: () => void }) => {
     // [關鍵] 設為 true，告訴 useEffect 這次變更不要搜尋
     isSelecting.current = true;
     
-    // Nominatim 的資料結構
-    const country = place.address?.country || '';
-    const currency = getCurrencyByCountry(country);
-    // 取得主要地名 (逗號前的部分)
+    // 1. 解析地點資訊 (解決幣別對應失敗的關鍵)
+    const address = place.address || {};
+    const countryCode = address.country_code || ''; // ex: 'kr', 'cn', 'jp'
+    const countryName = address.country || '';      // ex: '南韓', 'China'
+    
+    // 2. 透過國家代碼取得精準幣別
+    const currency = getCurrencyByCountry(countryCode, countryName);
+    
+    // 3. 取得主要地名 (逗號前的部分，優化顯示)
     const placeName = place.display_name.split(',')[0];
 
     setForm(prev => ({ ...prev, selectedPlace: place, currency }));
     setQuery(placeName); // 更新輸入框文字
     setSuggestions([]);  // 關閉選單
 
-    // 抓取匯率
+    // 4. 抓取即時匯率
     try {
       const currentRate = await fetchExchangeRate(currency);
       setRate(currentRate);
@@ -83,17 +87,41 @@ export const Onboarding = ({ onComplete }: { onComplete: () => void }) => {
     }
   };
 
+  const handleCreate = () => {
+    if (!form.selectedPlace) return alert("請先搜尋並選擇一個城市！");
+    
+    addTrip({
+      id: Date.now().toString(),
+      dest: form.selectedPlace.display_name.split(',')[0],
+      destination: form.selectedPlace.display_name,
+      startDate: form.start,
+      endDate: form.end,
+      baseCurrency: form.currency,
+      members: ['Admin'],
+      pin: '007',
+      // 初始化 items 防止 undefined 錯誤
+      // (注意：這裡不需要傳入 items 屬性，因為 store 會處理，但若有需要可加)
+    });
+    onComplete();
+  };
+
   return (
     // fixed inset-0 確保手機版完全滿版 (包含狀態欄背景)
+    // z-[100] 確保蓋在所有內容之上
+    // overflow-y-auto 允許小螢幕捲動
     <div className="fixed inset-0 bg-gradient-to-b from-[#328383] to-[#2E6A9E] flex flex-col items-center justify-center p-6 font-sans text-white z-[100] overflow-y-auto">
-      <div className="w-full max-w-md flex flex-col items-center pt-safe">
+      
+      {/* 使用 pt-[env(safe-area-inset-top)] 避開手機瀏海 */}
+      <div className="w-full max-w-md flex flex-col items-center pt-[env(safe-area-inset-top)]">
         
+        {/* 飛機 Icon */}
         <div className="w-20 h-20 bg-white/10 rounded-full flex items-center justify-center border border-white/30 backdrop-blur-md mb-6 shrink-0">
           <Plane size={36} className="rotate-45 text-white" />
         </div>
 
         <h1 className="text-4xl font-bold mb-10 tracking-wide">Travel Plan</h1>
 
+        {/* 主卡片區塊 */}
         <div className="bg-white rounded-[40px] w-full p-8 shadow-2xl space-y-4">
           
           {/* DESTINATION 輸入區 */}
@@ -163,6 +191,7 @@ export const Onboarding = ({ onComplete }: { onComplete: () => void }) => {
                 <Banknote size={24} className="text-[#5C6B89]" />
                 <span className="text-[#2D3A52] font-bold">{form.currency}</span>
               </div>
+              {/* 裝飾用的上下箭頭 */}
               <div className="text-[#5C6B89] flex flex-col gap-0.5">
                 <div className="w-0 h-0 border-l-[4px] border-l-transparent border-r-[4px] border-r-transparent border-b-[6px] border-b-current"></div>
                 <div className="w-0 h-0 border-l-[4px] border-l-transparent border-r-[4px] border-r-transparent border-t-[6px] border-t-current"></div>
@@ -179,28 +208,16 @@ export const Onboarding = ({ onComplete }: { onComplete: () => void }) => {
             </div>
           </div>
 
+          {/* 建立按鈕 */}
           <button 
-            onClick={() => {
-               if(!form.selectedPlace) return alert("請先搜尋並選擇一個城市！");
-               addTrip({
-                 id: Date.now().toString(),
-                 dest: form.selectedPlace.display_name.split(',')[0],
-                 destination: form.selectedPlace.display_name,
-                 startDate: form.start,
-                 endDate: form.end,
-                 baseCurrency: form.currency,
-                 members: ['Admin'],
-                 pin: '007',
-                 items: []
-               });
-               onComplete();
-            }}
+            onClick={handleCreate}
             className="w-full bg-[#147A70] hover:bg-[#0E5A52] text-white py-5 rounded-full font-black text-lg flex items-center justify-center gap-3 shadow-lg active:scale-95 transition-all mt-4"
           >
             <Rocket size={24} fill="white" /> 建立行程
           </button>
         </div>
         
+        {/* Footer */}
         <p className="mt-8 text-[9px] text-white/40 font-bold tracking-tighter text-center leading-relaxed">
           Powered by OpenStreetMap / Nominatim / open-er-api.com / Google<br/>
           Translate / ChatGPT
