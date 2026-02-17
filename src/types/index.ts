@@ -10,23 +10,35 @@ export interface ScheduleItem {
   note?: string;
 }
 
-// 新增預訂相關型別
 export interface BookingItem {
   id: string;
   type: 'flight' | 'hotel' | 'car' | 'voucher';
   title: string;
   confirmationNo?: string;
-  date: string; // 開始日
-  endDate?: string; // 結束日
+  date: string;
+  endDate?: string;
   location?: string;
   price?: number;
   note?: string;
-  // 針對機票
   flightNo?: string;
   depIata?: string;
   arrIata?: string;
   depTime?: string;
   arrTime?: string;
+}
+
+// 新增記帳型別
+export interface ExpenseItem {
+  id: string;
+  date: string;
+  title: string;
+  amount: number;
+  currency: CurrencyCode;
+  method: '現金' | '信用卡' | '行動支付' | 'WOWPASS';
+  location?: string;
+  category: string;
+  payerId: string;
+  splitWith: string[]; // 分攤成員 ID 列表
 }
 
 export interface Trip {
@@ -39,5 +51,6 @@ export interface Trip {
   members: string[];
   pin: string;
   items: ScheduleItem[];
-  bookings: BookingItem[]; // 新增此欄位
+  bookings: BookingItem[];
+  expenses: ExpenseItem[]; // 新增
 }

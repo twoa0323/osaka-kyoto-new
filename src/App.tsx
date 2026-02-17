@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { useTripStore } from './store/useTripStore';
 import { Onboarding } from './components/Onboarding';
 import { Schedule } from './components/Schedule';
-import { Booking } from './components/Booking'; // 新增
+import { Booking } from './components/Booking';
+import { Expense } from './components/Expense'; // 新增
 import { Plus, ChevronDown, Trash2, Calendar, CreditCard, Wallet, Utensils, ShoppingBag, Info } from 'lucide-react';
 
 const App: React.FC = () => {
@@ -49,8 +50,9 @@ const App: React.FC = () => {
 
       <main>
         {activeTab === 'schedule' && <Schedule />}
-        {activeTab === 'booking' && <Booking />} {/* 接入預訂頁面 */}
-        {activeTab !== 'schedule' && activeTab !== 'booking' && (
+        {activeTab === 'booking' && <Booking />}
+        {activeTab === 'expense' && <Expense />} {/* 接入記帳頁面 */}
+        {activeTab !== 'schedule' && activeTab !== 'booking' && activeTab !== 'expense' && (
           <div className="p-10 text-center italic text-ac-border font-bold">
             {activeTab.toUpperCase()} 開發中...
           </div>
