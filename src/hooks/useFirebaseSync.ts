@@ -1,16 +1,13 @@
 import { useEffect } from 'react';
 import { useTripStore } from '../store/useTripStore';
 import { db } from '../services/firebase';
-import { collection, onSnapshot, query, orderBy, limit } from 'firebase/firestore'; // 引入 limit
+import { collection, onSnapshot, query, orderBy, limit } from 'firebase/firestore';
 import { Trip } from '../types';
 
 export const useFirebaseSync = () => {
   const { setTrips } = useTripStore();
 
   useEffect(() => {
-    // [關鍵修復]
-    // 1. orderBy("id", "desc"): 依照 ID 倒序排列 (假設 ID 是時間戳，越大的越新)
-    // 2. limit(5): 只抓取最新的 5 筆資料，忽略之前產生的大量髒資料
     const q = query(
       collection(db, "trips"), 
       orderBy("id", "desc"), 
@@ -18,17 +15,19 @@ export const useFirebaseSync = () => {
     );
     
     const unsubscribe = onSnapshot(q, (snapshot) => {
+      // [關鍵修復] 如果快照包含本地尚未完成寫入的變更，忽略此次雲端回傳
+      // 這能解決「新增後2秒消失」的問題
+      if (snapshot.metadata.hasPendingWrites) return;
+
       const tripsData: Trip[] = [];
       snapshot.forEach((doc) => {
         tripsData.push(doc.data() as Trip);
       });
       
-      // 更新 Store
       if (tripsData.length > 0) {
         setTrips(tripsData);
       }
     }, (error) => {
-      // 這裡可能會因為還沒建立索引報錯，但通常 Firebase 會自動處理單欄位排序
       console.error("Firebase 同步錯誤:", error);
     });
 
