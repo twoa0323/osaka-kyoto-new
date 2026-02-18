@@ -3,7 +3,7 @@ import { useTripStore } from '../store/useTripStore';
 import { Wallet, Coins, MapPin, Image as ImageIcon, Trash2, Camera, X, Edit3, BarChart3, ScanLine, Upload, PenTool, LayoutList, Settings, CheckCircle, Search } from 'lucide-react';
 import { ExpenseItem, CurrencyCode } from '../types';
 import { compressImage } from '../utils/imageUtils';
-import { format, parseISO } from 'date-fns';
+import { format, parseISO, differenceInDays } from 'date-fns';
 import { zhTW } from 'date-fns/locale';
 
 // --- 純 CSS 統計圓餅圖 ---
@@ -18,8 +18,9 @@ const DonutChart = ({ data, totalLabel }: { data: { label: string, value: number
   }).join(', ');
   return (
     <div className="relative w-44 h-44 rounded-full mx-auto shadow-zakka" style={{ background: `conic-gradient(${gradients})` }}>
-      <div className="absolute inset-6 bg-[#1A1A1A] rounded-full flex flex-col items-center justify-center text-white">
-        <span className="text-3xl font-black">{data.length}</span><span className="text-[9px] opacity-40 font-bold uppercase">{totalLabel}</span>
+      <div className="absolute inset-6 bg-[#1A1A1A] rounded-full flex flex-col items-center justify-center text-white text-center">
+        <span className="text-3xl font-black">{data.length}</span>
+        <span className="text-[9px] opacity-40 font-bold uppercase block">{totalLabel}</span>
       </div>
     </div>
   );
@@ -41,21 +42,14 @@ export const Expense = () => {
     method: '現金', amount: 0, title: '', location: '', images: [], category: '飲食', items: []
   });
 
-  // --- 關鍵修正：解決匯率 1:1 錯誤 ---
+  // --- 關鍵修正：解決匯率 1:1 錯誤，自動更新匯率 ---
   useEffect(() => {
     if (trip?.baseCurrency && trip.baseCurrency !== 'TWD') {
       fetch(`https://open.er-api.com/v6/latest/${trip.baseCurrency}`)
         .then(res => res.json())
-        .then(data => {
-          if (data?.rates?.TWD) {
-            setExchangeRate(data.rates.TWD);
-            console.log(`匯率已更新: 1 ${trip.baseCurrency} = ${data.rates.TWD} TWD`);
-          }
-        })
-        .catch(err => console.error("匯率 API 錯誤", err));
-    } else {
-      setExchangeRate(1);
-    }
+        .then(data => { if(data?.rates?.TWD) setExchangeRate(data.rates.TWD); })
+        .catch(() => setExchangeRate(0.21)); // 失敗時預設
+    } else { setExchangeRate(1); }
   }, [trip?.baseCurrency, setExchangeRate]);
 
   if (!trip) return null;
@@ -80,8 +74,7 @@ export const Expense = () => {
 
   const resetForm = () => {
     setForm({ date: new Date().toISOString().split('T')[0], currency: trip.baseCurrency, method: '現金', title: '', amount: 0, location: '', images: [], category: '飲食', items: [] });
-    setEditingId(null);
-    setInputMode('manual');
+    setEditingId(null); setInputMode('manual');
   };
 
   const handleAIAnalyze = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -94,19 +87,13 @@ export const Expense = () => {
         body: JSON.stringify({ imageBase64: b64.split(',')[1] })
       });
       const data = await res.json();
+      if (data.error) throw new Error(data.error);
       setForm(prev => ({ ...prev, title: data.title, amount: data.amount, date: data.date, category: data.category, items: data.items, images: [b64] }));
       alert("AI 辨識成功！✨");
       setInputMode('manual');
     } catch (err) { alert("辨識失敗，請手動輸入 🥲"); }
     finally { setIsProcessing(false); }
   };
-
-  // --- 明細分組 ---
-  const grouped = expenses.reduce((acc, curr) => {
-    if (!acc[curr.date]) acc[curr.date] = [];
-    acc[curr.date].push(curr);
-    return acc;
-  }, {} as Record<string, ExpenseItem[]>);
 
   const categoryStats = expenses.reduce((acc, curr) => {
     const twd = curr.currency === 'TWD' ? curr.amount : curr.amount * exchangeRate;
@@ -119,16 +106,19 @@ export const Expense = () => {
     label: k, value: v, color: ['#FF6B6B', '#4ECDC4', '#FFE66D', '#1A535C', '#F9AC7D'][i % 5]
   }));
 
+  const grouped = expenses.reduce((acc, curr) => {
+    if (!acc[curr.date]) acc[curr.date] = [];
+    acc[curr.date].push(curr); return acc;
+  }, {} as Record<string, ExpenseItem[]>);
+
   return (
     <div className="px-6 space-y-6 animate-fade-in pb-28 text-left">
-      
-      {/* 總額儀表板 */}
       <div className="flex gap-4">
         <div className="card-zakka bg-[#8D775F] text-white border-none p-5 flex-1 flex flex-col justify-between shadow-xl relative overflow-hidden">
           <p className="text-[10px] font-black uppercase opacity-60 tracking-widest z-10">Total Spending</p>
           <div className="z-10">
             <h2 className="text-2xl font-black italic">NT$ {Math.round(totalTwd).toLocaleString()}</h2>
-            <p className="text-[9px] font-bold opacity-40 uppercase tracking-tighter">Rate: 1 {trip.baseCurrency} ≈ {exchangeRate.toFixed(3)} TWD</p>
+            <p className="text-[9px] font-bold opacity-40">Rate: 1 {trip.baseCurrency} ≈ {exchangeRate.toFixed(3)} TWD</p>
           </div>
           <Coins className="absolute -bottom-4 -right-4 text-white opacity-10 rotate-12" size={80} />
         </div>
@@ -141,20 +131,21 @@ export const Expense = () => {
         <div className="space-y-6 animate-in slide-in-from-right">
           <div className="card-zakka bg-[#1A1A1A] text-white border-none p-6 space-y-4">
             <div className="flex justify-between items-start">
-              <div><h3 className="font-black text-lg">預算與剩餘</h3><p className="text-xs opacity-50 font-bold uppercase">Budget Management</p></div>
+              <div><h3 className="font-black text-lg">預算與剩餘</h3><p className="text-xs opacity-50 uppercase font-black">Budget Management</p></div>
               <button onClick={() => { const b = prompt("設定預算 (TWD):", trip.budget?.toString()); if(b) updateTripData(trip.id, { budget: Number(b) }); }} className="p-2 bg-white/10 rounded-full active:bg-white/20"><Settings size={16}/></button>
             </div>
-            <div className="h-4 bg-white/20 rounded-full overflow-hidden"><div className={`h-full transition-all duration-1000 ${percent > 90 ? 'bg-red-400' : 'bg-ac-green'}`} style={{ width: `${percent}%` }} /></div>
+            <div className="h-4 bg-white/20 rounded-full overflow-hidden shadow-inner"><div className={`h-full transition-all duration-1000 ${percent > 90 ? 'bg-red-400' : 'bg-ac-green'}`} style={{ width: `${percent}%` }} /></div>
             <div className="flex justify-between text-[10px] font-black uppercase"><span>已用 ${Math.round(totalTwd).toLocaleString()}</span><span className="text-ac-green">剩餘 ${Math.round(budget - totalTwd).toLocaleString()}</span></div>
           </div>
           <div className="card-zakka bg-white border-4 border-ac-border p-8 text-center shadow-zakka">
              <h3 className="text-left font-black text-ac-brown mb-6 flex items-center gap-2"><div className="w-1 h-4 bg-ac-orange rounded-full"/> 支出類別統計</h3>
              <DonutChart data={pieData} totalLabel="Categories" />
           </div>
+          <button onClick={() => setActiveTab('record')} className="w-full py-4 text-center text-ac-border font-black text-[10px] uppercase">Back to record</button>
         </div>
       ) : (
         <>
-          <div className="flex bg-white p-1.5 rounded-full border-4 border-ac-border shadow-zakka">
+          <div className="flex bg-white p-1.5 rounded-full border-4 border-ac-border shadow-zakka relative z-10">
             <button onClick={() => setActiveTab('record')} className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-full text-sm font-black transition-all ${activeTab === 'record' ? 'bg-ac-green text-white shadow-md' : 'text-ac-border'}`}><PenTool size={16}/> 記帳</button>
             <button onClick={() => setActiveTab('list')} className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-full text-sm font-black transition-all ${activeTab === 'list' ? 'bg-ac-green text-white shadow-md' : 'text-ac-border'}`}><LayoutList size={16}/> 明細</button>
           </div>
@@ -169,26 +160,31 @@ export const Expense = () => {
                 <button onClick={() => setInputMode('manual')} className={`flex-1 py-4 rounded-2xl border-2 flex flex-col items-center gap-1 transition-all ${inputMode === 'manual' ? 'border-blue-400 bg-blue-50 text-blue-500' : 'border-ac-border text-ac-border'}`}><PenTool size={20} /><span className="text-[9px] font-black">手動</span></button>
               </div>
 
+              {(inputMode === 'scan' || inputMode === 'import') && (
+                <div className="border-4 border-dashed border-ac-border rounded-[32px] p-10 text-center space-y-4 bg-ac-bg">
+                  {isProcessing ? <div className="flex flex-col items-center text-ac-green animate-pulse"><ScanLine size={48}/><p className="font-black mt-2">AI 智慧分析中...</p></div> : 
+                  <><p className="text-ac-brown font-bold text-xs opacity-50">拍攝收據 AI 會自動帶入唷！</p><button onClick={() => aiInputRef.current?.click()} className="btn-zakka px-8 py-3 shadow-md">{inputMode === 'scan' ? '開啟相機 📸' : '選擇照片 🖼️'}</button>
+                  <input ref={aiInputRef} type="file" accept="image/*" capture={inputMode === 'scan' ? "environment" : undefined} className="hidden" onChange={handleAIAnalyze} /></>}
+                </div>
+              )}
+
               <div className={`space-y-5 transition-all ${isProcessing ? 'opacity-30 pointer-events-none' : ''}`}>
                 <div className="space-y-1">
                   <label className="text-[10px] font-black text-ac-brown/40 uppercase tracking-widest pl-1">日期</label>
-                  <input type="date" value={form.date} onChange={e => setForm({...form, date: e.target.value})} className="w-full p-4 bg-ac-bg border-2 border-ac-border rounded-2xl font-black text-ac-brown text-center outline-none" />
+                  <input type="date" value={form.date} onChange={e => setForm({...form, date: e.target.value})} className="w-full p-4 bg-ac-bg border-2 border-ac-border rounded-2xl font-black text-ac-brown text-center outline-none focus:border-ac-green" />
                 </div>
                 <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-1"><label className="text-[10px] font-black text-ac-orange uppercase">* 金額</label><input type="number" inputMode="decimal" placeholder="0" value={form.amount || ''} onChange={e => setForm({...form, amount: Number(e.target.value)})} className="w-full p-4 bg-ac-bg border-2 border-ac-border rounded-2xl text-2xl font-black text-ac-brown outline-none" /></div>
-                  <div className="space-y-1"><label className="text-[10px] font-black text-ac-brown/40 uppercase">幣別</label><div className="flex gap-2 h-[66px]">{[trip.baseCurrency, 'TWD'].map(c => <button key={c} onClick={() => setForm({...form, currency: c as any})} className={`flex-1 rounded-xl font-black border-2 ${form.currency === c ? 'bg-[#E2F1E7] border-ac-green text-ac-green shadow-sm' : 'bg-white border-ac-border text-ac-border'}`}>{c}</button>)}</div></div>
+                  <div className="space-y-1"><label className="text-[10px] font-black text-ac-orange uppercase pl-1">* 金額</label><input type="number" inputMode="decimal" value={form.amount || ''} onChange={e => setForm({...form, amount: Number(e.target.value)})} className="w-full p-4 bg-ac-bg border-2 border-ac-border rounded-2xl text-2xl font-black text-ac-brown outline-none focus:border-ac-orange" /></div>
+                  <div className="space-y-1"><label className="text-[10px] font-black text-ac-brown/40 uppercase pl-1">幣別</label><div className="flex gap-2 h-[66px]">{[trip.baseCurrency, 'TWD'].map(c => <button key={c} onClick={() => setForm({...form, currency: c as any})} className={`flex-1 rounded-xl font-black border-2 transition-all ${form.currency === c ? 'bg-[#E2F1E7] border-ac-green text-ac-green shadow-sm' : 'bg-white border-ac-border text-ac-border'}`}>{c}</button>)}</div></div>
                 </div>
-                <div className="space-y-1"><label className="text-[10px] font-black text-ac-orange uppercase">* 項目名稱</label>
-                  <div className="flex gap-2">
-                    <input placeholder="買了什麼呢？" value={form.title} onChange={e => setForm({...form, title: e.target.value})} className="flex-1 p-4 bg-ac-bg border-2 border-ac-border rounded-2xl font-black text-ac-brown outline-none" />
-                    <button onClick={() => fileInputRef.current?.click()} className="w-14 h-14 bg-[#E2F1E7] border-2 border-ac-green rounded-2xl flex items-center justify-center text-ac-green overflow-hidden relative active:scale-90 transition-transform">
-                      {form.images?.[0] ? <img src={form.images[0]} className="w-full h-full object-cover"/> : <ImageIcon size={24}/>}
-                    </button>
-                  </div>
+                <div className="space-y-1"><label className="text-[10px] font-black text-ac-brown/40 uppercase pl-1">地點 (Google Maps)</label>
+                <div className="flex gap-2"><input placeholder="尋找店家..." value={form.location} onChange={e => setForm({...form, location: e.target.value})} className="flex-1 p-4 bg-ac-bg border-2 border-ac-border rounded-2xl font-bold outline-none" /><button onClick={() => window.open(`https://www.google.com/maps/search/${encodeURIComponent(form.location || trip.dest)}`)} className="w-14 h-14 bg-blue-50 border-2 border-blue-200 rounded-2xl flex items-center justify-center text-blue-500 active:scale-95 transition-all"><Search size={20}/></button></div></div>
+                <div className="space-y-1"><label className="text-[10px] font-black text-ac-orange uppercase pl-1">* 項目名稱</label>
+                  <div className="flex gap-2"><input placeholder="買了什麼呢？" value={form.title} onChange={e => setForm({...form, title: e.target.value})} className="flex-1 p-4 bg-ac-bg border-2 border-ac-border rounded-2xl font-black text-ac-brown outline-none focus:border-ac-green" />
+                  <button onClick={() => fileInputRef.current?.click()} className="w-14 h-14 bg-[#E2F1E7] border-2 border-ac-green rounded-2xl flex items-center justify-center text-ac-green overflow-hidden relative active:scale-90 transition-transform">{form.images?.[0] ? <img src={form.images[0]} className="w-full h-full object-cover"/> : <Camera size={24}/>}</button></div>
                   <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={async e => {if(e.target.files?.[0]){const b=await compressImage(e.target.files[0]);setForm({...form, images:[b]});}}} />
-                  <input ref={aiInputRef} type="file" accept="image/*" className="hidden" onChange={handleAIAnalyze} />
                 </div>
-                <button onClick={handleSave} className="btn-zakka w-full py-5 text-xl mt-2 shadow-zakka">{editingId ? '更新紀錄 ➔' : '完成記帳 ➔'}</button>
+                <button onClick={handleSave} className="btn-zakka w-full py-5 text-xl mt-2">{editingId ? '確認更新 ➔' : '完成記帳 ➔'}</button>
               </div>
             </div>
           )}
@@ -200,14 +196,14 @@ export const Expense = () => {
                   <h3 className="text-[11px] font-black text-ac-border pl-2 border-l-4 border-ac-orange flex items-center gap-2 uppercase tracking-[0.2em]">{date}</h3>
                   {grouped[date].map(e => (
                     <div key={e.id} onClick={() => { setForm(e); setEditingId(e.id); setActiveTab('record'); }} className="card-zakka bg-white flex justify-between items-center group active:scale-95 transition-all shadow-sm">
-                       <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-4">
                           <div className={`w-10 h-10 rounded-2xl flex items-center justify-center text-white font-black text-xs ${e.category === '飲食' ? 'bg-orange-400' : 'bg-ac-green'}`}>{e.category?.slice(0,1) || '其'}</div>
                           <div><h3 className="font-black text-ac-brown text-sm truncate w-24">{e.title}</h3><p className="text-[9px] font-bold text-ac-border uppercase">{e.method} • {e.currency}</p></div>
-                       </div>
-                       <div className="text-right flex items-center gap-4">
-                          <div><p className="font-black text-ac-brown text-lg">{e.amount.toLocaleString()}</p></div>
-                          <button onClick={(ev) => { ev.stopPropagation(); if(confirm('要刪除嗎？')) deleteExpenseItem(trip.id, e.id); }} className="p-2 bg-ac-bg rounded-lg text-ac-orange/40 hover:text-ac-orange transition-colors"><Trash2 size={16}/></button>
-                       </div>
+                        </div>
+                        <div className="text-right flex items-center gap-4">
+                          <div><p className="font-black text-ac-brown">{e.amount.toLocaleString()}</p><p className="text-[8px] opacity-30 font-black">≈ ${Math.round(e.currency === 'TWD' ? e.amount : e.amount * exchangeRate)}</p></div>
+                          <button onClick={(ev) => { ev.stopPropagation(); if(confirm('要刪除嗎？')) deleteExpenseItem(trip.id, e.id); }} className="p-2 text-ac-orange/30 hover:text-ac-orange transition-colors"><Trash2 size={16}/></button>
+                        </div>
                     </div>
                   ))}
                 </div>
@@ -219,5 +215,7 @@ export const Expense = () => {
     </div>
   );
 };
+
+
 
 
