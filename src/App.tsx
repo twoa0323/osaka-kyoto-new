@@ -8,7 +8,8 @@ import { Expense } from './components/Expense';
 import { Journal } from './components/Journal';
 import { Shopping } from './components/Shopping';
 import { Info } from './components/Info';
-import { Plus, ChevronDown, Trash2, Calendar, CreditCard, Wallet, Utensils, ShoppingBag, Info as InfoIcon, X, Camera, Lock, Mail, ShieldCheck, Check } from 'lucide-react';
+// 已將 User 加入下方的引入清單中
+import { Plus, ChevronDown, Trash2, Calendar, CreditCard, Wallet, Utensils, ShoppingBag, Info as InfoIcon, X, Camera, Lock, Mail, ShieldCheck, Check, User } from 'lucide-react';
 import { compressImage } from './utils/imageUtils';
 
 const App: React.FC = () => {
@@ -150,6 +151,7 @@ const App: React.FC = () => {
         <div className="fixed inset-0 z-[2000] bg-white flex items-center justify-center p-8">
            <div className="w-full max-w-sm space-y-8">
               <div className="text-center space-y-2">
+                 {/* 已修正：User 圖示現在已定義 */}
                  <div className="w-20 h-20 bg-ac-bg rounded-full flex items-center justify-center mx-auto border-4 border-ac-border shadow-zakka animate-bounce"><User size={40} className="text-ac-green"/></div>
                  <h2 className="text-3xl font-black italic">你是誰呢？</h2>
                  <p className="text-sm font-bold text-ac-border">請設定個人 PIN 碼與稱呼以開始管理行程</p>
