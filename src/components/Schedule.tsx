@@ -35,8 +35,8 @@ export const Schedule = () => {
     setIsAiLoading(true);
     try {
       const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-      // 使用 Gemini 2.0 Flash 預覽版，解析速度最快且最智慧
-      const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+      // 使用 Gemini 3 Flash preview 預覽版，解析速度最快且最智慧
+      const model = genAI.getGenerativeModel({ model: "gemini-3-flash-preview" });
       
       const prompt = `你是一個專業旅遊策劃。請將以下文字轉化為 JSON 陣列。
       格式: [{"time":"HH:mm", "title":"名稱", "location":"地點", "category":"sightseeing或food或transport或hotel", "note":"簡介"}]。
