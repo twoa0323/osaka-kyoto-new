@@ -1,10 +1,9 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { Trip, Member } from '../types';
+import { Trip } from '../types';
 import { db } from '../services/firebase';
 import { doc, setDoc } from 'firebase/firestore';
 
-// 確保不含 undefined 導致寫入失敗
 const sanitize = (data: any) => JSON.parse(JSON.stringify(data, (k, v) => v === undefined ? null : v));
 
 const syncToCloud = async (trip: Trip) => {
@@ -54,4 +53,5 @@ export const useTripStore = create<TripState>()(
     { name: 'zakka-trip-storage' }
   )
 );
+
 
