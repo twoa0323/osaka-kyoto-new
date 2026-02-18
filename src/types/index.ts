@@ -12,18 +12,30 @@ export interface ScheduleItem {
 
 export interface BookingItem {
   id: string;
-  type: 'flight' | 'hotel' | 'car' | 'voucher';
+  type: 'flight' | 'hotel' | 'spot' | 'voucher';
   title: string;
   confirmationNo: string;
   date: string;
+  endDate?: string;
   location: string;
   note: string;
-  images: string[]; 
+  images: string[];
+  qrCode?: string;
+  website?: string;
+  // 航班專屬
   flightNo?: string;
   depIata?: string;
   arrIata?: string;
+  depCity?: string;
+  arrCity?: string;
   depTime?: string;
   arrTime?: string;
+  duration?: string;
+  baggage?: string;
+  aircraft?: string;
+  // 費用
+  price?: number;
+  nights?: number;
 }
 
 export interface ExpenseItem {
@@ -34,12 +46,12 @@ export interface ExpenseItem {
   currency: CurrencyCode;
   method: '現金' | '信用卡' | '行動支付';
   location: string;
+  mapUrl?: string;
   payerId: string;
   splitWith: string[];
-  images: string[]; 
+  images: string[];
 }
 
-// 其餘 JournalItem, ShoppingItem, InfoItem 確保 images: string[]
 export interface JournalItem { id: string; date: string; title: string; content: string; images: string[]; rating: number; location: string; }
 export interface ShoppingItem { id: string; title: string; price: number; currency: CurrencyCode; isBought: boolean; images: string[]; note: string; category: string; }
 export interface InfoItem { id: string; type: string; title: string; content: string; images: string[]; url: string; }
