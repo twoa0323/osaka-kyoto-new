@@ -1,5 +1,14 @@
 export type CurrencyCode = 'TWD' | 'JPY' | 'KRW' | 'USD' | 'EUR' | 'THB' | 'GBP' | 'CNY' | 'HKD' | 'SGD' | 'VND';
 
+// 旅伴成員定義
+export interface Member {
+  id: string;
+  name: string;
+  avatar: string;
+  email: string;
+  pin: string; // 4位數 PIN 碼
+}
+
 export interface ScheduleItem {
   id: string;
   date: string;
@@ -22,7 +31,6 @@ export interface BookingItem {
   images: string[];
   qrCode?: string;
   website?: string;
-  // 航班專屬
   flightNo?: string;
   depIata?: string;
   arrIata?: string;
@@ -33,7 +41,6 @@ export interface BookingItem {
   duration?: string;
   baggage?: string;
   aircraft?: string;
-  // 費用
   price?: number;
   nights?: number;
 }
@@ -52,10 +59,6 @@ export interface ExpenseItem {
   images: string[];
 }
 
-export interface JournalItem { id: string; date: string; title: string; content: string; images: string[]; rating: number; location: string; }
-export interface ShoppingItem { id: string; title: string; price: number; currency: CurrencyCode; isBought: boolean; images: string[]; note: string; category: string; }
-export interface InfoItem { id: string; type: string; title: string; content: string; images: string[]; url: string; }
-
 export interface Trip {
   id: string;
   dest: string;
@@ -63,12 +66,12 @@ export interface Trip {
   startDate: string;
   endDate: string;
   baseCurrency: CurrencyCode;
-  members: string[];
-  pin: string;
+  members: Member[]; // 改為物件陣列
+  pin: string; // 行程管理 PIN
   items: ScheduleItem[];
   bookings: BookingItem[];
   expenses: ExpenseItem[];
-  journals: JournalItem[];
-  shoppingList: ShoppingItem[];
-  infoItems: InfoItem[];
+  journals: any[];
+  shoppingList: any[];
+  infoItems: any[];
 }
