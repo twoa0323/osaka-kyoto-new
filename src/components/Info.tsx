@@ -1,61 +1,75 @@
 // filepath: src/components/Info.tsx
 import React, { useState } from 'react';
 import { useTripStore } from '../store/useTripStore';
-import { ExternalLink, ShieldAlert, BookOpen, Plus, X, Camera, Trash2, Globe, Phone } from 'lucide-react';
+import { ExternalLink, ShieldAlert, Plus, X, Camera, Trash2, Edit3, Globe, Phone, Loader2 } from 'lucide-react';
 import { uploadImage } from '../utils/imageUtils';
 import { InfoItem } from '../types';
 
 export const Info = () => {
-  const { trips, currentTripId, addInfoItem, deleteInfoItem } = useTripStore();
+  const { trips, currentTripId, addInfoItem, updateInfoItem, deleteInfoItem } = useTripStore();
   const trip = trips.find(t => t.id === currentTripId);
   
-  const [isAdding, setIsAdding] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingItem, setEditingItem] = useState<InfoItem | undefined>();
+  const [detailItem, setDetailItem] = useState<InfoItem | undefined>();
+  const [isUploading, setIsUploading] = useState(false);
+  
   const [form, setForm] = useState<Partial<InfoItem>>({
     type: 'note', title: '', content: '', images: [], url: ''
   });
 
   if (!trip) return null;
 
+  const handleOpenAdd = () => {
+    setEditingItem(undefined);
+    setForm({ type: 'note', title: '', content: '', images: [], url: '' });
+    setIsModalOpen(true);
+  };
+
+  const handleOpenEdit = (item: InfoItem) => {
+    setEditingItem(item);
+    setForm(item);
+    setIsModalOpen(true);
+  };
+
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
       const files = Array.from(e.target.files);
-      e.target.value = ''; // 提早清空
-      const urls = await Promise.all(files.map(f => uploadImage(f)));
-      setForm(prev => ({ ...prev, images: [...(prev.images || []), ...urls] }));
+      e.target.value = '';
+      setIsUploading(true);
+      try {
+        const urls = await Promise.all(files.map(f => uploadImage(f)));
+        setForm(prev => ({ ...prev, images: [...(prev.images || []), ...urls] }));
+      } catch(err) { alert("上傳失敗！"); } 
+      finally { setIsUploading(false); }
     }
   };
 
   const handleSave = () => {
     if (!form.title) return alert("給這條資訊一個標題吧！");
-    const newItem: InfoItem = {
-      id: Date.now().toString(),
-      type: form.type as any,
-      title: form.title!,
-      content: form.content || '',
-      images: form.images || [],
-      url: form.url
-    };
-    addInfoItem(trip.id, newItem);
-    setIsAdding(false);
-    setForm({ type: 'note', title: '', content: '', images: [], url: '' });
+    if (editingItem) {
+      updateInfoItem(trip.id, editingItem.id, { ...form, id: editingItem.id });
+    } else {
+      addInfoItem(trip.id, { ...form, id: Date.now().toString() } as InfoItem);
+    }
+    setIsModalOpen(false);
+  };
+
+  const handleDelete = () => {
+    if (editingItem && confirm('確定刪除這個資訊嗎？')) {
+      deleteInfoItem(trip.id, editingItem.id);
+      setIsModalOpen(false);
+    }
   };
 
   return (
     <div className="px-6 pb-24 animate-fade-in text-left space-y-6">
       <div className="flex justify-between items-end">
         <h2 className="text-2xl font-black text-ac-brown italic">旅遊資訊</h2>
-        <button onClick={() => setIsAdding(true)} className="w-12 h-12 bg-ac-brown text-white rounded-full shadow-zakka flex items-center justify-center active:scale-90 transition-transform">
-          <Plus size={28} />
-        </button>
+        <button onClick={handleOpenAdd} className="w-12 h-12 bg-ac-brown text-white rounded-full shadow-zakka flex items-center justify-center active:scale-90 transition-transform"><Plus size={28} /></button>
       </div>
 
-      {/* 快捷連結卡片 (例如：Visit Japan Web) */}
-      <a 
-        href="https://www.vjw.digital.go.jp/" 
-        target="_blank" 
-        rel="noreferrer"
-        className="card-zakka bg-[#1A1A1A] text-white border-none flex items-center justify-between p-6 group active:scale-95 transition-transform"
-      >
+      <a href="https://www.vjw.digital.go.jp/" target="_blank" rel="noreferrer" className="card-zakka bg-[#1A1A1A] text-white border-none flex items-center justify-between p-6 group active:scale-95 transition-transform">
         <div className="space-y-1">
           <span className="bg-[#E85D75] text-[8px] font-black px-2 py-0.5 rounded uppercase tracking-widest">Must Have</span>
           <h3 className="text-xl font-black italic">Visit Japan Web</h3>
@@ -64,52 +78,73 @@ export const Info = () => {
         <Globe className="text-[#E85D75] group-hover:rotate-12 transition-transform" size={32} />
       </a>
 
-      {/* 緊急聯絡 */}
       <div className="card-zakka bg-red-50 border-red-200 p-6 space-y-4">
         <h3 className="flex items-center gap-2 font-black text-red-900"><ShieldAlert size={18}/> 緊急救援</h3>
         <div className="grid grid-cols-2 gap-3">
-          <a href="tel:110" className="bg-white border-2 border-red-100 p-3 rounded-2xl flex items-center gap-3 font-black text-red-800 text-sm shadow-sm active:bg-red-100">
-            <Phone size={14}/> 警察 110
-          </a>
-          <a href="tel:119" className="bg-white border-2 border-red-100 p-3 rounded-2xl flex items-center gap-3 font-black text-red-800 text-sm shadow-sm active:bg-red-100">
-            <Phone size={14}/> 救護 119
-          </a>
+          <a href="tel:110" className="bg-white border-2 border-red-100 p-3 rounded-2xl flex items-center gap-3 font-black text-red-800 text-sm shadow-sm active:bg-red-100"><Phone size={14}/> 警察 110</a>
+          <a href="tel:119" className="bg-white border-2 border-red-100 p-3 rounded-2xl flex items-center gap-3 font-black text-red-800 text-sm shadow-sm active:bg-red-100"><Phone size={14}/> 救護 119</a>
         </div>
       </div>
 
-      {/* 自定義資訊列表 */}
       <div className="space-y-4">
         {(trip.infoItems || []).map(item => (
-          <div key={item.id} className="card-zakka bg-white group relative">
+          <div key={item.id} onClick={() => setDetailItem(item)} className="card-zakka bg-white group relative cursor-pointer active:scale-95 transition-transform">
             <div className="flex justify-between items-start mb-2">
               <h4 className="font-black text-ac-brown text-lg">{item.title}</h4>
-              <button onClick={() => deleteInfoItem(trip.id, item.id)} className="text-ac-orange/20 hover:text-ac-orange opacity-0 group-hover:opacity-100 transition-opacity"><Trash2 size={16}/></button>
+              <button onClick={(e) => { e.stopPropagation(); handleOpenEdit(item); }} className="text-ac-border hover:text-ac-orange opacity-0 group-hover:opacity-100 transition-colors p-1.5 bg-ac-bg rounded-lg"><Edit3 size={16}/></button>
             </div>
-            {item.content && <p className="text-sm text-ac-brown/60 mb-4 whitespace-pre-wrap">{item.content}</p>}
-            {item.images.length > 0 && (
+            {item.content && <p className="text-sm text-ac-brown/60 mb-4 whitespace-pre-wrap line-clamp-2">{item.content}</p>}
+            {item.images?.length > 0 && (
               <div className="flex gap-2 overflow-x-auto pb-2 hide-scrollbar">
-                {item.images.map((img, i) => (
-                  <img key={i} src={img} className="w-24 h-24 rounded-xl object-cover border-2 border-ac-border" alt="info" />
-                ))}
+                {item.images.map((img, i) => <img key={i} src={img} className="w-20 h-20 rounded-xl object-cover border-2 border-ac-border" alt="info" />)}
               </div>
             )}
-            {item.url && (
-              <a href={item.url} target="_blank" rel="noreferrer" className="flex items-center gap-2 text-xs font-black text-ac-green mt-2 underline">
-                <ExternalLink size={12}/> 查看外部連結
-              </a>
-            )}
+            {item.url && <div className="flex items-center gap-2 text-xs font-black text-ac-green mt-2"><ExternalLink size={12}/> 包含外部連結</div>}
           </div>
         ))}
       </div>
 
-      {/* 新增 Modal */}
-      {isAdding && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[200] flex items-end sm:items-center justify-center p-4">
+      {/* 詳情 Modal */}
+      {detailItem && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-md z-[600] p-6 flex items-center justify-center" onClick={() => setDetailItem(undefined)}>
+           <div className="bg-ac-bg w-full max-w-sm rounded-[45px] shadow-2xl overflow-hidden animate-in slide-in-from-bottom-10 flex flex-col max-h-[85vh]" onClick={e => e.stopPropagation()}>
+              <div className="p-8 border-b-4 border-ac-border flex justify-between items-center bg-white sticky top-0 z-10 shrink-0">
+                 <h2 className="text-2xl font-black text-ac-brown italic tracking-wide">{detailItem.title}</h2>
+                 <button onClick={() => setDetailItem(undefined)} className="p-2 bg-ac-bg rounded-full text-ac-border"><X size={20}/></button>
+              </div>
+              
+              <div className="p-8 space-y-6 overflow-y-auto">
+                 {detailItem.url && <a href={detailItem.url} target="_blank" rel="noreferrer" className="btn-zakka w-full py-4 flex items-center justify-center gap-2 font-black shadow-md"><Globe size={18}/> 前往外部連結</a>}
+                 
+                 <div className="bg-white p-5 rounded-3xl shadow-sm border border-ac-border min-h-[100px]">
+                   <p className="text-sm font-bold text-ac-brown/80 whitespace-pre-wrap leading-relaxed">{detailItem.content || "沒有詳細內容"}</p>
+                 </div>
+
+                 {detailItem.images?.length > 0 && (
+                   <div className="space-y-3">
+                     <p className="text-xs font-black text-ac-border uppercase tracking-widest pl-2">附加圖片</p>
+                     {detailItem.images.map((img, i) => <img key={i} src={img} className="w-full rounded-2xl object-cover border-4 border-white shadow-sm" alt="info" />)}
+                   </div>
+                 )}
+                 
+                 <button onClick={() => { setDetailItem(undefined); handleOpenEdit(detailItem); }} className="w-full py-4 text-ac-border font-bold text-[10px] uppercase tracking-widest hover:text-ac-brown transition-colors">編輯內容</button>
+              </div>
+           </div>
+        </div>
+      )}
+
+      {/* 新增/編輯 Modal */}
+      {isModalOpen && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[700] flex items-end sm:items-center justify-center p-4">
           <div className="bg-ac-bg w-full max-w-md rounded-t-[40px] sm:rounded-[40px] shadow-2xl overflow-hidden animate-in slide-in-from-bottom-10 max-h-[90vh] overflow-y-auto">
-            <div className="p-6 flex justify-between items-center border-b-4 border-ac-border">
-              <h2 className="text-xl font-black text-ac-brown italic">💡 增加資訊</h2>
-              <button onClick={() => setIsAdding(false)} className="p-2 bg-white rounded-full shadow-zakka text-ac-border"><X size={20}/></button>
+            <div className="p-6 flex justify-between items-center border-b-4 border-ac-border sticky top-0 bg-ac-bg z-10">
+              <h2 className="text-xl font-black text-ac-brown italic">{editingItem ? '✍️ 編輯資訊' : '💡 增加資訊'}</h2>
+              <div className="flex gap-2">
+                {editingItem && <button onClick={handleDelete} className="p-2 bg-red-50 text-red-500 rounded-full active:scale-90"><Trash2 size={20}/></button>}
+                <button onClick={() => setIsModalOpen(false)} className="p-2 bg-white rounded-full shadow-zakka text-ac-border"><X size={20}/></button>
+              </div>
             </div>
+            
             <div className="p-6 space-y-5">
               <input placeholder="資訊標題 (如：保險單號、備用地點)" value={form.title} onChange={e => setForm({...form, title: e.target.value})} className="w-full p-4 bg-white border-2 border-ac-border rounded-2xl font-black text-ac-brown outline-none" />
               <textarea placeholder="寫下具體內容..." value={form.content} onChange={e => setForm({...form, content: e.target.value})} className="w-full p-4 bg-white border-2 border-ac-border rounded-2xl font-bold text-ac-brown outline-none h-32 resize-none" />
@@ -120,8 +155,9 @@ export const Info = () => {
               <div className="space-y-1">
                 <label className="text-[10px] font-black text-ac-brown/40 uppercase">相關照片 (可上傳多張截圖)</label>
                 <div className="flex gap-2 overflow-x-auto py-2 hide-scrollbar">
-                  <label className="min-w-[80px] h-[80px] border-4 border-dashed border-ac-border rounded-2xl flex flex-col items-center justify-center text-ac-border cursor-pointer hover:bg-white">
-                    <Camera size={20}/>
+                  <label className={`min-w-[80px] h-[80px] border-4 border-dashed border-ac-border rounded-2xl flex flex-col items-center justify-center text-ac-border cursor-pointer hover:bg-white ${isUploading ? 'opacity-50 pointer-events-none' : ''}`}>
+                    {isUploading ? <Loader2 className="animate-spin" size={20}/> : <Camera size={20}/>}
+                    <span className="text-[10px] font-black mt-1">{isUploading ? '上傳中' : '上傳'}</span>
                     <input type="file" multiple accept="image/*" className="hidden" onChange={handleFileChange} />
                   </label>
                   {form.images?.map((img, i) => (
@@ -132,7 +168,7 @@ export const Info = () => {
                   ))}
                 </div>
               </div>
-              <button onClick={handleSave} className="btn-zakka w-full py-4 text-lg">儲存資訊 ➔</button>
+              <button onClick={handleSave} className="btn-zakka w-full py-4 text-lg">{editingItem ? '儲存修改 ➔' : '儲存資訊 ➔'}</button>
             </div>
           </div>
         </div>
@@ -140,3 +176,4 @@ export const Info = () => {
     </div>
   );
 };
+

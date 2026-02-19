@@ -1,3 +1,4 @@
+// filepath: src/store/useTripStore.ts
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { Trip, ScheduleItem, BookingItem, ExpenseItem } from '../types';
@@ -23,6 +24,10 @@ interface TripState {
   reorderScheduleItems: (tid: string, ni: ScheduleItem[]) => void;
   addBookingItem: (tid: string, i: any) => void; updateBookingItem: (tid: string, iid: string, ni: any) => void; deleteBookingItem: (tid: string, iid: string) => void;
   addExpenseItem: (tid: string, i: any) => void; updateExpenseItem: (tid: string, iid: string, ni: any) => void; deleteExpenseItem: (tid: string, iid: string) => void;
+  
+  addJournalItem: (tid: string, i: any) => void; updateJournalItem: (tid: string, iid: string, ni: any) => void; deleteJournalItem: (tid: string, iid: string) => void;
+  addShoppingItem: (tid: string, i: any) => void; updateShoppingItem: (tid: string, iid: string, ni: any) => void; toggleShoppingItem: (tid: string, iid: string) => void; deleteShoppingItem: (tid: string, iid: string) => void;
+  addInfoItem: (tid: string, i: any) => void; updateInfoItem: (tid: string, iid: string, ni: any) => void; deleteInfoItem: (tid: string, iid: string) => void;
 }
 
 export const useTripStore = create<TripState>()(
@@ -55,16 +60,21 @@ export const useTripStore = create<TripState>()(
     updateExpenseItem: (tid, iid, ni) => { const t = get().trips.find(x => x.id === tid); if(t) get().updateTripData(tid, { expenses: t.expenses.map(e => e.id === iid ? ni : e) }); },
     deleteExpenseItem: (tid, iid) => { const t = get().trips.find(x => x.id === tid); if(t) get().updateTripData(tid, { expenses: t.expenses.filter(e => e.id !== iid) }); },
     
-    // Journal, Shopping, Info 模組省略實作細節但功能保留 (透過通用 updateTripData 處理)
     addJournalItem: (tid, i) => { const t = get().trips.find(x => x.id === tid); if(t) get().updateTripData(tid, { journals: [i, ...(t.journals || [])] }); },
+    updateJournalItem: (tid, iid, ni) => { const t = get().trips.find(x => x.id === tid); if(t) get().updateTripData(tid, { journals: t.journals.map(j => j.id === iid ? ni : j) }); },
     deleteJournalItem: (tid, iid) => { const t = get().trips.find(x => x.id === tid); if(t) get().updateTripData(tid, { journals: t.journals.filter(j => j.id !== iid) }); },
+    
     addShoppingItem: (tid, i) => { const t = get().trips.find(x => x.id === tid); if(t) get().updateTripData(tid, { shoppingList: [...(t.shoppingList || []), i] }); },
+    updateShoppingItem: (tid, iid, ni) => { const t = get().trips.find(x => x.id === tid); if(t) get().updateTripData(tid, { shoppingList: t.shoppingList.map(s => s.id === iid ? ni : s) }); },
     toggleShoppingItem: (tid, iid) => { const t = get().trips.find(x => x.id === tid); if(t) get().updateTripData(tid, { shoppingList: t.shoppingList.map(x => x.id === iid ? {...x, isBought: !x.isBought} : x) }); },
     deleteShoppingItem: (tid, iid) => { const t = get().trips.find(x => x.id === tid); if(t) get().updateTripData(tid, { shoppingList: t.shoppingList.filter(x => x.id !== iid) }); },
+    
     addInfoItem: (tid, i) => { const t = get().trips.find(x => x.id === tid); if(t) get().updateTripData(tid, { infoItems: [i, ...(t.infoItems || [])] }); },
+    updateInfoItem: (tid, iid, ni) => { const t = get().trips.find(x => x.id === tid); if(t) get().updateTripData(tid, { infoItems: t.infoItems.map(i => i.id === iid ? ni : i) }); },
     deleteInfoItem: (tid, iid) => { const t = get().trips.find(x => x.id === tid); if(t) get().updateTripData(tid, { infoItems: t.infoItems.filter(x => x.id !== iid) }); },
   }), { name: 'zakka-trip-storage' })
 );
+
 
 
 
