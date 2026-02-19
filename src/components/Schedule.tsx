@@ -10,10 +10,10 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY || "";
 const ICON_MAP = { sightseeing: Camera, food: Utensils, transport: Plane, hotel: Home };
 
-export const Schedule = () => {
+// 透過接收外部傳來的 externalDateIdx 來控制選中的日期，並移除內部重複的切換功能
+export const Schedule = ({ externalDateIdx = 0 }: { externalDateIdx?: number }) => {
   const { trips, currentTripId, deleteScheduleItem, addScheduleItem, reorderScheduleItems } = useTripStore();
   const trip = trips.find(t => t.id === currentTripId);
-  const [selectedDateIdx, setSelectedDateIdx] = useState(0);
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [editingItem, setEditingItem] = useState<ScheduleItem | undefined>();
@@ -41,7 +41,6 @@ export const Schedule = () => {
     if (!trip?.lat || !trip?.lng) return;
     const getW = async () => {
       try {
-        // 同時抓取 daily 與 hourly 資料
         const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${trip.lat}&longitude=${trip.lng}&daily=weathercode,temperature_2m_max,temperature_2m_min,precipitation_probability_max,sunrise,sunset&hourly=temperature_2m,weathercode,precipitation_probability,windspeed_10m&timezone=auto`);
         const data = await res.json();
         setWeatherData(data.daily);
@@ -51,13 +50,12 @@ export const Schedule = () => {
       } catch (e) { console.error(e); }
     };
     getW();
-  }, [trip, selectedDateIdx]);
+  }, [trip, externalDateIdx]); // 依賴於 App.tsx 傳進來的外部 Date Index
 
   if (!trip || dateRange.length === 0) return null;
-  const selectedDateStr = format(dateRange[selectedDateIdx], 'yyyy-MM-dd');
+  const selectedDateStr = format(dateRange[externalDateIdx], 'yyyy-MM-dd');
   const dayItems = (trip.items || []).filter(i => i.date === selectedDateStr).sort((a, b) => a.time.localeCompare(b.time));
 
-  // Gemini-3-flash-preview 鎖定
   const handleAiAnalyze = async () => {
     if (!GEMINI_API_KEY) return alert("請設定 Gemini Key");
     setIsAiLoading(true);
@@ -88,38 +86,40 @@ export const Schedule = () => {
   };
 
   return (
-    <div className="flex flex-col h-screen overflow-hidden bg-ac-bg relative">
-      {/* 1. 日期選擇器 (修正: 增加高度與 Padding 防止上方被切) */}
-      <div className="bg-white border-b-4 border-ac-border z-30 sticky top-0 shadow-sm flex flex-col justify-center pb-2 pt-2">
-        <div className="flex items-center gap-2 mb-2 px-4 text-ac-brown/60">
-           <CheckCircle size={14} className="text-ac-green"/> <span className="text-[10px] font-black uppercase tracking-widest">行程日期</span>
-        </div>
-        <div className="flex overflow-x-auto gap-3 px-4 pb-4 hide-scrollbar">
-          {dateRange.map((date, i) => (
-            <button key={i} onClick={() => setSelectedDateIdx(i)} className={`flex flex-col items-center justify-center min-w-[72px] h-[75px] rounded-2xl border-2 transition-all duration-300 ${selectedDateIdx === i ? 'bg-[#E2F1E7] border-ac-green text-ac-green shadow-zakka -translate-y-1' : 'bg-white border-ac-border text-ac-brown/30'}`}>
-              <span className="text-[8px] font-black opacity-60 uppercase">DAY {i+1}</span>
-              <span className="text-xl font-black leading-none my-0.5">{format(date, 'M/d')}</span>
-              <span className="text-[10px] font-bold">{format(date, 'EEE', { locale: zhTW })}</span>
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <div className="flex-1 overflow-y-auto hide-scrollbar p-6 space-y-6">
-        {/* 2. 天氣卡片 (高度縮小 Compact) */}
+    <div className="flex flex-col h-full bg-ac-bg relative">
+      {/* 移除了原本重複的日期選擇器，現在由 App.tsx 統一掌控 */}
+      
+      {/* 為了防止最後一個行程被 Navbar 擋住，我們加入 pb-28 的安全距離 */}
+      <div className="flex-1 overflow-y-auto hide-scrollbar p-6 space-y-6 pb-28">
+        
+        {/* 天氣卡片 - 放大字體與時間 */}
         <div onClick={() => setShowFullWeather(true)} className="bg-gradient-to-br from-[#4FC3F7] to-[#29B6F6] rounded-[32px] p-5 text-white shadow-zakka relative active:scale-95 transition-all cursor-pointer">
           <div className="flex justify-between items-center mb-4">
              <div><p className="text-[9px] font-black opacity-80 flex items-center gap-1 uppercase tracking-widest"><MapPin size={9}/> {trip.dest} City</p><h2 className="text-2xl font-black italic flex items-center gap-2">晴朗 <Sun className="animate-pulse" size={20}/></h2></div>
              <div className="text-right"><span className="text-4xl font-black italic">24°</span></div>
           </div>
-          <div className="grid grid-cols-3 gap-2 bg-white/10 backdrop-blur-md rounded-2xl p-3 border border-white/20">
-             <div className="text-center border-r border-white/10"><Droplets size={12} className="mx-auto mb-1"/><p className="text-[8px] opacity-70">降雨</p><p className="font-black text-xs">10%</p></div>
-             <div className="text-center border-r border-white/10"><Wind size={12} className="mx-auto mb-1"/><p className="text-[8px] opacity-70">風力</p><p className="font-black text-xs">2級</p></div>
-             <div className="text-center"><Clock size={12} className="mx-auto mb-1"/><p className="text-[8px] opacity-70">下小時</p><p className="font-black text-xs">晴</p></div>
+          
+          <div className="grid grid-cols-3 gap-2 bg-white/10 backdrop-blur-md rounded-2xl p-3 border border-white/20 mt-2">
+             <div className="text-center border-r border-white/10">
+               <Droplets size={16} className="mx-auto mb-1.5"/>
+               <p className="text-[10px] opacity-90 font-bold mb-0.5">降雨</p>
+               <p className="font-black text-sm">10%</p>
+             </div>
+             <div className="text-center border-r border-white/10">
+               <Wind size={16} className="mx-auto mb-1.5"/>
+               <p className="text-[10px] opacity-90 font-bold mb-0.5">風力</p>
+               <p className="font-black text-sm">2級</p>
+             </div>
+             <div className="text-center">
+               <Clock size={16} className="mx-auto mb-1.5"/>
+               {/* 下一個小時：時間格式動態獲取 */}
+               <p className="text-[10px] opacity-90 font-bold mb-0.5">{format(new Date(Date.now() + 3600000), 'HH:00')}</p>
+               <p className="font-black text-sm">晴</p>
+             </div>
           </div>
         </div>
 
-        {/* 行程列表與功能列 (IMG_6074 藍框位置) */}
+        {/* 行程列表與功能列 */}
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -127,7 +127,6 @@ export const Schedule = () => {
               <h3 className="text-xl font-black text-ac-brown italic">當日行程</h3>
             </div>
             
-            {/* 功能按鈕區 (縮小並列) */}
             <div className="bg-white/80 backdrop-blur-md rounded-full border-2 border-ac-border shadow-sm p-1 flex gap-1 items-center">
               <button onClick={()=>{setEditingItem(undefined); setIsEditorOpen(true)}} className="w-9 h-9 rounded-full bg-ac-green text-white flex items-center justify-center active:scale-90 transition-all shadow-sm" title="新增"><Plus size={18}/></button>
               <button onClick={()=>setIsEditMode(!isEditMode)} className={`w-9 h-9 rounded-full flex items-center justify-center active:scale-90 transition-all shadow-sm ${isEditMode ? 'bg-ac-orange text-white' : 'bg-white text-ac-brown border border-ac-border'}`} title="編輯"><Edit3 size={16}/></button>
@@ -170,12 +169,11 @@ export const Schedule = () => {
         </div>
       </div>
 
-      {/* 詳情 Modal (自動圖片) */}
+      {/* 詳情 Modal */}
       {detailItem && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-md z-[600] p-6 flex items-center justify-center" onClick={() => setDetailItem(undefined)}>
            <div className="bg-ac-bg w-full max-w-sm rounded-[45px] shadow-2xl overflow-hidden animate-in slide-in-from-bottom-10" onClick={e => e.stopPropagation()}>
               <div className="h-60 bg-gray-200 relative overflow-hidden">
-                 {/* 3. 圖片自動帶入邏輯 */}
                  <img 
                    src={detailItem.images?.[0] || `https://image.pollinations.ai/prompt/${encodeURIComponent(detailItem.location + ' ' + detailItem.title + ' scenery photorealistic')}?width=800&height=600&nologo=true`} 
                    className="w-full h-full object-cover" 
@@ -232,6 +230,7 @@ export const Schedule = () => {
     </div>
   );
 };
+
 
 
 

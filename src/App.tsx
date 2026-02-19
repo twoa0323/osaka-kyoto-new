@@ -82,13 +82,13 @@ const App: React.FC = () => {
           </div>
         </div>
 
-        {/* 行程分頁專屬：綁定日期選擇器 (IMG_6022 樣式) */}
+        {/* 行程分頁專屬：綁定日期選擇器 (IMG_6022 樣式) + 增加 pt-2 防止陰影截斷 */}
         {activeTab === 'schedule' && dateRange.length > 0 && (
-          <div className="flex overflow-x-auto gap-4 hide-scrollbar pb-2 animate-in slide-in-from-top-2">
+          <div className="flex overflow-x-auto gap-4 hide-scrollbar pt-2 pb-2 animate-in slide-in-from-top-2">
             {dateRange.map((date, i) => (
               <button key={i} onClick={() => setSelectedDateIdx(i)} className={`flex flex-col items-center min-w-[70px] p-3 rounded-2xl border-2 transition-all ${selectedDateIdx === i ? 'bg-[#E2F1E7] border-ac-green text-ac-green shadow-zakka -translate-y-1' : 'bg-white border-ac-border text-ac-brown/30'}`}>
                 <span className="text-[8px] font-black opacity-60">DAY {i+1}</span>
-                <span className="text-sm font-black">{format(date, 'M/d')}</span>
+                <span className="text-sm font-black mt-0.5">{format(date, 'M/d')}</span>
                 <span className="text-[9px] font-bold">{format(date, 'EEE', { locale: zhTW })}</span>
               </button>
             ))}
@@ -105,9 +105,6 @@ const App: React.FC = () => {
         {activeTab === 'shop' && <Shopping />}
         {activeTab === 'info' && <Info />}
       </main>
-
-      {/* 安全性、側欄、個人設定 (代碼保留，略過展示以節省空間但內容完整) */}
-      {/* ...其餘彈窗代碼與之前回覆一致，確保 functional 完整性... */}
 
       <nav className="fixed bottom-6 left-1/2 -translate-x-1/2 w-[92%] max-w-md bg-white border-4 border-ac-border rounded-full shadow-zakka px-4 py-3 flex justify-between items-center z-50">
         <NavIcon icon={<Calendar />} label="行程" id="schedule" active={activeTab} onClick={setActiveTab} />
@@ -132,4 +129,3 @@ const NavIcon = ({ icon, label, id, active, onClick }: any) => {
 };
 
 export default App;
-
