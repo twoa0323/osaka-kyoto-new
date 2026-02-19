@@ -114,6 +114,33 @@ const App: React.FC = () => {
         <NavIcon icon={<ShoppingBag />} label="購物" id="shop" active={activeTab} onClick={setActiveTab} />
         <NavIcon icon={<InfoIcon />} label="資訊" id="info" active={activeTab} onClick={setActiveTab} />
       </nav>
+
+      {/* 注意這裡要有 {lockedTripId && ( 來做條件判斷，不然 Modal 會一直顯示 */}
+      {lockedTripId && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[1000] flex items-center justify-center p-4">
+          <div className="bg-white w-full max-w-sm rounded-[32px] shadow-2xl p-6 text-center space-y-4 animate-in zoom-in-95">
+            <div className="w-16 h-16 bg-[#E2F1E7] rounded-full flex items-center justify-center mx-auto text-ac-green">
+              <Lock size={32} />
+            </div>
+            <h3 className="text-xl font-black text-ac-brown">切換行程</h3>
+            <p className="text-xs text-ac-border font-bold">請輸入該行程的 4 位數密碼</p>
+            <input
+              type="password"
+              maxLength={4}
+              inputMode="numeric"
+              placeholder="****"
+              className="w-full bg-ac-bg text-ac-brown font-black p-4 rounded-2xl text-center text-2xl tracking-[0.5em] outline-none border-2 border-ac-border focus:border-ac-green"
+              value={verifyPin}
+              onChange={(e) => setVerifyPin(e.target.value)}
+            />
+            <div className="flex gap-3 mt-2">
+              <button onClick={() => { setLockedTripId(null); setVerifyPin(''); }} className="flex-1 py-3 border-2 border-ac-border text-ac-border font-black rounded-full active:scale-95 transition-all">取消</button>
+              <button onClick={confirmTripSwitch} className="flex-[2] py-3 bg-ac-green text-white font-black rounded-full shadow-zakka active:scale-95 transition-all">解鎖並切換 ➔</button>
+            </div>
+          </div>
+        </div>
+      )}
+      
     </div>
   );
 };

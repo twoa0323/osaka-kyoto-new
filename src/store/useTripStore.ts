@@ -3,7 +3,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { Trip, ScheduleItem, BookingItem, ExpenseItem } from '../types';
 import { db } from '../services/firebase';
-import { doc, setDoc } from 'firebase/firestore';
+import { doc, setDoc, deleteDoc } from 'firebase/firestore';
 
 const deepSanitize = (obj: any): any => JSON.parse(JSON.stringify(obj, (k, v) => (v === undefined ? null : v)));
 
@@ -38,10 +38,18 @@ export const useTripStore = create<TripState>()(
     setExchangeRate: (exchangeRate) => set({ exchangeRate }),
     addTrip: (trip) => { set(s => ({ trips: [trip, ...s.trips].slice(0, 3), currentTripId: trip.id })); syncToCloud(trip); },
     switchTrip: (id) => set({ currentTripId: id }),
-    deleteTrip: (id) => set(s => {
-      const nt = s.trips.filter(t => t.id !== id);
-      return { trips: nt, currentTripId: s.currentTripId === id ? (nt[0]?.id || null) : s.currentTripId };
-    }),
+    deleteTrip: async (id) => {
+      set(s => {
+        const nt = s.trips.filter(t => t.id !== id);
+        return { trips: nt, currentTripId: s.currentTripId === id ? (nt[0]?.id || null) : s.currentTripId };
+      });
+      // 同步刪除 Firebase 上的資料
+      try {
+        await deleteDoc(doc(db, "trips", id));
+      } catch (e) {
+        console.error("Cloud Delete Fail:", e);
+      }
+    },
     updateTripData: (tid, payload) => {
       set(s => ({ trips: s.trips.map(t => t.id === tid ? { ...t, ...payload } : t) }));
       const updated = get().trips.find(t => t.id === tid);
