@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useTripStore } from '../store/useTripStore';
-import { Plane, Home, MapPin, Plus, Edit3, Globe, QrCode, Trash2, ArrowRight, X, Luggage } from 'lucide-react';
+import { Plane, Home, MapPin, Plus, Edit3, Globe, QrCode, ArrowRight, X, Luggage } from 'lucide-react';
 import { BookingItem } from '../types';
 import { BookingEditor } from './BookingEditor';
 
@@ -49,7 +49,7 @@ const AIRLINE_THEMES: Record<string, any> = {
 };
 
 export const Booking = () => {
-  const { trips, currentTripId, deleteBookingItem } = useTripStore();
+  const { trips, currentTripId } = useTripStore();
   const trip = trips.find(t => t.id === currentTripId);
   const [activeSubTab, setActiveSubTab] = useState<'flight' | 'hotel' | 'spot' | 'voucher'>('flight');
   const [editingItem, setEditingItem] = useState<BookingItem | undefined>();
@@ -58,14 +58,6 @@ export const Booking = () => {
 
   if (!trip) return null;
   const bookings = (trip.bookings || []).filter(b => b.type === activeSubTab);
-
-  const handleDelete = (e: React.MouseEvent, id: string) => {
-    e.stopPropagation();
-    if (confirm('確定要永久刪除這個預訂項目嗎？')) {
-      deleteBookingItem(trip.id, id);
-      setDetailItem(undefined);
-    }
-  };
 
   return (
     <div className="px-6 space-y-8 animate-fade-in pb-28 text-left">
@@ -81,11 +73,11 @@ export const Booking = () => {
       <div className="space-y-6">
         {bookings.length === 0 ? <div className="text-center py-20 text-ac-border font-black italic opacity-30">尚無預訂資訊 📓</div> :
           bookings.map(item => (
-            <div key={item.id} className="relative group cursor-pointer" onClick={() => setDetailItem(item)}>
+            <div key={item.id}>
               {item.type === 'flight' ? (
-                <FlightCard item={item} onEdit={(e:any)=>{e.stopPropagation(); setEditingItem(item); setIsEditorOpen(true);}} onDelete={(e:any) => handleDelete(e, item.id)} />
+                <FlightCard item={item} onEdit={(e:any)=>{e.stopPropagation(); setEditingItem(item); setIsEditorOpen(true);}} onViewDetails={() => setDetailItem(item)} />
               ) : (
-                <HotelCard item={item} onEdit={(e:any)=>{e.stopPropagation(); setEditingItem(item); setIsEditorOpen(true);}} onDelete={(e:any) => handleDelete(e, item.id)} />
+                <HotelCard item={item} onEdit={(e:any)=>{e.stopPropagation(); setEditingItem(item); setIsEditorOpen(true);}} onViewDetails={() => setDetailItem(item)} />
               )}
             </div>
           ))
@@ -112,34 +104,51 @@ export const Booking = () => {
   );
 };
 
-const FlightCard = ({ item, onEdit, onDelete }: any) => {
+const FlightCard = ({ item, onEdit, onViewDetails }: any) => {
   const theme = AIRLINE_THEMES[item.airline] || AIRLINE_THEMES.other;
+  const [showActions, setShowActions] = useState(false);
+
+  // 點擊邏輯：第一次顯示編輯按鈕，第二次進入詳細資訊
+  const handleCardClick = () => {
+    if (!showActions) {
+      setShowActions(true);
+      // 3秒後自動隱藏按鈕 (優化體驗)
+      setTimeout(() => setShowActions(false), 3000);
+    } else {
+      onViewDetails();
+      setShowActions(false);
+    }
+  };
 
   return (
-    <div className="relative active:scale-[0.98] transition-transform drop-shadow-xl group">
+    <div className="relative active:scale-[0.98] transition-transform drop-shadow-xl cursor-pointer" onClick={handleCardClick}>
       
-      {/* 編輯與刪除按鈕 (Hover 顯示) */}
-      <div className="absolute top-4 right-4 flex gap-2 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity z-20">
-        <button onClick={onEdit} className="p-2.5 bg-white/90 backdrop-blur-md rounded-full text-ac-green shadow-sm hover:bg-ac-green hover:text-white transition-colors"><Edit3 size={16}/></button>
-        <button onClick={onDelete} className="p-2.5 bg-white/90 backdrop-blur-md rounded-full text-ac-orange shadow-sm hover:bg-ac-orange hover:text-white transition-colors"><Trash2 size={16}/></button>
+      {/* 編輯按鈕 (預設隱藏，點擊顯示) */}
+      <div className={`absolute top-4 right-4 z-20 transition-opacity duration-300 ${showActions ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
+        <button onClick={onEdit} className="p-2.5 bg-white/95 backdrop-blur-md rounded-full text-ac-green shadow-sm border border-gray-100 hover:bg-ac-green hover:text-white transition-colors">
+          <Edit3 size={18}/>
+        </button>
       </div>
 
       {/* 票卡主體 */}
       <div className="bg-white rounded-[2rem] overflow-hidden flex flex-col shadow-sm">
         
-        {/* 上半部：航空公司視覺 (Header) */}
-        <div className={`relative h-[110px] w-full flex items-center justify-center ${theme.bgClass}`} style={theme.bgStyle}>
+        {/* 上半部：航空公司視覺 (Header) - 高度已縮減至 88px */}
+        <div className={`relative h-[88px] w-full flex items-center justify-center ${theme.bgClass}`} style={theme.bgStyle}>
            {theme.logoHtml}
-           <div className="absolute top-4 right-4 bg-white/95 text-gray-800 font-black px-3 py-1 rounded-lg text-xs shadow-sm">
-             {item.flightNo || 'FLIGHT'}
-           </div>
         </div>
 
         {/* 下半部：票券詳細資訊 (Body) */}
         <div className="relative w-full bg-white pt-6 pb-6 border-t-0 rounded-b-[2rem]">
+          
+          {/* 將航班號碼移至此處 (中央上方) */}
+          <div className="absolute -top-[12px] left-1/2 -translate-x-1/2 bg-white px-5 py-0.5 border border-gray-100 text-gray-400 font-black rounded-full text-[10px] shadow-sm tracking-widest z-10">
+            {item.flightNo || 'FLIGHT'}
+          </div>
+
           <div className="absolute left-4 top-0 bottom-6 border-l-[3px] border-dotted border-gray-300"></div>
           
-          <div className="pl-8 pr-6">
+          <div className="pl-8 pr-6 mt-1">
             {/* 核心航班資訊列 */}
             <div className="flex justify-between items-center mb-6">
               <div className="flex flex-col items-center">
@@ -165,18 +174,27 @@ const FlightCard = ({ item, onEdit, onDelete }: any) => {
               </div>
             </div>
 
-            {/* 底部附屬資訊區塊 */}
+            {/* 底部附屬資訊區塊 - 分為 3 欄 */}
             <div className="bg-[#F8F9FA] rounded-xl flex items-center justify-between p-3 border border-gray-100">
+              {/* 1. 行李 */}
               <div className="flex-1 flex flex-col items-center justify-center border-r-2 border-gray-200">
                 <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">BAGGAGE</span>
                 <div className="flex items-center gap-1.5 text-gray-800 font-black text-sm">
-                  <Luggage size={14} className="text-[#519B96]"/> {item.baggage || '無'}
+                  <Luggage size={14} className="text-[#519B96]"/> {item.baggage || '--'}
                 </div>
               </div>
+              {/* 2. 座位 */}
+              <div className="flex-1 flex flex-col items-center justify-center border-r-2 border-gray-200">
+                <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">SEAT</span>
+                <div className="flex items-center gap-1.5 text-gray-800 font-black text-sm">
+                  {item.seat || '--'}
+                </div>
+              </div>
+              {/* 3. 機型 */}
               <div className="flex-1 flex flex-col items-center justify-center">
                 <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">AIRCRAFT</span>
                 <div className="flex items-center gap-1 text-gray-800 font-black text-sm">
-                  <Plane size={14} className="text-[#C29562] fill-current" /> {item.aircraft || '未知'} <span className="font-bold text-xs ml-1">(窗位): {item.seat || '--'}</span>
+                  <Plane size={14} className="text-[#C29562] fill-current" /> {item.aircraft || '--'}
                 </div>
               </div>
             </div>
@@ -188,27 +206,43 @@ const FlightCard = ({ item, onEdit, onDelete }: any) => {
   );
 };
 
-const HotelCard = ({ item, onEdit, onDelete }: any) => (
-  <div className="bg-white rounded-[40px] border-4 border-ac-border shadow-zakka overflow-hidden relative active:scale-[0.98] transition-all group">
-    <div className="absolute top-4 right-4 flex gap-2 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity z-20">
-      <button onClick={onEdit} className="p-2.5 bg-white/90 backdrop-blur-md rounded-full text-ac-green shadow-sm border-2 border-ac-border hover:bg-ac-green hover:text-white transition-colors"><Edit3 size={16}/></button>
-      <button onClick={onDelete} className="p-2.5 bg-white/90 backdrop-blur-md rounded-full text-ac-orange shadow-sm border-2 border-ac-border hover:bg-ac-orange hover:text-white transition-colors"><Trash2 size={16}/></button>
-    </div>
+const HotelCard = ({ item, onEdit, onViewDetails }: any) => {
+  const [showActions, setShowActions] = useState(false);
 
-    <div className="h-52 relative"><img src={item.images?.[0] || "https://images.unsplash.com/photo-1566073771259-6a8506099945"} className="w-full h-full object-cover" />
-      <div className="absolute top-4 left-4 bg-white/90 backdrop-blur-md px-4 py-1.5 rounded-full border-2 border-ac-border flex items-center gap-2"><MapPin size={12} className="text-blue-500" /><span className="text-[10px] font-black text-ac-brown uppercase tracking-widest">{item.location?.split(',')[0] || '地點'}</span></div>
-    </div>
-    <div className="p-8 space-y-6">
-      <div><h3 className="text-2xl font-black text-ac-brown leading-tight italic pr-12">{item.title}</h3><p className="text-xs font-bold text-ac-border mt-1 truncate">{item.location}</p></div>
-      <div className="bg-ac-bg rounded-[28px] p-6 border-2 border-ac-border flex justify-between items-center relative">
-        <div className="flex-1"><p className="text-[9px] font-black text-ac-border uppercase mb-1">Check-in</p><p className="text-sm font-black text-ac-brown">{item.date}</p></div>
-        <div className="flex flex-col items-center px-4"><span className="text-[9px] font-black text-ac-border">{item.nights || 1} Nights</span><ArrowRight size={20} className="text-ac-border" /></div>
-        <div className="flex-1 text-right"><p className="text-[9px] font-black text-ac-border uppercase mb-1">Check-out</p><p className="text-sm font-black text-ac-brown">{item.endDate || item.date}</p></div>
+  const handleCardClick = () => {
+    if (!showActions) {
+      setShowActions(true);
+      setTimeout(() => setShowActions(false), 3000);
+    } else {
+      onViewDetails();
+      setShowActions(false);
+    }
+  };
+
+  return (
+    <div className="bg-white rounded-[40px] border-4 border-ac-border shadow-zakka overflow-hidden relative active:scale-[0.98] transition-all cursor-pointer" onClick={handleCardClick}>
+      
+      {/* 編輯按鈕 */}
+      <div className={`absolute top-4 right-4 z-20 transition-opacity duration-300 ${showActions ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
+        <button onClick={onEdit} className="p-2.5 bg-white/95 backdrop-blur-md rounded-full text-ac-green shadow-sm border border-gray-100 hover:bg-ac-green hover:text-white transition-colors"><Edit3 size={18}/></button>
       </div>
-      {item.price && <div className="flex flex-col items-end pt-2"><div className="flex items-baseline gap-2"><span className="text-[9px] font-black text-ac-border uppercase">Total</span><span className="text-2xl font-black text-ac-brown">NT$ {item.price.toLocaleString()}</span></div><span className="text-[9px] font-black bg-[#E2F1E7] text-[#4A785D] px-3 py-1 rounded-lg mt-1 shadow-sm">每人約 NT$ {Math.round(item.price / (item.nights || 1) / 2)}</span></div>}
+
+      <div className="h-52 relative"><img src={item.images?.[0] || "https://images.unsplash.com/photo-1566073771259-6a8506099945"} className="w-full h-full object-cover" />
+        <div className="absolute top-4 left-4 bg-white/90 backdrop-blur-md px-4 py-1.5 rounded-full border-2 border-ac-border flex items-center gap-2"><MapPin size={12} className="text-blue-500" /><span className="text-[10px] font-black text-ac-brown uppercase tracking-widest">{item.location?.split(',')[0] || '地點'}</span></div>
+      </div>
+      <div className="p-8 space-y-6">
+        <div><h3 className="text-2xl font-black text-ac-brown leading-tight italic pr-12">{item.title}</h3><p className="text-xs font-bold text-ac-border mt-1 truncate">{item.location}</p></div>
+        <div className="bg-ac-bg rounded-[28px] p-6 border-2 border-ac-border flex justify-between items-center relative">
+          <div className="flex-1"><p className="text-[9px] font-black text-ac-border uppercase mb-1">Check-in</p><p className="text-sm font-black text-ac-brown">{item.date}</p></div>
+          <div className="flex flex-col items-center px-4"><span className="text-[9px] font-black text-ac-border">{item.nights || 1} Nights</span><ArrowRight size={20} className="text-ac-border" /></div>
+          <div className="flex-1 text-right"><p className="text-[9px] font-black text-ac-border uppercase mb-1">Check-out</p><p className="text-sm font-black text-ac-brown">{item.endDate || item.date}</p></div>
+        </div>
+        {item.price && <div className="flex flex-col items-end pt-2"><div className="flex items-baseline gap-2"><span className="text-[9px] font-black text-ac-border uppercase">Total</span><span className="text-2xl font-black text-ac-brown">NT$ {item.price.toLocaleString()}</span></div><span className="text-[9px] font-black bg-[#E2F1E7] text-[#4A785D] px-3 py-1 rounded-lg mt-1 shadow-sm">每人約 NT$ {Math.round(item.price / (item.nights || 1) / 2)}</span></div>}
+      </div>
     </div>
-  </div>
-);
+  );
+};
+
 
 
 

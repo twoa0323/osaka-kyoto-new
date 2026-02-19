@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { useTripStore } from '../store/useTripStore';
-import { X, Camera, Globe, QrCode, Loader2 } from 'lucide-react';
+import { X, Camera, Globe, QrCode, Loader2, Trash2 } from 'lucide-react';
 import { BookingItem } from '../types';
 import { uploadImage } from '../utils/imageUtils';
 
@@ -23,7 +23,7 @@ const AIRLINES = [
 ];
 
 export const BookingEditor: React.FC<Props> = ({ tripId, type, item, onClose }) => {
-  const { addBookingItem, updateBookingItem } = useTripStore();
+  const { addBookingItem, updateBookingItem, deleteBookingItem } = useTripStore();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const qrInputRef = useRef<HTMLInputElement>(null);
   const [uploadingField, setUploadingField] = useState<'images' | 'qrCode' | null>(null);
@@ -73,12 +73,27 @@ export const BookingEditor: React.FC<Props> = ({ tripId, type, item, onClose }) 
     onClose();
   };
 
+  // 移入的刪除功能
+  const handleDelete = () => {
+    if (confirm('確定要永久刪除這個預訂項目嗎？')) {
+      deleteBookingItem(tripId, item!.id);
+      onClose();
+    }
+  };
+
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[400] flex items-end sm:items-center justify-center p-4">
       <div className="bg-ac-bg w-full max-w-md rounded-t-[40px] sm:rounded-[40px] shadow-2xl overflow-hidden animate-in slide-in-from-bottom-10 max-h-[90vh] overflow-y-auto text-left">
+        
+        {/* Header 區塊加入刪除按鈕 */}
         <div className="p-6 flex justify-between items-center border-b-4 border-ac-border sticky top-0 bg-ac-bg z-10">
           <h2 className="text-xl font-black text-ac-brown italic">{item ? '✍️ 編輯' : '📔 新增'}</h2>
-          <button onClick={onClose} className="p-2 bg-white rounded-full"><X size={20}/></button>
+          <div className="flex items-center gap-2">
+            {item && (
+               <button onClick={handleDelete} className="p-2 bg-red-50 text-red-500 rounded-full active:scale-90"><Trash2 size={18}/></button>
+            )}
+            <button onClick={onClose} className="p-2 bg-white rounded-full shadow-sm"><X size={20}/></button>
+          </div>
         </div>
         
         <div className="p-6 space-y-5">
@@ -175,6 +190,7 @@ export const BookingEditor: React.FC<Props> = ({ tripId, type, item, onClose }) 
     </div>
   );
 };
+
 
 
 
