@@ -2,7 +2,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useTripStore } from '../store/useTripStore';
 import { format, addDays, differenceInDays, parseISO, isValid } from 'date-fns';
-import { zhTW } from 'date-fns/locale';
 import { MapPin, Plus, Edit3, Trash2, Utensils, Plane, Home, Camera, Sparkles, X, Loader2, ThermometerSun, Wind, Umbrella, Sunrise, ChevronUp, ChevronDown, Clock } from 'lucide-react';
 import { ScheduleEditor } from './ScheduleEditor';
 import { ScheduleItem } from '../types';
@@ -11,8 +10,9 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY || "";
 const ICON_MAP = { sightseeing: Camera, food: Utensils, transport: Plane, hotel: Home };
 
-// 天氣代碼轉換 (WMO Weather interpretation codes) -> 4字形容 + 彩色Emoji
+// 天氣代碼轉換 -> 4字形容 + Emoji
 const getWeatherDesc = (code: number) => {
+  if (code === undefined || code === -1) return { t: '等待載入', e: '☁️' };
   if (code === 0) return { t: '晴朗無雲', e: '☀️' };
   if (code === 1) return { t: '大致晴朗', e: '🌤️' };
   if (code === 2) return { t: '多雲時晴', e: '⛅' };
@@ -25,7 +25,6 @@ const getWeatherDesc = (code: number) => {
   return { t: '晴朗無雲', e: '☀️' };
 };
 
-// 風速 (km/h) 轉為蒲福氏風級
 const getWindLevel = (speed: number) => {
   if (speed < 2) return '0級';
   if (speed < 6) return '1級';
@@ -36,6 +35,19 @@ const getWindLevel = (speed: number) => {
   return '6級+';
 };
 
+// 內建常見城市關鍵字與座標庫 (加入釜山等地)
+const CITY_DB = [
+  { keys: ['東京', 'Tokyo', '新宿', '淺草', '澀谷', '迪士尼'], name: 'TOKYO', lat: 35.6895, lng: 139.6917 },
+  { keys: ['京都', 'Kyoto', '清水寺', '嵐山', '金閣寺'], name: 'KYOTO', lat: 35.0116, lng: 135.7681 },
+  { keys: ['大阪', 'Osaka', '梅田', '難波', '心齋橋', '環球'], name: 'OSAKA', lat: 34.6937, lng: 135.5023 },
+  { keys: ['奈良', 'Nara', '東大寺', '春日大社', '奈良公園'], name: 'NARA', lat: 34.6851, lng: 135.8048 },
+  { keys: ['宇治', 'Uji', '平等院', '抹茶'], name: 'UJI', lat: 34.8906, lng: 135.8039 },
+  { keys: ['神戶', 'Kobe', '三宮', '姬路'], name: 'KOBE', lat: 34.6901, lng: 135.1955 },
+  { keys: ['釜山', 'Busan', '海雲台', '西面'], name: 'BUSAN', lat: 35.1028, lng: 129.0403 },
+  { keys: ['富士', 'Fuji', '河口湖'], name: 'FUJI', lat: 35.4986, lng: 138.7690 },
+  { keys: ['福岡', 'Fukuoka', '博多', '天神'], name: 'FUKUOKA', lat: 33.5902, lng: 130.4017 },
+];
+
 export const Schedule = ({ externalDateIdx = 0 }: { externalDateIdx?: number }) => {
   const { trips, currentTripId, deleteScheduleItem, addScheduleItem, reorderScheduleItems } = useTripStore();
   const trip = trips.find(t => t.id === currentTripId);
@@ -44,11 +56,9 @@ export const Schedule = ({ externalDateIdx = 0 }: { externalDateIdx?: number }) 
   const [editingItem, setEditingItem] = useState<ScheduleItem | undefined>();
   const [detailItem, setDetailItem] = useState<ScheduleItem | undefined>();
 
-  // 天氣狀態
-  const [weatherData, setWeatherData] = useState<any>(null);
-  const [hourlyWeather, setHourlyWeather] = useState<any[]>([]);
+  // 天氣資料快取：儲存多個城市的 API 結果
+  const [weatherCache, setWeatherCache] = useState<Record<string, any>>({});
   const [showFullWeather, setShowFullWeather] = useState(false);
-  
   const [isAiOpen, setIsAiOpen] = useState(false);
   const [aiText, setAiText] = useState('');
   const [isAiLoading, setIsAiLoading] = useState(false);
@@ -63,51 +73,135 @@ export const Schedule = ({ externalDateIdx = 0 }: { externalDateIdx?: number }) 
   }, [trip]);
 
   const selectedDateStr = dateRange.length > 0 ? format(dateRange[externalDateIdx], 'yyyy-MM-dd') : '';
+  const dayItems = useMemo(() => (trip?.items || []).filter(i => i.date === selectedDateStr).sort((a, b) => a.time.localeCompare(b.time)), [trip, selectedDateStr]);
 
-  // Open-Meteo API
+  // ★ 終極 B 方案：分析本日的「城市時間軸」
+  const timeline = useMemo(() => {
+    const defaultCity = { name: trip?.dest.toUpperCase() || 'CITY', lat: trip?.lat || 0, lng: trip?.lng || 0 };
+    if (!trip || dateRange.length === 0) return [{ time: '00:00', city: defaultCity }];
+
+    // 尋找鄰近日期的預設城市 (若當天一開始沒排行程，或完全沒行程)
+    const getFallbackCity = () => {
+      for (let i = externalDateIdx - 1; i >= 0; i--) {
+        const dStr = format(dateRange[i], 'yyyy-MM-dd');
+        const items = trip.items.filter(it => it.date === dStr).sort((a,b) => b.time.localeCompare(a.time));
+        for (const it of items) {
+          const found = CITY_DB.find(c => c.keys.some(k => `${it.title} ${it.location}`.includes(k)));
+          if (found) return found;
+        }
+      }
+      for (let i = externalDateIdx + 1; i < dateRange.length; i++) {
+        const dStr = format(dateRange[i], 'yyyy-MM-dd');
+        const items = trip.items.filter(it => it.date === dStr).sort((a,b) => a.time.localeCompare(b.time));
+        for (const it of items) {
+          const found = CITY_DB.find(c => c.keys.some(k => `${it.title} ${it.location}`.includes(k)));
+          if (found) return found;
+        }
+      }
+      return defaultCity;
+    };
+
+    const tl: { time: string, city: typeof defaultCity }[] = [];
+    for (const item of dayItems) {
+      const found = CITY_DB.find(c => c.keys.some(k => `${item.title} ${item.location}`.includes(k)));
+      if (found) {
+        if (tl.length === 0 || tl[tl.length - 1].city.name !== found.name) {
+          tl.push({ time: item.time, city: found });
+        }
+      }
+    }
+
+    if (tl.length === 0) {
+      tl.push({ time: '00:00', city: getFallbackCity() });
+    } else if (tl[0].time !== '00:00') {
+      tl.unshift({ time: '00:00', city: getFallbackCity() });
+    }
+    return tl;
+  }, [dayItems, trip, externalDateIdx, dateRange]);
+
+  // 取出今天涉及到的所有不重複城市
+  const uniqueCities = useMemo(() => {
+    const map = new Map();
+    timeline.forEach(t => map.set(t.city.name, t.city));
+    return Array.from(map.values());
+  }, [timeline]);
+
+  // 向 Open-Meteo 獲取所有涉及城市的天氣
   useEffect(() => {
-    if (!trip?.lat || !trip?.lng) return;
-    const getW = async () => {
-      try {
-        // 增加 windspeed_10m_max 來取得每日最大風速
-        const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${trip.lat}&longitude=${trip.lng}&daily=weathercode,temperature_2m_max,temperature_2m_min,precipitation_probability_max,sunrise,sunset,windspeed_10m_max&hourly=temperature_2m,weathercode,precipitation_probability,windspeed_10m&timezone=auto`);
-        const data = await res.json();
-        setWeatherData(data.daily);
-        setHourlyWeather(data.hourly.time.map((t: string, i: number) => ({
-          time: t, temp: data.hourly.temperature_2m[i], code: data.hourly.weathercode[i], prob: data.hourly.precipitation_probability[i], wind: data.hourly.windspeed_10m[i]
-        })));
-      } catch (e) { console.error(e); }
+    let isMounted = true;
+    const fetchWeather = async () => {
+      const newCache = { ...weatherCache };
+      let changed = false;
+      for (const city of uniqueCities) {
+        if (!newCache[city.name]) {
+          try {
+            const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${city.lat}&longitude=${city.lng}&daily=weathercode,temperature_2m_max,temperature_2m_min,precipitation_probability_max,sunrise,sunset,windspeed_10m_max&hourly=temperature_2m,weathercode,precipitation_probability,windspeed_10m&timezone=auto`);
+            const data = await res.json();
+            newCache[city.name] = data;
+            changed = true;
+          } catch (e) { console.error(e); }
+        }
+      }
+      if (isMounted && changed) setWeatherCache(newCache);
     };
-    getW();
-  }, [trip]); 
+    fetchWeather();
+    return () => { isMounted = false; };
+  }, [uniqueCities.map(c => c.name).join(',')]);
 
-  if (!trip || dateRange.length === 0) return null;
-  const dayItems = (trip.items || []).filter(i => i.date === selectedDateStr).sort((a, b) => a.time.localeCompare(b.time));
-
-  // 處理當日天氣資訊
-  let todayWeather = { max: '--', min: '--', code: 0, rain: 0, sunrise: '--:--', wind: '0級' };
-  let todayHourly: any[] = [];
+  // ★ 組合資料：頂部卡片 (取今日主要/初始城市)
+  let todayWeather = { max: '--', min: '--', code: -1, rain: '0', sunrise: '--:--', wind: '0級', cityName: timeline[0]?.city.name || 'CITY' };
   
-  if (weatherData && weatherData.time) {
-    // 尋找符合今天日期的 index，若日期太遠找不到，則預設使用第0筆資料當作示意
-    let dailyIdx = weatherData.time.findIndex((t: string) => t === selectedDateStr);
-    if (dailyIdx === -1) dailyIdx = 0; 
-
-    todayWeather = {
-      max: Math.round(weatherData.temperature_2m_max[dailyIdx]),
-      min: Math.round(weatherData.temperature_2m_min[dailyIdx]),
-      code: weatherData.weathercode[dailyIdx],
-      rain: weatherData.precipitation_probability_max[dailyIdx],
-      sunrise: format(parseISO(weatherData.sunrise[dailyIdx]), 'HH:mm'),
-      wind: getWindLevel(weatherData.windspeed_10m_max[dailyIdx] || 0)
-    };
+  if (timeline.length > 0 && weatherCache[timeline[0].city.name]) {
+    const mainCityData = weatherCache[timeline[0].city.name];
+    let dailyIdx = mainCityData.daily.time.findIndex((t: string) => t === selectedDateStr);
+    if (dailyIdx === -1) dailyIdx = 0;
     
-    // 過濾出屬於該日期的 24 小時資料
-    const targetDateForHourly = weatherData.time[dailyIdx];
-    todayHourly = hourlyWeather.filter(h => h.time.startsWith(targetDateForHourly));
+    todayWeather = {
+      cityName: timeline[0].city.name,
+      max: Math.round(mainCityData.daily.temperature_2m_max[dailyIdx]).toString(),
+      min: Math.round(mainCityData.daily.temperature_2m_min[dailyIdx]).toString(),
+      code: mainCityData.daily.weathercode[dailyIdx],
+      rain: mainCityData.daily.precipitation_probability_max[dailyIdx].toString(),
+      sunrise: format(parseISO(mainCityData.daily.sunrise[dailyIdx]), 'HH:mm'),
+      wind: getWindLevel(mainCityData.daily.windspeed_10m_max[dailyIdx] || 0)
+    };
   }
-
   const weatherInfo = getWeatherDesc(todayWeather.code);
+
+  // ★ 組合資料：24小時預報拼圖 (依時間動態切換城市)
+  let todayHourly: any[] = [];
+  if (timeline.length > 0 && weatherCache[timeline[0].city.name]) {
+    const mainCityData = weatherCache[timeline[0].city.name];
+    let dailyIdx = mainCityData.daily.time.findIndex((t: string) => t === selectedDateStr);
+    if (dailyIdx === -1) dailyIdx = 0;
+    const targetDateForHourly = mainCityData.daily.time[dailyIdx];
+
+    for (let h = 0; h < 24; h++) {
+      const hourStr = `${h.toString().padStart(2, '0')}:00`;
+      
+      // 找出這個小時屬於哪一個城市
+      let activeCity = timeline[0].city;
+      for (const t of timeline) {
+        if (t.time <= hourStr) activeCity = t.city;
+        else break;
+      }
+
+      const cityData = weatherCache[activeCity.name];
+      if (cityData && cityData.hourly) {
+        const startIdx = cityData.hourly.time.findIndex((t: string) => t.startsWith(targetDateForHourly));
+        if (startIdx !== -1 && cityData.hourly.time[startIdx + h]) {
+          todayHourly.push({
+            cityName: activeCity.name,
+            time: cityData.hourly.time[startIdx + h],
+            temp: cityData.hourly.temperature_2m[startIdx + h],
+            code: cityData.hourly.weathercode[startIdx + h],
+            prob: cityData.hourly.precipitation_probability[startIdx + h],
+            wind: cityData.hourly.windspeed_10m[startIdx + h]
+          });
+        }
+      }
+    }
+  }
 
   const handleAiAnalyze = async () => {
     if (!GEMINI_API_KEY) return alert("請設定 Gemini Key");
@@ -138,48 +232,52 @@ export const Schedule = ({ externalDateIdx = 0 }: { externalDateIdx?: number }) 
     }
   };
 
+  if (!trip || dateRange.length === 0) return null;
+
   return (
     <div className="flex flex-col h-full bg-ac-bg relative">
       <div className="flex-1 overflow-y-auto hide-scrollbar p-6 space-y-6 pb-28">
         
-        {/* 精緻化天氣卡片 (依照圖片樣式設計) */}
-        <div onClick={() => setShowFullWeather(true)} className="bg-gradient-to-br from-[#6AB0FF] to-[#4EA0FB] rounded-[32px] p-6 text-white shadow-zakka relative active:scale-[0.98] transition-all cursor-pointer overflow-hidden border border-[#83C0FF]">
+        {/* 100% 復刻圖片樣式的高級天氣卡片 */}
+        <div onClick={() => setShowFullWeather(true)} className="bg-gradient-to-br from-[#68B1F8] to-[#519CE5] rounded-[32px] p-6 pb-5 text-white shadow-zakka relative active:scale-[0.98] transition-all cursor-pointer overflow-hidden border border-[#83C0FF]">
           
-          {/* 背景幾何圖形裝飾 */}
-          <div className="absolute -top-12 -right-6 w-36 h-36 bg-[#3587D8] rotate-[20deg] rounded-[40px] z-0 opacity-80"></div>
-          <div className="absolute top-0 right-3 w-24 h-24 border-[10px] border-[#2A75C5] rounded-full z-0 opacity-40"></div>
+          {/* 背景幾何圖形 (完美對應圖片右上角的太陽星星圖騰) */}
+          <svg className="absolute -top-12 -right-8 w-60 h-60 text-[#4C9AE4] opacity-80" viewBox="0 0 200 200" fill="currentColor">
+            <path d="M100 0L118.8 38.2L161.8 19.1L150 61.8L200 82.5L158.2 100L200 117.5L150 138.2L161.8 180.9L118.8 161.8L100 200L81.2 161.8L38.2 180.9L50 138.2L0 117.5L41.8 100L0 82.5L50 61.8L38.2 19.1L81.2 38.2L100 0Z" />
+          </svg>
+          <div className="absolute top-2 right-5 w-24 h-24 border-[10px] border-[#3980CE] rounded-full z-0 opacity-60"></div>
 
-          <div className="relative z-10 flex justify-between items-start">
+          <div className="relative z-10 flex justify-between items-start pt-1">
              <div>
-               <p className="text-[10px] font-black opacity-90 flex items-center gap-1 uppercase tracking-widest mb-1">
-                 <MapPin size={10} strokeWidth={3}/> {trip.dest} CITY
+               <p className="text-[11px] font-bold opacity-90 flex items-center gap-1.5 uppercase tracking-[0.15em] mb-2 drop-shadow-sm">
+                 <MapPin size={12} strokeWidth={2.5}/> {todayWeather.cityName} CITY
                </p>
-               <h2 className="text-[28px] font-black tracking-widest flex items-center gap-2 drop-shadow-sm mt-1">
-                 {weatherInfo.t} <span className="text-2xl drop-shadow-md">{weatherInfo.e}</span>
+               <h2 className="text-4xl font-black tracking-widest flex items-center gap-2 drop-shadow-md mt-1">
+                 {weatherInfo.t} <span className="text-3xl drop-shadow-lg">{weatherInfo.e}</span>
                </h2>
              </div>
-             <div className="text-right mt-1 pl-4">
-               <span className="text-5xl font-black drop-shadow-md tracking-tighter">{todayWeather.max}°</span>
-               <p className="text-xs font-black mt-2 opacity-90 tracking-widest drop-shadow-sm">{todayWeather.min}° / {todayWeather.max}°</p>
+             <div className="text-center mt-1 pl-2">
+               <span className="text-6xl font-black drop-shadow-md tracking-tighter leading-none">{todayWeather.max}°</span>
+               <p className="text-[13px] font-black mt-2 opacity-90 tracking-widest drop-shadow-sm">{todayWeather.min}° / {todayWeather.max}°</p>
              </div>
           </div>
           
-          {/* 下方三個資訊欄位 */}
-          <div className="grid grid-cols-3 gap-3 mt-6 relative z-10">
-             <div className="bg-white/20 backdrop-blur-md rounded-2xl p-3 flex flex-col items-center justify-center border border-white/20 shadow-sm">
-               <Umbrella size={18} className="mb-1.5 opacity-90" strokeWidth={2.5}/>
-               <p className="font-black text-base">{todayWeather.rain}%</p>
-               <p className="text-[9px] opacity-80 font-bold mt-1 tracking-widest">降雨機率</p>
+          {/* 下方三個玻璃資訊欄位 */}
+          <div className="grid grid-cols-3 gap-3 mt-8 relative z-10">
+             <div className="bg-white/20 backdrop-blur-md rounded-[20px] p-3 flex flex-col items-center justify-center border border-white/10 shadow-sm">
+               <Umbrella size={22} className="mb-2 opacity-90" strokeWidth={2.5}/>
+               <p className="font-black text-[22px] leading-none">{todayWeather.rain}%</p>
+               <p className="text-[10px] opacity-80 font-bold mt-1.5 tracking-widest">降雨機率</p>
              </div>
-             <div className="bg-white/20 backdrop-blur-md rounded-2xl p-3 flex flex-col items-center justify-center border border-white/20 shadow-sm">
-               <Wind size={18} className="mb-1.5 opacity-90" strokeWidth={2.5}/>
-               <p className="font-black text-base">{todayWeather.wind}</p>
-               <p className="text-[9px] opacity-80 font-bold mt-1 tracking-widest">風力</p>
+             <div className="bg-white/20 backdrop-blur-md rounded-[20px] p-3 flex flex-col items-center justify-center border border-white/10 shadow-sm">
+               <Wind size={22} className="mb-2 opacity-90" strokeWidth={2.5}/>
+               <p className="font-black text-[22px] leading-none">{todayWeather.wind}</p>
+               <p className="text-[10px] opacity-80 font-bold mt-1.5 tracking-widest">風力</p>
              </div>
-             <div className="bg-white/20 backdrop-blur-md rounded-2xl p-3 flex flex-col items-center justify-center border border-white/20 shadow-sm">
-               <Sunrise size={18} className="mb-1.5 opacity-90" strokeWidth={2.5}/>
-               <p className="font-black text-base">{todayWeather.sunrise}</p>
-               <p className="text-[9px] opacity-80 font-bold mt-1 tracking-widest">日出</p>
+             <div className="bg-white/20 backdrop-blur-md rounded-[20px] p-3 flex flex-col items-center justify-center border border-white/10 shadow-sm">
+               <Sunrise size={22} className="mb-2 opacity-90" strokeWidth={2.5}/>
+               <p className="font-black text-[22px] leading-none tracking-tight">{todayWeather.sunrise}</p>
+               <p className="text-[10px] opacity-80 font-bold mt-1.5 tracking-widest">日出</p>
              </div>
           </div>
         </div>
@@ -262,12 +360,12 @@ export const Schedule = ({ externalDateIdx = 0 }: { externalDateIdx?: number }) 
         </div>
       )}
 
-      {/* 天氣 Modal */}
+      {/* 24H 拼圖天氣 Modal */}
       {showFullWeather && (
         <div className="fixed inset-0 bg-black/60 z-[500] p-6 flex items-center justify-center backdrop-blur-sm" onClick={()=>setShowFullWeather(false)}>
           <div className="bg-ac-bg w-full max-w-sm rounded-[40px] shadow-2xl overflow-hidden animate-in zoom-in-95" onClick={e=>e.stopPropagation()}>
-             <div className="bg-gradient-to-br from-[#6AB0FF] to-[#4EA0FB] p-6 flex justify-between items-center text-white border-b border-[#83C0FF]">
-               <h3 className="text-xl font-black italic tracking-widest">當日24H預報</h3>
+             <div className="bg-gradient-to-br from-[#68B1F8] to-[#519CE5] p-6 flex justify-between items-center text-white">
+               <h3 className="text-xl font-black italic tracking-widest flex items-center gap-2"><Clock size={18}/> 跨城市 24H 預報</h3>
                <button onClick={()=>setShowFullWeather(false)} className="bg-white/20 p-1.5 rounded-full"><X size={18}/></button>
              </div>
              <div className="p-4 space-y-3 max-h-[60vh] overflow-y-auto hide-scrollbar">
@@ -275,10 +373,13 @@ export const Schedule = ({ externalDateIdx = 0 }: { externalDateIdx?: number }) 
                   const hrInfo = getWeatherDesc(h.code);
                   return (
                     <div key={i} className="flex justify-between items-center bg-white p-4 rounded-2xl border-2 border-ac-border shadow-sm">
-                      <span className="font-black text-ac-brown/60 text-xs w-10">{format(parseISO(h.time), 'HH:00')}</span>
-                      <div className="flex items-center gap-3 flex-1 px-4">
+                      <div className="w-14">
+                        <span className="font-black text-ac-brown text-sm block">{format(parseISO(h.time), 'HH:00')}</span>
+                        <span className="text-[9px] font-black text-blue-500 bg-blue-50 px-1.5 py-0.5 rounded uppercase">{h.cityName}</span>
+                      </div>
+                      <div className="flex items-center gap-3 flex-1 px-2">
                         <span className="text-2xl drop-shadow-sm">{hrInfo.e}</span>
-                        <span className="text-[11px] font-black text-ac-brown">{hrInfo.t}</span>
+                        <span className="text-xs font-black text-ac-brown">{hrInfo.t}</span>
                       </div>
                       <div className="flex items-center gap-3 text-right">
                         <span className="text-[10px] font-bold text-blue-400 w-10">{h.prob}% 雨</span>
@@ -309,6 +410,7 @@ export const Schedule = ({ externalDateIdx = 0 }: { externalDateIdx?: number }) 
     </div>
   );
 };
+
 
 
 
