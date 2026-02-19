@@ -27,14 +27,17 @@ const App: React.FC = () => {
   const [selectedDateIdx, setSelectedDateIdx] = useState(0);
 
   useFirebaseSync();
-  const currentTrip = trips.find(t => t.id === currentTripId);
+  
+  // ✅ 修正：增加 fallback，避免 currentTrip 變成 undefined 導致白畫面
+  const currentTrip = trips.find(t => t.id === currentTripId) || trips[0];
 
   useEffect(() => {
     if (currentTrip && (!currentTrip.members || currentTrip.members.length === 0)) setShowPersonalSetup(true);
   }, [currentTrip]);
 
+  // ✅ 修正：如果連第一個行程都找不到，強制回到建立行程畫面
   if (trips.length === 0 || showOnboarding) return <Onboarding onComplete={() => setShowOnboarding(false)} />;
-  if (!currentTrip) return null;
+  if (!currentTrip) return <Onboarding onComplete={() => setShowOnboarding(false)} />;
 
   const myProfile = currentTrip.members?.[0];
 
@@ -56,7 +59,6 @@ const App: React.FC = () => {
   return (
     <div className="flex flex-col min-h-screen bg-ac-bg font-sans text-ac-brown relative">
       
-      {/* 核心修正：頂部 Header (綁定地區與日期列) */}
       <header className={`p-6 pb-2 sticky top-0 bg-ac-bg/90 backdrop-blur-md z-[100] w-full max-w-md mx-auto transition-all ${activeTab === 'schedule' ? 'border-b-4 border-ac-border' : ''}`}>
         <div className="flex justify-between items-start mb-4">
           <div className="relative text-left">
@@ -68,8 +70,8 @@ const App: React.FC = () => {
             {menuOpen && (
               <div className="absolute top-14 left-0 w-64 bg-white border-4 border-ac-border rounded-[32px] shadow-zakka z-[110] p-2 animate-in fade-in slide-in-from-top-2">
                 {trips.map(t => (
-                  <div key={t.id} className={`flex items-center justify-between p-4 rounded-2xl ${t.id === currentTripId ? 'bg-ac-bg' : ''}`}>
-                    <button className="flex-1 text-left font-bold text-sm" onClick={() => { if(t.id === currentTripId) return; setLockedTripId(t.id); setVerifyPin(''); }}>{t.dest}</button>
+                  <div key={t.id} className={`flex items-center justify-between p-4 rounded-2xl ${t.id === currentTrip.id ? 'bg-ac-bg' : ''}`}>
+                    <button className="flex-1 text-left font-bold text-sm" onClick={() => { if(t.id === currentTrip.id) return; setLockedTripId(t.id); setVerifyPin(''); }}>{t.dest}</button>
                     <button onClick={() => { if(confirm('移除行程？')) deleteTrip(t.id); }} className="text-ac-orange/40"><Trash2 size={16}/></button>
                   </div>
                 ))}
@@ -82,7 +84,6 @@ const App: React.FC = () => {
           </div>
         </div>
 
-        {/* 行程分頁專屬：綁定日期選擇器 (IMG_6022 樣式) + 增加 pt-2 防止陰影截斷 */}
         {activeTab === 'schedule' && dateRange.length > 0 && (
           <div className="flex overflow-x-auto gap-4 hide-scrollbar pt-2 pb-2 animate-in slide-in-from-top-2">
             {dateRange.map((date, i) => (
@@ -97,7 +98,6 @@ const App: React.FC = () => {
       </header>
 
       <main className="flex-1 w-full max-w-md mx-auto overflow-x-hidden">
-        {/* 注意：將日期索引傳給 Schedule 進行連動 */}
         {activeTab === 'schedule' && <Schedule externalDateIdx={selectedDateIdx} />}
         {activeTab === 'booking' && <Booking />}
         {activeTab === 'expense' && <Expense />}
@@ -115,7 +115,6 @@ const App: React.FC = () => {
         <NavIcon icon={<InfoIcon />} label="資訊" id="info" active={activeTab} onClick={setActiveTab} />
       </nav>
 
-      {/* 注意這裡要有 {lockedTripId && ( 來做條件判斷，不然 Modal 會一直顯示 */}
       {lockedTripId && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[1000] flex items-center justify-center p-4">
           <div className="bg-white w-full max-w-sm rounded-[32px] shadow-2xl p-6 text-center space-y-4 animate-in zoom-in-95">

@@ -1,4 +1,3 @@
-// filepath: twoa0323/osaka-kyoto-new/osaka-kyoto-new-main/src/components/Schedule.tsx
 import React, { useState, useMemo, useEffect } from 'react';
 import { useTripStore } from '../store/useTripStore';
 import { format, addDays, differenceInDays, parseISO, isValid } from 'date-fns';
@@ -213,7 +212,8 @@ export const Schedule = ({ externalDateIdx = 0 }: { externalDateIdx?: number }) 
       const res = await model.generateContent(prompt);
       const match = res.response.text().match(/\[[\s\S]*\]/);
       if (match) {
-        JSON.parse(match[0]).forEach((i: any) => addScheduleItem(trip.id, { ...i, id: 'ai-'+Math.random(), date: selectedDateStr, images: [] }));
+        // [修復]: AI ID 避免重複衝突
+        JSON.parse(match[0]).forEach((i: any) => addScheduleItem(trip.id, { ...i, id: `ai-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`, date: selectedDateStr, images: [] }));
         setIsAiOpen(false); setAiText('');
       }
     } catch (e) { alert("AI 解析失敗"); }
@@ -354,7 +354,8 @@ export const Schedule = ({ externalDateIdx = 0 }: { externalDateIdx?: number }) 
                     <span className="flex items-center gap-1 truncate"><MapPin size={14}/> {detailItem.location}</span>
                  </div>
                  <p className="text-sm text-ac-brown/70 font-bold whitespace-pre-wrap leading-relaxed min-h-[60px]">{detailItem.note || "這個行程還沒有備註，點擊編輯來增加筆記吧！"}</p>
-                 <button onClick={() => window.open(`https://www.google.com/maps/search/${encodeURIComponent(detailItem.location)}`, '_blank')} className="btn-zakka w-full py-4 flex items-center justify-center gap-2 text-lg shadow-lg"><MapPin size={20}/> Google Maps</button>
+                 {/* [修復]: Google Maps URL 語法錯誤 */}
+                 <button onClick={() => window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(detailItem.location)}`, '_blank')} className="btn-zakka w-full py-4 flex items-center justify-center gap-2 text-lg shadow-lg"><MapPin size={20}/> Google Maps</button>
               </div>
            </div>
         </div>
