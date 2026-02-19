@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { useTripStore } from '../store/useTripStore';
-import { X, Clock, MapPin, Tag, AlignLeft, Check, Camera, Search } from 'lucide-react';
+import { X, Clock, MapPin, Tag, AlignLeft, Check, Camera, Search, Trash2 } from 'lucide-react';
 import { ScheduleItem } from '../types';
 import { compressImage } from '../utils/imageUtils';
 
@@ -29,53 +29,53 @@ export const ScheduleEditor: React.FC<Props> = ({ tripId, date, item, onClose })
   };
 
   const handleSave = () => {
-    if (!form.title) return alert("請輸入標題！");
+    if (!form.title) return alert("請輸入標題唷！");
     if (item) updateScheduleItem(tripId, item.id, form);
     else addScheduleItem(tripId, { ...form, id: Date.now().toString() });
     onClose();
   };
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[500] flex items-end sm:items-center justify-center p-4">
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[1000] flex items-end sm:items-center justify-center p-4">
       <div className="bg-ac-bg w-full max-w-md rounded-t-[40px] sm:rounded-[40px] shadow-2xl overflow-hidden animate-in slide-in-from-bottom-10 max-h-[90vh] overflow-y-auto text-left">
         <div className="p-6 flex justify-between items-center border-b-4 border-ac-border sticky top-0 bg-ac-bg z-10">
           <h2 className="text-xl font-black italic">{item ? '✍️ 編輯行程' : '📔 手寫計畫'}</h2>
           <div className="flex gap-2">
-            {item && <button onClick={() => { if(confirm('確定刪除？')) { deleteScheduleItem(tripId, item.id); onClose(); } }} className="p-2 bg-red-50 text-red-500 rounded-full"><Trash2 size={20}/></button>}
+            {item && <button onClick={() => { if(confirm('確定刪除這筆計畫？')) { deleteScheduleItem(tripId, item.id); onClose(); } }} className="p-2 bg-red-50 text-red-500 rounded-full"><Trash2 size={20}/></button>}
             <button onClick={onClose} className="p-2 bg-white rounded-full shadow-zakka"><X size={20}/></button>
           </div>
         </div>
 
         <div className="p-6 space-y-5">
           <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-1"><label className="text-[10px] font-black opacity-40 uppercase tracking-widest"><Clock size={12} className="inline mr-1"/> Time</label>
+            <div className="space-y-1"><label className="text-[10px] font-black opacity-40 uppercase tracking-widest">Time</label>
             <input type="time" className="w-full p-4 bg-white border-2 border-ac-border rounded-2xl font-black text-ac-brown" value={form.time} onChange={e => setForm({...form, time: e.target.value})} /></div>
-            <div className="space-y-1"><label className="text-[10px] font-black opacity-40 uppercase tracking-widest"><Tag size={12} className="inline mr-1"/> Category</label>
+            <div className="space-y-1"><label className="text-[10px] font-black opacity-40 uppercase tracking-widest">Category</label>
             <select className="w-full p-4 bg-white border-2 border-ac-border rounded-2xl font-black outline-none appearance-none" value={form.category} onChange={e => setForm({...form, category: e.target.value as any})}>
               {CATEGORIES.map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
             </select></div>
           </div>
+          <div className="space-y-1"><label className="text-[10px] font-black opacity-40 uppercase">Title</label>
+          <input className="w-full p-4 bg-white border-2 border-ac-border rounded-2xl font-black text-ac-brown outline-none" value={form.title} onChange={e => setForm({...form, title: e.target.value})} placeholder="去哪探險？" /></div>
 
-          <div className="space-y-1"><label className="text-[10px] font-black opacity-40 uppercase tracking-widest">Title</label>
-          <input className="w-full p-4 bg-white border-2 border-ac-border rounded-2xl font-black outline-none" value={form.title} onChange={e => setForm({...form, title: e.target.value})} placeholder="探險名稱" /></div>
-
-          <div className="space-y-1"><label className="text-[10px] font-black opacity-40 uppercase tracking-widest">Location (Google Maps)</label>
+          <div className="space-y-1"><label className="text-[10px] font-black opacity-40 uppercase">Location (Google Map)</label>
           <div className="flex gap-2">
-            <input className="flex-1 p-4 bg-white border-2 border-ac-border rounded-2xl font-bold outline-none" value={form.location} onChange={e => setForm({...form, location: e.target.value})} placeholder="輸入地點" />
-            <button onClick={() => window.open(`https://www.google.com/maps/search/${encodeURIComponent(form.location || '探險')}`, '_blank')} className="w-14 h-14 bg-blue-50 border-2 border-blue-200 rounded-2xl flex items-center justify-center text-blue-500"><Search size={24}/></button>
+            <input className="flex-1 p-4 bg-white border-2 border-ac-border rounded-2xl font-bold text-ac-brown" value={form.location} onChange={e => setForm({...form, location: e.target.value})} placeholder="輸入具體地點" />
+            <button onClick={() => window.open(`https://www.google.com/maps/search/${encodeURIComponent(form.location || '目的地')}`, '_blank')} className="w-14 h-14 bg-blue-50 border-2 border-blue-200 rounded-2xl flex items-center justify-center text-blue-500 shadow-sm active:scale-90 transition-all"><Search size={24}/></button>
           </div></div>
 
-          <div className="space-y-1"><label className="text-[10px] font-black opacity-40 uppercase">相關照片</label>
+          <div className="space-y-1"><label className="text-[10px] font-black opacity-40 uppercase tracking-widest">Memories</label>
           <button onClick={() => fileInputRef.current?.click()} className="w-full h-32 border-4 border-dashed border-ac-border rounded-3xl flex flex-col items-center justify-center text-ac-border bg-white overflow-hidden relative">
-             {form.images?.[0] ? <img src={form.images[0]} className="w-full h-full object-cover" /> : <><Camera size={32}/><span className="text-xs font-black">點此上傳美照</span></>}
+             {form.images?.[0] ? <img src={form.images[0]} className="w-full h-full object-cover" /> : <><Camera size={32}/><span className="text-[10px] font-black mt-2 uppercase tracking-tighter">上傳當日美照</span></>}
              <input ref={fileInputRef} type="file" className="hidden" onChange={handlePhoto} />
           </button></div>
 
-          <textarea placeholder="寫下詳情或備註..." className="w-full p-4 bg-white border-2 border-ac-border rounded-2xl font-bold h-24" value={form.note} onChange={e => setForm({...form, note: e.target.value})} />
-          <button onClick={handleSave} className="btn-zakka w-full py-5 text-xl">保存計畫 ➔</button>
+          <textarea placeholder="寫點手帳筆記吧..." className="w-full p-4 bg-white border-2 border-ac-border rounded-2xl font-bold text-ac-brown h-24" value={form.note} onChange={e => setForm({...form, note: e.target.value})} />
+          <button onClick={handleSave} className="btn-zakka w-full py-5 text-xl mt-4">儲存至手帳 ➔</button>
         </div>
       </div>
     </div>
   );
 };
+
 

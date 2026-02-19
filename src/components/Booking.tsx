@@ -37,7 +37,6 @@ export const Booking = () => {
         <button onClick={() => { setEditingItem(undefined); setIsEditorOpen(true); }} className="w-full p-5 border-4 border-dashed border-ac-border rounded-[32px] text-ac-border font-black flex items-center justify-center gap-3 active:scale-95 transition-all"><Plus /> 新增預訂項目</button>
       </div>
 
-      {/* 詳細 Modal */}
       {detailItem && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[300] flex items-center justify-center p-6" onClick={() => setDetailItem(undefined)}>
           <div className="bg-ac-bg w-full max-w-sm rounded-[40px] shadow-2xl overflow-hidden animate-in zoom-in-95" onClick={e => e.stopPropagation()}>
@@ -95,4 +94,5 @@ const HotelCard = ({ item, onEdit }: any) => (
 const SubTab = ({ id, icon, active, onClick }: any) => (
   <button onClick={() => onClick(id)} className={`flex-1 flex flex-col items-center py-3 rounded-[24px] transition-all ${active === id ? 'bg-ac-green text-white shadow-md' : 'text-ac-border'}`}>{icon}</button>
 );
+
 
