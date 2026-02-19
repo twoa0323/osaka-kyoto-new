@@ -1,3 +1,4 @@
+// src/types/index.ts
 export type CurrencyCode = 'TWD' | 'JPY' | 'KRW' | 'USD' | 'EUR' | 'THB' | 'GBP' | 'CNY' | 'HKD' | 'SGD' | 'VND';
 
 export interface Member {
@@ -31,13 +32,20 @@ export interface BookingItem {
   images: string[];
   qrCode?: string;
   website?: string;
+  // 機票專用欄位
+  airline?: string; // 新增：航空公司模板 ID
   flightNo?: string;
   depIata?: string;
   arrIata?: string;
   depTime?: string;
   arrTime?: string;
+  depCity?: string;
+  arrCity?: string;
+  duration?: string;
   baggage?: string;
   aircraft?: string;
+  seat?: string; // 新增：座位
+  // 住宿專用欄位
   price?: number;
   nights?: number;
 }
@@ -77,6 +85,7 @@ export interface Trip {
   shoppingList: any[];
   infoItems: any[];
 }
+
 
 
 
