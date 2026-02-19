@@ -1,3 +1,4 @@
+// src/components/Booking.tsx
 import React, { useState } from 'react';
 import { useTripStore } from '../store/useTripStore';
 import { Plane, Home, MapPin, Plus, Edit3, Globe, QrCode, ArrowRight, X, Luggage } from 'lucide-react';
@@ -108,16 +109,20 @@ const FlightCard = ({ item, onEdit, onViewDetails }: any) => {
   const theme = AIRLINE_THEMES[item.airline] || AIRLINE_THEMES.other;
   const [showActions, setShowActions] = useState(false);
 
-  // 點擊邏輯：第一次顯示編輯按鈕，第二次進入詳細資訊
   const handleCardClick = () => {
     if (!showActions) {
       setShowActions(true);
-      // 3秒後自動隱藏按鈕 (優化體驗)
       setTimeout(() => setShowActions(false), 3000);
     } else {
       onViewDetails();
       setShowActions(false);
     }
+  };
+
+  // 確保舊資料如果沒有空格，也能顯示出空格 (例如 "02h45m" 轉成 "02h 45m")
+  const formatDurationDisplay = (dur: string) => {
+    if (!dur) return '--h --m';
+    return dur.replace(/(\d+h)\s*(\d+m)/, '$1 $2');
   };
 
   return (
@@ -133,7 +138,7 @@ const FlightCard = ({ item, onEdit, onViewDetails }: any) => {
       {/* 票卡主體 */}
       <div className="bg-white rounded-[2rem] overflow-hidden flex flex-col shadow-sm">
         
-        {/* 上半部：航空公司視覺 (Header) - 高度已縮減至 88px */}
+        {/* 上半部：航空公司視覺 (Header) */}
         <div className={`relative h-[88px] w-full flex items-center justify-center ${theme.bgClass}`} style={theme.bgStyle}>
            {theme.logoHtml}
         </div>
@@ -141,34 +146,36 @@ const FlightCard = ({ item, onEdit, onViewDetails }: any) => {
         {/* 下半部：票券詳細資訊 (Body) */}
         <div className="relative w-full bg-white pt-6 pb-6 border-t-0 rounded-b-[2rem]">
           
-          {/* 將航班號碼移至此處 (中央上方) */}
-          <div className="absolute -top-[12px] left-1/2 -translate-x-1/2 bg-white px-5 py-0.5 border border-gray-100 text-gray-400 font-black rounded-full text-[10px] shadow-sm tracking-widest z-10">
+          {/* 將航班號碼移至此處 (中央上方)，並放大字體與留白 */}
+          <div className="absolute -top-[16px] left-1/2 -translate-x-1/2 bg-white px-6 py-1.5 border border-gray-100 text-gray-400 font-black rounded-full text-sm shadow-sm tracking-widest z-10">
             {item.flightNo || 'FLIGHT'}
           </div>
 
           <div className="absolute left-4 top-0 bottom-6 border-l-[3px] border-dotted border-gray-300"></div>
           
-          <div className="pl-8 pr-6 mt-1">
+          <div className="pl-8 pr-6 mt-2">
             {/* 核心航班資訊列 */}
             <div className="flex justify-between items-center mb-6">
               <div className="flex flex-col items-center">
-                <span className="text-4xl font-black text-gray-900 tracking-tighter">{item.depIata || 'TPE'}</span>
+                <span className="text-4xl font-black text-gray-900 tracking-tighter uppercase">{item.depIata || 'TPE'}</span>
                 <span className="text-2xl font-black text-gray-900 mt-1">{item.depTime || '--:--'}</span>
                 <span className="mt-2 bg-[#1C734C] text-white text-[10px] px-3 py-0.5 rounded-full font-bold tracking-widest">{item.depCity || '出發地'}</span>
               </div>
 
               <div className="flex flex-col items-center flex-1 px-4 mt-2">
-                <span className="text-[10px] font-black text-gray-400 mb-1">{item.duration || '--h--m'}</span>
+                {/* 飛行時間：顏色加深至 gray-500，並套用含空格的格式 */}
+                <span className="text-[11px] font-black text-gray-500 mb-1">{formatDurationDisplay(item.duration)}</span>
                 <div className="w-full flex items-center text-blue-600">
                   <div className="h-[2px] flex-1 bg-gray-300 border-dashed border-t-[2px]"></div>
                   <Plane size={24} className="mx-2 fill-current rotate-45" />
                   <div className="h-[2px] flex-1 bg-gray-300 border-dashed border-t-[2px]"></div>
                 </div>
-                <span className="text-[10px] font-black text-gray-900 mt-1 tracking-widest">{item.date?.replace(/-/g, '/')}</span>
+                {/* 日期：顏色調淺至 gray-400 */}
+                <span className="text-[10px] font-black text-gray-400 mt-1 tracking-widest">{item.date?.replace(/-/g, '/')}</span>
               </div>
 
               <div className="flex flex-col items-center">
-                <span className="text-4xl font-black text-gray-900 tracking-tighter">{item.arrIata || 'PUS'}</span>
+                <span className="text-4xl font-black text-gray-900 tracking-tighter uppercase">{item.arrIata || 'KIX'}</span>
                 <span className="text-2xl font-black text-gray-900 mt-1">{item.arrTime || '--:--'}</span>
                 <span className="mt-2 bg-[#C29562] text-white text-[10px] px-3 py-0.5 rounded-full font-bold tracking-widest">{item.arrCity || '目的地'}</span>
               </div>
@@ -176,24 +183,21 @@ const FlightCard = ({ item, onEdit, onViewDetails }: any) => {
 
             {/* 底部附屬資訊區塊 - 分為 3 欄 */}
             <div className="bg-[#F8F9FA] rounded-xl flex items-center justify-between p-3 border border-gray-100">
-              {/* 1. 行李 */}
               <div className="flex-1 flex flex-col items-center justify-center border-r-2 border-gray-200">
                 <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">BAGGAGE</span>
                 <div className="flex items-center gap-1.5 text-gray-800 font-black text-sm">
                   <Luggage size={14} className="text-[#519B96]"/> {item.baggage || '--'}
                 </div>
               </div>
-              {/* 2. 座位 */}
               <div className="flex-1 flex flex-col items-center justify-center border-r-2 border-gray-200">
                 <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">SEAT</span>
-                <div className="flex items-center gap-1.5 text-gray-800 font-black text-sm">
+                <div className="flex items-center gap-1.5 text-gray-800 font-black text-sm uppercase">
                   {item.seat || '--'}
                 </div>
               </div>
-              {/* 3. 機型 */}
               <div className="flex-1 flex flex-col items-center justify-center">
                 <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">AIRCRAFT</span>
-                <div className="flex items-center gap-1 text-gray-800 font-black text-sm">
+                <div className="flex items-center gap-1 text-gray-800 font-black text-sm uppercase">
                   <Plane size={14} className="text-[#C29562] fill-current" /> {item.aircraft || '--'}
                 </div>
               </div>
@@ -221,8 +225,6 @@ const HotelCard = ({ item, onEdit, onViewDetails }: any) => {
 
   return (
     <div className="bg-white rounded-[40px] border-4 border-ac-border shadow-zakka overflow-hidden relative active:scale-[0.98] transition-all cursor-pointer" onClick={handleCardClick}>
-      
-      {/* 編輯按鈕 */}
       <div className={`absolute top-4 right-4 z-20 transition-opacity duration-300 ${showActions ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
         <button onClick={onEdit} className="p-2.5 bg-white/95 backdrop-blur-md rounded-full text-ac-green shadow-sm border border-gray-100 hover:bg-ac-green hover:text-white transition-colors"><Edit3 size={18}/></button>
       </div>
@@ -242,6 +244,7 @@ const HotelCard = ({ item, onEdit, onViewDetails }: any) => {
     </div>
   );
 };
+
 
 
 
