@@ -1,7 +1,6 @@
-// filepath: src/components/ScheduleEditor.tsx
 import React, { useState, useRef } from 'react';
 import { useTripStore } from '../store/useTripStore';
-import { X, Search, Camera, Trash2 } from 'lucide-react';
+import { X, Search, Camera, Trash2, Loader2 } from 'lucide-react';
 import { ScheduleItem } from '../types';
 import { uploadImage } from '../utils/imageUtils';
 
@@ -17,6 +16,7 @@ const CATEGORIES = [
 export const ScheduleEditor: React.FC<Props> = ({ tripId, date, item, onClose }) => {
   const { addScheduleItem, updateScheduleItem, deleteScheduleItem } = useTripStore();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isUploading, setIsUploading] = useState(false);
   
   const [form, setForm] = useState<ScheduleItem>(item || {
     id: Date.now().toString(), date, time: '09:00', title: '', location: '', category: 'sightseeing', note: '', images: []
@@ -25,20 +25,23 @@ export const ScheduleEditor: React.FC<Props> = ({ tripId, date, item, onClose })
   const handlePhoto = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      e.target.value = ''; // 清空 input 確保下次選同張圖也能觸發
-      const url = await uploadImage(file);
-      setForm(prev => ({ ...prev, images: [url] }));
+      e.target.value = '';
+      setIsUploading(true);
+      try {
+        const url = await uploadImage(file);
+        setForm(prev => ({ ...prev, images: [url] }));
+      } catch (err) {
+        alert("圖片上傳失敗，請稍後再試！");
+      } finally {
+        setIsUploading(false);
+      }
     }
   };
 
   const handleSave = () => {
     if (!form.title) return alert("請輸入標題！");
-    
-    if (item) {
-      updateScheduleItem(tripId, item.id, form);
-    } else {
-      addScheduleItem(tripId, { ...form, id: Date.now().toString() });
-    }
+    if (item) updateScheduleItem(tripId, item.id, form);
+    else addScheduleItem(tripId, { ...form, id: Date.now().toString() });
     onClose();
   };
 
@@ -73,10 +76,24 @@ export const ScheduleEditor: React.FC<Props> = ({ tripId, date, item, onClose })
           </div></div>
 
           <div className="space-y-1"><label className="text-[10px] font-black opacity-40 uppercase tracking-widest">Photo</label>
-          <button onClick={() => fileInputRef.current?.click()} className="w-full h-32 border-4 border-dashed border-ac-border rounded-3xl flex flex-col items-center justify-center text-ac-border bg-white overflow-hidden relative active:scale-98 transition-all">
-             {form.images?.[0] ? <img src={form.images[0]} className="w-full h-full object-cover" /> : <><Camera size={32}/><span className="text-[10px] font-black mt-2 uppercase tracking-tighter">上傳手帳美照</span></>}
-             <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handlePhoto} />
-          </button></div>
+          <button type="button" onClick={() => fileInputRef.current?.click()} className="w-full h-32 border-4 border-dashed border-ac-border rounded-3xl flex flex-col items-center justify-center text-ac-border bg-white overflow-hidden relative active:scale-98 transition-all group">
+             {isUploading && (
+               <div className="absolute inset-0 bg-white/90 backdrop-blur-sm flex flex-col items-center justify-center z-50">
+                 <Loader2 className="animate-spin text-ac-orange mb-2" size={36} strokeWidth={3}/>
+                 <span className="text-xs font-black text-ac-orange animate-pulse tracking-widest">照片上傳中...</span>
+               </div>
+             )}
+             {form.images?.[0] ? (
+               <>
+                 <img src={form.images[0]} className="w-full h-full object-cover pointer-events-none" />
+                 <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"><span className="bg-black/60 text-white text-xs font-black px-4 py-1.5 rounded-full">點擊更換照片</span></div>
+               </>
+             ) : (
+               <><Camera size={32}/><span className="text-[10px] font-black mt-2 uppercase tracking-tighter">上傳手帳美照</span></>
+             )}
+          </button>
+          <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handlePhoto} />
+          </div>
 
           <textarea placeholder="寫點什麼筆記吧..." className="w-full p-4 bg-white border-2 border-ac-border rounded-2xl font-bold text-ac-brown h-24 outline-none" value={form.note} onChange={e => setForm({...form, note: e.target.value})} />
           <button onClick={handleSave} className="btn-zakka w-full py-5 text-xl mt-4">儲存計畫 ➔</button>
@@ -85,6 +102,7 @@ export const ScheduleEditor: React.FC<Props> = ({ tripId, date, item, onClose })
     </div>
   );
 };
+
 
 
 

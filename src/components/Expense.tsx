@@ -1,11 +1,9 @@
-// filepath: src/components/Expense.tsx
-import React, { useState, useMemo, useRef, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useTripStore } from '../store/useTripStore';
-import { Wallet, Coins, MapPin, Image as ImageIcon, Trash2, Camera, X, Edit3, BarChart3, ScanLine, Upload, PenTool, LayoutList, Settings, CheckCircle, Search } from 'lucide-react';
+import { Wallet, Coins, Trash2, Camera, X, BarChart3, ScanLine, Upload, PenTool, LayoutList, Settings, CheckCircle, Image as ImageIcon, Loader2 } from 'lucide-react';
 import { ExpenseItem, CurrencyCode } from '../types';
 import { compressImage, uploadImage } from '../utils/imageUtils';
 import { format, parseISO, differenceInDays } from 'date-fns';
-import { zhTW } from 'date-fns/locale';
 
 const DonutChart = ({ data, totalLabel }: { data: { label: string, value: number, color: string }[], totalLabel: string }) => {
   const total = data.reduce((a, b) => a + b.value, 0);
@@ -32,6 +30,7 @@ export const Expense = () => {
   const [activeTab, setActiveTab] = useState<'record' | 'list' | 'stats'>('record');
   const [inputMode, setInputMode] = useState<'manual' | 'scan' | 'import'>('manual');
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isUploadingImg, setIsUploadingImg] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [isSuccess, setIsSuccess] = useState(false);
   const aiInputRef = useRef<HTMLInputElement>(null);
@@ -68,27 +67,19 @@ export const Expense = () => {
     if (editingId) updateExpenseItem(trip.id, editingId, item);
     else addExpenseItem(trip.id, item);
     setIsSuccess(true);
-    setTimeout(() => { setIsSuccess(false); setEditingId(null); setViewModeToRecord(); }, 1500);
-  };
-
-  const setViewModeToRecord = () => {
-    setForm({ date: new Date().toISOString().split('T')[0], currency: trip.baseCurrency, method: '現金', title: '', amount: 0, location: '', images: [], category: '飲食', items: [] });
-    setActiveTab('record'); setInputMode('manual');
+    setTimeout(() => { setIsSuccess(false); setEditingId(null); setForm({ date: new Date().toISOString().split('T')[0], currency: trip.baseCurrency, method: '現金', title: '', amount: 0, location: '', images: [], category: '飲食', items: [] }); setActiveTab('record'); setInputMode('manual'); }, 1500);
   };
 
   const handleAIAnalyze = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    e.target.value = ''; // 提早清空
+    e.target.value = '';
     setIsProcessing(true);
     try {
-      const b64 = await compressImage(file); // AI 需要 base64 解析
-      const res = await fetch('/api/analyze-receipt', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ imageBase64: b64.split(',')[1] })
-      });
+      const b64 = await compressImage(file, true); 
+      const res = await fetch('/api/analyze-receipt', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ imageBase64: b64.split(',')[1] }) });
       const data = await res.json();
-      const url = await uploadImage(file); // 實際儲存為雲端 URL
+      const url = await uploadImage(file);
       setForm(prev => ({ ...prev, title: data.title, amount: data.amount, date: data.date, category: data.category, items: data.items, images: [url] }));
       alert("AI 辨識成功！✨");
       setInputMode('manual');
@@ -107,40 +98,27 @@ export const Expense = () => {
     return acc;
   }, {} as Record<string, number>);
 
-  const pieData = Object.entries(categoryStats).map(([k, v], i) => ({
-    label: k, value: v, color: ['#FF6B6B', '#4ECDC4', '#FFE66D', '#1A535C', '#F9AC7D'][i % 5]
-  }));
+  const pieData = Object.entries(categoryStats).map(([k, v], i) => ({ label: k, value: v, color: ['#FF6B6B', '#4ECDC4', '#FFE66D', '#1A535C', '#F9AC7D'][i % 5] }));
 
   return (
     <div className="px-6 space-y-6 animate-fade-in pb-28 text-left">
       <div className="flex gap-4">
         <div className="card-zakka bg-[#8D775F] text-white border-none p-5 flex-1 flex flex-col justify-between shadow-xl relative overflow-hidden">
           <p className="text-[10px] font-black uppercase opacity-60 tracking-widest z-10">Total Balance</p>
-          <div className="z-10">
-            <h2 className="text-2xl font-black italic">NT$ {Math.round(totalTwd).toLocaleString()}</h2>
-            <p className="text-[9px] font-bold opacity-40 uppercase">1 {trip.baseCurrency} ≈ {exchangeRate.toFixed(3)} TWD</p>
-          </div>
+          <div className="z-10"><h2 className="text-2xl font-black italic">NT$ {Math.round(totalTwd).toLocaleString()}</h2><p className="text-[9px] font-bold opacity-40 uppercase">1 {trip.baseCurrency} ≈ {exchangeRate.toFixed(3)} TWD</p></div>
           <Coins className="absolute -bottom-4 -right-4 text-white opacity-10 rotate-12" size={80} />
         </div>
-        <button onClick={() => setActiveTab('stats')} className={`w-20 card-zakka border-none flex flex-col items-center justify-center gap-1 active:scale-95 transition-all ${activeTab === 'stats' ? 'bg-ac-orange text-white shadow-inner' : 'bg-white text-ac-brown'}`}>
-          <BarChart3 size={24} /><span className="text-[9px] font-black">統計</span>
-        </button>
+        <button onClick={() => setActiveTab('stats')} className={`w-20 card-zakka border-none flex flex-col items-center justify-center gap-1 active:scale-95 transition-all ${activeTab === 'stats' ? 'bg-ac-orange text-white shadow-inner' : 'bg-white text-ac-brown'}`}><BarChart3 size={24} /><span className="text-[9px] font-black">統計</span></button>
       </div>
 
       {activeTab === 'stats' ? (
         <div className="space-y-6 animate-in slide-in-from-right">
           <div className="card-zakka bg-[#1A1A1A] text-white border-none p-6 space-y-4 shadow-xl">
-            <div className="flex justify-between items-start">
-              <div><h3 className="font-black text-lg">預算規劃</h3></div>
-              <button onClick={() => { const b = prompt("設定預算 (TWD):", trip.budget?.toString()); if(b) updateTripData(trip.id, { budget: Number(b) }); }} className="p-2 bg-white/10 rounded-full"><Settings size={16}/></button>
-            </div>
+            <div className="flex justify-between items-start"><div><h3 className="font-black text-lg">預算規劃</h3></div><button onClick={() => { const b = prompt("設定預算 (TWD):", trip.budget?.toString()); if(b) updateTripData(trip.id, { budget: Number(b) }); }} className="p-2 bg-white/10 rounded-full"><Settings size={16}/></button></div>
             <div className="h-4 bg-white/20 rounded-full overflow-hidden shadow-inner"><div className={`h-full transition-all duration-1000 ${percent > 90 ? 'bg-red-400' : 'bg-ac-green'}`} style={{ width: `${percent}%` }} /></div>
             <div className="flex justify-between text-[10px] font-black uppercase"><span>已用 ${Math.round(totalTwd).toLocaleString()}</span><span className="text-ac-green">剩餘 ${Math.round(budget - totalTwd).toLocaleString()}</span></div>
           </div>
-          <div className="card-zakka bg-white border-4 border-ac-border p-8 text-center shadow-zakka">
-             <h3 className="text-left font-black text-ac-brown mb-6 flex items-center gap-2"><div className="w-1 h-4 bg-ac-orange rounded-full"/> 支出類別統計</h3>
-             <DonutChart data={pieData} totalLabel="Categories" />
-          </div>
+          <div className="card-zakka bg-white border-4 border-ac-border p-8 text-center shadow-zakka"><h3 className="text-left font-black text-ac-brown mb-6 flex items-center gap-2"><div className="w-1 h-4 bg-ac-orange rounded-full"/> 支出類別統計</h3><DonutChart data={pieData} totalLabel="Categories" /></div>
         </div>
       ) : (
         <>
@@ -159,9 +137,13 @@ export const Expense = () => {
               </div>
 
               {(inputMode === 'scan' || inputMode === 'import') && (
-                <div className="border-4 border-dashed border-ac-border rounded-[32px] p-10 text-center space-y-4 bg-ac-bg">
-                  {isProcessing ? <div className="flex flex-col items-center text-ac-green animate-pulse"><ScanLine size={48}/><p className="font-black mt-2">AI 分析中...</p></div> : 
-                  <><p className="text-ac-brown font-bold text-xs opacity-50 uppercase tracking-widest">Receipt Scan</p><button onClick={() => aiInputRef.current?.click()} className="btn-zakka px-8 py-3">{inputMode === 'scan' ? '相機拍照' : '選擇照片'}</button>
+                <div className="border-4 border-dashed border-ac-border rounded-[32px] p-10 text-center space-y-4 bg-ac-bg relative">
+                  {isProcessing ? (
+                    <div className="flex flex-col items-center justify-center z-50 py-4">
+                      <Loader2 className="animate-spin text-ac-orange mb-2" size={36} strokeWidth={3}/>
+                      <span className="text-xs font-black text-ac-orange animate-pulse tracking-widest">AI 解析照片中...</span>
+                    </div>
+                  ) : <><p className="text-ac-brown font-bold text-xs opacity-50 uppercase tracking-widest">Receipt Scan</p><button onClick={() => aiInputRef.current?.click()} className="btn-zakka px-8 py-3">{inputMode === 'scan' ? '相機拍照' : '選擇照片'}</button>
                   <input ref={aiInputRef} type="file" accept="image/*" capture={inputMode === 'scan' ? "environment" : undefined} className="hidden" onChange={handleAIAnalyze} /></>}
                 </div>
               )}
@@ -177,15 +159,30 @@ export const Expense = () => {
 
                 <div className="space-y-1"><label className="text-[10px] font-black text-ac-orange uppercase pl-1">* 項目名稱</label>
                   <div className="flex gap-2"><input placeholder="買了什麼呢？" value={form.title} onChange={e => setForm({...form, title: e.target.value})} className="flex-1 p-4 bg-ac-bg border-2 border-ac-border rounded-2xl font-black text-ac-brown outline-none" />
-                  <button onClick={() => fileInputRef.current?.click()} className="w-14 h-14 bg-[#E2F1E7] border-2 border-ac-green rounded-2xl flex items-center justify-center text-ac-green overflow-hidden relative active:scale-90 transition-transform">{form.images?.[0] ? <img src={form.images[0]} className="w-full h-full object-cover"/> : <ImageIcon size={24}/>}</button></div>
+                  
+                  <button type="button" onClick={() => fileInputRef.current?.click()} className="w-14 h-14 bg-[#E2F1E7] border-2 border-ac-green rounded-2xl flex items-center justify-center text-ac-green overflow-hidden relative active:scale-90 transition-transform group">
+                    {isUploadingImg && (
+                      <div className="absolute inset-0 bg-white/90 backdrop-blur-sm flex flex-col items-center justify-center z-50">
+                        <Loader2 className="animate-spin text-ac-orange" size={20} strokeWidth={3}/>
+                      </div>
+                    )}
+                    {form.images?.[0] ? (
+                      <><img src={form.images[0]} className="w-full h-full object-cover pointer-events-none"/><div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"><span className="text-white text-[8px] font-black">更換</span></div></>
+                    ) : <ImageIcon size={24}/>}
+                  </button>
                   <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={async e => {
                     const file = e.target.files?.[0];
                     if(file){
                       e.target.value = '';
-                      const url = await uploadImage(file);
-                      setForm(prev => ({ ...prev, images: [url] }));
+                      setIsUploadingImg(true);
+                      try {
+                        const url = await uploadImage(file);
+                        setForm(prev => ({ ...prev, images: [url] }));
+                      } catch(err) { alert("上傳失敗"); }
+                      finally { setIsUploadingImg(false); }
                     }
                   }} />
+                  </div>
                 </div>
                 <button onClick={handleSave} className="btn-zakka w-full py-5 text-xl mt-2 shadow-zakka">{editingId ? '確認更新 ➔' : '完成記帳 ➔'}</button>
               </div>
@@ -222,6 +219,7 @@ export const Expense = () => {
     </div>
   );
 };
+
 
 
 
