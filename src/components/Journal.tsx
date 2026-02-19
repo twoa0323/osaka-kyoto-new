@@ -1,7 +1,8 @@
+// filepath: src/components/Journal.tsx
 import React, { useState } from 'react';
 import { useTripStore } from '../store/useTripStore';
 import { Camera, MapPin, Star, Plus, X, Image as ImageIcon, Map as MapIcon, Trash2 } from 'lucide-react';
-import { compressImage } from '../utils/imageUtils';
+import { uploadImage } from '../utils/imageUtils';
 import { JournalItem } from '../types';
 
 export const Journal = () => {
@@ -18,8 +19,9 @@ export const Journal = () => {
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
       const files = Array.from(e.target.files);
-      const compressed = await Promise.all(files.map(f => compressImage(f)));
-      setForm({ ...form, images: [...(form.images || []), ...compressed] });
+      e.target.value = ''; // 提早清空
+      const urls = await Promise.all(files.map(f => uploadImage(f)));
+      setForm(prev => ({ ...prev, images: [...(prev.images || []), ...urls] }));
     }
   };
 

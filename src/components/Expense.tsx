@@ -1,8 +1,9 @@
+// filepath: src/components/Expense.tsx
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { useTripStore } from '../store/useTripStore';
 import { Wallet, Coins, MapPin, Image as ImageIcon, Trash2, Camera, X, Edit3, BarChart3, ScanLine, Upload, PenTool, LayoutList, Settings, CheckCircle, Search } from 'lucide-react';
 import { ExpenseItem, CurrencyCode } from '../types';
-import { compressImage } from '../utils/imageUtils';
+import { compressImage, uploadImage } from '../utils/imageUtils';
 import { format, parseISO, differenceInDays } from 'date-fns';
 import { zhTW } from 'date-fns/locale';
 
@@ -76,16 +77,19 @@ export const Expense = () => {
   };
 
   const handleAIAnalyze = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!e.target.files?.[0]) return;
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = ''; // 提早清空
     setIsProcessing(true);
     try {
-      const b64 = await compressImage(e.target.files[0]);
+      const b64 = await compressImage(file); // AI 需要 base64 解析
       const res = await fetch('/api/analyze-receipt', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ imageBase64: b64.split(',')[1] })
       });
       const data = await res.json();
-      setForm(prev => ({ ...prev, title: data.title, amount: data.amount, date: data.date, category: data.category, items: data.items, images: [b64] }));
+      const url = await uploadImage(file); // 實際儲存為雲端 URL
+      setForm(prev => ({ ...prev, title: data.title, amount: data.amount, date: data.date, category: data.category, items: data.items, images: [url] }));
       alert("AI 辨識成功！✨");
       setInputMode('manual');
     } catch (err) { alert("辨識失敗，請手動輸入 🥲"); }
@@ -174,7 +178,14 @@ export const Expense = () => {
                 <div className="space-y-1"><label className="text-[10px] font-black text-ac-orange uppercase pl-1">* 項目名稱</label>
                   <div className="flex gap-2"><input placeholder="買了什麼呢？" value={form.title} onChange={e => setForm({...form, title: e.target.value})} className="flex-1 p-4 bg-ac-bg border-2 border-ac-border rounded-2xl font-black text-ac-brown outline-none" />
                   <button onClick={() => fileInputRef.current?.click()} className="w-14 h-14 bg-[#E2F1E7] border-2 border-ac-green rounded-2xl flex items-center justify-center text-ac-green overflow-hidden relative active:scale-90 transition-transform">{form.images?.[0] ? <img src={form.images[0]} className="w-full h-full object-cover"/> : <ImageIcon size={24}/>}</button></div>
-                  <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={async e => {if(e.target.files?.[0]){const b=await compressImage(e.target.files[0]);setForm({...form, images:[b]});}}} />
+                  <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={async e => {
+                    const file = e.target.files?.[0];
+                    if(file){
+                      e.target.value = '';
+                      const url = await uploadImage(file);
+                      setForm(prev => ({ ...prev, images: [url] }));
+                    }
+                  }} />
                 </div>
                 <button onClick={handleSave} className="btn-zakka w-full py-5 text-xl mt-2 shadow-zakka">{editingId ? '確認更新 ➔' : '完成記帳 ➔'}</button>
               </div>
@@ -211,6 +222,7 @@ export const Expense = () => {
     </div>
   );
 };
+
 
 
 

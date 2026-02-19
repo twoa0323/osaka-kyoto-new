@@ -1,7 +1,8 @@
+// filepath: src/components/Shopping.tsx
 import React, { useState } from 'react';
 import { useTripStore } from '../store/useTripStore';
 import { ShoppingBag, CheckCircle2, Circle, Plus, X, Camera, Trash2, Tag, Coins } from 'lucide-react';
-import { compressImage } from '../utils/imageUtils';
+import { uploadImage } from '../utils/imageUtils';
 import { ShoppingItem } from '../types';
 
 const CATEGORIES = {
@@ -26,8 +27,9 @@ export const Shopping = () => {
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
       const files = Array.from(e.target.files);
-      const compressed = await Promise.all(files.map(f => compressImage(f)));
-      setForm({ ...form, images: [...(form.images || []), ...compressed] });
+      e.target.value = ''; // 提早清空
+      const urls = await Promise.all(files.map(f => uploadImage(f)));
+      setForm(prev => ({ ...prev, images: [...(prev.images || []), ...urls] }));
     }
   };
 

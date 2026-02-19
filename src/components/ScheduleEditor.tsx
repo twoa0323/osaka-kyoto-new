@@ -1,8 +1,9 @@
+// filepath: src/components/ScheduleEditor.tsx
 import React, { useState, useRef } from 'react';
 import { useTripStore } from '../store/useTripStore';
-import { X, Clock, MapPin, Tag, AlignLeft, Check, Camera, Search, Trash2 } from 'lucide-react';
+import { X, Search, Camera, Trash2 } from 'lucide-react';
 import { ScheduleItem } from '../types';
-import { compressImage } from '../utils/imageUtils';
+import { uploadImage } from '../utils/imageUtils';
 
 interface Props { tripId: string; date: string; item?: ScheduleItem; onClose: () => void; }
 
@@ -22,17 +23,17 @@ export const ScheduleEditor: React.FC<Props> = ({ tripId, date, item, onClose })
   });
 
   const handlePhoto = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files?.[0]) {
-      const b64 = await compressImage(e.target.files[0]);
-      // 這裡直接更新 form 狀態，稍後 handleSave 會一起儲存
-      setForm(prev => ({ ...prev, images: [b64] }));
+    const file = e.target.files?.[0];
+    if (file) {
+      e.target.value = ''; // 清空 input 確保下次選同張圖也能觸發
+      const url = await uploadImage(file);
+      setForm(prev => ({ ...prev, images: [url] }));
     }
   };
 
   const handleSave = () => {
     if (!form.title) return alert("請輸入標題！");
     
-    // 確保 form 的所有欄位（含圖片）都被正確傳遞
     if (item) {
       updateScheduleItem(tripId, item.id, form);
     } else {
@@ -84,6 +85,7 @@ export const ScheduleEditor: React.FC<Props> = ({ tripId, date, item, onClose })
     </div>
   );
 };
+
 
 
 

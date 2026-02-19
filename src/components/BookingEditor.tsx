@@ -1,8 +1,9 @@
+// filepath: src/components/BookingEditor.tsx
 import React, { useState, useRef } from 'react';
 import { useTripStore } from '../store/useTripStore';
-import { X, Check, Plane, Camera, MapPin, Calendar, Globe, QrCode } from 'lucide-react';
+import { X, Camera, Globe, QrCode } from 'lucide-react';
 import { BookingItem } from '../types';
-import { compressImage } from '../utils/imageUtils';
+import { uploadImage } from '../utils/imageUtils';
 
 interface Props {
   tripId: string;
@@ -24,11 +25,13 @@ export const BookingEditor: React.FC<Props> = ({ tripId, type, item, onClose }) 
     duration: '02h25m', baggage: '15kg', aircraft: 'A321', qrCode: '', website: '', nights: 1
   });
 
-  const handlePhoto = async (e: any, field: 'images' | 'qrCode') => {
-    if (e.target.files?.[0]) {
-      const b64 = await compressImage(e.target.files[0]);
-      if (field === 'images') setForm({ ...form, images: [b64] });
-      else setForm({ ...form, qrCode: b64 });
+  const handlePhoto = async (e: React.ChangeEvent<HTMLInputElement>, field: 'images' | 'qrCode') => {
+    const file = e.target.files?.[0];
+    if (file) {
+      e.target.value = ''; // 提早清空
+      const url = await uploadImage(file);
+      if (field === 'images') setForm(prev => ({ ...prev, images: [url] }));
+      else setForm(prev => ({ ...prev, qrCode: url }));
     }
   };
 
@@ -78,4 +81,6 @@ export const BookingEditor: React.FC<Props> = ({ tripId, type, item, onClose }) 
     </div>
   );
 };
+
+
 
