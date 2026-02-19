@@ -24,14 +24,20 @@ export const ScheduleEditor: React.FC<Props> = ({ tripId, date, item, onClose })
   const handlePhoto = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files?.[0]) {
       const b64 = await compressImage(e.target.files[0]);
-      setForm({ ...form, images: [b64] });
+      // 這裡直接更新 form 狀態，稍後 handleSave 會一起儲存
+      setForm(prev => ({ ...prev, images: [b64] }));
     }
   };
 
   const handleSave = () => {
     if (!form.title) return alert("請輸入標題！");
-    if (item) updateScheduleItem(tripId, item.id, form);
-    else addScheduleItem(tripId, { ...form, id: Date.now().toString() });
+    
+    // 確保 form 的所有欄位（含圖片）都被正確傳遞
+    if (item) {
+      updateScheduleItem(tripId, item.id, form);
+    } else {
+      addScheduleItem(tripId, { ...form, id: Date.now().toString() });
+    }
     onClose();
   };
 
@@ -39,9 +45,9 @@ export const ScheduleEditor: React.FC<Props> = ({ tripId, date, item, onClose })
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[1000] flex items-end sm:items-center justify-center p-4">
       <div className="bg-ac-bg w-full max-w-md rounded-t-[40px] sm:rounded-[40px] shadow-2xl overflow-hidden animate-in slide-in-from-bottom-10 max-h-[90vh] overflow-y-auto text-left">
         <div className="p-6 flex justify-between items-center border-b-4 border-ac-border sticky top-0 bg-ac-bg z-10">
-          <h2 className="text-xl font-black italic">{item ? '✍️ 編輯行程' : '📔 新增計畫'}</h2>
+          <h2 className="text-xl font-black italic">{item ? '✍️ 編輯行程' : '📔 手寫計畫'}</h2>
           <div className="flex gap-2">
-            {item && <button onClick={() => { if(confirm('確定刪除這筆計畫？')) { deleteScheduleItem(tripId, item.id); onClose(); } }} className="p-2 bg-red-50 text-red-500 rounded-full active:scale-90"><Trash2 size={20}/></button>}
+            {item && <button onClick={() => { if(confirm('確定刪除？')) { deleteScheduleItem(tripId, item.id); onClose(); } }} className="p-2 bg-red-50 text-red-500 rounded-full active:scale-90"><Trash2 size={20}/></button>}
             <button onClick={onClose} className="p-2 bg-white rounded-full shadow-zakka active:scale-90"><X size={20}/></button>
           </div>
         </div>
@@ -66,9 +72,9 @@ export const ScheduleEditor: React.FC<Props> = ({ tripId, date, item, onClose })
           </div></div>
 
           <div className="space-y-1"><label className="text-[10px] font-black opacity-40 uppercase tracking-widest">Photo</label>
-          <button onClick={() => fileInputRef.current?.click()} className="w-full h-32 border-4 border-dashed border-ac-border rounded-3xl flex flex-col items-center justify-center text-ac-border bg-white overflow-hidden relative">
+          <button onClick={() => fileInputRef.current?.click()} className="w-full h-32 border-4 border-dashed border-ac-border rounded-3xl flex flex-col items-center justify-center text-ac-border bg-white overflow-hidden relative active:scale-98 transition-all">
              {form.images?.[0] ? <img src={form.images[0]} className="w-full h-full object-cover" /> : <><Camera size={32}/><span className="text-[10px] font-black mt-2 uppercase tracking-tighter">上傳手帳美照</span></>}
-             <input ref={fileInputRef} type="file" className="hidden" onChange={handlePhoto} />
+             <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handlePhoto} />
           </button></div>
 
           <textarea placeholder="寫點什麼筆記吧..." className="w-full p-4 bg-white border-2 border-ac-border rounded-2xl font-bold text-ac-brown h-24 outline-none" value={form.note} onChange={e => setForm({...form, note: e.target.value})} />
@@ -78,6 +84,7 @@ export const ScheduleEditor: React.FC<Props> = ({ tripId, date, item, onClose })
     </div>
   );
 };
+
 
 
 
