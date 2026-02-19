@@ -34,11 +34,8 @@ export interface BookingItem {
   flightNo?: string;
   depIata?: string;
   arrIata?: string;
-  depCity?: string;
-  arrCity?: string;
   depTime?: string;
   arrTime?: string;
-  duration?: string;
   baggage?: string;
   aircraft?: string;
   price?: number;
@@ -60,10 +57,6 @@ export interface ExpenseItem {
   items?: { name: string; price: number }[];
 }
 
-export interface JournalItem { id: string; date: string; title: string; content: string; images: string[]; rating: number; location: string; }
-export interface ShoppingItem { id: string; title: string; price: number; currency: CurrencyCode; isBought: boolean; images: string[]; note: string; category: string; }
-export interface InfoItem { id: string; type: string; title: string; content: string; images: string[]; url: string; }
-
 export interface Trip {
   id: string;
   dest: string;
@@ -80,10 +73,11 @@ export interface Trip {
   items: ScheduleItem[];
   bookings: BookingItem[];
   expenses: ExpenseItem[];
-  journals: JournalItem[];
-  shoppingList: ShoppingItem[];
-  infoItems: InfoItem[];
+  journals: any[];
+  shoppingList: any[];
+  infoItems: any[];
 }
+
 
 
 

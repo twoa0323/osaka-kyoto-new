@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { Trip, ScheduleItem, BookingItem, ExpenseItem, JournalItem, ShoppingItem, InfoItem } from '../types';
+import { Trip, ScheduleItem, BookingItem, ExpenseItem } from '../types';
 import { db } from '../services/firebase';
 import { doc, setDoc } from 'firebase/firestore';
 
@@ -17,24 +17,12 @@ interface TripState {
   setTrips: (t: Trip[]) => void; setActiveTab: (t: string) => void; setExchangeRate: (r: number) => void;
   addTrip: (t: Trip) => void; switchTrip: (id: string) => void; deleteTrip: (id: string) => void;
   updateTripData: (tid: string, p: Partial<Trip>) => void;
-  // 各模組 CRUD
   addScheduleItem: (tid: string, i: ScheduleItem) => void;
   updateScheduleItem: (tid: string, iid: string, ni: ScheduleItem) => void;
   deleteScheduleItem: (tid: string, iid: string) => void;
   reorderScheduleItems: (tid: string, ni: ScheduleItem[]) => void;
-  addBookingItem: (tid: string, i: BookingItem) => void;
-  updateBookingItem: (tid: string, iid: string, ni: BookingItem) => void;
-  deleteBookingItem: (tid: string, iid: string) => void;
-  addExpenseItem: (tid: string, i: ExpenseItem) => void;
-  updateExpenseItem: (tid: string, iid: string, ni: ExpenseItem) => void;
-  deleteExpenseItem: (tid: string, iid: string) => void;
-  addJournalItem: (tid: string, i: JournalItem) => void;
-  deleteJournalItem: (tid: string, iid: string) => void;
-  addShoppingItem: (tid: string, i: ShoppingItem) => void;
-  toggleShoppingItem: (tid: string, iid: string) => void;
-  deleteShoppingItem: (tid: string, iid: string) => void;
-  addInfoItem: (tid: string, i: InfoItem) => void;
-  deleteInfoItem: (tid: string, iid: string) => void;
+  addBookingItem: (tid: string, i: any) => void; updateBookingItem: (tid: string, iid: string, ni: any) => void; deleteBookingItem: (tid: string, iid: string) => void;
+  addExpenseItem: (tid: string, i: any) => void; updateExpenseItem: (tid: string, iid: string, ni: any) => void; deleteExpenseItem: (tid: string, iid: string) => void;
 }
 
 export const useTripStore = create<TripState>()(
@@ -54,31 +42,19 @@ export const useTripStore = create<TripState>()(
       const updated = get().trips.find(t => t.id === tid);
       if (updated) syncToCloud(updated);
     },
-    // Schedule
-    addScheduleItem: (tid, i) => get().updateTripData(tid, { items: [...(get().trips.find(x => x.id === tid)?.items || []), i] }),
-    updateScheduleItem: (tid, iid, ni) => get().updateTripData(tid, { items: (get().trips.find(x => x.id === tid)?.items || []).map(x => x.id === iid ? ni : x) }),
-    deleteScheduleItem: (tid, iid) => get().updateTripData(tid, { items: (get().trips.find(x => x.id === tid)?.items || []).filter(x => x.id !== iid) }),
+    addScheduleItem: (tid, i) => { const t = get().trips.find(x => x.id === tid); if(t) get().updateTripData(tid, { items: [...(t.items || []), i] }); },
+    updateScheduleItem: (tid, iid, ni) => { const t = get().trips.find(x => x.id === tid); if(t) get().updateTripData(tid, { items: (t.items || []).map(x => x.id === iid ? ni : x) }); },
+    deleteScheduleItem: (tid, iid) => { const t = get().trips.find(x => x.id === tid); if(t) get().updateTripData(tid, { items: (t.items || []).filter(x => x.id !== iid) }); },
     reorderScheduleItems: (tid, ni) => get().updateTripData(tid, { items: ni }),
-    // Booking
-    addBookingItem: (tid, i) => get().updateTripData(tid, { bookings: [...(get().trips.find(x => x.id === tid)?.bookings || []), i] }),
-    updateBookingItem: (tid, iid, ni) => get().updateTripData(tid, { bookings: (get().trips.find(x => x.id === tid)?.bookings || []).map(x => x.id === iid ? ni : x) }),
-    deleteBookingItem: (tid, iid) => get().updateTripData(tid, { bookings: (get().trips.find(x => x.id === tid)?.bookings || []).filter(x => x.id !== iid) }),
-    // Expense
-    addExpenseItem: (tid, i) => get().updateTripData(tid, { expenses: [...(get().trips.find(x => x.id === tid)?.expenses || []), i] }),
-    updateExpenseItem: (tid, iid, ni) => get().updateTripData(tid, { expenses: (get().trips.find(x => x.id === tid)?.expenses || []).map(x => x.id === iid ? ni : x) }),
-    deleteExpenseItem: (tid, iid) => get().updateTripData(tid, { expenses: (get().trips.find(x => x.id === tid)?.expenses || []).filter(x => x.id !== iid) }),
-    // Journal
-    addJournalItem: (tid, i) => get().updateTripData(tid, { journals: [i, ...(get().trips.find(x => x.id === tid)?.journals || [])] }),
-    deleteJournalItem: (tid, iid) => get().updateTripData(tid, { journals: (get().trips.find(x => x.id === tid)?.journals || []).filter(x => x.id !== iid) }),
-    // Shopping
-    addShoppingItem: (tid, i) => get().updateTripData(tid, { shoppingList: [...(get().trips.find(x => x.id === tid)?.shoppingList || []), i] }),
-    toggleShoppingItem: (tid, iid) => get().updateTripData(tid, { shoppingList: (get().trips.find(x => x.id === tid)?.shoppingList || []).map(x => x.id === iid ? {...x, isBought: !x.isBought} : x) }),
-    deleteShoppingItem: (tid, iid) => get().updateTripData(tid, { shoppingList: (get().trips.find(x => x.id === tid)?.shoppingList || []).filter(x => x.id !== iid) }),
-    // Info
-    addInfoItem: (tid, i) => get().updateTripData(tid, { infoItems: [i, ...(get().trips.find(x => x.id === tid)?.infoItems || [])] }),
-    deleteInfoItem: (tid, iid) => get().updateTripData(tid, { infoItems: (get().trips.find(x => x.id === tid)?.infoItems || []).filter(x => x.id !== iid) }),
+    addBookingItem: (tid, i) => { const t = get().trips.find(x => x.id === tid); if(t) get().updateTripData(tid, { bookings: [...(t.bookings || []), i] }); },
+    updateBookingItem: (tid, iid, ni) => { const t = get().trips.find(x => x.id === tid); if(t) get().updateTripData(tid, { bookings: (t.bookings || []).map(b => b.id === iid ? ni : b) }); },
+    deleteBookingItem: (tid, iid) => { const t = get().trips.find(x => x.id === tid); if(t) get().updateTripData(tid, { bookings: t.bookings.filter(b => b.id !== iid) }); },
+    addExpenseItem: (tid, i) => { const t = get().trips.find(x => x.id === tid); if(t) get().updateTripData(tid, { expenses: [...(t.expenses || []), i] }); },
+    updateExpenseItem: (tid, iid, ni) => { const t = get().trips.find(x => x.id === tid); if(t) get().updateTripData(tid, { expenses: (t.expenses || []).map(e => e.id === iid ? ni : e) }); },
+    deleteExpenseItem: (tid, iid) => { const t = get().trips.find(x => x.id === tid); if(t) get().updateTripData(tid, { expenses: t.expenses.filter(e => e.id !== iid) }); },
   }), { name: 'zakka-trip-storage' })
 );
+
 
 
 
