@@ -1,217 +1,181 @@
-// src/components/Booking.tsx
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useTripStore } from '../store/useTripStore';
-import { Plane, Home, MapPin, Plus, Edit3, Globe, QrCode, Trash2, ArrowRight, X, Luggage } from 'lucide-react';
+import { X, Camera, Globe, QrCode, Loader2 } from 'lucide-react';
 import { BookingItem } from '../types';
-import { BookingEditor } from './BookingEditor';
+import { uploadImage } from '../utils/imageUtils';
 
-// 8大航空公司模板設定
-const AIRLINE_THEMES: Record<string, any> = {
-  tigerair: {
-    bgClass: 'bg-[#F49818]',
-    bgStyle: { backgroundImage: 'repeating-linear-gradient(-45deg, transparent, transparent 15px, #E57A0F 15px, #E57A0F 30px)' },
-    logoHtml: <span className="font-black text-white text-xl tracking-tight">tiger<span className="font-medium">air</span> <span className="text-sm font-normal">Taiwan</span></span>,
-  },
-  starlux: {
-    bgClass: 'bg-[#181B26]',
-    bgStyle: { backgroundImage: 'radial-gradient(circle at center, #ffffff 1px, transparent 1px)', backgroundSize: '24px 24px' },
-    logoHtml: <span className="font-serif text-[#C4A97A] text-2xl font-bold tracking-widest flex items-center gap-2"><span className="text-3xl rotate-45 text-[#E6C998]">✦</span> STARLUX</span>,
-  },
-  cathay: {
-    bgClass: 'bg-[#006564]',
-    bgStyle: {},
-    logoHtml: <span className="font-sans text-white text-xl font-bold tracking-widest flex items-center gap-2"><span className="text-3xl font-light scale-y-75 -scale-x-100">✔</span> CATHAY PACIFIC</span>,
-  },
-  china: {
-    bgClass: 'bg-gradient-to-r from-[#8CAAE6] to-[#B0C4DE]',
-    bgStyle: {},
-    logoHtml: <span className="font-serif text-[#002855] text-lg font-black tracking-widest flex items-center gap-2"><span className="text-[#FFB6C1] text-2xl">🌸</span> CHINA AIRLINES</span>,
-  },
-  eva: {
-    bgClass: 'bg-[#007A53]',
-    bgStyle: { backgroundImage: 'linear-gradient(rgba(255,255,255,0.05) 1px, transparent 1px)', backgroundSize: '100% 10px' },
-    logoHtml: <span className="font-sans text-white text-2xl font-bold tracking-widest flex items-center gap-2"><span className="text-[#F2A900] text-3xl">⊕</span> EVA AIR</span>,
-  },
-  peach: {
-    bgClass: 'bg-[#D93B8B]',
-    bgStyle: {},
-    logoHtml: <span className="font-sans text-white text-4xl font-black tracking-tighter lowercase pr-2">peach</span>,
-  },
-  ana: {
-    bgClass: 'bg-[#133261]',
-    bgStyle: { backgroundImage: 'radial-gradient(ellipse at bottom, rgba(255,255,255,0.1) 0%, transparent 60%)' },
-    logoHtml: <span className="font-sans text-white text-3xl font-black italic tracking-widest flex gap-1 items-center">ANA <span className="flex flex-col gap-0.5 ml-1"><div className="w-4 h-1 bg-[#0088CE]"></div><div className="w-4 h-1 bg-[#0088CE]"></div></span></span>,
-  },
-  other: {
-    bgClass: 'bg-ac-brown',
-    bgStyle: {},
-    logoHtml: <span className="font-sans text-white text-xl font-black tracking-[0.2em]">BOARDING PASS</span>,
-  }
-};
+interface Props {
+  tripId: string;
+  type: 'flight' | 'hotel' | 'spot' | 'voucher';
+  item?: BookingItem;
+  onClose: () => void;
+}
 
-export const Booking = () => {
-  const { trips, currentTripId, deleteBookingItem } = useTripStore();
-  const trip = trips.find(t => t.id === currentTripId);
-  const [activeSubTab, setActiveSubTab] = useState<'flight' | 'hotel' | 'spot' | 'voucher'>('flight');
-  const [editingItem, setEditingItem] = useState<BookingItem | undefined>();
-  const [detailItem, setDetailItem] = useState<BookingItem | undefined>();
-  const [isEditorOpen, setIsEditorOpen] = useState(false);
+const AIRLINES = [
+  { id: 'tigerair', name: '台灣虎航 (Tigerair)' },
+  { id: 'starlux', name: '星宇航空 (STARLUX)' },
+  { id: 'cathay', name: '國泰航空 (Cathay Pacific)' },
+  { id: 'china', name: '中華航空 (China Airlines)' },
+  { id: 'eva', name: '長榮航空 (EVA Air)' },
+  { id: 'peach', name: '樂桃航空 (Peach Aviation)' },
+  { id: 'ana', name: '全日空 (ANA)' },
+  { id: 'other', name: '其他 (Other)' }
+];
 
-  if (!trip) return null;
-  const bookings = (trip.bookings || []).filter(b => b.type === activeSubTab);
+export const BookingEditor: React.FC<Props> = ({ tripId, type, item, onClose }) => {
+  const { addBookingItem, updateBookingItem } = useTripStore();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const qrInputRef = useRef<HTMLInputElement>(null);
+  const [uploadingField, setUploadingField] = useState<'images' | 'qrCode' | null>(null);
+  
+  const [form, setForm] = useState<BookingItem>(item || {
+    id: Date.now().toString(),
+    type, title: '', date: new Date().toISOString().split('T')[0], confirmationNo: '',
+    location: '', note: '', images: [], 
+    airline: 'tigerair', flightNo: 'IT240', 
+    depIata: 'KHH', arrIata: 'PUS', 
+    depCity: '高雄', arrCity: '釜山', 
+    depTime: '15:00', arrTime: '18:25',
+    duration: '02h25m', baggage: '15kg', aircraft: 'A321', seat: '14F',
+    qrCode: '', website: '', nights: 1
+  });
 
-  const handleDelete = (e: React.MouseEvent, id: string) => {
-    e.stopPropagation();
-    if (confirm('確定要永久刪除這個預訂項目嗎？')) {
-      deleteBookingItem(trip.id, id);
-      setDetailItem(undefined);
+  const handlePhoto = async (e: React.ChangeEvent<HTMLInputElement>, field: 'images' | 'qrCode') => {
+    const file = e.target.files?.[0];
+    if (file) {
+      e.target.value = '';
+      setUploadingField(field);
+      try {
+        const url = await uploadImage(file);
+        if (field === 'images') setForm(prev => ({ ...prev, images: [url] }));
+        else setForm(prev => ({ ...prev, qrCode: url }));
+      } catch (err) {
+        alert("上傳失敗！");
+      } finally {
+        setUploadingField(null);
+      }
     }
   };
 
+  const handleSave = () => {
+    if (type !== 'flight' && !form.title) return alert("請輸入名稱唷！");
+    if (type === 'flight' && !form.flightNo) return alert("請輸入航班號碼！");
+    
+    // 如果是機票，將 Title 自動設為航空公司名稱
+    const finalForm = { ...form };
+    if (type === 'flight') {
+      const selectedAirline = AIRLINES.find(a => a.id === form.airline);
+      finalForm.title = selectedAirline ? selectedAirline.name : '航班預訂';
+    }
+
+    if (item) updateBookingItem(tripId, item.id, finalForm);
+    else addBookingItem(tripId, { ...finalForm, id: Date.now().toString() });
+    onClose();
+  };
+
   return (
-    <div className="px-6 space-y-8 animate-fade-in pb-28 text-left">
-      <div className="flex bg-white p-2 rounded-[32px] border-4 border-ac-border shadow-zakka">
-        {['flight', 'hotel', 'spot', 'voucher'].map((t) => (
-          <button key={t} onClick={() => setActiveSubTab(t as any)} className={`flex-1 flex flex-col items-center py-3 rounded-[24px] transition-all ${activeSubTab === t ? 'bg-ac-green text-white shadow-md' : 'text-ac-border'}`}>
-            {t === 'flight' ? <Plane size={18}/> : t === 'hotel' ? <Home size={18}/> : t === 'spot' ? <MapPin size={18}/> : <QrCode size={18}/>}
-            <span className="text-[9px] font-black mt-1 uppercase tracking-widest">{t === 'flight' ? '機票' : t === 'hotel' ? '住宿' : t === 'spot' ? '景點' : '憑證'}</span>
-          </button>
-        ))}
-      </div>
-
-      <div className="space-y-6">
-        {bookings.length === 0 ? <div className="text-center py-20 text-ac-border font-black italic opacity-30">尚無預訂資訊 📓</div> :
-          bookings.map(item => (
-            <div key={item.id} className="relative group cursor-pointer" onClick={() => setDetailItem(item)}>
-              {item.type === 'flight' ? (
-                <FlightCard item={item} onEdit={(e:any)=>{e.stopPropagation(); setEditingItem(item); setIsEditorOpen(true);}} onDelete={(e:any) => handleDelete(e, item.id)} />
-              ) : (
-                <HotelCard item={item} onEdit={(e:any)=>{e.stopPropagation(); setEditingItem(item); setIsEditorOpen(true);}} onDelete={(e:any) => handleDelete(e, item.id)} />
-              )}
-            </div>
-          ))
-        }
-        <button onClick={() => { setEditingItem(undefined); setIsEditorOpen(true); }} className="w-full p-5 border-4 border-dashed border-ac-border rounded-[32px] text-ac-border font-black flex items-center justify-center gap-3 active:scale-95 transition-all hover:bg-white"><Plus /> 新增預訂項目</button>
-      </div>
-
-      {/* 詳細資訊 Modal */}
-      {detailItem && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[300] flex items-center justify-center p-6" onClick={() => setDetailItem(undefined)}>
-          <div className="bg-ac-bg w-full max-w-sm rounded-[40px] shadow-2xl overflow-hidden animate-in zoom-in-95" onClick={e => e.stopPropagation()}>
-            <div className="p-8 space-y-6 max-h-[80vh] overflow-y-auto hide-scrollbar">
-              <div className="flex justify-between items-start"><h2 className="text-2xl font-black text-ac-brown italic pr-8">{detailItem.title}</h2><button onClick={() => setDetailItem(undefined)} className="p-2 bg-white rounded-full"><X size={16} className="text-ac-border"/></button></div>
-              {detailItem.images?.[0] && <img src={detailItem.images[0]} className="w-full aspect-video rounded-3xl object-cover border-4 border-white shadow-zakka" />}
-              <p className="text-sm text-ac-brown/70 font-bold whitespace-pre-wrap leading-relaxed">{detailItem.note || "尚無備註資訊"}</p>
-              {detailItem.qrCode && <div className="bg-white p-6 rounded-3xl flex flex-col items-center gap-3 border-4 border-ac-border shadow-zakka"><img src={detailItem.qrCode} className="w-40 h-40 object-contain" alt="QR" /><span className="text-[10px] font-black text-ac-orange uppercase tracking-widest">Scan for Check-in</span></div>}
-              {detailItem.website && <a href={detailItem.website} target="_blank" rel="noreferrer" className="btn-zakka w-full py-4 flex items-center justify-center gap-2 font-black shadow-md"><Globe size={18}/> 前往官方網站</a>}
-            </div>
-          </div>
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[400] flex items-end sm:items-center justify-center p-4">
+      <div className="bg-ac-bg w-full max-w-md rounded-t-[40px] sm:rounded-[40px] shadow-2xl overflow-hidden animate-in slide-in-from-bottom-10 max-h-[90vh] overflow-y-auto text-left">
+        <div className="p-6 flex justify-between items-center border-b-4 border-ac-border sticky top-0 bg-ac-bg z-10">
+          <h2 className="text-xl font-black text-ac-brown italic">{item ? '✍️ 編輯' : '📔 新增'}</h2>
+          <button onClick={onClose} className="p-2 bg-white rounded-full"><X size={20}/></button>
         </div>
-      )}
-      {isEditorOpen && <BookingEditor tripId={trip.id} type={activeSubTab} item={editingItem} onClose={() => setIsEditorOpen(false)} />}
-    </div>
-  );
-};
-
-const FlightCard = ({ item, onEdit, onDelete }: any) => {
-  const theme = AIRLINE_THEMES[item.airline] || AIRLINE_THEMES.other;
-
-  return (
-    <div className="relative active:scale-[0.98] transition-transform drop-shadow-xl group">
-      
-      {/* 編輯與刪除按鈕 (Hover 顯示) */}
-      <div className="absolute top-4 right-4 flex gap-2 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity z-20">
-        <button onClick={onEdit} className="p-2.5 bg-white/90 backdrop-blur-md rounded-full text-ac-green shadow-sm hover:bg-ac-green hover:text-white transition-colors"><Edit3 size={16}/></button>
-        <button onClick={onDelete} className="p-2.5 bg-white/90 backdrop-blur-md rounded-full text-ac-orange shadow-sm hover:bg-ac-orange hover:text-white transition-colors"><Trash2 size={16}/></button>
-      </div>
-
-      {/* 票卡主體 (模擬 IMG_6099) */}
-      <div className="bg-white rounded-[2rem] overflow-hidden flex flex-col shadow-sm">
         
-        {/* 上半部：航空公司視覺 (Header) */}
-        <div className={`relative h-[110px] w-full flex items-center justify-center ${theme.bgClass}`} style={theme.bgStyle}>
-           {theme.logoHtml}
-           <div className="absolute top-4 right-4 bg-white/95 text-gray-800 font-black px-3 py-1 rounded-lg text-xs shadow-sm">
-             {item.flightNo || 'FLIGHT'}
-           </div>
-        </div>
-
-        {/* 下半部：票券詳細資訊 (Body) */}
-        {/* 左側模擬撕線 (Perforated line) */}
-        <div className="relative w-full bg-white pt-6 pb-6 border-t-0 rounded-b-[2rem]">
-          <div className="absolute left-4 top-0 bottom-6 border-l-[3px] border-dotted border-gray-300"></div>
-          
-          <div className="pl-8 pr-6">
-            {/* 核心航班資訊列 */}
-            <div className="flex justify-between items-center mb-6">
-              <div className="flex flex-col items-center">
-                <span className="text-4xl font-black text-gray-900 tracking-tighter">{item.depIata || 'TPE'}</span>
-                <span className="text-2xl font-black text-gray-900 mt-1">{item.depTime || '--:--'}</span>
-                <span className="mt-2 bg-[#1C734C] text-white text-[10px] px-3 py-0.5 rounded-full font-bold tracking-widest">{item.depCity || '出發地'}</span>
-              </div>
-
-              <div className="flex flex-col items-center flex-1 px-4 mt-2">
-                <span className="text-[10px] font-black text-gray-400 mb-1">{item.duration || '--h--m'}</span>
-                <div className="w-full flex items-center text-blue-600">
-                  <div className="h-[2px] flex-1 bg-gray-300 border-dashed border-t-[2px]"></div>
-                  <Plane size={24} className="mx-2 fill-current rotate-45" />
-                  <div className="h-[2px] flex-1 bg-gray-300 border-dashed border-t-[2px]"></div>
+        <div className="p-6 space-y-5">
+          {type === 'flight' ? (
+            <div className="space-y-4">
+              <div className="space-y-1">
+                <label className="text-[10px] font-black text-ac-brown/40 uppercase">航空公司模板</label>
+                <div className="relative">
+                  <select 
+                    className="w-full p-4 bg-white border-2 border-ac-border rounded-2xl font-black text-ac-brown outline-none appearance-none cursor-pointer"
+                    value={form.airline} 
+                    onChange={e => setForm({...form, airline: e.target.value})}
+                  >
+                    {AIRLINES.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
+                  </select>
                 </div>
-                <span className="text-[10px] font-black text-gray-900 mt-1 tracking-widest">{item.date?.replace(/-/g, '/')}</span>
               </div>
 
-              <div className="flex flex-col items-center">
-                <span className="text-4xl font-black text-gray-900 tracking-tighter">{item.arrIata || 'PUS'}</span>
-                <span className="text-2xl font-black text-gray-900 mt-1">{item.arrTime || '--:--'}</span>
-                <span className="mt-2 bg-[#C29562] text-white text-[10px] px-3 py-0.5 rounded-full font-bold tracking-widest">{item.arrCity || '目的地'}</span>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1"><label className="text-[10px] font-black text-ac-brown/40 uppercase">日期</label>
+                <input type="date" className="w-full p-3 bg-white border-2 border-ac-border rounded-xl font-bold" value={form.date} onChange={e => setForm({...form, date: e.target.value})} /></div>
+                <div className="space-y-1"><label className="text-[10px] font-black text-ac-brown/40 uppercase">航班號</label>
+                <input placeholder="IT240" className="w-full p-3 bg-white border-2 border-ac-border rounded-xl font-bold" value={form.flightNo} onChange={e => setForm({...form, flightNo: e.target.value})} /></div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-2 bg-white p-4 rounded-3xl border-2 border-ac-border items-end">
+                <div className="space-y-2">
+                  <input placeholder="出發 (KHH)" className="w-full p-2 bg-ac-bg rounded-lg font-black text-center text-sm" value={form.depIata} onChange={e => setForm({...form, depIata: e.target.value})} />
+                  <input type="time" className="w-full p-2 bg-ac-bg rounded-lg font-bold text-center text-sm" value={form.depTime} onChange={e => setForm({...form, depTime: e.target.value})} />
+                  <input placeholder="城市 (高雄)" className="w-full p-2 bg-ac-bg rounded-lg font-bold text-center text-xs" value={form.depCity} onChange={e => setForm({...form, depCity: e.target.value})} />
+                </div>
+                <div className="space-y-2 pb-2">
+                   <label className="text-[10px] font-black text-ac-brown/40 uppercase text-center block">飛行時間</label>
+                   <input placeholder="02h25m" className="w-full p-2 bg-ac-bg rounded-lg font-bold text-center text-xs" value={form.duration} onChange={e => setForm({...form, duration: e.target.value})} />
+                </div>
+                <div className="space-y-2">
+                  <input placeholder="抵達 (PUS)" className="w-full p-2 bg-ac-bg rounded-lg font-black text-center text-sm" value={form.arrIata} onChange={e => setForm({...form, arrIata: e.target.value})} />
+                  <input type="time" className="w-full p-2 bg-ac-bg rounded-lg font-bold text-center text-sm" value={form.arrTime} onChange={e => setForm({...form, arrTime: e.target.value})} />
+                  <input placeholder="城市 (釜山)" className="w-full p-2 bg-ac-bg rounded-lg font-bold text-center text-xs" value={form.arrCity} onChange={e => setForm({...form, arrCity: e.target.value})} />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-4">
+                <div className="space-y-1"><label className="text-[10px] font-black text-ac-brown/40 uppercase">行李</label>
+                <input placeholder="15kg" className="w-full p-3 bg-white border-2 border-ac-border rounded-xl font-bold" value={form.baggage} onChange={e => setForm({...form, baggage: e.target.value})} /></div>
+                <div className="space-y-1"><label className="text-[10px] font-black text-ac-brown/40 uppercase">機型</label>
+                <input placeholder="A321" className="w-full p-3 bg-white border-2 border-ac-border rounded-xl font-bold" value={form.aircraft} onChange={e => setForm({...form, aircraft: e.target.value})} /></div>
+                <div className="space-y-1"><label className="text-[10px] font-black text-ac-brown/40 uppercase">座位</label>
+                <input placeholder="14F" className="w-full p-3 bg-white border-2 border-ac-border rounded-xl font-bold" value={form.seat} onChange={e => setForm({...form, seat: e.target.value})} /></div>
               </div>
             </div>
-
-            {/* 底部附屬資訊區塊 */}
-            <div className="bg-[#F8F9FA] rounded-xl flex items-center justify-between p-3 border border-gray-100">
-              <div className="flex-1 flex flex-col items-center justify-center border-r-2 border-gray-200">
-                <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">BAGGAGE</span>
-                <div className="flex items-center gap-1.5 text-gray-800 font-black text-sm">
-                  <Luggage size={14} className="text-[#519B96]"/> {item.baggage || '無'}
-                </div>
-              </div>
-              <div className="flex-1 flex flex-col items-center justify-center">
-                <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">AIRCRAFT</span>
-                <div className="flex items-center gap-1 text-gray-800 font-black text-sm">
-                  <Plane size={14} className="text-[#C29562] fill-current" /> {item.aircraft || '未知'} <span className="font-bold text-xs ml-1">(窗位): {item.seat || '--'}</span>
-                </div>
-              </div>
+          ) : (
+            <div className="space-y-4">
+               <div className="space-y-1"><label className="text-[10px] font-black text-ac-brown/40 uppercase">標題</label>
+               <input className="w-full p-4 bg-white border-2 border-ac-border rounded-2xl font-bold text-ac-brown outline-none" value={form.title} onChange={e => setForm({...form, title: e.target.value})} placeholder="例如：東橫INN" /></div>
+               <input placeholder="地點 / 地址" className="w-full p-4 bg-white border-2 border-ac-border rounded-2xl font-bold" value={form.location} onChange={e => setForm({...form, location: e.target.value})} />
+               {type === 'hotel' && <input type="number" placeholder="住宿晚數" className="w-full p-4 bg-white border-2 border-ac-border rounded-2xl font-bold" value={form.nights} onChange={e => setForm({...form, nights: Number(e.target.value)})} />}
             </div>
-            
+          )}
+
+          <div className="space-y-1"><label className="text-[10px] font-black text-ac-brown/40 uppercase flex items-center gap-1"><Globe size={12}/> 網址</label>
+          <input className="w-full p-4 bg-white border-2 border-ac-border rounded-2xl font-bold outline-none" value={form.website} onChange={e => setForm({...form, website: e.target.value})} placeholder="https://..." /></div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <button type="button" onClick={() => qrInputRef.current?.click()} className="h-28 border-4 border-dashed border-ac-border rounded-2xl flex flex-col items-center justify-center text-ac-border bg-white overflow-hidden relative group transition-all active:scale-[0.98]">
+              {uploadingField === 'qrCode' && (
+                <div className="absolute inset-0 bg-white/90 backdrop-blur-sm flex flex-col items-center justify-center z-50">
+                  <Loader2 className="animate-spin text-ac-orange mb-1.5" size={28} strokeWidth={3}/>
+                </div>
+              )}
+              {form.qrCode ? (
+                <><img src={form.qrCode} className="h-full object-contain pointer-events-none" /><div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"><span className="text-white text-[10px] font-black">點擊更換</span></div></>
+              ) : <><QrCode size={24}/> <span className="text-[10px] font-black mt-1">上傳 QR</span></>}
+            </button>
+            <input ref={qrInputRef} type="file" className="hidden" onChange={e => handlePhoto(e, 'qrCode')} />
+
+            <button type="button" onClick={() => fileInputRef.current?.click()} className="h-28 border-4 border-dashed border-ac-border rounded-2xl flex flex-col items-center justify-center text-ac-border bg-white overflow-hidden relative group transition-all active:scale-[0.98]">
+              {uploadingField === 'images' && (
+                <div className="absolute inset-0 bg-white/90 backdrop-blur-sm flex flex-col items-center justify-center z-50">
+                  <Loader2 className="animate-spin text-ac-orange mb-1.5" size={28} strokeWidth={3}/>
+                </div>
+              )}
+              {form.images?.[0] ? (
+                <><img src={form.images[0]} className="w-full h-full object-cover pointer-events-none" /><div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"><span className="text-white text-[10px] font-black">點擊更換</span></div></>
+              ) : <><Camera size={24}/> <span className="text-[10px] font-black mt-1">上傳照片</span></>}
+            </button>
+            <input ref={fileInputRef} type="file" className="hidden" onChange={e => handlePhoto(e, 'images')} />
           </div>
+
+          <textarea placeholder="寫下詳情或備註..." className="w-full p-4 bg-white border-2 border-ac-border rounded-2xl font-bold h-24" value={form.note} onChange={e => setForm({...form, note: e.target.value})} />
+          <button onClick={handleSave} className="btn-zakka w-full py-5 text-xl">確認儲存 ➔</button>
         </div>
       </div>
     </div>
   );
 };
 
-const HotelCard = ({ item, onEdit, onDelete }: any) => (
-  <div className="bg-white rounded-[40px] border-4 border-ac-border shadow-zakka overflow-hidden relative active:scale-[0.98] transition-all group">
-    {/* 右上角編輯與刪除 */}
-    <div className="absolute top-4 right-4 flex gap-2 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity z-20">
-      <button onClick={onEdit} className="p-2.5 bg-white/90 backdrop-blur-md rounded-full text-ac-green shadow-sm border-2 border-ac-border hover:bg-ac-green hover:text-white transition-colors"><Edit3 size={16}/></button>
-      <button onClick={onDelete} className="p-2.5 bg-white/90 backdrop-blur-md rounded-full text-ac-orange shadow-sm border-2 border-ac-border hover:bg-ac-orange hover:text-white transition-colors"><Trash2 size={16}/></button>
-    </div>
-
-    <div className="h-52 relative"><img src={item.images?.[0] || "https://images.unsplash.com/photo-1566073771259-6a8506099945"} className="w-full h-full object-cover" />
-      <div className="absolute top-4 left-4 bg-white/90 backdrop-blur-md px-4 py-1.5 rounded-full border-2 border-ac-border flex items-center gap-2"><MapPin size={12} className="text-blue-500" /><span className="text-[10px] font-black text-ac-brown uppercase tracking-widest">{item.location?.split(',')[0] || '地點'}</span></div>
-    </div>
-    <div className="p-8 space-y-6">
-      <div><h3 className="text-2xl font-black text-ac-brown leading-tight italic pr-12">{item.title}</h3><p className="text-xs font-bold text-ac-border mt-1 truncate">{item.location}</p></div>
-      <div className="bg-ac-bg rounded-[28px] p-6 border-2 border-ac-border flex justify-between items-center relative">
-        <div className="flex-1"><p className="text-[9px] font-black text-ac-border uppercase mb-1">Check-in</p><p className="text-sm font-black text-ac-brown">{item.date}</p></div>
-        <div className="flex flex-col items-center px-4"><span className="text-[9px] font-black text-ac-border">{item.nights || 1} Nights</span><ArrowRight size={20} className="text-ac-border" /></div>
-        <div className="flex-1 text-right"><p className="text-[9px] font-black text-ac-border uppercase mb-1">Check-out</p><p className="text-sm font-black text-ac-brown">{item.endDate || item.date}</p></div>
-      </div>
-      {item.price && <div className="flex flex-col items-end pt-2"><div className="flex items-baseline gap-2"><span className="text-[9px] font-black text-ac-border uppercase">Total</span><span className="text-2xl font-black text-ac-brown">NT$ {item.price.toLocaleString()}</span></div><span className="text-[9px] font-black bg-[#E2F1E7] text-[#4A785D] px-3 py-1 rounded-lg mt-1 shadow-sm">每人約 NT$ {Math.round(item.price / (item.nights || 1) / 2)}</span></div>}
-    </div>
-  </div>
-);
 
 
 
