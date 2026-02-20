@@ -1,7 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useTripStore } from '../store/useTripStore';
 import { format, addDays, differenceInDays, parseISO, isValid } from 'date-fns';
-import { zhTW } from 'date-fns/locale';
 import { MapPin, Plus, Edit3, Trash2, Utensils, Plane, Home, Camera, Sparkles, X, Loader2, Wind, Umbrella, Sunrise, ChevronUp, ChevronDown, Clock, Cloud, CloudRain, Sun, Droplets } from 'lucide-react';
 import { ScheduleEditor } from './ScheduleEditor';
 import { ScheduleItem } from '../types';
@@ -11,7 +10,6 @@ const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY || "";
 const GEMINI_MODEL = "gemini-3-flash-preview"; 
 const ICON_MAP = { sightseeing: Camera, food: Utensils, transport: Plane, hotel: Home };
 
-// 🎨 淺色塗鴉風配色 (高飽和、非螢光)
 const CATEGORY_STYLE = {
   sightseeing: { bg: 'bg-splat-yellow', text: 'text-splat-dark', label: 'SIGHTSEEING' },
   food: { bg: 'bg-splat-pink', text: 'text-white', label: 'FOOD' },        
@@ -69,7 +67,6 @@ export const Schedule = ({ externalDateIdx = 0 }: { externalDateIdx?: number }) 
   const [aiText, setAiText] = useState('');
   const [isAiLoading, setIsAiLoading] = useState(false);
 
-  // 📝 完整保留：日期範圍計算
   const dateRange = useMemo(() => {
     if (!trip?.startDate || !trip?.endDate) return [];
     const start = parseISO(trip.startDate);
@@ -82,7 +79,6 @@ export const Schedule = ({ externalDateIdx = 0 }: { externalDateIdx?: number }) 
   const selectedDateStr = dateRange.length > 0 ? format(dateRange[externalDateIdx], 'yyyy-MM-dd') : '';
   const dayItems = useMemo(() => (trip?.items || []).filter(i => i.date === selectedDateStr).sort((a, b) => a.time.localeCompare(b.time)), [trip, selectedDateStr]);
 
-  // 📝 完整保留：城市時間軸分析與 Fallback 邏輯
   const timeline = useMemo(() => {
     const defaultCity = { name: trip?.dest.toUpperCase() || 'CITY', lat: trip?.lat || 0, lng: trip?.lng || 0 };
     if (!trip || dateRange.length === 0) return [{ time: '00:00', city: defaultCity }];
@@ -131,7 +127,6 @@ export const Schedule = ({ externalDateIdx = 0 }: { externalDateIdx?: number }) 
     return Array.from(map.values());
   }, [timeline]);
 
-  // 📝 完整保留：天氣 API 抓取
   useEffect(() => {
     let isMounted = true;
     const fetchWeather = async () => {
@@ -140,7 +135,8 @@ export const Schedule = ({ externalDateIdx = 0 }: { externalDateIdx?: number }) 
       for (const city of uniqueCities) {
         if (!newCache[city.name]) {
           try {
-            const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${city.lat}&longitude=${city.lng}&daily=weathercode,temperature_2m_max,temperature_2m_min,precipitation_probability_max,sunrise,sunset,windspeed_10m_max&hourly=temperature_2m,weathercode,precipitation_probability,windspeed_10m&timezone=auto`);
+            // 加入 current_weather=true
+            const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${city.lat}&longitude=${city.lng}&daily=weathercode,temperature_2m_max,temperature_2m_min,precipitation_probability_max,sunrise,sunset,windspeed_10m_max&hourly=temperature_2m,weathercode,precipitation_probability,windspeed_10m&current_weather=true&timezone=auto`);
             const data = await res.json();
             newCache[city.name] = data;
             changed = true;
@@ -153,8 +149,8 @@ export const Schedule = ({ externalDateIdx = 0 }: { externalDateIdx?: number }) 
     return () => { isMounted = false; };
   }, [uniqueCities.map(c => c.name).join(',')]);
 
-  // 📝 完整保留：今日天氣整理
   let todayWeather = { max: '--', min: '--', code: -1, rain: '0', sunrise: '--:--', wind: '0級', cityName: timeline[0]?.city.name || 'CITY' };
+  let currentTempStr = '--';
   
   if (timeline.length > 0 && weatherCache[timeline[0].city.name]) {
     const mainCityData = weatherCache[timeline[0].city.name];
@@ -170,10 +166,11 @@ export const Schedule = ({ externalDateIdx = 0 }: { externalDateIdx?: number }) 
       sunrise: format(parseISO(mainCityData.daily.sunrise[dailyIdx]), 'HH:mm'),
       wind: getWindLevel(mainCityData.daily.windspeed_10m_max[dailyIdx] || 0)
     };
+    // 取得當前溫度
+    currentTempStr = mainCityData.current_weather?.temperature !== undefined ? Math.round(mainCityData.current_weather.temperature).toString() : todayWeather.max;
   }
   const weatherInfo = getWeatherDesc(todayWeather.code);
 
-  // 📝 完整保留：補回！24小時天氣資料處理陣列
   let todayHourly: any[] = [];
   if (timeline.length > 0 && weatherCache[timeline[0].city.name]) {
     const mainCityData = weatherCache[timeline[0].city.name];
@@ -205,7 +202,6 @@ export const Schedule = ({ externalDateIdx = 0 }: { externalDateIdx?: number }) 
     }
   }
 
-  // 📝 完整保留：AI 解析
   const handleAiAnalyze = async () => {
     if (!GEMINI_API_KEY) return alert("請設定 Gemini Key");
     setIsAiLoading(true);
@@ -247,54 +243,48 @@ export const Schedule = ({ externalDateIdx = 0 }: { externalDateIdx?: number }) 
       <div className="flex-1 overflow-y-auto hide-scrollbar p-6 space-y-8 pb-32">
         
         {/* ==================================================== */}
-        {/* 1. 天氣卡片 - 淺色底、粗邊框、非螢光亮色點綴         */}
+        {/* 1. 天氣卡片 - 完全復刻您提供的藍色 UI 與位置比例       */}
         {/* ==================================================== */}
         <div 
           onClick={() => setShowFullWeather(true)} 
-          className="bg-white rounded-[32px] border-[3px] border-splat-dark flex flex-col cursor-pointer transition-transform active:scale-[0.98] shadow-splat-solid relative overflow-hidden"
+          className="bg-[#5BA4E5] text-white rounded-[32px] border-[3px] border-splat-dark flex flex-col cursor-pointer transition-transform active:scale-[0.98] shadow-splat-solid relative overflow-hidden p-5"
         >
-          {/* Header 區域 */}
-          <div className="bg-splat-blue border-b-[3px] border-splat-dark p-4 flex justify-between items-center text-white">
-             <div className="font-black text-xs uppercase tracking-widest bg-white text-splat-dark px-3 py-1 rounded-full border-2 border-splat-dark -rotate-2 shadow-splat-solid-sm">
-               WEATHER
-             </div>
-             <span className="font-black text-xl tracking-tighter uppercase drop-shadow-md">{todayWeather.cityName}</span>
-          </div>
+          {/* 右上角深色裝飾塊 */}
+          <div className="absolute -top-6 -right-6 w-32 h-32 bg-[#4887C2] rounded-full blur-md opacity-80 pointer-events-none"></div>
 
-          {/* 主要資訊：淺灰色波點底 */}
-          <div className="py-8 px-6 flex justify-between items-center bg-[radial-gradient(#D1D5DB_1.5px,transparent_1px)] bg-[size:16px_16px]">
-            {/* 高溫 */}
-            <div className="flex flex-col items-center">
-              <span className="text-4xl font-black text-splat-dark">{todayWeather.max}°</span>
-              <span className="mt-1 bg-splat-pink text-white text-[10px] px-3 py-0.5 rounded-full font-black border-[2px] border-splat-dark shadow-sm">HIGH</span>
+          <div className="flex justify-between items-start z-10">
+            <div>
+               <div className="flex items-center gap-1 text-white/90 font-black text-[11px] uppercase tracking-widest mb-2">
+                 <MapPin size={12}/> {todayWeather.cityName} CITY
+               </div>
+               <div className="text-3xl font-black flex items-center gap-2 drop-shadow-sm">
+                 {weatherInfo.t} <span className="text-4xl">{weatherInfo.e}</span>
+               </div>
             </div>
-
-            {/* 圖示 */}
-            <div className="flex flex-col items-center flex-1 px-4 text-center">
-              <span className="text-6xl drop-shadow-md">{weatherInfo.e}</span>
-              <span className="text-xs font-black bg-white text-splat-dark px-3 py-1 rounded-lg border-2 border-splat-dark mt-2 shadow-sm uppercase">{weatherInfo.t}</span>
-            </div>
-
-            {/* 低溫 */}
-            <div className="flex flex-col items-center">
-              <span className="text-4xl font-black text-splat-dark opacity-50">{todayWeather.min}°</span>
-              <span className="mt-1 bg-splat-blue text-white text-[10px] px-3 py-0.5 rounded-full font-black border-[2px] border-splat-dark shadow-sm">LOW</span>
+            
+            {/* 當下溫度與高低溫 */}
+            <div className="text-right mt-1 relative z-10">
+               <div className="text-5xl font-black drop-shadow-md">{currentTempStr}°</div>
+               <div className="text-[11px] font-black text-white/90 mt-1 tracking-widest">{todayWeather.min}° / {todayWeather.max}°</div>
             </div>
           </div>
 
-          {/* 底部數據 */}
-          <div className="bg-splat-yellow flex items-center justify-between p-3 border-t-[3px] border-splat-dark">
-            <div className="flex-1 text-center border-r-[3px] border-splat-dark">
-              <span className="text-[10px] font-black text-splat-dark/70 uppercase flex items-center justify-center gap-1"><Droplets size={10}/> RAIN</span>
-              <div className="text-splat-dark font-black text-sm">{todayWeather.rain}%</div>
+          {/* 底部數據 3 區塊 */}
+          <div className="flex gap-2 mt-6 z-10">
+            <div className="flex-1 bg-white/20 rounded-xl p-3 flex flex-col items-center justify-center border-[2px] border-white/10 shadow-sm">
+              <Umbrella size={18} className="mb-1.5 opacity-80"/>
+              <div className="text-lg font-black">{todayWeather.rain}%</div>
+              <div className="text-[9px] font-bold opacity-80">降雨機率</div>
             </div>
-            <div className="flex-1 text-center border-r-[3px] border-splat-dark">
-              <span className="text-[10px] font-black text-splat-dark/70 uppercase flex items-center justify-center gap-1"><Wind size={10}/> WIND</span>
-              <div className="text-splat-dark font-black text-sm uppercase">{todayWeather.wind}</div>
+            <div className="flex-1 bg-white/20 rounded-xl p-3 flex flex-col items-center justify-center border-[2px] border-white/10 shadow-sm">
+              <Wind size={18} className="mb-1.5 opacity-80"/>
+              <div className="text-lg font-black uppercase">{todayWeather.wind}</div>
+              <div className="text-[9px] font-bold opacity-80">風力</div>
             </div>
-            <div className="flex-1 text-center">
-              <span className="text-[10px] font-black text-splat-dark/70 uppercase flex items-center justify-center gap-1"><Sunrise size={10}/> SUNRISE</span>
-              <div className="text-splat-dark font-black text-sm">{todayWeather.sunrise}</div>
+            <div className="flex-1 bg-white/20 rounded-xl p-3 flex flex-col items-center justify-center border-[2px] border-white/10 shadow-sm">
+              <Sunrise size={18} className="mb-1.5 opacity-80"/>
+              <div className="text-lg font-black">{todayWeather.sunrise}</div>
+              <div className="text-[9px] font-bold opacity-80">日出</div>
             </div>
           </div>
         </div>
@@ -375,7 +365,7 @@ export const Schedule = ({ externalDateIdx = 0 }: { externalDateIdx?: number }) 
       </div>
 
       {/* ==================================================== */}
-      {/* 24H 拼圖天氣 Modal - 補回並改為淺色 Brutalism 風格     */}
+      {/* 24H 拼圖天氣 Modal                                   */}
       {/* ==================================================== */}
       {showFullWeather && (
         <div className="fixed inset-0 bg-splat-dark/60 backdrop-blur-md z-[500] p-4 flex items-center justify-center" onClick={()=>setShowFullWeather(false)}>
@@ -427,14 +417,14 @@ export const Schedule = ({ externalDateIdx = 0 }: { externalDateIdx?: number }) 
                    onError={(e) => (e.currentTarget.src = "https://images.unsplash.com/photo-1542224566-6e85f2e6772f")}
                  />
                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"/>
-                 <button onClick={() => setDetailItem(undefined)} className="absolute top-4 right-4 bg-white border-[3px] border-splat-dark p-2 rounded-full text-splat-dark shadow-splat-solid-sm hover:scale-110 transition-transform"><X size={20} strokeWidth={3}/></button>
+                 <button onClick={() => setDetailItem(undefined)} className="absolute top-4 right-4 bg-white border-[3px] border-splat-dark p-2 rounded-full text-splat-dark shadow-splat-solid-sm hover:scale-110 transition-transform z-10"><X size={20} strokeWidth={3}/></button>
                  
-                 <div className="absolute -bottom-4 left-4 right-4 bg-splat-yellow border-[3px] border-splat-dark p-3 rounded-xl shadow-splat-solid -rotate-1">
-                   <h2 className="text-xl font-black text-splat-dark uppercase truncate">{detailItem.title}</h2>
+                 <div className="absolute bottom-4 left-4 right-4 z-10">
+                   <h2 className="text-2xl font-black text-white uppercase truncate drop-shadow-md">{detailItem.title}</h2>
                  </div>
               </div>
 
-              <div className="p-6 pt-8 space-y-5 bg-[#F4F5F7]">
+              <div className="p-6 pt-6 space-y-5 bg-[#F4F5F7]">
                  <div className="flex flex-col gap-2">
                     <div className="inline-flex items-center gap-2 text-sm font-black bg-white border-[3px] border-splat-dark px-3 py-1.5 rounded-lg shadow-sm w-fit -rotate-1">
                       <Clock size={16} className="text-splat-pink"/> {detailItem.time}
@@ -482,6 +472,7 @@ export const Schedule = ({ externalDateIdx = 0 }: { externalDateIdx?: number }) 
     </div>
   );
 };
+
 
 
 

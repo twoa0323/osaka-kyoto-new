@@ -10,7 +10,6 @@ import { Shopping } from './components/Shopping';
 import { Info } from './components/Info';
 import { Plus, ChevronDown, Trash2, Calendar, CreditCard, Wallet, Utensils, ShoppingBag, Info as InfoIcon, Lock } from 'lucide-react';
 import { format, addDays, differenceInDays, parseISO } from 'date-fns';
-import { zhTW } from 'date-fns/locale';
 
 const App: React.FC = () => {
   const { trips, currentTripId, switchTrip, deleteTrip, activeTab, setActiveTab } = useTripStore();
@@ -138,7 +137,8 @@ const NavIcon = ({ icon, label, id, active, onClick, color }: any) => {
   return (
     <button onClick={() => onClick(id)} className={`flex flex-col items-center gap-1 flex-1 transition-all duration-300 ${isActive ? `${color} scale-110 -translate-y-2` : 'text-gray-400 hover:text-gray-600'}`}>
       {React.cloneElement(icon, { size: 24, strokeWidth: isActive ? 3 : 2.5 })}
-      <span className={`text-[9px] font-black tracking-widest ${isActive ? 'opacity-100' : 'opacity-0'} transition-opacity`}>{label}</span>
+      {/* 修改：保證文字永遠可見 */}
+      <span className="text-[10px] font-black tracking-widest transition-opacity">{label}</span>
     </button>
   );
 };
