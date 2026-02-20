@@ -97,13 +97,26 @@ const App: React.FC = () => {
         )}
       </header>
 
+      {/* ✅ 效能優化：使用 CSS display:none 取代條件渲染，實作狀態與捲動位置保留 (Keep-Alive) */}
       <main className="flex-1 w-full max-w-md mx-auto overflow-x-hidden">
-        {activeTab === 'schedule' && <Schedule externalDateIdx={selectedDateIdx} />}
-        {activeTab === 'booking' && <Booking />}
-        {activeTab === 'expense' && <Expense />}
-        {activeTab === 'food' && <Journal />}
-        {activeTab === 'shop' && <Shopping />}
-        {activeTab === 'info' && <Info />}
+        <div className={activeTab === 'schedule' ? 'block' : 'hidden'}>
+          <Schedule externalDateIdx={selectedDateIdx} />
+        </div>
+        <div className={activeTab === 'booking' ? 'block' : 'hidden'}>
+          <Booking />
+        </div>
+        <div className={activeTab === 'expense' ? 'block' : 'hidden'}>
+          <Expense />
+        </div>
+        <div className={activeTab === 'food' ? 'block' : 'hidden'}>
+          <Journal />
+        </div>
+        <div className={activeTab === 'shop' ? 'block' : 'hidden'}>
+          <Shopping />
+        </div>
+        <div className={activeTab === 'info' ? 'block' : 'hidden'}>
+          <Info />
+        </div>
       </main>
 
       <nav className="fixed bottom-6 left-1/2 -translate-x-1/2 w-[92%] max-w-md bg-white border-4 border-ac-border rounded-full shadow-zakka px-4 py-3 flex justify-between items-center z-50">

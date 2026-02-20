@@ -7,10 +7,22 @@ import { doc, setDoc, deleteDoc } from 'firebase/firestore';
 
 const deepSanitize = (obj: any): any => JSON.parse(JSON.stringify(obj, (k, v) => (v === undefined ? null : v)));
 
-const syncToCloud = async (trip: Trip) => {
+// ✅ 效能優化：加入防抖 (Debounce) 機制
+let syncTimeout: any = null;
+const syncToCloud = (trip: Trip) => {
   if (!trip?.id) return;
-  try { await setDoc(doc(db, "trips", trip.id), deepSanitize(trip)); } 
-  catch (e) { console.error("Cloud Sync Fail:", e); }
+  
+  // 如果 2 秒內有新的變更，就取消上一次的排程
+  if (syncTimeout) clearTimeout(syncTimeout);
+  
+  // 重新設定 2 秒的倒數計時
+  syncTimeout = setTimeout(async () => {
+    try { 
+      await setDoc(doc(db, "trips", trip.id), deepSanitize(trip)); 
+      console.log("☁️ 行程已合併同步至雲端");
+    } 
+    catch (e) { console.error("Cloud Sync Fail:", e); }
+  }, 2000); // 2000 毫秒 = 2 秒
 };
 
 interface TripState {
@@ -82,6 +94,7 @@ export const useTripStore = create<TripState>()(
     deleteInfoItem: (tid, iid) => { const t = get().trips.find(x => x.id === tid); if(t) get().updateTripData(tid, { infoItems: t.infoItems.filter(x => x.id !== iid) }); },
   }), { name: 'zakka-trip-storage' })
 );
+
 
 
 
