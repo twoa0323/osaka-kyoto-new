@@ -4,14 +4,15 @@ import { Plane, Home, MapPin, Plus, Edit3, Globe, QrCode, ArrowRight, X, Luggage
 import { BookingItem } from '../types';
 import { BookingEditor } from './BookingEditor';
 
+// 8大航空公司模板設定 (完整保留您原本設計的精美 LOGO 排版)
 const AIRLINE_THEMES: Record<string, any> = {
-  tigerair: { bgClass: 'bg-[#F49818]', bgStyle: { backgroundImage: 'repeating-linear-gradient(-45deg, transparent, transparent 15px, #E57A0F 15px, #E57A0F 30px)' }, logoHtml: <span className="font-black text-white text-xl tracking-tight">tiger<span className="font-medium">air</span></span>, },
-  starlux: { bgClass: 'bg-[#181B26]', bgStyle: { backgroundImage: 'radial-gradient(circle at center, #ffffff 1px, transparent 1px)', backgroundSize: '24px 24px' }, logoHtml: <span className="font-serif text-[#C4A97A] text-2xl font-bold tracking-widest flex items-center gap-2">STARLUX</span>, },
-  cathay: { bgClass: 'bg-[#006564]', bgStyle: {}, logoHtml: <span className="font-sans text-white text-xl font-bold tracking-widest flex items-center gap-2">CATHAY PACIFIC</span>, },
-  china: { bgClass: 'bg-gradient-to-r from-[#8CAAE6] to-[#B0C4DE]', bgStyle: {}, logoHtml: <span className="font-serif text-[#002855] text-lg font-black tracking-widest flex items-center gap-2">CHINA AIRLINES</span>, },
-  eva: { bgClass: 'bg-[#007A53]', bgStyle: { backgroundImage: 'linear-gradient(rgba(255,255,255,0.05) 1px, transparent 1px)', backgroundSize: '100% 10px' }, logoHtml: <span className="font-sans text-white text-2xl font-bold tracking-widest flex items-center gap-2">EVA AIR</span>, },
+  tigerair: { bgClass: 'bg-[#F49818]', bgStyle: { backgroundImage: 'repeating-linear-gradient(-45deg, transparent, transparent 15px, #E57A0F 15px, #E57A0F 30px)' }, logoHtml: <span className="font-black text-white text-xl tracking-tight">tiger<span className="font-medium">air</span> <span className="text-sm font-normal">Taiwan</span></span>, },
+  starlux: { bgClass: 'bg-[#181B26]', bgStyle: { backgroundImage: 'radial-gradient(circle at center, #ffffff 1px, transparent 1px)', backgroundSize: '24px 24px' }, logoHtml: <span className="font-serif text-[#C4A97A] text-2xl font-bold tracking-widest flex items-center gap-2"><span className="text-3xl rotate-45 text-[#E6C998]">✦</span> STARLUX</span>, },
+  cathay: { bgClass: 'bg-[#006564]', bgStyle: {}, logoHtml: <span className="font-sans text-white text-xl font-bold tracking-widest flex items-center gap-2"><span className="text-3xl font-light scale-y-75 -scale-x-100">✔</span> CATHAY PACIFIC</span>, },
+  china: { bgClass: 'bg-gradient-to-r from-[#8CAAE6] to-[#B0C4DE]', bgStyle: {}, logoHtml: <span className="font-serif text-[#002855] text-lg font-black tracking-widest flex items-center gap-2"><span className="text-[#FFB6C1] text-2xl">🌸</span> CHINA AIRLINES</span>, },
+  eva: { bgClass: 'bg-[#007A53]', bgStyle: { backgroundImage: 'linear-gradient(rgba(255,255,255,0.05) 1px, transparent 1px)', backgroundSize: '100% 10px' }, logoHtml: <span className="font-sans text-white text-2xl font-bold tracking-widest flex items-center gap-2"><span className="text-[#F2A900] text-3xl">⊕</span> EVA AIR</span>, },
   peach: { bgClass: 'bg-[#D93B8B]', bgStyle: {}, logoHtml: <span className="font-sans text-white text-4xl font-black tracking-tighter lowercase pr-2">peach</span>, },
-  ana: { bgClass: 'bg-[#133261]', bgStyle: { backgroundImage: 'radial-gradient(ellipse at bottom, rgba(255,255,255,0.1) 0%, transparent 60%)' }, logoHtml: <span className="font-sans text-white text-3xl font-black italic tracking-widest flex gap-1 items-center">ANA</span>, },
+  ana: { bgClass: 'bg-[#133261]', bgStyle: { backgroundImage: 'radial-gradient(ellipse at bottom, rgba(255,255,255,0.1) 0%, transparent 60%)' }, logoHtml: <span className="font-sans text-white text-3xl font-black italic tracking-widest flex gap-1 items-center">ANA <span className="flex flex-col gap-0.5 ml-1"><div className="w-4 h-1 bg-[#0088CE]"></div><div className="w-4 h-1 bg-[#0088CE]"></div></span></span>, },
   other: { bgClass: 'bg-splat-dark', bgStyle: {}, logoHtml: <span className="font-sans text-white text-xl font-black tracking-[0.2em]">BOARDING PASS</span>, }
 };
 
@@ -28,7 +29,7 @@ export const Booking = () => {
 
   return (
     <div className="px-4 space-y-6 animate-fade-in pb-28 text-left">
-      {/* 修正：不會變成空白的膠囊選單 */}
+      {/* 斯普拉遁風格的膠囊選單 */}
       <div className="flex bg-gray-200 p-1.5 rounded-[32px] border-[3px] border-splat-dark shadow-splat-solid relative z-10">
         {['flight', 'hotel', 'spot', 'voucher'].map((t) => (
           <button 
@@ -98,59 +99,90 @@ export const Booking = () => {
 const FlightCard = ({ item, onEdit, onViewDetails }: any) => {
   const theme = AIRLINE_THEMES[item.airline] || AIRLINE_THEMES.other;
   const [showActions, setShowActions] = useState(false);
+
   const handleCardClick = () => {
-    if (!showActions) { setShowActions(true); setTimeout(() => setShowActions(false), 3000); } else { onViewDetails(); setShowActions(false); }
+    if (!showActions) {
+      setShowActions(true);
+      setTimeout(() => setShowActions(false), 3000);
+    } else {
+      onViewDetails();
+      setShowActions(false);
+    }
   };
+
+  const formatDurationDisplay = (dur: string) => {
+    if (!dur) return '--h --m';
+    return dur.replace(/(\d+h)\s*(\d+m)/, '$1 $2');
+  };
+
   return (
     <div className="relative active:scale-[0.98] transition-transform cursor-pointer" onClick={handleCardClick}>
+      
       <div className={`absolute top-4 right-4 z-20 transition-opacity duration-300 ${showActions ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
-        <button onClick={onEdit} className="p-2.5 bg-splat-yellow border-[3px] border-splat-dark rounded-full text-splat-dark shadow-splat-solid-sm"><Edit3 size={18} strokeWidth={3}/></button>
+        <button onClick={onEdit} className="p-2.5 bg-splat-yellow border-[3px] border-splat-dark rounded-full text-splat-dark shadow-splat-solid-sm hover:scale-110 transition-transform">
+          <Edit3 size={18} strokeWidth={3}/>
+        </button>
       </div>
-      <div className="bg-white rounded-[32px] border-[3px] border-splat-dark shadow-splat-solid overflow-hidden flex flex-col">
-        <div className={`relative h-[80px] w-full flex items-center justify-center border-b-[3px] border-splat-dark ${theme.bgClass}`} style={theme.bgStyle}>
+
+      {/* 這裡就是關鍵：內部結構與 Tailwind Class 100% 照搬您提供的，只在最外層加上 border-[3px] border-splat-dark shadow-splat-solid */}
+      <div className="bg-white rounded-[2rem] overflow-hidden flex flex-col border-[3px] border-splat-dark shadow-splat-solid">
+        <div className={`relative h-[88px] w-full flex items-center justify-center ${theme.bgClass}`} style={theme.bgStyle}>
            {theme.logoHtml}
         </div>
-        <div className="relative w-full bg-[radial-gradient(#D1D5DB_1.5px,transparent_1px)] bg-[size:16px_16px] pt-8 pb-6 rounded-b-[2rem]">
-          <div className="absolute -top-[16px] left-1/2 -translate-x-1/2 bg-white px-6 py-1.5 border-[3px] border-splat-dark text-splat-dark font-black rounded-full shadow-sm tracking-widest z-10">
+
+        <div className="relative w-full bg-white pt-8 pb-6 border-t-0 rounded-b-[2rem]">
+          <div className="absolute -top-[20px] left-1/2 -translate-x-1/2 bg-white px-8 py-2 border border-gray-100 text-gray-400 font-black rounded-full text-base shadow-sm tracking-widest z-10">
             {item.flightNo || 'FLIGHT'}
           </div>
-          <div className="absolute left-6 top-0 bottom-6 border-l-[3px] border-dashed border-gray-400"></div>
-          <div className="pl-10 pr-6 bg-white mx-4 rounded-2xl border-[3px] border-splat-dark shadow-sm py-4">
-            <div className="flex justify-between items-center mb-4">
+
+          <div className="absolute left-4 top-0 bottom-6 border-l-[3px] border-dotted border-gray-300"></div>
+          
+          <div className="pl-8 pr-6">
+            <div className="flex justify-between items-center mb-6">
               <div className="flex flex-col items-center">
-                <span className="text-2xl font-black text-gray-500 tracking-widest uppercase mb-1">{item.depIata || 'TPE'}</span>
-                <span className="text-3xl leading-none font-black text-splat-dark">{item.depTime || '--:--'}</span>
-                <span className="mt-2 bg-splat-dark text-white text-[9px] px-2 py-0.5 rounded-md font-bold tracking-widest">{item.depCity || '出發地'}</span>
+                <span className="text-2xl font-black text-gray-400 tracking-widest uppercase mb-1">{item.depIata || 'TPE'}</span>
+                <span className="text-[40px] leading-none font-black text-gray-900">{item.depTime || '--:--'}</span>
+                <span className="mt-3 bg-[#1C734C] text-white text-[10px] px-3 py-0.5 rounded-full font-bold tracking-widest">{item.depCity || '出發地'}</span>
               </div>
-              <div className="flex flex-col items-center flex-1 px-2">
-                <span className="text-[10px] font-black text-gray-400 mb-1">{item.duration}</span>
-                <div className="w-full flex items-center text-splat-blue">
-                  <div className="h-[3px] flex-1 bg-splat-dark"></div>
-                  <Plane size={24} className="mx-2 fill-current rotate-45 stroke-[2px] stroke-splat-dark" />
-                  <div className="h-[3px] flex-1 bg-splat-dark"></div>
+
+              <div className="flex flex-col items-center flex-1 px-4">
+                <span className="text-[11px] font-black text-gray-500 mb-1">{formatDurationDisplay(item.duration)}</span>
+                <div className="w-full flex items-center text-blue-600">
+                  <div className="h-[2px] flex-1 bg-gray-300 border-dashed border-t-[2px]"></div>
+                  <Plane size={24} className="mx-2 fill-current rotate-45" />
+                  <div className="h-[2px] flex-1 bg-gray-300 border-dashed border-t-[2px]"></div>
                 </div>
-                <span className="text-[9px] font-black text-gray-500 mt-1 tracking-widest">{item.date?.replace(/-/g, '/')}</span>
+                <span className="text-[10px] font-black text-gray-400 mt-1 tracking-widest">{item.date?.replace(/-/g, '/')}</span>
               </div>
+
               <div className="flex flex-col items-center">
-                <span className="text-2xl font-black text-gray-500 tracking-widest uppercase mb-1">{item.arrIata || 'KIX'}</span>
-                <span className="text-3xl leading-none font-black text-splat-dark">{item.arrTime || '--:--'}</span>
-                <span className="mt-2 bg-splat-yellow text-splat-dark text-[9px] px-2 py-0.5 rounded-md font-bold tracking-widest border-2 border-splat-dark">{item.arrCity || '目的地'}</span>
+                <span className="text-2xl font-black text-gray-400 tracking-widest uppercase mb-1">{item.arrIata || 'KIX'}</span>
+                <span className="text-[40px] leading-none font-black text-gray-900">{item.arrTime || '--:--'}</span>
+                <span className="mt-3 bg-[#C29562] text-white text-[10px] px-3 py-0.5 rounded-full font-bold tracking-widest">{item.arrCity || '目的地'}</span>
               </div>
             </div>
-            <div className="bg-gray-100 rounded-xl flex items-center justify-between p-2 border-2 border-splat-dark">
-              <div className="flex-1 flex flex-col items-center border-r-2 border-splat-dark">
-                <span className="text-[8px] font-black text-gray-500 uppercase tracking-widest mb-0.5">BAGGAGE</span>
-                <div className="flex items-center gap-1 text-splat-dark font-black text-xs"><Luggage size={12}/> {item.baggage || '--'}</div>
+
+            <div className="bg-[#F8F9FA] rounded-xl flex items-center justify-between p-3 border border-gray-100">
+              <div className="flex-1 flex flex-col items-center justify-center border-r-2 border-gray-200">
+                <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">BAGGAGE</span>
+                <div className="flex items-center gap-1.5 text-gray-800 font-black text-sm">
+                  <Luggage size={14} className="text-[#519B96]"/> {item.baggage || '--'}
+                </div>
               </div>
-              <div className="flex-1 flex flex-col items-center border-r-2 border-splat-dark">
-                <span className="text-[8px] font-black text-gray-500 uppercase tracking-widest mb-0.5">SEAT</span>
-                <div className="flex items-center gap-1 text-splat-dark font-black text-xs uppercase">{item.seat || '--'}</div>
+              <div className="flex-1 flex flex-col items-center justify-center border-r-2 border-gray-200">
+                <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">SEAT</span>
+                <div className="flex items-center gap-1.5 text-gray-800 font-black text-sm uppercase">
+                  {item.seat || '--'}
+                </div>
               </div>
-              <div className="flex-1 flex flex-col items-center">
-                <span className="text-[8px] font-black text-gray-500 uppercase tracking-widest mb-0.5">AIRCRAFT</span>
-                <div className="flex items-center gap-1 text-splat-dark font-black text-xs uppercase"><Plane size={12}/> {item.aircraft || '--'}</div>
+              <div className="flex-1 flex flex-col items-center justify-center">
+                <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">AIRCRAFT</span>
+                <div className="flex items-center gap-1 text-gray-800 font-black text-sm uppercase">
+                  <Plane size={14} className="text-[#C29562] fill-current" /> {item.aircraft || '--'}
+                </div>
               </div>
             </div>
+            
           </div>
         </div>
       </div>
@@ -160,9 +192,17 @@ const FlightCard = ({ item, onEdit, onViewDetails }: any) => {
 
 const HotelCard = ({ item, onEdit, onViewDetails }: any) => {
   const [showActions, setShowActions] = useState(false);
+
   const handleCardClick = () => {
-    if (!showActions) { setShowActions(true); setTimeout(() => setShowActions(false), 3000); } else { onViewDetails(); setShowActions(false); }
+    if (!showActions) {
+      setShowActions(true);
+      setTimeout(() => setShowActions(false), 3000);
+    } else {
+      onViewDetails();
+      setShowActions(false);
+    }
   };
+
   return (
     <div className="bg-white rounded-[32px] border-[3px] border-splat-dark shadow-splat-solid overflow-hidden relative active:scale-[0.98] transition-all cursor-pointer" onClick={handleCardClick}>
       <div className={`absolute top-4 right-4 z-20 transition-opacity duration-300 ${showActions ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
@@ -186,6 +226,7 @@ const HotelCard = ({ item, onEdit, onViewDetails }: any) => {
     </div>
   );
 };
+
 
 
 
