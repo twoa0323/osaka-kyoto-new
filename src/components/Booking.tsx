@@ -4,7 +4,7 @@ import { Plane, Home, MapPin, Plus, Edit3, Globe, QrCode, ArrowRight, X, Luggage
 import { BookingItem } from '../types';
 import { BookingEditor } from './BookingEditor';
 
-// 8大航空公司模板設定 (完整保留您原本設計的精美 LOGO 排版)
+// --- 8大航空公司模板 (完整保留 7家+1其他) ---
 const AIRLINE_THEMES: Record<string, any> = {
   tigerair: { bgClass: 'bg-[#F49818]', bgStyle: { backgroundImage: 'repeating-linear-gradient(-45deg, transparent, transparent 15px, #E57A0F 15px, #E57A0F 30px)' }, logoHtml: <span className="font-black text-white text-xl tracking-tight">tiger<span className="font-medium">air</span> <span className="text-sm font-normal">Taiwan</span></span>, },
   starlux: { bgClass: 'bg-[#181B26]', bgStyle: { backgroundImage: 'radial-gradient(circle at center, #ffffff 1px, transparent 1px)', backgroundSize: '24px 24px' }, logoHtml: <span className="font-serif text-[#C4A97A] text-2xl font-bold tracking-widest flex items-center gap-2"><span className="text-3xl rotate-45 text-[#E6C998]">✦</span> STARLUX</span>, },
@@ -14,6 +14,12 @@ const AIRLINE_THEMES: Record<string, any> = {
   peach: { bgClass: 'bg-[#D93B8B]', bgStyle: {}, logoHtml: <span className="font-sans text-white text-4xl font-black tracking-tighter lowercase pr-2">peach</span>, },
   ana: { bgClass: 'bg-[#133261]', bgStyle: { backgroundImage: 'radial-gradient(ellipse at bottom, rgba(255,255,255,0.1) 0%, transparent 60%)' }, logoHtml: <span className="font-sans text-white text-3xl font-black italic tracking-widest flex gap-1 items-center">ANA <span className="flex flex-col gap-0.5 ml-1"><div className="w-4 h-1 bg-[#0088CE]"></div><div className="w-4 h-1 bg-[#0088CE]"></div></span></span>, },
   other: { bgClass: 'bg-splat-dark', bgStyle: {}, logoHtml: <span className="font-sans text-white text-xl font-black tracking-[0.2em]">BOARDING PASS</span>, }
+};
+
+const getTheme = (airline?: string) => {
+  if (!airline) return AIRLINE_THEMES.other;
+  const key = Object.keys(AIRLINE_THEMES).find(k => airline.toLowerCase().includes(k));
+  return key ? AIRLINE_THEMES[key] : AIRLINE_THEMES.other;
 };
 
 export const Booking = () => {
@@ -96,8 +102,11 @@ export const Booking = () => {
   );
 };
 
+// ==========================================
+// 重寫 FlightCard：外層黑框 + 內部完美復刻 IMG_6113
+// ==========================================
 const FlightCard = ({ item, onEdit, onViewDetails }: any) => {
-  const theme = AIRLINE_THEMES[item.airline] || AIRLINE_THEMES.other;
+  const theme = getTheme(item.airline);
   const [showActions, setShowActions] = useState(false);
 
   const handleCardClick = () => {
@@ -116,73 +125,90 @@ const FlightCard = ({ item, onEdit, onViewDetails }: any) => {
   };
 
   return (
-    <div className="relative active:scale-[0.98] transition-transform cursor-pointer" onClick={handleCardClick}>
+    <div className="relative active:scale-[0.98] transition-transform cursor-pointer group" onClick={handleCardClick}>
       
-      <div className={`absolute top-4 right-4 z-20 transition-opacity duration-300 ${showActions ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
+      {/* 編輯按鈕 */}
+      <div className={`absolute top-4 right-4 z-30 transition-opacity duration-300 ${showActions ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
         <button onClick={onEdit} className="p-2.5 bg-splat-yellow border-[3px] border-splat-dark rounded-full text-splat-dark shadow-splat-solid-sm hover:scale-110 transition-transform">
           <Edit3 size={18} strokeWidth={3}/>
         </button>
       </div>
 
-      {/* 這裡就是關鍵：內部結構與 Tailwind Class 100% 照搬您提供的，只在最外層加上 border-[3px] border-splat-dark shadow-splat-solid */}
-      <div className="bg-white rounded-[2rem] overflow-hidden flex flex-col border-[3px] border-splat-dark shadow-splat-solid">
+      {/* 📍 外圍：Splatoon 黑框與實色陰影 */}
+      <div className="rounded-[2rem] overflow-hidden border-[3px] border-splat-dark shadow-splat-solid bg-[#FDFBF7]">
+        
+        {/* 1. 頂部深色品牌區塊 (高度與比例) */}
         <div className={`relative h-[88px] w-full flex items-center justify-center ${theme.bgClass}`} style={theme.bgStyle}>
            {theme.logoHtml}
         </div>
 
-        <div className="relative w-full bg-white pt-8 pb-6 border-t-0 rounded-b-[2rem]">
-          <div className="absolute -top-[20px] left-1/2 -translate-x-1/2 bg-white px-8 py-2 border border-gray-100 text-gray-400 font-black rounded-full text-base shadow-sm tracking-widest z-10">
+        {/* 2. 下半部米色紙張內容區 */}
+        <div className="relative w-full pt-10 pb-6 px-5 border-t-0 rounded-b-[2rem]">
+          
+          {/* 📍 完美復刻：置中的膠囊航班編號 */}
+          <div className="absolute -top-[18px] left-1/2 -translate-x-1/2 bg-white px-8 py-2 border border-gray-100 text-gray-400 font-black rounded-full text-base shadow-sm tracking-widest z-10">
             {item.flightNo || 'FLIGHT'}
           </div>
 
-          <div className="absolute left-4 top-0 bottom-6 border-l-[3px] border-dotted border-gray-300"></div>
+          {/* 📍 完美復刻：左側虛線 (從膠囊下方延伸到底) */}
+          <div className="absolute left-6 top-6 bottom-6 border-l-[3px] border-dotted border-gray-300"></div>
           
-          <div className="pl-8 pr-6">
-            <div className="flex justify-between items-center mb-6">
+          <div className="pl-6 pr-2">
+            
+            {/* 時間、地點、代碼 排版 */}
+            <div className="flex justify-between items-center mb-8">
+              
+              {/* 左側：出發 */}
               <div className="flex flex-col items-center">
-                <span className="text-2xl font-black text-gray-400 tracking-widest uppercase mb-1">{item.depIata || 'TPE'}</span>
-                <span className="text-[40px] leading-none font-black text-gray-900">{item.depTime || '--:--'}</span>
-                <span className="mt-3 bg-[#1C734C] text-white text-[10px] px-3 py-0.5 rounded-full font-bold tracking-widest">{item.depCity || '出發地'}</span>
+                <span className="text-[26px] font-black text-gray-400 tracking-widest uppercase mb-1">{item.depIata || 'TPE'}</span>
+                <span className="text-[46px] leading-none font-black text-[#1A1917] tracking-tighter">{item.depTime || '--:--'}</span>
+                <span className="mt-3 bg-[#447A5A] text-white text-[11px] px-4 py-1 rounded-full font-bold tracking-widest">{item.depCity || '出發地'}</span>
               </div>
 
-              <div className="flex flex-col items-center flex-1 px-4">
-                <span className="text-[11px] font-black text-gray-500 mb-1">{formatDurationDisplay(item.duration)}</span>
-                <div className="w-full flex items-center text-blue-600">
+              {/* 中間：飛行時間、飛機圖標與日期 */}
+              <div className="flex flex-col items-center flex-1 px-3">
+                <span className="text-[12px] font-bold text-[#6D6A65] mb-1">{formatDurationDisplay(item.duration)}</span>
+                <div className="w-full flex items-center text-[#4A72C8]">
                   <div className="h-[2px] flex-1 bg-gray-300 border-dashed border-t-[2px]"></div>
                   <Plane size={24} className="mx-2 fill-current rotate-45" />
                   <div className="h-[2px] flex-1 bg-gray-300 border-dashed border-t-[2px]"></div>
                 </div>
-                <span className="text-[10px] font-black text-gray-400 mt-1 tracking-widest">{item.date?.replace(/-/g, '/')}</span>
+                <span className="text-[11px] font-bold text-gray-400 mt-1 tracking-widest">{item.date?.replace(/-/g, '/')}</span>
               </div>
 
+              {/* 右側：抵達 */}
               <div className="flex flex-col items-center">
-                <span className="text-2xl font-black text-gray-400 tracking-widest uppercase mb-1">{item.arrIata || 'KIX'}</span>
-                <span className="text-[40px] leading-none font-black text-gray-900">{item.arrTime || '--:--'}</span>
-                <span className="mt-3 bg-[#C29562] text-white text-[10px] px-3 py-0.5 rounded-full font-bold tracking-widest">{item.arrCity || '目的地'}</span>
+                <span className="text-[26px] font-black text-gray-400 tracking-widest uppercase mb-1">{item.arrIata || 'KIX'}</span>
+                <span className="text-[46px] leading-none font-black text-[#1A1917] tracking-tighter">{item.arrTime || '--:--'}</span>
+                <span className="mt-3 bg-[#B3936E] text-white text-[11px] px-4 py-1 rounded-full font-bold tracking-widest">{item.arrCity || '目的地'}</span>
               </div>
             </div>
 
-            <div className="bg-[#F8F9FA] rounded-xl flex items-center justify-between p-3 border border-gray-100">
-              <div className="flex-1 flex flex-col items-center justify-center border-r-2 border-gray-200">
-                <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">BAGGAGE</span>
-                <div className="flex items-center gap-1.5 text-gray-800 font-black text-sm">
-                  <Luggage size={14} className="text-[#519B96]"/> {item.baggage || '--'}
+            {/* 📍 完美復刻：底部 行李/座位/機型 的圓角淺灰色底框 */}
+            <div className="bg-[#F8F9FA] rounded-2xl flex items-center justify-between p-4 border border-gray-100">
+              
+              <div className="flex-1 flex flex-col items-center justify-center border-r-[2px] border-gray-200/60">
+                <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1">BAGGAGE</span>
+                <div className="flex items-center gap-1.5 text-[#1A1917] font-black text-sm">
+                  <Luggage size={16} className="text-[#519B96]"/> {item.baggage || '--'}
                 </div>
               </div>
-              <div className="flex-1 flex flex-col items-center justify-center border-r-2 border-gray-200">
-                <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">SEAT</span>
-                <div className="flex items-center gap-1.5 text-gray-800 font-black text-sm uppercase">
+
+              <div className="flex-1 flex flex-col items-center justify-center border-r-[2px] border-gray-200/60">
+                <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1">SEAT</span>
+                <div className="flex items-center gap-1.5 text-[#1A1917] font-black text-sm uppercase">
                   {item.seat || '--'}
                 </div>
               </div>
+
               <div className="flex-1 flex flex-col items-center justify-center">
-                <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">AIRCRAFT</span>
-                <div className="flex items-center gap-1 text-gray-800 font-black text-sm uppercase">
-                  <Plane size={14} className="text-[#C29562] fill-current" /> {item.aircraft || '--'}
+                <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1">AIRCRAFT</span>
+                <div className="flex items-center gap-1.5 text-[#1A1917] font-black text-sm uppercase">
+                  <Plane size={16} className="text-[#C29562] fill-current" /> {item.aircraft || '--'}
                 </div>
               </div>
+              
             </div>
-            
           </div>
         </div>
       </div>
@@ -190,6 +216,7 @@ const FlightCard = ({ item, onEdit, onViewDetails }: any) => {
   );
 };
 
+// HotelCard 維持原樣，只確保外框也是 Splatoon 風格
 const HotelCard = ({ item, onEdit, onViewDetails }: any) => {
   const [showActions, setShowActions] = useState(false);
 
@@ -226,6 +253,7 @@ const HotelCard = ({ item, onEdit, onViewDetails }: any) => {
     </div>
   );
 };
+
 
 
 
