@@ -1,9 +1,9 @@
+// filepath: src/components/Onboarding.tsx
 import React, { useState, useEffect, useRef } from 'react';
 import { useTripStore } from '../store/useTripStore';
 import { getCurrencyByCountry } from '../utils/currencyMapping';
 import { fetchExchangeRate } from '../utils/exchange';
 import { Plane, MapPin, Calendar, Banknote, RefreshCw, Rocket, Loader2, Mail, Lock } from 'lucide-react';
-import axios from 'axios';
 
 export const Onboarding = ({ onComplete }: { onComplete: () => void }) => {
   const addTrip = useTripStore((state) => state.addTrip);
@@ -29,8 +29,10 @@ export const Onboarding = ({ onComplete }: { onComplete: () => void }) => {
       if (query.length >= 2) {
         setLoading(true);
         try {
-          const res = await axios.get(`https://nominatim.openstreetmap.org/search?q=${query}&format=json&addressdetails=1&limit=5&accept-language=zh-TW`);
-          setSuggestions(res.data);
+          // ✅ 替換為原生 fetch
+          const res = await fetch(`https://nominatim.openstreetmap.org/search?q=${query}&format=json&addressdetails=1&limit=5&accept-language=zh-TW`);
+          const data = await res.json();
+          setSuggestions(data);
         } catch (e) { console.error(e); }
         setLoading(false);
       } else { setSuggestions([]); }
@@ -110,4 +112,5 @@ export const Onboarding = ({ onComplete }: { onComplete: () => void }) => {
     </div>
   );
 };
+
 

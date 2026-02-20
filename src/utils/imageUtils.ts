@@ -49,9 +49,9 @@ export const uploadImage = async (file: File): Promise<string> => {
 
     const data = await response.json();
     
-    // 💡 偷吃步最佳化：在網址中自動加入 q_auto,f_auto 參數
-    // 讓 Cloudinary 伺服器幫我們極致壓縮與最佳化載入速度
-    const optimizedUrl = data.secure_url.replace('/upload/', '/upload/q_auto,f_auto/');
+    // ✅ 核心優化：插入 f_auto,q_auto,c_limit,w_1080
+    // 自動判斷格式、畫質壓縮、限制最大寬度為 1080px (超大圖也不會拖慢手機效能)
+    const optimizedUrl = data.secure_url.replace('/upload/', '/upload/f_auto,q_auto,c_limit,w_1080/');
     
     return optimizedUrl;
     
