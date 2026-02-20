@@ -4,15 +4,20 @@ export default {
   theme: {
     extend: {
       colors: {
-        'ac-bg': '#F7F4EB',       // 米色背景
-        'ac-green': '#7EAB83',    // 動森綠
-        'ac-orange': '#E9A178',   // 大地橘
-        'ac-brown': '#8D775F',    // 文字深啡
-        'ac-border': '#E0E5D5',   // 陰影/邊框色
+        'ac-bg': '#121215',       // 斯普拉遁深色背景
+        'ac-green': '#00E5FF',    // 電光藍 (取代原本的動森綠)
+        'ac-orange': '#E3FF00',   // 螢光黃 (取代原本的橘色)
+        'ac-brown': '#1A1A1A',    // 極深灰 (用於卡片文字)
+        'ac-border': '#333333',   // 邊框色
+        'splat-pink': '#FF007A',  // 螢光粉紅
+        'splat-blue': '#4500FF',  // 深藍墨水
+        'ticket-bg': '#F8F9FA',   // 機票紙張白
       },
       boxShadow: {
-        'zakka': '4px 4px 0px #E0E5D5', // 你要求的硬質軟陰影
-        'zakka-active': '2px 2px 0px #E0E5D5',
+        'zakka': '4px 4px 0px rgba(255, 255, 255, 0.1)', 
+        'splat-yellow': '4px 4px 0px #E3FF00',
+        'splat-pink': '4px 4px 0px #FF007A',
+        'splat-blue': '4px 4px 0px #00E5FF',
       },
       borderRadius: {
         '3xl': '1.5rem',

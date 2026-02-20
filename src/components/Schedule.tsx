@@ -1,13 +1,26 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useTripStore } from '../store/useTripStore';
 import { format, addDays, differenceInDays, parseISO, isValid } from 'date-fns';
-import { MapPin, Plus, Edit3, Trash2, Utensils, Plane, Home, Camera, Sparkles, X, Loader2, Wind, Umbrella, Sunrise, ChevronUp, ChevronDown, Clock } from 'lucide-react';
+import { zhTW } from 'date-fns/locale';
+import { MapPin, Plus, Edit3, Trash2, Utensils, Plane, Home, Camera, Sparkles, X, Loader2, Wind, Umbrella, Sunrise, ChevronUp, ChevronDown, Clock, Cloud, CloudRain, Sun } from 'lucide-react';
 import { ScheduleEditor } from './ScheduleEditor';
 import { ScheduleItem } from '../types';
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
 const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY || "";
+
+// 📌 第一原則：嚴格鎖定模型
+const GEMINI_MODEL = "gemini-3-flash-preview"; 
+
 const ICON_MAP = { sightseeing: Camera, food: Utensils, transport: Plane, hotel: Home };
+
+// 🎨 Splatoon 3 色彩配置與圖標對應
+const CATEGORY_STYLE = {
+  sightseeing: { bg: 'bg-[#E3FF00]', text: 'text-[#121215]', shadow: 'shadow-[4px_4px_0px_#FF007A]', label: 'SIGHTSEEING' }, // 螢光黃 + 螢光粉陰影
+  food: { bg: 'bg-[#FF007A]', text: 'text-[#F8F9FA]', shadow: 'shadow-[4px_4px_0px_#00E5FF]', label: 'FOOD' },        // 螢光粉 + 電光藍陰影
+  transport: { bg: 'bg-[#00E5FF]', text: 'text-[#121215]', shadow: 'shadow-[4px_4px_0px_#E3FF00]', label: 'TRANSPORT' }, // 電光藍 + 螢光黃陰影
+  hotel: { bg: 'bg-[#F8F9FA]', text: 'text-[#121215]', shadow: 'shadow-[4px_4px_0px_#FF007A]', label: 'HOTEL' },        // 白 + 螢光粉陰影
+};
 
 const getWeatherDesc = (code: number) => {
   if (code === undefined || code === -1) return { t: '等待載入', e: '☁️' };
@@ -59,6 +72,7 @@ export const Schedule = ({ externalDateIdx = 0 }: { externalDateIdx?: number }) 
   const [aiText, setAiText] = useState('');
   const [isAiLoading, setIsAiLoading] = useState(false);
 
+  // 📝 保持原有邏輯：日期範圍計算
   const dateRange = useMemo(() => {
     if (!trip?.startDate || !trip?.endDate) return [];
     const start = parseISO(trip.startDate);
@@ -71,6 +85,7 @@ export const Schedule = ({ externalDateIdx = 0 }: { externalDateIdx?: number }) 
   const selectedDateStr = dateRange.length > 0 ? format(dateRange[externalDateIdx], 'yyyy-MM-dd') : '';
   const dayItems = useMemo(() => (trip?.items || []).filter(i => i.date === selectedDateStr).sort((a, b) => a.time.localeCompare(b.time)), [trip, selectedDateStr]);
 
+  // 📝 保持原有邏輯：城市時間軸分析
   const timeline = useMemo(() => {
     const defaultCity = { name: trip?.dest.toUpperCase() || 'CITY', lat: trip?.lat || 0, lng: trip?.lng || 0 };
     if (!trip || dateRange.length === 0) return [{ time: '00:00', city: defaultCity }];
@@ -119,6 +134,7 @@ export const Schedule = ({ externalDateIdx = 0 }: { externalDateIdx?: number }) 
     return Array.from(map.values());
   }, [timeline]);
 
+  // 📝 保持原有邏輯：天氣 API 抓取
   useEffect(() => {
     let isMounted = true;
     const fetchWeather = async () => {
@@ -140,6 +156,7 @@ export const Schedule = ({ externalDateIdx = 0 }: { externalDateIdx?: number }) 
     return () => { isMounted = false; };
   }, [uniqueCities.map(c => c.name).join(',')]);
 
+  // 📝 保持原有邏輯：今日天氣整理
   let todayWeather = { max: '--', min: '--', code: -1, rain: '0', sunrise: '--:--', wind: '0級', cityName: timeline[0]?.city.name || 'CITY' };
   
   if (timeline.length > 0 && weatherCache[timeline[0].city.name]) {
@@ -190,12 +207,13 @@ export const Schedule = ({ externalDateIdx = 0 }: { externalDateIdx?: number }) 
     }
   }
 
+  // 📝 保持原有邏輯：AI 解析 (確保使用 gemini-3-flash-preview)
   const handleAiAnalyze = async () => {
     if (!GEMINI_API_KEY) return alert("請設定 Gemini Key");
     setIsAiLoading(true);
     try {
       const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-      const model = genAI.getGenerativeModel({ model: "gemini-3-flash-preview" });
+      const model = genAI.getGenerativeModel({ model: GEMINI_MODEL }); // 遵守第一原則
       const prompt = `分析文字並回傳純 JSON 陣列。格式: [{"time":"HH:mm", "title":"景點", "location":"地址", "category":"sightseeing/food/transport/hotel", "note":"介紹"}]。日期: ${selectedDateStr}。內容: ${aiText}`;
       const res = await model.generateContent(prompt);
       const match = res.response.text().match(/\[[\s\S]*\]/);
@@ -227,91 +245,140 @@ export const Schedule = ({ externalDateIdx = 0 }: { externalDateIdx?: number }) 
   if (!trip || dateRange.length === 0) return null;
 
   return (
-    <div className="flex flex-col h-full bg-ac-bg relative">
-      <div className="flex-1 overflow-y-auto hide-scrollbar p-6 space-y-6 pb-28">
+    // 🎨 UI 改裝：採用 Splatoon 3 深色塗鴉風格
+    <div className="flex flex-col h-full bg-[#121215] relative">
+      <div className="flex-1 overflow-y-auto hide-scrollbar p-6 space-y-8 pb-32">
         
-        <div onClick={() => setShowFullWeather(true)} className="bg-gradient-to-br from-[#68B1F8] to-[#519CE5] rounded-[32px] p-6 pb-5 text-white shadow-zakka relative active:scale-[0.98] transition-all cursor-pointer overflow-hidden border border-[#83C0FF]">
-          <svg className="absolute -top-12 -right-8 w-60 h-60 text-[#4C9AE4] opacity-80" viewBox="0 0 200 200" fill="currentColor">
-            <path d="M100 0L118.8 38.2L161.8 19.1L150 61.8L200 82.5L158.2 100L200 117.5L150 138.2L161.8 180.9L118.8 161.8L100 200L81.2 161.8L38.2 180.9L50 138.2L0 117.5L41.8 100L0 82.5L50 61.8L38.2 19.1L81.2 38.2L100 0Z" />
-          </svg>
-          <div className="absolute top-2 right-5 w-24 h-24 border-[10px] border-[#3980CE] rounded-full z-0 opacity-60"></div>
-
-          <div className="relative z-10 flex justify-between items-start pt-1">
-             <div>
-               <p className="text-[11px] font-bold opacity-90 flex items-center gap-1.5 uppercase tracking-[0.15em] mb-2 drop-shadow-sm">
-                 <MapPin size={12} strokeWidth={2.5}/> {todayWeather.cityName} CITY
-               </p>
-               <h2 className="text-4xl font-black tracking-widest flex items-center gap-2 drop-shadow-md mt-1">
-                 {weatherInfo.t} <span className="text-3xl drop-shadow-lg">{weatherInfo.e}</span>
-               </h2>
-             </div>
-             <div className="text-center mt-1 pl-2">
-               <span className="text-6xl font-black drop-shadow-md tracking-tighter leading-none">{todayWeather.max}°</span>
-               <p className="text-[13px] font-black mt-2 opacity-90 tracking-widest drop-shadow-sm">{todayWeather.min}° / {todayWeather.max}°</p>
+        {/* ==================================================== */}
+        {/* 1. 機票風天氣卡片 (Ticket Style Weather Card)        */}
+        {/*    完全復刻 IMG_6113 結構設計，採用 Splatoon 配色      */}
+        {/* ==================================================== */}
+        <div 
+          onClick={() => setShowFullWeather(true)} 
+          className="bg-[#F8F9FA] rounded-[2rem] flex flex-col cursor-pointer transition-transform active:scale-[0.98] border-2 border-[#1A1A1A] overflow-hidden shadow-[4px_4px_0px_#00E5FF]"
+        >
+          {/* 上半部：深色波點 Header + 膠囊標籤 */}
+          <div className="relative h-16 bg-[#1A1A24] bg-[radial-gradient(#ffffff_1.5px,transparent_1px)] bg-[size:16px_16px] flex items-center justify-center border-b-2 border-dashed border-[#1A1A1A]">
+             <div className="absolute -bottom-4 bg-[#E3FF00] text-[#121215] px-6 py-1.5 rounded-full font-black text-xs uppercase tracking-[0.2em] border-2 border-[#1A1A1A] shadow-[2px_2px_0px_#FF007A]">
+               WEATHER REPORT
              </div>
           </div>
-          
-          <div className="grid grid-cols-3 gap-3 mt-8 relative z-10">
-             <div className="bg-white/20 backdrop-blur-md rounded-[20px] p-3 flex flex-col items-center justify-center border border-white/10 shadow-sm">
-               <Umbrella size={22} className="mb-2 opacity-90" strokeWidth={2.5}/>
-               <p className="font-black text-[22px] leading-none">{todayWeather.rain}%</p>
-               <p className="text-[10px] opacity-80 font-bold mt-1.5 tracking-widest">降雨機率</p>
-             </div>
-             <div className="bg-white/20 backdrop-blur-md rounded-[20px] p-3 flex flex-col items-center justify-center border border-white/10 shadow-sm">
-               <Wind size={22} className="mb-2 opacity-90" strokeWidth={2.5}/>
-               <p className="font-black text-[22px] leading-none">{todayWeather.wind}</p>
-               <p className="text-[10px] opacity-80 font-bold mt-1.5 tracking-widest">風力</p>
-             </div>
-             <div className="bg-white/20 backdrop-blur-md rounded-[20px] p-3 flex flex-col items-center justify-center border border-white/10 shadow-sm">
-               <Sunrise size={22} className="mb-2 opacity-90" strokeWidth={2.5}/>
-               <p className="font-black text-[22px] leading-none tracking-tight">{todayWeather.sunrise}</p>
-               <p className="text-[10px] opacity-80 font-bold mt-1.5 tracking-widest">日出</p>
-             </div>
+
+          {/* 中半部：主要天氣資訊 */}
+          <div className="pt-8 pb-6 px-8 flex justify-between items-center bg-[#F8F9FA]">
+            <div className="flex flex-col items-center">
+              <span className="text-2xl font-black text-[#8E99AF] tracking-widest uppercase mb-1">{todayWeather.cityName.substring(0,3)}</span>
+              <span className="text-5xl leading-none font-black text-[#1A1A1A] tracking-tighter">{todayWeather.max}°</span>
+              <span className="mt-3 bg-[#1A1A1A] text-white text-[10px] px-3 py-0.5 rounded-full font-bold tracking-widest shadow-[2px_2px_0px_#00E5FF]">HIGH</span>
+            </div>
+
+            <div className="flex flex-col items-center flex-1 px-4">
+              <span className="text-[11px] font-black text-[#8E99AF] mb-2 tracking-widest">CURRENT</span>
+              <div className="w-full flex items-center text-[#1A1A1A]">
+                <div className="h-[2px] flex-1 bg-[#D1D5DB] border-dashed border-t-[2px]"></div>
+                <span className="text-3xl mx-2 drop-shadow-md">{weatherInfo.e}</span>
+                <div className="h-[2px] flex-1 bg-[#D1D5DB] border-dashed border-t-[2px]"></div>
+              </div>
+              <span className="text-[10px] font-black text-[#8E99AF] mt-2 tracking-widest uppercase">{weatherInfo.t}</span>
+            </div>
+
+            <div className="flex flex-col items-center">
+              <span className="text-2xl font-black text-[#8E99AF] tracking-widest uppercase mb-1">{todayWeather.cityName.substring(3,6) || 'LOW'}</span>
+              <span className="text-5xl leading-none font-black text-[#1A1A1A] tracking-tighter opacity-40">{todayWeather.min}°</span>
+              <span className="mt-3 bg-[#8E99AF] text-white text-[10px] px-3 py-0.5 rounded-full font-bold tracking-widest shadow-[2px_2px_0px_#FF007A]">LOW</span>
+            </div>
+          </div>
+
+          {/* 下半部：詳細資訊列 (仿 IMG_6113 底部三欄格) */}
+          <div className="bg-[#E9ECEF] flex items-center justify-between p-4 border-t-2 border-[#1A1A1A]">
+            <div className="flex-1 flex flex-col items-center justify-center border-r-2 border-[#D1D5DB]">
+              <span className="text-[9px] font-black text-[#8E99AF] uppercase tracking-widest mb-1 flex items-center gap-1"><Droplets size={10}/> RAIN</span>
+              <div className="text-[#1A1A1A] font-black text-sm">{todayWeather.rain}%</div>
+            </div>
+            <div className="flex-1 flex flex-col items-center justify-center border-r-2 border-[#D1D5DB]">
+              <span className="text-[9px] font-black text-[#8E99AF] uppercase tracking-widest mb-1 flex items-center gap-1"><Wind size={10}/> WIND</span>
+              <div className="text-[#1A1A1A] font-black text-sm uppercase">{todayWeather.wind}</div>
+            </div>
+            <div className="flex-1 flex flex-col items-center justify-center">
+              <span className="text-[9px] font-black text-[#8E99AF] uppercase tracking-widest mb-1 flex items-center gap-1"><Clock size={10}/> NEXT HR</span>
+              <div className="text-[#1A1A1A] font-black text-sm uppercase">SUNNY</div>
+            </div>
           </div>
         </div>
 
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <div className="w-1.5 h-6 bg-ac-orange rounded-full"/>
-              <h3 className="text-xl font-black text-ac-brown italic">當日行程</h3>
-            </div>
+        {/* ==================================================== */}
+        {/* 2. 行程時間軸 (Splatoon 塗鴉風 + 票券風卡片)         */}
+        {/*    將功能列縮小，移至「當日行程」右側                */}
+        {/* ==================================================== */}
+        <div className="space-y-6">
+          <div className="flex items-center justify-between bg-[#1A1A24] p-3 rounded-2xl border-2 border-[#333333]">
+            <h3 className="text-lg font-black text-white italic tracking-widest uppercase flex items-center gap-2">
+              <div className="w-3 h-3 bg-[#E3FF00] rounded-full animate-pulse shadow-[0_0_8px_#E3FF00]"/> SCHEDULE
+            </h3>
             
-            <div className="bg-white/80 backdrop-blur-md rounded-full border-2 border-ac-border shadow-sm p-1 flex gap-1 items-center">
-              <button onClick={()=>{setEditingItem(undefined); setIsEditorOpen(true)}} className="w-9 h-9 rounded-full bg-ac-green text-white flex items-center justify-center active:scale-90 transition-all shadow-sm" title="新增"><Plus size={18}/></button>
-              <button onClick={()=>setIsEditMode(!isEditMode)} className={`w-9 h-9 rounded-full flex items-center justify-center active:scale-90 transition-all shadow-sm ${isEditMode ? 'bg-ac-orange text-white' : 'bg-white text-ac-brown border border-ac-border'}`} title="編輯"><Edit3 size={16}/></button>
-              <button onClick={()=>setIsAiOpen(true)} className="w-9 h-9 rounded-full bg-purple-500 text-white flex items-center justify-center active:scale-90 transition-all shadow-sm" title="AI"><Sparkles size={16}/></button>
+            {/* 📍 藍框位置：功能按鈕區 (變成街頭風小貼紙) */}
+            <div className="flex gap-2">
+              <button onClick={()=>{setEditingItem(undefined); setIsEditorOpen(true)}} className="w-8 h-8 rounded-lg bg-[#E3FF00] text-[#121215] flex items-center justify-center border-2 border-[#1A1A1A] shadow-[2px_2px_0px_#1A1A1A] active:translate-y-0.5 active:shadow-none transition-all"><Plus size={18} strokeWidth={3}/></button>
+              <button onClick={()=>setIsEditMode(!isEditMode)} className={`w-8 h-8 rounded-lg flex items-center justify-center border-2 border-[#1A1A1A] transition-all ${isEditMode ? 'bg-[#FF007A] text-white shadow-[2px_2px_0px_#1A1A1A] translate-y-0' : 'bg-white text-[#121215] shadow-[2px_2px_0px_#1A1A1A]'} active:translate-y-0.5 active:shadow-none`}><Edit3 size={16} strokeWidth={3}/></button>
+              <button onClick={()=>setIsAiOpen(true)} className="w-8 h-8 rounded-lg bg-[#00E5FF] text-[#121215] flex items-center justify-center border-2 border-[#1A1A1A] shadow-[2px_2px_0px_#1A1A1A] active:translate-y-0.5 active:shadow-none transition-all"><Sparkles size={16} strokeWidth={3}/></button>
             </div>
           </div>
           
-          <div className="relative pl-10 space-y-5">
-             <div className="absolute left-4 top-4 bottom-4 w-1.5 bg-ac-border/30 rounded-full" />
+          <div className="relative pl-6 space-y-8">
+             {/* 螢光主軸線 */}
+             <div className="absolute left-2 top-4 bottom-4 w-1 bg-[#E3FF00]/80 rounded-full shadow-[0_0_5px_#E3FF00]" />
+             
              {dayItems.length === 0 ? (
-               <div className="text-center py-10 text-ac-border font-black opacity-30 italic">今日尚未安排計畫 📖</div>
+               <div className="text-center py-10 text-white/40 font-black italic tracking-widest border-2 border-dashed border-white/20 rounded-3xl">NO MISSION TODAY 🦑</div>
              ) : (
                dayItems.map((item, idx) => {
-                 const Icon = ICON_MAP[item.category as keyof typeof ICON_MAP] || Camera;
+                 const catStyle = CATEGORY_STYLE[item.category as keyof typeof CATEGORY_STYLE] || CATEGORY_STYLE.sightseeing;
+                 
                  return (
-                   <div 
-                     key={item.id} 
-                     // ✅ 確保加上渲染優化
-                     className="relative group animate-in slide-in-from-left duration-300 [content-visibility:auto] [contain-intrinsic-size:100px]"
-                   >
-                      <span className="absolute -left-10 top-3 text-[9px] font-black opacity-40">{item.time}</span>
-                      <div className={`absolute -left-[28.5px] top-3.5 w-4 h-4 rounded-full border-4 border-white shadow-sm z-10 ${item.category === 'food' ? 'bg-ac-orange' : 'bg-ac-green'}`} />
+                   <div key={item.id} className="relative group animate-in slide-in-from-left duration-300">
+                      {/* 時間軸節點 (螢光墨水點) */}
+                      <div className={`absolute -left-[18.5px] top-8 w-5 h-5 rounded-full border-4 border-[#121215] shadow-[0_0_8px_currentColor] z-10 ${catStyle.text} ${catStyle.bg}`} />
                       
+                      {/* 票券式行程卡片 */}
                       <div 
                         onClick={() => isEditMode ? (setEditingItem(item), setIsEditorOpen(true)) : setDetailItem(item)}
-                        className={`card-zakka bg-white p-4 cursor-pointer active:scale-[0.98] transition-all flex justify-between items-center ${isEditMode ? 'border-dashed border-ac-orange ring-2 ring-ac-orange/10' : ''}`}
+                        className={`ml-4 bg-[#F8F9FA] rounded-3xl flex flex-col border-2 border-[#1A1A1A] cursor-pointer active:scale-[0.98] transition-all relative overflow-hidden ${isEditMode ? 'border-dashed border-[#FF007A] ring-2 ring-[#FF007A]/30' : catStyle.shadow}`}
                       >
-                         <div className="flex-1 min-w-0">
-                           <h4 className="font-black text-ac-brown text-lg truncate">{item.title}</h4>
-                           <p className="text-[10px] font-bold text-ac-brown/40 flex items-center gap-1 mt-1 truncate"><MapPin size={10}/> {item.location}</p>
+                         {/* 頂部重疊的膠囊標籤 */}
+                         <div className="absolute -top-1 right-6 z-20">
+                            <div className={`${catStyle.bg} ${catStyle.text} px-3 py-1 rounded-b-xl font-black text-[9px] uppercase tracking-widest border-x-2 border-b-2 border-[#1A1A1A]`}>
+                              {catStyle.label}
+                            </div>
                          </div>
-                         {isEditMode && (
-                           <div className="flex flex-col gap-1 ml-2">
-                              <button onClick={(e) => { e.stopPropagation(); handleMove(idx, 'up'); }} className="p-1 bg-ac-bg rounded text-ac-brown/40 hover:bg-ac-orange hover:text-white"><ChevronUp size={14}/></button>
-                              <button onClick={(e) => { e.stopPropagation(); handleMove(idx, 'down'); }} className="p-1 bg-ac-bg rounded text-ac-brown/40 hover:bg-ac-orange hover:text-white"><ChevronDown size={14}/></button>
+
+                         <div className="flex">
+                           {/* 左側撕線與時間 (像機票左邊的存根聯) */}
+                           <div className="w-20 border-r-[3px] border-dotted border-gray-300 p-4 flex flex-col items-center justify-center bg-[#E9ECEF]">
+                             <span className="text-[10px] font-black text-[#8E99AF] mb-1 uppercase">TIME</span>
+                             <span className="text-xl font-black text-[#1A1A1A] leading-none tracking-tighter">{item.time}</span>
+                           </div>
+
+                           {/* 右側主要內容 */}
+                           <div className="p-4 flex-1 flex justify-between items-center min-w-0">
+                             <div className="flex-1 min-w-0 pr-2">
+                               <h4 className="font-black text-[#1A1A1A] text-lg truncate uppercase">{item.title}</h4>
+                               <p className="text-[10px] font-bold text-[#8E99AF] flex items-center gap-1 mt-1 truncate"><MapPin size={10}/> {item.location}</p>
+                             </div>
+                             
+                             {/* 編輯模式的上下排序按鈕 */}
+                             {isEditMode && (
+                               <div className="flex flex-col gap-1 ml-2">
+                                  <button onClick={(e) => { e.stopPropagation(); handleMove(idx, 'up'); }} className="p-1.5 bg-[#1A1A1A] rounded-md text-white hover:bg-[#FF007A] border border-[#1A1A1A] shadow-sm"><ChevronUp size={14}/></button>
+                                  <button onClick={(e) => { e.stopPropagation(); handleMove(idx, 'down'); }} className="p-1.5 bg-[#1A1A1A] rounded-md text-white hover:bg-[#FF007A] border border-[#1A1A1A] shadow-sm"><ChevronDown size={14}/></button>
+                               </div>
+                             )}
+                           </div>
+                         </div>
+                         
+                         {/* 底部備註 (如果有) */}
+                         {item.note && (
+                           <div className="px-4 py-2 border-t-2 border-gray-200 bg-white">
+                             <p className="text-[10px] text-[#1A1A1A]/60 font-bold truncate">INFO: {item.note}</p>
                            </div>
                          )}
                       </div>
@@ -323,78 +390,82 @@ export const Schedule = ({ externalDateIdx = 0 }: { externalDateIdx?: number }) 
         </div>
       </div>
 
-      {detailItem && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-md z-[600] p-6 flex items-center justify-center" onClick={() => setDetailItem(undefined)}>
-           <div className="bg-ac-bg w-full max-w-sm rounded-[45px] shadow-2xl overflow-hidden animate-in slide-in-from-bottom-10" onClick={e => e.stopPropagation()}>
-              <div className="h-60 bg-gray-200 relative overflow-hidden">
-                 {/* ✅ 加上 loading="lazy" decoding="async" */}
-                 <img 
-                   src={detailItem.images?.[0] || `https://image.pollinations.ai/prompt/${encodeURIComponent(detailItem.location + ' ' + detailItem.title + ' scenery photorealistic')}?width=800&height=600&nologo=true`} 
-                   className="w-full h-full object-cover" 
-                   alt="location"
-                   loading="lazy" 
-                   decoding="async"
-                   onError={(e) => (e.currentTarget.src = "https://images.unsplash.com/photo-1469854523086-cc02fe5d8800")}
-                 />
-                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"/>
-                 <button onClick={() => setDetailItem(undefined)} className="absolute top-6 right-6 bg-white/20 backdrop-blur-md p-2 rounded-full text-white"><X size={20}/></button>
-                 <h2 className="absolute bottom-6 left-6 text-2xl font-black text-white italic tracking-wide">{detailItem.title}</h2>
-              </div>
-              <div className="p-8 space-y-6">
-                 <div className="flex items-center gap-4 text-xs font-black uppercase text-ac-green bg-white p-3 rounded-2xl shadow-sm border border-ac-border">
-                    <span className="flex items-center gap-1"><Clock size={14}/> {detailItem.time}</span>
-                    <div className="w-px h-3 bg-ac-border"/>
-                    <span className="flex items-center gap-1 truncate"><MapPin size={14}/> {detailItem.location}</span>
-                 </div>
-                 <p className="text-sm text-ac-brown/70 font-bold whitespace-pre-wrap leading-relaxed min-h-[60px]">{detailItem.note || "這個行程還沒有備註，點擊編輯來增加筆記吧！"}</p>
-                 <button onClick={() => window.open(`https://maps.google.com/?q=${encodeURIComponent(detailItem.location)}`, '_blank')} className="btn-zakka w-full py-4 flex items-center justify-center gap-2 text-lg shadow-lg">
-                   <MapPin size={20}/> Google Maps
-                 </button>
-              </div>
-           </div>
-        </div>
-      )}
-
+      {/* 24H 拼圖天氣 Modal (維持深色科技感) */}
       {showFullWeather && (
-        <div className="fixed inset-0 bg-black/60 z-[500] p-6 flex items-center justify-center backdrop-blur-sm" onClick={()=>setShowFullWeather(false)}>
-          <div className="bg-ac-bg w-full max-w-sm rounded-[40px] shadow-2xl overflow-hidden animate-in zoom-in-95" onClick={e=>e.stopPropagation()}>
-             <div className="bg-gradient-to-br from-[#68B1F8] to-[#519CE5] p-6 flex justify-between items-center text-white">
-               <h3 className="text-xl font-black italic tracking-widest flex items-center gap-2"><Clock size={18}/> 跨城市 24H 預報</h3>
-               <button onClick={()=>setShowFullWeather(false)} className="bg-white/20 p-1.5 rounded-full"><X size={18}/></button>
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-[500] p-6 flex items-center justify-center" onClick={()=>setShowFullWeather(false)}>
+          <div className="bg-[#121215] w-full max-w-sm rounded-[40px] border-2 border-[#333333] shadow-[4px_4px_0px_#00E5FF] overflow-hidden animate-in zoom-in-95" onClick={e=>e.stopPropagation()}>
+             <div className="bg-[#00E5FF] p-6 flex justify-between items-center text-[#121215] border-b-2 border-[#1A1A1A]">
+               <h3 className="text-xl font-black italic tracking-widest flex items-center gap-2"><Clock size={18} strokeWidth={3}/> 24H REPORT</h3>
+               <button onClick={()=>setShowFullWeather(false)} className="bg-white/50 p-1.5 rounded-full border-2 border-[#1A1A1A]"><X size={18} strokeWidth={3}/></button>
              </div>
              <div className="p-4 space-y-3 max-h-[60vh] overflow-y-auto hide-scrollbar">
                 {todayHourly.length > 0 ? todayHourly.map((h, i) => {
                   const hrInfo = getWeatherDesc(h.code);
                   return (
-                    <div key={i} className="flex justify-between items-center bg-white p-4 rounded-2xl border-2 border-ac-border shadow-sm">
+                    <div key={i} className="flex justify-between items-center bg-[#1A1A24] p-4 rounded-2xl border-2 border-[#333333]">
                       <div className="w-14">
-                        <span className="font-black text-ac-brown text-sm block">{format(parseISO(h.time), 'HH:00')}</span>
-                        <span className="text-[9px] font-black text-blue-500 bg-blue-50 px-1.5 py-0.5 rounded uppercase">{h.cityName}</span>
+                        <span className="font-black text-white text-sm block">{format(parseISO(h.time), 'HH:00')}</span>
+                        <span className="text-[9px] font-black text-[#E3FF00] uppercase tracking-wider">{h.cityName}</span>
                       </div>
                       <div className="flex items-center gap-3 flex-1 px-2">
-                        <span className="text-2xl drop-shadow-sm">{hrInfo.e}</span>
-                        <span className="text-xs font-black text-ac-brown">{hrInfo.t}</span>
+                        <span className="text-2xl">{hrInfo.e}</span>
+                        <span className="text-xs font-black text-[#8E99AF]">{hrInfo.t}</span>
                       </div>
                       <div className="flex items-center gap-3 text-right">
-                        <span className="text-[10px] font-bold text-blue-400 w-10">{h.prob}% 雨</span>
-                        <span className="font-black text-lg text-ac-brown w-8">{Math.round(h.temp)}°</span>
+                        <span className="text-[10px] font-bold text-[#00E5FF] w-10">{h.prob}% DROP</span>
+                        <span className="font-black text-lg text-white w-8">{Math.round(h.temp)}°</span>
                       </div>
                     </div>
                   )
                 }) : (
-                  <div className="text-center py-10 font-black text-ac-border opacity-50">尚無詳細預報資料</div>
+                  <div className="text-center py-10 font-black text-[#333333]">NO DATA</div>
                 )}
              </div>
           </div>
         </div>
       )}
 
+      {/* 詳情 Modal (保持原樣) */}
+      {detailItem && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-[600] p-6 flex items-center justify-center" onClick={() => setDetailItem(undefined)}>
+           <div className="bg-[#121215] w-full max-w-sm rounded-[2rem] border-2 border-[#333333] shadow-[4px_4px_0px_#FF007A] overflow-hidden animate-in slide-in-from-bottom-10" onClick={e => e.stopPropagation()}>
+              <div className="h-60 bg-gray-900 relative overflow-hidden border-b-2 border-[#1A1A1A]">
+                 <img 
+                   src={detailItem.images?.[0] || `https://image.pollinations.ai/prompt/${encodeURIComponent(detailItem.location + ' ' + detailItem.title + ' neon street style photography')}?width=800&height=600&nologo=true`} 
+                   className="w-full h-full object-cover" 
+                   alt="location"
+                   loading="lazy" 
+                   decoding="async"
+                   onError={(e) => (e.currentTarget.src = "https://images.unsplash.com/photo-1542224566-6e85f2e6772f")}
+                 />
+                 <div className="absolute inset-0 bg-gradient-to-t from-black/90 to-transparent"/>
+                 <button onClick={() => setDetailItem(undefined)} className="absolute top-6 right-6 bg-white border-2 border-[#1A1A1A] p-2 rounded-full text-[#1A1A1A] shadow-[2px_2px_0px_#1A1A1A]"><X size={20} strokeWidth={3}/></button>
+                 <h2 className="absolute bottom-6 left-6 text-2xl font-black text-white italic tracking-widest uppercase">{detailItem.title}</h2>
+              </div>
+              <div className="p-8 space-y-6">
+                 <div className="flex items-center gap-4 text-xs font-black uppercase text-[#E3FF00] bg-[#1A1A24] p-3 rounded-xl border-2 border-[#333333]">
+                    <span className="flex items-center gap-1"><Clock size={14}/> {detailItem.time}</span>
+                    <div className="w-0.5 h-3 bg-[#333333]"/>
+                    <span className="flex items-center gap-1 truncate"><MapPin size={14}/> {detailItem.location.split(',')[0]}</span>
+                 </div>
+                 <p className="text-sm text-white/70 font-bold whitespace-pre-wrap leading-relaxed min-h-[60px]">{detailItem.note || "No extra info provided."}</p>
+                 <button onClick={() => window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(detailItem.location)}`, '_blank')} className="w-full py-4 flex items-center justify-center gap-2 text-lg font-black bg-[#E3FF00] text-[#121215] border-2 border-[#1A1A1A] shadow-[4px_4px_0px_#1A1A1A] active:translate-y-1 active:shadow-none transition-all uppercase">
+                   <MapPin size={20}/> OPEN IN MAPS
+                 </button>
+              </div>
+           </div>
+        </div>
+      )}
+
+      {/* AI 解析 Modal (Splatoon 風格) */}
       {isAiOpen && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[700] flex items-center justify-center p-6">
-          <div className="bg-ac-bg w-full max-w-md rounded-[40px] shadow-2xl p-8 space-y-6 animate-in zoom-in-95">
-            <div className="flex justify-between items-center"><h2 className="text-xl font-black text-purple-600 flex items-center gap-2"><Sparkles size={20}/> AI 智慧解析</h2><button onClick={()=>setIsAiOpen(false)}><X/></button></div>
-            <textarea placeholder="貼上行程文字..." className="w-full h-48 bg-white border-4 border-ac-border rounded-3xl p-4 font-bold text-ac-brown outline-none focus:border-purple-400 resize-none shadow-inner" value={aiText} onChange={e=>setAiText(e.target.value)} />
-            <button onClick={handleAiAnalyze} disabled={isAiLoading} className="w-full bg-purple-500 text-white py-4 rounded-full font-black flex items-center justify-center gap-2 shadow-zakka">{isAiLoading ? <Loader2 className="animate-spin"/> : "Gemini G3 解析 ➔"}</button>
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-[700] flex items-center justify-center p-6">
+          <div className="bg-[#121215] w-full max-w-md rounded-[2rem] border-2 border-[#333333] shadow-[4px_4px_0px_#00E5FF] p-8 space-y-6 animate-in zoom-in-95">
+            <div className="flex justify-between items-center"><h2 className="text-xl font-black text-[#00E5FF] flex items-center gap-2 italic uppercase"><Sparkles size={24}/> AI SYNC (G3)</h2><button onClick={()=>setIsAiOpen(false)} className="p-2 bg-white rounded-full border-2 border-[#1A1A1A] shadow-[2px_2px_0px_#1A1A1A] text-[#121215]"><X strokeWidth={3}/></button></div>
+            <textarea placeholder="Paste your itinerary text here..." className="w-full h-48 bg-[#1A1A24] border-2 border-[#333333] rounded-2xl p-4 font-bold text-white outline-none focus:border-[#00E5FF] resize-none" value={aiText} onChange={e=>setAiText(e.target.value)} />
+            <button onClick={handleAiAnalyze} disabled={isAiLoading} className="w-full bg-[#FF007A] text-white py-5 rounded-xl font-black flex items-center justify-center gap-3 border-2 border-[#1A1A1A] shadow-[4px_4px_0px_#1A1A1A] active:translate-y-1 active:shadow-none transition-all uppercase">
+              {isAiLoading ? <Loader2 className="animate-spin"/> : "INITIALIZE SYNC ➔"}
+            </button>
           </div>
         </div>
       )}
@@ -403,6 +474,7 @@ export const Schedule = ({ externalDateIdx = 0 }: { externalDateIdx?: number }) 
     </div>
   );
 };
+
 
 
 
