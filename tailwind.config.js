@@ -4,28 +4,28 @@ export default {
   theme: {
     extend: {
       colors: {
-        'ac-bg': '#121215',       // 斯普拉遁深色背景
-        'ac-green': '#00E5FF',    // 電光藍
-        'ac-orange': '#E3FF00',   // 螢光黃
-        'ac-brown': '#1A1A1A',    // 極深灰
-        'ac-border': '#333333',   // 邊框色
-        'splat-pink': '#FF007A',  // 螢光粉紅
-        'splat-blue': '#4500FF',  // 深藍墨水
-        'ticket-bg': '#F8F9FA',   // 機票紙張白
+        'splat-bg': '#F4F5F7',      // 淺灰白紙張底色
+        'splat-yellow': '#FFC000',  // 招牌亮黃色 (高飽和、非螢光)
+        'splat-blue': '#2932CF',    // 深邃電光藍
+        'splat-pink': '#F03C69',    // 墨水粉紅
+        'splat-green': '#21CC65',   // 活力綠
+        'splat-orange': '#FF6C00',  // 鮮豔橘
+        'splat-dark': '#1A1A1A',    // 極深灰 (用於粗邊框與文字)
+        'splat-light': '#FFFFFF',   // 純白 (用於卡片底)
       },
       boxShadow: {
-        'zakka': '4px 4px 0px rgba(255, 255, 255, 0.1)', 
-        'splat-yellow': '4px 4px 0px #E3FF00',
-        'splat-pink': '4px 4px 0px #FF007A',
-        'splat-blue': '4px 4px 0px #00E5FF',
-        'zakka-active': '2px 2px 0px rgba(0, 0, 0, 0.2)', // 修正 Vercel 報錯：定義此類名
+        // 斯普拉遁風格的實色硬陰影
+        'splat-solid': '4px 4px 0px #1A1A1A', 
+        'splat-solid-sm': '2px 2px 0px #1A1A1A',
+        'splat-active': '0px 0px 0px #1A1A1A', // 按下時的狀態
       },
-      borderRadius: {
-        '3xl': '1.5rem',
-        '4xl': '2rem',
-      },
+      fontFamily: {
+        sans: ['"Noto Sans TC"', 'sans-serif'],
+        black: ['"Kosugi Maru"', '"Noto Sans TC"', 'sans-serif'],
+      }
     },
   },
   plugins: [],
 };
+
 

@@ -1,23 +1,17 @@
-@import url('https://fonts.googleapis.com/css2?family=Kosugi+Maru&family=Noto+Sans+TC:wght@400;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Kosugi+Maru&family=Noto+Sans+TC:wght@400;700;900&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
-  :root {
-    --ac-bg: #F7F4EB;
-    --ac-green: #7EAB83;
-    --ac-orange: #E9A178;
-    --ac-brown: #8D775F;
-    --ac-border: #E0E5D5;
-  }
-
   body {
-    background-color: #328383; /* 這裡設為與 App 背景頂部一致，防止露白 */
-    color: var(--ac-brown);
+    background-color: #F4F5F7;
+    color: #1A1A1A;
     font-family: 'Kosugi Maru', 'Noto Sans TC', sans-serif;
-    /* 處理 iOS 安全區域 */
+    /* 遊戲感波點背景 */
+    background-image: radial-gradient(#D1D5DB 2px, transparent 2px);
+    background-size: 24px 24px;
     padding-top: env(safe-area-inset-top);
     padding-bottom: env(safe-area-inset-bottom);
     min-height: 100vh;
@@ -26,14 +20,15 @@
 }
 
 @layer components {
-  .card-zakka {
-    @apply bg-white border-2 border-ac-border rounded-3xl shadow-zakka p-4;
+  /* 斯普拉遁風格通用卡片 */
+  .card-splat {
+    @apply bg-white border-[3px] border-splat-dark rounded-[20px] shadow-splat-solid transition-transform;
   }
   
-  .btn-zakka {
-    @apply bg-ac-green text-white rounded-full px-6 py-2 shadow-zakka 
-           active:shadow-zakka-active active:translate-x-[2px] active:translate-y-[2px] 
-           transition-all duration-75 font-bold;
+  /* 斯普拉遁風格通用按鈕 */
+  .btn-splat {
+    @apply font-black uppercase tracking-widest border-[3px] border-splat-dark shadow-splat-solid 
+           active:shadow-splat-active active:translate-x-1 active:translate-y-1 transition-all rounded-full;
   }
 }
 
