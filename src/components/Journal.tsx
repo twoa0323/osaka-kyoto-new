@@ -54,9 +54,11 @@ export const Journal = () => {
 
       <div className="grid grid-cols-2 gap-4">
         {(trip.journals || []).map(item => (
-          <div key={item.id} className="bg-white p-2 pb-4 rounded-xl shadow-zakka border-2 border-ac-border rotate-[-1deg] hover:rotate-0 transition-transform group relative">
+          // ✅ 加入 [content-visibility:auto] [contain-intrinsic-size:200px]
+          <div key={item.id} className="bg-white p-2 pb-4 rounded-xl shadow-zakka border-2 border-ac-border rotate-[-1deg] hover:rotate-0 transition-transform group relative [content-visibility:auto] [contain-intrinsic-size:200px]">
              <div className="aspect-square bg-ac-bg rounded-lg overflow-hidden mb-2 relative">
-                <img src={item.images[0]} className="w-full h-full object-cover" alt="food" />
+                {/* ✅ 加入 loading="lazy" decoding="async" */}
+                <img src={item.images[0]} loading="lazy" decoding="async" className="w-full h-full object-cover" alt="food" />
                 {item.images.length > 1 && <div className="absolute bottom-1 right-1 bg-black/50 text-white text-[8px] px-1.5 py-0.5 rounded-full">+{item.images.length - 1}</div>}
              </div>
              <h3 className="font-black text-ac-brown text-sm truncate px-1">{item.title}</h3>
@@ -91,7 +93,8 @@ export const Journal = () => {
                 </label>
                 {form.images?.map((img, i) => (
                   <div key={i} className="min-w-[100px] h-[100px] rounded-2xl overflow-hidden relative border-2 border-white shadow-sm">
-                    <img src={img} className="w-full h-full object-cover" alt="preview" />
+                    {/* ✅ 加入 loading="lazy" decoding="async" */}
+                    <img src={img} loading="lazy" decoding="async" className="w-full h-full object-cover" alt="preview" />
                     <button onClick={() => setForm({...form, images: form.images?.filter((_, idx) => idx !== i)})} className="absolute top-1 right-1 bg-black/50 text-white rounded-full p-1"><X size={10}/></button>
                   </div>
                 ))}
@@ -119,5 +122,6 @@ export const Journal = () => {
     </div>
   );
 };
+
 
 

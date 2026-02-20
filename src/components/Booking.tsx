@@ -1,4 +1,3 @@
-// src/components/Booking.tsx
 import React, { useState } from 'react';
 import { useTripStore } from '../store/useTripStore';
 import { Plane, Home, MapPin, Plus, Edit3, Globe, QrCode, ArrowRight, X, Luggage } from 'lucide-react';
@@ -7,46 +6,14 @@ import { BookingEditor } from './BookingEditor';
 
 // 8大航空公司模板設定
 const AIRLINE_THEMES: Record<string, any> = {
-  tigerair: {
-    bgClass: 'bg-[#F49818]',
-    bgStyle: { backgroundImage: 'repeating-linear-gradient(-45deg, transparent, transparent 15px, #E57A0F 15px, #E57A0F 30px)' },
-    logoHtml: <span className="font-black text-white text-xl tracking-tight">tiger<span className="font-medium">air</span> <span className="text-sm font-normal">Taiwan</span></span>,
-  },
-  starlux: {
-    bgClass: 'bg-[#181B26]',
-    bgStyle: { backgroundImage: 'radial-gradient(circle at center, #ffffff 1px, transparent 1px)', backgroundSize: '24px 24px' },
-    logoHtml: <span className="font-serif text-[#C4A97A] text-2xl font-bold tracking-widest flex items-center gap-2"><span className="text-3xl rotate-45 text-[#E6C998]">✦</span> STARLUX</span>,
-  },
-  cathay: {
-    bgClass: 'bg-[#006564]',
-    bgStyle: {},
-    logoHtml: <span className="font-sans text-white text-xl font-bold tracking-widest flex items-center gap-2"><span className="text-3xl font-light scale-y-75 -scale-x-100">✔</span> CATHAY PACIFIC</span>,
-  },
-  china: {
-    bgClass: 'bg-gradient-to-r from-[#8CAAE6] to-[#B0C4DE]',
-    bgStyle: {},
-    logoHtml: <span className="font-serif text-[#002855] text-lg font-black tracking-widest flex items-center gap-2"><span className="text-[#FFB6C1] text-2xl">🌸</span> CHINA AIRLINES</span>,
-  },
-  eva: {
-    bgClass: 'bg-[#007A53]',
-    bgStyle: { backgroundImage: 'linear-gradient(rgba(255,255,255,0.05) 1px, transparent 1px)', backgroundSize: '100% 10px' },
-    logoHtml: <span className="font-sans text-white text-2xl font-bold tracking-widest flex items-center gap-2"><span className="text-[#F2A900] text-3xl">⊕</span> EVA AIR</span>,
-  },
-  peach: {
-    bgClass: 'bg-[#D93B8B]',
-    bgStyle: {},
-    logoHtml: <span className="font-sans text-white text-4xl font-black tracking-tighter lowercase pr-2">peach</span>,
-  },
-  ana: {
-    bgClass: 'bg-[#133261]',
-    bgStyle: { backgroundImage: 'radial-gradient(ellipse at bottom, rgba(255,255,255,0.1) 0%, transparent 60%)' },
-    logoHtml: <span className="font-sans text-white text-3xl font-black italic tracking-widest flex gap-1 items-center">ANA <span className="flex flex-col gap-0.5 ml-1"><div className="w-4 h-1 bg-[#0088CE]"></div><div className="w-4 h-1 bg-[#0088CE]"></div></span></span>,
-  },
-  other: {
-    bgClass: 'bg-ac-brown',
-    bgStyle: {},
-    logoHtml: <span className="font-sans text-white text-xl font-black tracking-[0.2em]">BOARDING PASS</span>,
-  }
+  tigerair: { bgClass: 'bg-[#F49818]', bgStyle: { backgroundImage: 'repeating-linear-gradient(-45deg, transparent, transparent 15px, #E57A0F 15px, #E57A0F 30px)' }, logoHtml: <span className="font-black text-white text-xl tracking-tight">tiger<span className="font-medium">air</span> <span className="text-sm font-normal">Taiwan</span></span>, },
+  starlux: { bgClass: 'bg-[#181B26]', bgStyle: { backgroundImage: 'radial-gradient(circle at center, #ffffff 1px, transparent 1px)', backgroundSize: '24px 24px' }, logoHtml: <span className="font-serif text-[#C4A97A] text-2xl font-bold tracking-widest flex items-center gap-2"><span className="text-3xl rotate-45 text-[#E6C998]">✦</span> STARLUX</span>, },
+  cathay: { bgClass: 'bg-[#006564]', bgStyle: {}, logoHtml: <span className="font-sans text-white text-xl font-bold tracking-widest flex items-center gap-2"><span className="text-3xl font-light scale-y-75 -scale-x-100">✔</span> CATHAY PACIFIC</span>, },
+  china: { bgClass: 'bg-gradient-to-r from-[#8CAAE6] to-[#B0C4DE]', bgStyle: {}, logoHtml: <span className="font-serif text-[#002855] text-lg font-black tracking-widest flex items-center gap-2"><span className="text-[#FFB6C1] text-2xl">🌸</span> CHINA AIRLINES</span>, },
+  eva: { bgClass: 'bg-[#007A53]', bgStyle: { backgroundImage: 'linear-gradient(rgba(255,255,255,0.05) 1px, transparent 1px)', backgroundSize: '100% 10px' }, logoHtml: <span className="font-sans text-white text-2xl font-bold tracking-widest flex items-center gap-2"><span className="text-[#F2A900] text-3xl">⊕</span> EVA AIR</span>, },
+  peach: { bgClass: 'bg-[#D93B8B]', bgStyle: {}, logoHtml: <span className="font-sans text-white text-4xl font-black tracking-tighter lowercase pr-2">peach</span>, },
+  ana: { bgClass: 'bg-[#133261]', bgStyle: { backgroundImage: 'radial-gradient(ellipse at bottom, rgba(255,255,255,0.1) 0%, transparent 60%)' }, logoHtml: <span className="font-sans text-white text-3xl font-black italic tracking-widest flex gap-1 items-center">ANA <span className="flex flex-col gap-0.5 ml-1"><div className="w-4 h-1 bg-[#0088CE]"></div><div className="w-4 h-1 bg-[#0088CE]"></div></span></span>, },
+  other: { bgClass: 'bg-ac-brown', bgStyle: {}, logoHtml: <span className="font-sans text-white text-xl font-black tracking-[0.2em]">BOARDING PASS</span>, }
 };
 
 export const Booking = () => {
@@ -66,40 +33,62 @@ export const Booking = () => {
         {['flight', 'hotel', 'spot', 'voucher'].map((t) => (
           <button key={t} onClick={() => setActiveSubTab(t as any)} className={`flex-1 flex flex-col items-center py-3 rounded-[24px] transition-all ${activeSubTab === t ? 'bg-ac-green text-white shadow-md' : 'text-ac-border'}`}>
             {t === 'flight' ? <Plane size={18}/> : t === 'hotel' ? <Home size={18}/> : t === 'spot' ? <MapPin size={18}/> : <QrCode size={18}/>}
-            <span className="text-[9px] font-black mt-1 uppercase tracking-widest">{t === 'flight' ? '機票' : t === 'hotel' ? '住宿' : t === 'spot' ? '景點' : '憑證'}</span>
+            <span className="text-[9px] font-black mt-1 uppercase tracking-widest">
+              {t === 'flight' ? '機票' : t === 'hotel' ? '住宿' : t === 'spot' ? '景點' : '憑證'}
+            </span>
           </button>
         ))}
       </div>
 
       <div className="space-y-6">
-        {bookings.length === 0 ? <div className="text-center py-20 text-ac-border font-black italic opacity-30">尚無預訂資訊 📓</div> :
+        {bookings.length === 0 ? (
+          <div className="text-center py-20 text-ac-border font-black italic opacity-30">尚無預訂資訊 📓</div>
+        ) : (
           bookings.map(item => (
-            <div key={item.id}>
+            // ✅ 確保加上渲染優化
+            <div key={item.id} className="[content-visibility:auto] [contain-intrinsic-size:250px]">
               {item.type === 'flight' ? (
-                <FlightCard item={item} onEdit={(e:any)=>{e.stopPropagation(); setEditingItem(item); setIsEditorOpen(true);}} onViewDetails={() => setDetailItem(item)} />
+                <FlightCard 
+                  item={item} 
+                  onEdit={(e:any)=>{e.stopPropagation(); setEditingItem(item); setIsEditorOpen(true);}} 
+                  onViewDetails={() => setDetailItem(item)} 
+                />
               ) : (
-                <HotelCard item={item} onEdit={(e:any)=>{e.stopPropagation(); setEditingItem(item); setIsEditorOpen(true);}} onViewDetails={() => setDetailItem(item)} />
+                <HotelCard 
+                  item={item} 
+                  onEdit={(e:any)=>{e.stopPropagation(); setEditingItem(item); setIsEditorOpen(true);}} 
+                  onViewDetails={() => setDetailItem(item)} 
+                />
               )}
             </div>
           ))
-        }
+        )}
         <button onClick={() => { setEditingItem(undefined); setIsEditorOpen(true); }} className="w-full p-5 border-4 border-dashed border-ac-border rounded-[32px] text-ac-border font-black flex items-center justify-center gap-3 active:scale-95 transition-all hover:bg-white"><Plus /> 新增預訂項目</button>
       </div>
 
-      {/* 詳細資訊 Modal */}
       {detailItem && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[300] flex items-center justify-center p-6" onClick={() => setDetailItem(undefined)}>
           <div className="bg-ac-bg w-full max-w-sm rounded-[40px] shadow-2xl overflow-hidden animate-in zoom-in-95" onClick={e => e.stopPropagation()}>
             <div className="p-8 space-y-6 max-h-[80vh] overflow-y-auto hide-scrollbar">
-              <div className="flex justify-between items-start"><h2 className="text-2xl font-black text-ac-brown italic pr-8">{detailItem.title}</h2><button onClick={() => setDetailItem(undefined)} className="p-2 bg-white rounded-full"><X size={16} className="text-ac-border"/></button></div>
-              {detailItem.images?.[0] && <img src={detailItem.images[0]} className="w-full aspect-video rounded-3xl object-cover border-4 border-white shadow-zakka" />}
+              <div className="flex justify-between items-start">
+                <h2 className="text-2xl font-black text-ac-brown italic pr-8">{detailItem.title}</h2>
+                <button onClick={() => setDetailItem(undefined)} className="p-2 bg-white rounded-full"><X size={16} className="text-ac-border"/></button>
+              </div>
+              {/* ✅ 加上 loading="lazy" decoding="async" */}
+              {detailItem.images?.[0] && <img src={detailItem.images[0]} loading="lazy" decoding="async" className="w-full aspect-video rounded-3xl object-cover border-4 border-white shadow-zakka" />}
               <p className="text-sm text-ac-brown/70 font-bold whitespace-pre-wrap leading-relaxed">{detailItem.note || "尚無備註資訊"}</p>
-              {detailItem.qrCode && <div className="bg-white p-6 rounded-3xl flex flex-col items-center gap-3 border-4 border-ac-border shadow-zakka"><img src={detailItem.qrCode} className="w-40 h-40 object-contain" alt="QR" /><span className="text-[10px] font-black text-ac-orange uppercase tracking-widest">Scan for Check-in</span></div>}
+              {detailItem.qrCode && (
+                <div className="bg-white p-6 rounded-3xl flex flex-col items-center gap-3 border-4 border-ac-border shadow-zakka">
+                  <img src={detailItem.qrCode} className="w-40 h-40 object-contain" alt="QR" />
+                  <span className="text-[10px] font-black text-ac-orange uppercase tracking-widest">Scan for Check-in</span>
+                </div>
+              )}
               {detailItem.website && <a href={detailItem.website} target="_blank" rel="noreferrer" className="btn-zakka w-full py-4 flex items-center justify-center gap-2 font-black shadow-md"><Globe size={18}/> 前往官方網站</a>}
             </div>
           </div>
         </div>
       )}
+      
       {isEditorOpen && <BookingEditor tripId={trip.id} type={activeSubTab} item={editingItem} onClose={() => setIsEditorOpen(false)} />}
     </div>
   );
@@ -139,8 +128,6 @@ const FlightCard = ({ item, onEdit, onViewDetails }: any) => {
         </div>
 
         <div className="relative w-full bg-white pt-8 pb-6 border-t-0 rounded-b-[2rem]">
-          
-          {/* 航班號碼放大、加寬 */}
           <div className="absolute -top-[20px] left-1/2 -translate-x-1/2 bg-white px-8 py-2 border border-gray-100 text-gray-400 font-black rounded-full text-base shadow-sm tracking-widest z-10">
             {item.flightNo || 'FLIGHT'}
           </div>
@@ -148,7 +135,6 @@ const FlightCard = ({ item, onEdit, onViewDetails }: any) => {
           <div className="absolute left-4 top-0 bottom-6 border-l-[3px] border-dotted border-gray-300"></div>
           
           <div className="pl-8 pr-6">
-            {/* 核心航班資訊列：時間變大，地點變小 */}
             <div className="flex justify-between items-center mb-6">
               <div className="flex flex-col items-center">
                 <span className="text-2xl font-black text-gray-400 tracking-widest uppercase mb-1">{item.depIata || 'TPE'}</span>
@@ -220,21 +206,41 @@ const HotelCard = ({ item, onEdit, onViewDetails }: any) => {
         <button onClick={onEdit} className="p-2.5 bg-white/95 backdrop-blur-md rounded-full text-ac-green shadow-sm border border-gray-100 hover:bg-ac-green hover:text-white transition-colors"><Edit3 size={18}/></button>
       </div>
 
-      <div className="h-52 relative"><img src={item.images?.[0] || "https://images.unsplash.com/photo-1566073771259-6a8506099945"} className="w-full h-full object-cover" />
+      <div className="h-52 relative">
+        {/* ✅ 加上 loading="lazy" decoding="async" */}
+        <img 
+          src={item.images?.[0] || "https://images.unsplash.com/photo-1566073771259-6a8506099945"} 
+          loading="lazy" 
+          decoding="async" 
+          className="w-full h-full object-cover" 
+        />
         <div className="absolute top-4 left-4 bg-white/90 backdrop-blur-md px-4 py-1.5 rounded-full border-2 border-ac-border flex items-center gap-2"><MapPin size={12} className="text-blue-500" /><span className="text-[10px] font-black text-ac-brown uppercase tracking-widest">{item.location?.split(',')[0] || '地點'}</span></div>
       </div>
       <div className="p-8 space-y-6">
-        <div><h3 className="text-2xl font-black text-ac-brown leading-tight italic pr-12">{item.title}</h3><p className="text-xs font-bold text-ac-border mt-1 truncate">{item.location}</p></div>
+        <div>
+          <h3 className="text-2xl font-black text-ac-brown leading-tight italic pr-12">{item.title}</h3>
+          <p className="text-xs font-bold text-ac-border mt-1 truncate">{item.location}</p>
+        </div>
         <div className="bg-ac-bg rounded-[28px] p-6 border-2 border-ac-border flex justify-between items-center relative">
           <div className="flex-1"><p className="text-[9px] font-black text-ac-border uppercase mb-1">Check-in</p><p className="text-sm font-black text-ac-brown">{item.date}</p></div>
           <div className="flex flex-col items-center px-4"><span className="text-[9px] font-black text-ac-border">{item.nights || 1} Nights</span><ArrowRight size={20} className="text-ac-border" /></div>
           <div className="flex-1 text-right"><p className="text-[9px] font-black text-ac-border uppercase mb-1">Check-out</p><p className="text-sm font-black text-ac-brown">{item.endDate || item.date}</p></div>
         </div>
-        {item.price && <div className="flex flex-col items-end pt-2"><div className="flex items-baseline gap-2"><span className="text-[9px] font-black text-ac-border uppercase">Total</span><span className="text-2xl font-black text-ac-brown">NT$ {item.price.toLocaleString()}</span></div><span className="text-[9px] font-black bg-[#E2F1E7] text-[#4A785D] px-3 py-1 rounded-lg mt-1 shadow-sm">每人約 NT$ {Math.round(item.price / (item.nights || 1) / 2)}</span></div>}
+        {item.price && (
+          <div className="flex flex-col items-end pt-2">
+            <div className="flex items-baseline gap-2">
+              <span className="text-[9px] font-black text-ac-border uppercase">Total</span>
+              <span className="text-2xl font-black text-ac-brown">NT$ {item.price.toLocaleString()}</span>
+            </div>
+            <span className="text-[9px] font-black bg-[#E2F1E7] text-[#4A785D] px-3 py-1 rounded-lg mt-1 shadow-sm">每人約 NT$ {Math.round(item.price / (item.nights || 1) / 2)}</span>
+          </div>
+        )}
       </div>
     </div>
   );
 };
+
+
 
 
 

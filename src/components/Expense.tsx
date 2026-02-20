@@ -166,8 +166,9 @@ export const Expense = () => {
                         <Loader2 className="animate-spin text-ac-orange" size={20} strokeWidth={3}/>
                       </div>
                     )}
+                    {/* ✅ 加入 loading="lazy" */}
                     {form.images?.[0] ? (
-                      <><img src={form.images[0]} className="w-full h-full object-cover pointer-events-none"/><div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"><span className="text-white text-[8px] font-black">更換</span></div></>
+                      <><img src={form.images[0]} loading="lazy" decoding="async" className="w-full h-full object-cover pointer-events-none"/><div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"><span className="text-white text-[8px] font-black">更換</span></div></>
                     ) : <ImageIcon size={24}/>}
                   </button>
                   <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={async e => {
@@ -197,7 +198,8 @@ export const Expense = () => {
                   <div key={date} className="space-y-3">
                     <h3 className="text-[11px] font-black text-ac-border pl-2 border-l-4 border-ac-orange flex items-center gap-2 uppercase tracking-[0.2em]">DAY {dayDiff} <span className="opacity-30">{format(parseISO(date), 'MM/dd')}</span></h3>
                     {grouped[date].map(e => (
-                      <div key={e.id} onClick={() => { setForm(e); setEditingId(e.id); setActiveTab('record'); }} className="card-zakka bg-white flex justify-between items-center group active:scale-95 transition-all shadow-sm">
+                      // ✅ 加入 [content-visibility:auto] [contain-intrinsic-size:80px]
+                      <div key={e.id} onClick={() => { setForm(e); setEditingId(e.id); setActiveTab('record'); }} className="card-zakka bg-white flex justify-between items-center group active:scale-95 transition-all shadow-sm [content-visibility:auto] [contain-intrinsic-size:80px]">
                         <div className="flex items-center gap-4">
                           <div className={`w-10 h-10 rounded-2xl flex items-center justify-center text-white font-black text-xs ${e.category === '飲食' ? 'bg-orange-400' : 'bg-ac-green'}`}>{e.category?.slice(0,1) || '其'}</div>
                           <div><h3 className="font-black text-ac-brown text-sm truncate w-28">{e.title}</h3><p className="text-[9px] font-bold text-ac-border uppercase">{e.method} • {e.currency}</p></div>
@@ -219,6 +221,7 @@ export const Expense = () => {
     </div>
   );
 };
+
 
 
 

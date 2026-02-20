@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useTripStore } from '../store/useTripStore';
 import { format, addDays, differenceInDays, parseISO, isValid } from 'date-fns';
-import { MapPin, Plus, Edit3, Trash2, Utensils, Plane, Home, Camera, Sparkles, X, Loader2, ThermometerSun, Wind, Umbrella, Sunrise, ChevronUp, ChevronDown, Clock } from 'lucide-react';
+import { MapPin, Plus, Edit3, Trash2, Utensils, Plane, Home, Camera, Sparkles, X, Loader2, Wind, Umbrella, Sunrise, ChevronUp, ChevronDown, Clock } from 'lucide-react';
 import { ScheduleEditor } from './ScheduleEditor';
 import { ScheduleItem } from '../types';
 import { GoogleGenerativeAI } from "@google/generative-ai";
@@ -9,7 +9,6 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY || "";
 const ICON_MAP = { sightseeing: Camera, food: Utensils, transport: Plane, hotel: Home };
 
-// 天氣代碼轉換 -> 4字形容 + Emoji
 const getWeatherDesc = (code: number) => {
   if (code === undefined || code === -1) return { t: '等待載入', e: '☁️' };
   if (code === 0) return { t: '晴朗無雲', e: '☀️' };
@@ -34,7 +33,6 @@ const getWindLevel = (speed: number) => {
   return '6級+';
 };
 
-// 內建常見城市關鍵字與座標庫 (加入釜山等地)
 const CITY_DB = [
   { keys: ['東京', 'Tokyo', '新宿', '淺草', '澀谷', '迪士尼'], name: 'TOKYO', lat: 35.6895, lng: 139.6917 },
   { keys: ['京都', 'Kyoto', '清水寺', '嵐山', '金閣寺'], name: 'KYOTO', lat: 35.0116, lng: 135.7681 },
@@ -55,7 +53,6 @@ export const Schedule = ({ externalDateIdx = 0 }: { externalDateIdx?: number }) 
   const [editingItem, setEditingItem] = useState<ScheduleItem | undefined>();
   const [detailItem, setDetailItem] = useState<ScheduleItem | undefined>();
 
-  // 天氣資料快取：儲存多個城市的 API 結果
   const [weatherCache, setWeatherCache] = useState<Record<string, any>>({});
   const [showFullWeather, setShowFullWeather] = useState(false);
   const [isAiOpen, setIsAiOpen] = useState(false);
@@ -74,12 +71,10 @@ export const Schedule = ({ externalDateIdx = 0 }: { externalDateIdx?: number }) 
   const selectedDateStr = dateRange.length > 0 ? format(dateRange[externalDateIdx], 'yyyy-MM-dd') : '';
   const dayItems = useMemo(() => (trip?.items || []).filter(i => i.date === selectedDateStr).sort((a, b) => a.time.localeCompare(b.time)), [trip, selectedDateStr]);
 
-  // ★ 終極 B 方案：分析本日的「城市時間軸」
   const timeline = useMemo(() => {
     const defaultCity = { name: trip?.dest.toUpperCase() || 'CITY', lat: trip?.lat || 0, lng: trip?.lng || 0 };
     if (!trip || dateRange.length === 0) return [{ time: '00:00', city: defaultCity }];
 
-    // 尋找鄰近日期的預設城市 (若當天一開始沒排行程，或完全沒行程)
     const getFallbackCity = () => {
       for (let i = externalDateIdx - 1; i >= 0; i--) {
         const dStr = format(dateRange[i], 'yyyy-MM-dd');
@@ -118,14 +113,12 @@ export const Schedule = ({ externalDateIdx = 0 }: { externalDateIdx?: number }) 
     return tl;
   }, [dayItems, trip, externalDateIdx, dateRange]);
 
-  // 取出今天涉及到的所有不重複城市
   const uniqueCities = useMemo(() => {
     const map = new Map();
     timeline.forEach(t => map.set(t.city.name, t.city));
     return Array.from(map.values());
   }, [timeline]);
 
-  // 向 Open-Meteo 獲取所有涉及城市的天氣
   useEffect(() => {
     let isMounted = true;
     const fetchWeather = async () => {
@@ -147,7 +140,6 @@ export const Schedule = ({ externalDateIdx = 0 }: { externalDateIdx?: number }) 
     return () => { isMounted = false; };
   }, [uniqueCities.map(c => c.name).join(',')]);
 
-  // ★ 組合資料：頂部卡片 (取今日主要/初始城市)
   let todayWeather = { max: '--', min: '--', code: -1, rain: '0', sunrise: '--:--', wind: '0級', cityName: timeline[0]?.city.name || 'CITY' };
   
   if (timeline.length > 0 && weatherCache[timeline[0].city.name]) {
@@ -167,7 +159,6 @@ export const Schedule = ({ externalDateIdx = 0 }: { externalDateIdx?: number }) 
   }
   const weatherInfo = getWeatherDesc(todayWeather.code);
 
-  // ★ 組合資料：24小時預報拼圖 (依時間動態切換城市)
   let todayHourly: any[] = [];
   if (timeline.length > 0 && weatherCache[timeline[0].city.name]) {
     const mainCityData = weatherCache[timeline[0].city.name];
@@ -177,14 +168,11 @@ export const Schedule = ({ externalDateIdx = 0 }: { externalDateIdx?: number }) 
 
     for (let h = 0; h < 24; h++) {
       const hourStr = `${h.toString().padStart(2, '0')}:00`;
-      
-      // 找出這個小時屬於哪一個城市
       let activeCity = timeline[0].city;
       for (const t of timeline) {
         if (t.time <= hourStr) activeCity = t.city;
         else break;
       }
-
       const cityData = weatherCache[activeCity.name];
       if (cityData && cityData.hourly) {
         const startIdx = cityData.hourly.time.findIndex((t: string) => t.startsWith(targetDateForHourly));
@@ -212,8 +200,12 @@ export const Schedule = ({ externalDateIdx = 0 }: { externalDateIdx?: number }) 
       const res = await model.generateContent(prompt);
       const match = res.response.text().match(/\[[\s\S]*\]/);
       if (match) {
-        // [修復]: AI ID 避免重複衝突
-        JSON.parse(match[0]).forEach((i: any) => addScheduleItem(trip.id, { ...i, id: `ai-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`, date: selectedDateStr, images: [] }));
+        JSON.parse(match[0]).forEach((i: any) => addScheduleItem(trip.id, { 
+          ...i, 
+          id: `ai-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`, 
+          date: selectedDateStr, 
+          images: [] 
+        }));
         setIsAiOpen(false); setAiText('');
       }
     } catch (e) { alert("AI 解析失敗"); }
@@ -238,10 +230,7 @@ export const Schedule = ({ externalDateIdx = 0 }: { externalDateIdx?: number }) 
     <div className="flex flex-col h-full bg-ac-bg relative">
       <div className="flex-1 overflow-y-auto hide-scrollbar p-6 space-y-6 pb-28">
         
-        {/* 100% 復刻圖片樣式的高級天氣卡片 */}
         <div onClick={() => setShowFullWeather(true)} className="bg-gradient-to-br from-[#68B1F8] to-[#519CE5] rounded-[32px] p-6 pb-5 text-white shadow-zakka relative active:scale-[0.98] transition-all cursor-pointer overflow-hidden border border-[#83C0FF]">
-          
-          {/* 背景幾何圖形 (完美對應圖片右上角的太陽星星圖騰) */}
           <svg className="absolute -top-12 -right-8 w-60 h-60 text-[#4C9AE4] opacity-80" viewBox="0 0 200 200" fill="currentColor">
             <path d="M100 0L118.8 38.2L161.8 19.1L150 61.8L200 82.5L158.2 100L200 117.5L150 138.2L161.8 180.9L118.8 161.8L100 200L81.2 161.8L38.2 180.9L50 138.2L0 117.5L41.8 100L0 82.5L50 61.8L38.2 19.1L81.2 38.2L100 0Z" />
           </svg>
@@ -262,7 +251,6 @@ export const Schedule = ({ externalDateIdx = 0 }: { externalDateIdx?: number }) 
              </div>
           </div>
           
-          {/* 下方三個玻璃資訊欄位 */}
           <div className="grid grid-cols-3 gap-3 mt-8 relative z-10">
              <div className="bg-white/20 backdrop-blur-md rounded-[20px] p-3 flex flex-col items-center justify-center border border-white/10 shadow-sm">
                <Umbrella size={22} className="mb-2 opacity-90" strokeWidth={2.5}/>
@@ -282,7 +270,6 @@ export const Schedule = ({ externalDateIdx = 0 }: { externalDateIdx?: number }) 
           </div>
         </div>
 
-        {/* 行程列表與功能列 */}
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -305,7 +292,11 @@ export const Schedule = ({ externalDateIdx = 0 }: { externalDateIdx?: number }) 
                dayItems.map((item, idx) => {
                  const Icon = ICON_MAP[item.category as keyof typeof ICON_MAP] || Camera;
                  return (
-                   <div key={item.id} className="relative group animate-in slide-in-from-left duration-300">
+                   <div 
+                     key={item.id} 
+                     // ✅ 確保加上渲染優化
+                     className="relative group animate-in slide-in-from-left duration-300 [content-visibility:auto] [contain-intrinsic-size:100px]"
+                   >
                       <span className="absolute -left-10 top-3 text-[9px] font-black opacity-40">{item.time}</span>
                       <div className={`absolute -left-[28.5px] top-3.5 w-4 h-4 rounded-full border-4 border-white shadow-sm z-10 ${item.category === 'food' ? 'bg-ac-orange' : 'bg-ac-green'}`} />
                       
@@ -332,15 +323,17 @@ export const Schedule = ({ externalDateIdx = 0 }: { externalDateIdx?: number }) 
         </div>
       </div>
 
-      {/* 詳情 Modal */}
       {detailItem && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-md z-[600] p-6 flex items-center justify-center" onClick={() => setDetailItem(undefined)}>
            <div className="bg-ac-bg w-full max-w-sm rounded-[45px] shadow-2xl overflow-hidden animate-in slide-in-from-bottom-10" onClick={e => e.stopPropagation()}>
               <div className="h-60 bg-gray-200 relative overflow-hidden">
+                 {/* ✅ 加上 loading="lazy" decoding="async" */}
                  <img 
                    src={detailItem.images?.[0] || `https://image.pollinations.ai/prompt/${encodeURIComponent(detailItem.location + ' ' + detailItem.title + ' scenery photorealistic')}?width=800&height=600&nologo=true`} 
                    className="w-full h-full object-cover" 
                    alt="location"
+                   loading="lazy" 
+                   decoding="async"
                    onError={(e) => (e.currentTarget.src = "https://images.unsplash.com/photo-1469854523086-cc02fe5d8800")}
                  />
                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"/>
@@ -354,14 +347,14 @@ export const Schedule = ({ externalDateIdx = 0 }: { externalDateIdx?: number }) 
                     <span className="flex items-center gap-1 truncate"><MapPin size={14}/> {detailItem.location}</span>
                  </div>
                  <p className="text-sm text-ac-brown/70 font-bold whitespace-pre-wrap leading-relaxed min-h-[60px]">{detailItem.note || "這個行程還沒有備註，點擊編輯來增加筆記吧！"}</p>
-                 {/* [修復]: Google Maps URL 語法錯誤 */}
-                 <button onClick={() => window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(detailItem.location)}`, '_blank')} className="btn-zakka w-full py-4 flex items-center justify-center gap-2 text-lg shadow-lg"><MapPin size={20}/> Google Maps</button>
+                 <button onClick={() => window.open(`https://maps.google.com/?q=${encodeURIComponent(detailItem.location)}`, '_blank')} className="btn-zakka w-full py-4 flex items-center justify-center gap-2 text-lg shadow-lg">
+                   <MapPin size={20}/> Google Maps
+                 </button>
               </div>
            </div>
         </div>
       )}
 
-      {/* 24H 拼圖天氣 Modal */}
       {showFullWeather && (
         <div className="fixed inset-0 bg-black/60 z-[500] p-6 flex items-center justify-center backdrop-blur-sm" onClick={()=>setShowFullWeather(false)}>
           <div className="bg-ac-bg w-full max-w-sm rounded-[40px] shadow-2xl overflow-hidden animate-in zoom-in-95" onClick={e=>e.stopPropagation()}>
@@ -396,7 +389,6 @@ export const Schedule = ({ externalDateIdx = 0 }: { externalDateIdx?: number }) 
         </div>
       )}
 
-      {/* AI Modal */}
       {isAiOpen && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[700] flex items-center justify-center p-6">
           <div className="bg-ac-bg w-full max-w-md rounded-[40px] shadow-2xl p-8 space-y-6 animate-in zoom-in-95">
@@ -411,6 +403,8 @@ export const Schedule = ({ externalDateIdx = 0 }: { externalDateIdx?: number }) 
     </div>
   );
 };
+
+
 
 
 

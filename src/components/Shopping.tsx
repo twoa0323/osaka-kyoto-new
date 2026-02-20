@@ -68,7 +68,8 @@ export const Shopping = () => {
           <div className="text-center py-20 text-ac-border font-black italic">列下想買的東西，別漏掉囉！🎒</div>
         ) : (
           list.map(item => (
-            <div key={item.id} className={`card-zakka bg-white flex items-center gap-4 transition-all relative group ${item.isBought ? 'opacity-50 grayscale' : ''}`}>
+            // ✅ 加入 [content-visibility:auto] [contain-intrinsic-size:80px]
+            <div key={item.id} className={`card-zakka bg-white flex items-center gap-4 transition-all relative group [content-visibility:auto] [contain-intrinsic-size:80px] ${item.isBought ? 'opacity-50 grayscale' : ''}`}>
               <button onClick={() => toggleShoppingItem(trip.id, item.id)} className="shrink-0 transition-transform active:scale-90">
                 {item.isBought ? <CheckCircle2 className="text-ac-green" size={28} /> : <Circle className="text-ac-border" size={28} />}
               </button>
@@ -81,7 +82,8 @@ export const Shopping = () => {
                 <p className="text-[10px] font-bold text-ac-brown/40 uppercase italic">{item.price ? `${item.currency} ${item.price.toLocaleString()}` : '尚未標價'}</p>
               </div>
 
-              {item.images.length > 0 && <div className="w-12 h-12 rounded-lg overflow-hidden border-2 border-ac-border"><img src={item.images[0]} className="w-full h-full object-cover" alt="item" /></div>}
+              {/* ✅ 加入 loading="lazy" decoding="async" */}
+              {item.images.length > 0 && <div className="w-12 h-12 rounded-lg overflow-hidden border-2 border-ac-border"><img src={item.images[0]} loading="lazy" decoding="async" className="w-full h-full object-cover" alt="item" /></div>}
               <button onClick={() => deleteShoppingItem(trip.id, item.id)} className="p-2 bg-white/90 backdrop-blur-md rounded-full shadow-sm border-2 border-ac-border text-ac-orange opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity"><Trash2 size={14} /></button>
             </div>
           ))
@@ -126,7 +128,8 @@ export const Shopping = () => {
                     </label>
                     {form.images?.map((img, i) => (
                       <div key={i} className="min-w-[80px] h-[80px] rounded-2xl overflow-hidden relative border-2 border-white shadow-sm">
-                        <img src={img} className="w-full h-full object-cover" alt="preview" />
+                        {/* ✅ 加入 loading="lazy" decoding="async" */}
+                        <img src={img} loading="lazy" decoding="async" className="w-full h-full object-cover" alt="preview" />
                         <button onClick={() => setForm({...form, images: form.images?.filter((_, idx) => idx !== i)})} className="absolute top-1 right-1 bg-black/50 text-white rounded-full p-1"><X size={10}/></button>
                       </div>
                     ))}
@@ -143,5 +146,6 @@ export const Shopping = () => {
     </div>
   );
 };
+
 
 
