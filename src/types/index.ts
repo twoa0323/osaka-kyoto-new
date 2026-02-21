@@ -18,11 +18,14 @@ export interface ScheduleItem {
   id: string;
   date: string;
   time: string;
+  endTime?: string;             // 👈 新增：結束時間
   title: string;
   location: string;
   category: 'sightseeing' | 'food' | 'transport' | 'hotel';
   note: string;
   images: string[];
+  isCompleted?: boolean;        // 👈 新增：是否已完成 (灰底)
+  transportSuggestion?: string; // 👈 新增：AI 交通建議
 }
 
 // --- 2. 預訂 (Booking) 項目 ---

@@ -54,7 +54,7 @@ const CITY_DB = [
 ];
 
 export const Schedule = ({ externalDateIdx = 0 }: { externalDateIdx?: number }) => {
-  const { trips, currentTripId, deleteScheduleItem, addScheduleItem, reorderScheduleItems } = useTripStore();
+  const { trips, currentTripId, deleteScheduleItem, addScheduleItem, reorderScheduleItems, updateScheduleItem } = useTripStore();
   const trip = trips.find(t => t.id === currentTripId);
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
