@@ -10,6 +10,7 @@ export interface Member {
   avatar: string; 
   email: string;  
   pin: string;
+  mood?: string; // 👈 [新增] 心情/留言
 }
 
 // --- 1. 行程 (Schedule) 項目 ---
@@ -61,17 +62,17 @@ export interface BookingItem {
 export interface ExpenseItem {
   id: string;
   date: string;
-  storeName: string; // [關鍵新增] 店家名稱
+  storeName: string; 
   title: string;
   amount: number;
   currency: CurrencyCode;
-  method: '現金' | '信用卡' | '行動支付' | 'IC卡' | '其他'; // [更新] 支付方式
+  method: '現金' | '信用卡' | '行動支付' | 'IC卡' | '其他'; 
   location: string;
-  category: '餐飲' | '購物' | '交通' | '住宿' | '娛樂' | '藥妝' | '便利商店' | '超市' | '其他'; // [更新] 類別
+  category: '餐飲' | '購物' | '交通' | '住宿' | '娛樂' | '藥妝' | '便利商店' | '超市' | '其他'; 
   payerId: string;
   splitWith: string[];
   images: string[];
-  items?: { name: string; price: number }[]; // [關鍵新增] AI 辨識細項
+  items?: { name: string; price: number }[]; 
 }
 
 // --- 4. 美食日誌 (Journal) 項目 ---
@@ -110,7 +111,7 @@ export interface InfoItem {
 // --- 根節點：整趟旅程 (Trip) 定義 ---
 export interface Trip {
   id: string;
-  creatorId?: string; // 👈 [新增] 紀錄建立者的設備 UID
+  creatorId?: string;
   dest: string;
   destination: string;
   lat?: number;
@@ -133,6 +134,7 @@ export interface Trip {
   shoppingList: ShoppingItem[];
   infoItems: InfoItem[];
 }
+
 
 
 

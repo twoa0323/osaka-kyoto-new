@@ -1,3 +1,4 @@
+// filepath: src/App.tsx
 import React, { useState, useEffect } from 'react';
 import { useTripStore } from './store/useTripStore';
 import { useFirebaseSync } from './hooks/useFirebaseSync';
@@ -8,11 +9,19 @@ import { Expense } from './components/Expense';
 import { Journal } from './components/Journal';
 import { Shopping } from './components/Shopping';
 import { Info } from './components/Info';
-// ✅ 修復 1：補上漏掉的 X 與 auth import
-import { Plus, ChevronDown, Trash2, Calendar, CreditCard, Wallet, Utensils, ShoppingBag, Info as InfoIcon, Lock, User, Camera, X } from 'lucide-react';
+import { Plus, ChevronDown, Trash2, Calendar, CreditCard, Wallet, Utensils, ShoppingBag, Info as InfoIcon, Lock, User, Camera, X, Edit3 } from 'lucide-react';
 import { format, addDays, differenceInDays, parseISO } from 'date-fns';
-import { uploadImage } from './utils/imageUtils';
+import { zhTW } from 'date-fns/locale';
+import { compressImage, uploadImage } from './utils/imageUtils';
 import { auth } from './services/firebase';
+
+// 預設提供選擇的 AI 大頭貼
+const PRESET_AVATARS = [
+  `https://api.dicebear.com/7.x/avataaars/svg?seed=Mimi`,
+  `https://api.dicebear.com/7.x/avataaars/svg?seed=Felix`,
+  `https://api.dicebear.com/7.x/avataaars/svg?seed=Aneka`,
+  `https://api.dicebear.com/7.x/avataaars/svg?seed=Max`,
+];
 
 const App: React.FC = () => {
   const { trips, currentTripId, switchTrip, deleteTrip, activeTab, setActiveTab, updateTripData } = useTripStore();
@@ -21,8 +30,15 @@ const App: React.FC = () => {
   const [lockedTripId, setLockedTripId] = useState<string | null>(null);
   const [verifyPin, setVerifyPin] = useState('');
   const [selectedDateIdx, setSelectedDateIdx] = useState(0);
+  
+  // 會員區塊狀態
   const [memberOpen, setMemberOpen] = useState(false);
   const [showPersonalSetup, setShowPersonalSetup] = useState(false);
+  
+  // 新增：個人資料編輯狀態
+  const [showEditIcon, setShowEditIcon] = useState<string | null>(null);
+  const [editingProfile, setEditingProfile] = useState(false);
+  const [editForm, setEditForm] = useState({ name: '', mood: '', avatar: '' });
 
   useFirebaseSync();
   
@@ -63,7 +79,6 @@ const App: React.FC = () => {
       {activeTab === 'schedule' && (
         <header className="p-4 sticky top-0 z-[100] w-full max-w-md mx-auto animate-fade-in bg-[#F4F5F7]/95 backdrop-blur-sm border-b-[3px] border-splat-dark shadow-sm">
           <div className="bg-splat-yellow border-[3px] border-splat-dark rounded-[24px] shadow-splat-solid p-4 flex justify-between items-center relative z-20">
-            
             <div className="relative text-left">
               <h2 className="text-[10px] font-black text-splat-dark uppercase tracking-widest mb-0.5 bg-white inline-block px-2 border-2 border-splat-dark rounded-full shadow-splat-solid-sm -rotate-2">
                 {currentTrip.startDate} — {currentTrip.endDate}
@@ -73,17 +88,10 @@ const App: React.FC = () => {
                 <ChevronDown size={24} className={`stroke-[3px] transition-transform ${menuOpen ? 'rotate-180' : ''}`} />
               </div>
               
-              {/* ✅ 修復 2 & 4：左上角直接顯示 ID 與 PIN，並加上 select-all 方便使用者點擊複製 */}
-              <div className="mt-1.5 flex gap-2">
-                <span className="text-[9px] font-black bg-white border-2 border-splat-dark px-1.5 py-0.5 rounded shadow-sm text-splat-dark select-all">ID: {currentTrip.id}</span>
-                <span className="text-[9px] font-black bg-white border-2 border-splat-dark px-1.5 py-0.5 rounded shadow-sm text-splat-dark select-all">PIN: {currentTrip.tripPin}</span>
-              </div>
-
               {menuOpen && (
-                <div className="absolute top-[130%] left-0 w-64 bg-white border-[3px] border-splat-dark rounded-[24px] shadow-splat-solid z-[110] overflow-hidden animate-in fade-in slide-in-from-top-2">
+                <div className="absolute top-[120%] left-0 w-64 bg-white border-[3px] border-splat-dark rounded-[24px] shadow-splat-solid z-[110] overflow-hidden animate-in fade-in slide-in-from-top-2">
                   <div className="p-3 max-h-48 overflow-y-auto hide-scrollbar">
                     {trips.map(t => {
-                      // 判斷是否為建立者
                       const isCreator = t.creatorId === (auth.currentUser?.uid || 'unknown');
                       return (
                         <div key={t.id} className={`flex items-center justify-between p-3 rounded-xl border-2 mb-2 ${t.id === currentTrip.id ? 'bg-splat-yellow border-splat-dark' : 'border-transparent hover:border-gray-200'}`}>
@@ -118,7 +126,7 @@ const App: React.FC = () => {
                           const pin = prompt(`找到「${tripData.dest}」！請輸入密碼加入：`);
                           if (pin === tripData.tripPin) {
                             useTripStore.getState().addTripLocal(tripData);
-                            alert("成功加入行程！🎉 (已儲存於本機)");
+                            alert("成功加入行程！🎉 (已自動儲存於本機)");
                             setMenuOpen(false);
                           } else { alert("密碼錯誤！🔒"); }
                         } else { alert("找不到這個行程代碼喔 🥲"); }
@@ -169,6 +177,7 @@ const App: React.FC = () => {
         <NavIcon icon={<InfoIcon />} label="資訊" id="info" active={activeTab} onClick={setActiveTab} color="text-splat-dark" />
       </nav>
 
+      {/* 切換行程密碼鎖定畫面 */}
       {lockedTripId && (
         <div className="fixed inset-0 bg-splat-dark/80 backdrop-blur-sm z-[1000] flex items-center justify-center p-4">
           <div className="bg-white border-4 border-splat-dark w-full max-w-sm rounded-[32px] shadow-[8px_8px_0px_#FFC000] p-8 text-center space-y-4 animate-in zoom-in-95">
@@ -183,27 +192,50 @@ const App: React.FC = () => {
         </div>
       )}
 
+      {/* 📍 側邊欄：旅伴列表與 ID/PIN */}
       {memberOpen && (
         <div className="fixed inset-0 z-[1000] flex justify-end">
           <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setMemberOpen(false)} />
-          <div className="relative w-[85%] max-w-xs bg-splat-bg h-full shadow-2xl border-l-[6px] border-splat-dark p-8 animate-in slide-in-from-right duration-300">
-             <div className="flex justify-between items-center mb-8"><h2 className="text-2xl font-black italic text-splat-dark tracking-tighter">TRIP MATES</h2><button onClick={() => setMemberOpen(false)}><X strokeWidth={3}/></button></div>
+          <div className="relative w-[85%] max-w-xs bg-splat-bg h-full shadow-2xl border-l-[6px] border-splat-dark p-8 animate-in slide-in-from-right duration-300 overflow-y-auto">
+             
+             <div className="flex justify-between items-start mb-8">
+               <div>
+                 <h2 className="text-2xl font-black italic text-splat-dark tracking-tighter mb-2">TRIP MATES</h2>
+                 {/* ✅ ID & PIN 移至此處 */}
+                 <div className="flex gap-2">
+                    <span className="text-[9px] font-black bg-white border-2 border-splat-dark px-1.5 py-0.5 rounded shadow-sm text-splat-dark select-all">ID: {currentTrip.id}</span>
+                    <span className="text-[9px] font-black bg-white border-2 border-splat-dark px-1.5 py-0.5 rounded shadow-sm text-splat-dark select-all">PIN: {currentTrip.tripPin}</span>
+                 </div>
+               </div>
+               <button onClick={() => setMemberOpen(false)} className="p-1 -mt-2 -mr-2"><X strokeWidth={3}/></button>
+             </div>
+             
              <div className="space-y-4">
                 {(currentTrip.members || []).map(m => (
-                  <div key={m.id} className="bg-white border-[3px] border-splat-dark rounded-2xl p-4 flex items-center gap-3 relative group">
-                    <div className="relative">
-                      <img src={m.avatar} className="w-12 h-12 rounded-full border-2 border-splat-dark object-cover" />
-                      {m.id === myProfile?.id && (
-                        <label className="absolute -bottom-1 -right-1 bg-white p-1 rounded-full shadow-sm border-2 border-splat-dark cursor-pointer"><Camera size={10}/><input type="file" className="hidden" onChange={async e => {
-                          if(e.target.files?.[0]) {
-                            const url = await uploadImage(e.target.files[0]);
-                            const nm = currentTrip.members.map(x => x.id === m.id ? {...x, avatar: url} : x);
-                            updateTripData(currentTrip.id, { members: nm });
-                          }
-                        }}/></label>
-                      )}
+                  <div key={m.id} 
+                       onClick={() => { if(m.id === myProfile?.id) setShowEditIcon(prev => prev === m.id ? null : m.id); }}
+                       className={`bg-white border-[3px] border-splat-dark rounded-2xl p-4 flex items-center gap-3 relative transition-all ${m.id === myProfile?.id ? 'cursor-pointer active:scale-[0.98] shadow-sm hover:border-splat-blue' : ''}`}
+                  >
+                    <div className="relative shrink-0">
+                      <img src={m.avatar} className="w-12 h-12 rounded-full border-2 border-splat-dark object-cover bg-gray-50" />
                     </div>
-                    <div className="text-left"><p className="font-black text-sm text-splat-dark">{m.name}</p><p className="text-[8px] font-bold text-gray-400 uppercase tracking-tighter">{m.email}</p></div>
+                    <div className="text-left flex-1 min-w-0">
+                      <p className="font-black text-sm text-splat-dark truncate">{m.name}</p>
+                      {/* ✅ 顯示心情留言，若無則顯示信箱 */}
+                      <p className="text-[8px] font-bold text-gray-400 uppercase tracking-tighter truncate">{m.mood || m.email}</p>
+                    </div>
+                    
+                    {/* ✅ 點擊後出現的隱藏編輯圖示 */}
+                    {m.id === myProfile?.id && showEditIcon === m.id && (
+                       <button onClick={(e) => { 
+                         e.stopPropagation(); 
+                         setEditForm({name: m.name, mood: m.mood || '', avatar: m.avatar}); 
+                         setEditingProfile(true); 
+                         setShowEditIcon(null); 
+                       }} className="p-2 bg-splat-yellow border-2 border-splat-dark rounded-xl text-splat-dark shadow-sm animate-in zoom-in-95 shrink-0">
+                         <Edit3 size={16} strokeWidth={3}/>
+                       </button>
+                    )}
                   </div>
                 ))}
              </div>
@@ -211,6 +243,58 @@ const App: React.FC = () => {
         </div>
       )}
 
+      {/* ✅ 全新功能：個人資料編輯視窗 */}
+      {editingProfile && myProfile && (
+        <div className="fixed inset-0 z-[2000] bg-splat-dark/60 backdrop-blur-sm flex items-center justify-center p-4">
+           <div className="w-full max-w-sm space-y-6 text-center bg-[#F4F5F7] border-[4px] border-splat-dark rounded-[2.5rem] shadow-[8px_8px_0px_#1A1A1A] p-8 relative animate-in zoom-in-95">
+              <button onClick={() => setEditingProfile(false)} className="absolute top-5 right-5 bg-white p-2 rounded-full border-2 border-splat-dark active:scale-95 shadow-sm"><X size={16} strokeWidth={3}/></button>
+              
+              <h2 className="text-2xl font-black italic uppercase text-splat-dark">EDIT PROFILE</h2>
+              
+              <div className="space-y-6">
+                 {/* Avatar 選擇 */}
+                 <div className="space-y-3">
+                   <div className="relative inline-block">
+                     <img src={editForm.avatar} className="w-20 h-20 rounded-full border-[3px] border-splat-dark object-cover bg-white mx-auto" />
+                     <label className="absolute bottom-0 right-0 bg-white p-2 rounded-full border-2 border-splat-dark shadow-sm cursor-pointer active:scale-95">
+                       <Camera size={14}/>
+                       <input type="file" className="hidden" onChange={async e => {
+                          if(e.target.files?.[0]) {
+                            const url = await uploadImage(e.target.files[0]);
+                            setEditForm({...editForm, avatar: url});
+                          }
+                       }}/>
+                     </label>
+                   </div>
+                   <div className="flex justify-center gap-2 mt-2">
+                      {PRESET_AVATARS.map((url, idx) => (
+                          <img key={idx} src={url} onClick={() => setEditForm({...editForm, avatar: url})} className={`w-10 h-10 rounded-full border-[3px] bg-white cursor-pointer transition-all ${editForm.avatar === url ? 'border-splat-blue scale-110' : 'border-splat-dark opacity-50 hover:opacity-100'}`} />
+                      ))}
+                   </div>
+                 </div>
+
+                 <div className="space-y-1 text-left">
+                   <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest pl-1">Nickname 暱稱</label>
+                   <input value={editForm.name} onChange={e => setEditForm({...editForm, name: e.target.value})} className="w-full p-4 bg-white rounded-xl border-[3px] border-splat-dark font-black text-splat-dark outline-none focus:border-splat-blue transition-colors" />
+                 </div>
+
+                 <div className="space-y-1 text-left">
+                   <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest pl-1">Mood / Message 心情留言</label>
+                   <input placeholder="寫點什麼心情呢？" value={editForm.mood} onChange={e => setEditForm({...editForm, mood: e.target.value})} className="w-full p-4 bg-white rounded-xl border-[3px] border-splat-dark font-black text-splat-dark outline-none focus:border-splat-blue transition-colors" />
+                 </div>
+
+                 <button onClick={() => {
+                   if (!editForm.name) return alert("名字不能空白喔！");
+                   const nm = currentTrip.members.map(x => x.id === myProfile.id ? {...x, name: editForm.name, avatar: editForm.avatar, mood: editForm.mood} : x);
+                   updateTripData(currentTrip.id, { members: nm });
+                   setEditingProfile(false);
+                 }} className="btn-splat w-full py-4 text-lg bg-splat-green text-white">SAVE ➔</button>
+              </div>
+           </div>
+        </div>
+      )}
+
+      {/* 初次加入的設定畫面 (預設帶入一句可愛的留言) */}
       {showPersonalSetup && (
         <div className="fixed inset-0 z-[2000] bg-white flex items-center justify-center p-8">
            <div className="w-full max-w-sm space-y-8 text-center">
@@ -225,7 +309,8 @@ const App: React.FC = () => {
                    const e = (document.getElementById('setup-email') as HTMLInputElement).value;
                    const p = (document.getElementById('setup-pin') as HTMLInputElement).value;
                    if(!n || !e || p.length < 4) return alert("資訊要填完整唷！🦑");
-                   updateTripData(currentTrip.id, { members: [{ id: 'm-'+Date.now(), name: n, avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${n}`, email: e, pin: p }] });
+                   // 加入時自動塞入預設留言
+                   updateTripData(currentTrip.id, { members: [{ id: 'm-'+Date.now(), name: n, avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${n}`, email: e, pin: p, mood: '準備出發！✈️' }] });
                    setShowPersonalSetup(false);
                  }} className="btn-splat w-full py-5 text-xl bg-splat-blue text-white">READY GO! ➔</button>
               </div>
@@ -247,4 +332,5 @@ const NavIcon = ({ icon, label, id, active, onClick, color }: any) => {
 };
 
 export default App;
+
 
