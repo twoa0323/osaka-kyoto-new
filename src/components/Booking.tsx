@@ -4,7 +4,7 @@ import { Plane, Home, MapPin, Plus, Edit3, Globe, QrCode, ArrowRight, X, Luggage
 import { BookingItem } from '../types';
 import { BookingEditor } from './BookingEditor';
 
-// --- 8大航空公司模板 (完整保留 7家+1其他) ---
+// 8大航空公司模板 (維持原樣)
 const AIRLINE_THEMES: Record<string, any> = {
   tigerair: { bgClass: 'bg-[#F49818]', bgStyle: { backgroundImage: 'repeating-linear-gradient(-45deg, transparent, transparent 15px, #E57A0F 15px, #E57A0F 30px)' }, logoHtml: <span className="font-black text-white text-xl tracking-tight">tiger<span className="font-medium">air</span> <span className="text-sm font-normal">Taiwan</span></span>, },
   starlux: { bgClass: 'bg-[#181B26]', bgStyle: { backgroundImage: 'radial-gradient(circle at center, #ffffff 1px, transparent 1px)', backgroundSize: '24px 24px' }, logoHtml: <span className="font-serif text-[#C4A97A] text-2xl font-bold tracking-widest flex items-center gap-2"><span className="text-3xl rotate-45 text-[#E6C998]">✦</span> STARLUX</span>, },
@@ -22,8 +22,16 @@ const getTheme = (airline?: string) => {
   return key ? AIRLINE_THEMES[key] : AIRLINE_THEMES.other;
 };
 
+// 📍 UI 調整 2：修改子分頁顏色，不再是純白
+const SUBTAB_COLORS: Record<string, string> = {
+  flight: 'bg-splat-blue',
+  hotel: 'bg-splat-pink',
+  spot: 'bg-splat-green',
+  voucher: 'bg-splat-yellow'
+};
+
 export const Booking = () => {
-  const { trips, currentTripId } = useTripStore();
+  const { trips, currentTripId, deleteBookingItem } = useTripStore();
   const trip = trips.find(t => t.id === currentTripId);
   const [activeSubTab, setActiveSubTab] = useState<'flight' | 'hotel' | 'spot' | 'voucher'>('flight');
   const [editingItem, setEditingItem] = useState<BookingItem | undefined>();
@@ -34,35 +42,36 @@ export const Booking = () => {
   const bookings = (trip.bookings || []).filter(b => b.type === activeSubTab);
 
   return (
-    <div className="px-4 space-y-6 animate-fade-in pb-28 text-left">
-      {/* 斯普拉遁風格的膠囊選單 */}
-      <div className="flex bg-gray-200 p-1.5 rounded-[32px] border-[3px] border-splat-dark shadow-splat-solid relative z-10">
-        {['flight', 'hotel', 'spot', 'voucher'].map((t) => (
-          <button 
-            key={t} 
-            onClick={() => setActiveSubTab(t as any)} 
-            className={`flex-1 flex flex-col items-center justify-center py-2.5 rounded-[24px] transition-all duration-300 font-black ${
-              activeSubTab === t 
-                ? 'bg-white text-splat-dark shadow-[2px_2px_0px_#1A1A1A] border-2 border-splat-dark' 
-                : 'text-gray-500 border-2 border-transparent hover:text-gray-700'
-            }`}
-          >
-            {t === 'flight' ? <Plane size={20} strokeWidth={2.5}/> : t === 'hotel' ? <Home size={20} strokeWidth={2.5}/> : t === 'spot' ? <MapPin size={20} strokeWidth={2.5}/> : <QrCode size={20} strokeWidth={2.5}/>}
-            <span className="text-[10px] mt-1 tracking-widest">
-              {t === 'flight' ? '機票' : t === 'hotel' ? '住宿' : t === 'spot' ? '景點' : '憑證'}
-            </span>
-          </button>
-        ))}
+    <div className="px-4 space-y-6 animate-fade-in pb-28 text-left h-full">
+      {/* 固定子選單 (與原本風格結合，選中狀態加入專屬色彩) */}
+      <div className="sticky top-0 z-20 py-2 bg-[#F4F5F7]">
+        <div className="flex bg-white p-1.5 rounded-[32px] border-[3px] border-splat-dark shadow-splat-solid">
+          {['flight', 'hotel', 'spot', 'voucher'].map((t: any) => {
+            const isActive = activeSubTab === t;
+            return (
+              <button 
+                key={t} 
+                onClick={() => setActiveSubTab(t)} 
+                className={`flex-1 flex flex-col items-center justify-center py-2.5 rounded-[24px] transition-all duration-300 font-black ${
+                  isActive ? `${SUBTAB_COLORS[t]} text-white shadow-[2px_2px_0px_#1A1A1A] border-2 border-splat-dark` : 'text-gray-500 border-2 border-transparent hover:text-gray-700'
+                }`}
+              >
+                {t === 'flight' ? <Plane size={20} /> : t === 'hotel' ? <Home size={20} /> : t === 'spot' ? <MapPin size={20} /> : <QrCode size={20} />}
+                <span className="text-[9px] mt-1 uppercase tracking-widest">{t === 'flight' ? '機票' : t === 'hotel' ? '住宿' : t === 'spot' ? '景點' : '憑證'}</span>
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       <div className="space-y-6">
         {bookings.length === 0 ? (
            <div className="text-center py-16 bg-white border-[3px] border-dashed border-gray-400 rounded-[32px] text-gray-500 font-black italic shadow-sm">
-             尚無預訂資訊 📓 <br/>
+             尚無預訂資訊 📓
            </div>
         ) : (
           bookings.map(item => (
-            <div key={item.id} className="[content-visibility:auto] [contain-intrinsic-size:250px]">
+            <div key={item.id}>
               {item.type === 'flight' ? (
                 <FlightCard item={item} onEdit={(e:any)=>{e.stopPropagation(); setEditingItem(item); setIsEditorOpen(true);}} onViewDetails={() => setDetailItem(item)} />
               ) : (
@@ -75,7 +84,7 @@ export const Booking = () => {
       </div>
 
       {detailItem && (
-        <div className="fixed inset-0 bg-splat-dark/60 backdrop-blur-sm z-[300] flex items-center justify-center p-4" onClick={() => setDetailItem(undefined)}>
+        <div className="fixed inset-0 bg-splat-dark/80 backdrop-blur-sm z-[300] flex items-center justify-center p-4" onClick={() => setDetailItem(undefined)}>
           <div className="bg-[#F4F5F7] w-full max-w-sm rounded-[32px] border-[4px] border-splat-dark shadow-[8px_8px_0px_#1A1A1A] overflow-hidden animate-in zoom-in-95" onClick={e => e.stopPropagation()}>
             <div className="p-6 space-y-6 max-h-[80vh] overflow-y-auto hide-scrollbar">
               <div className="flex justify-between items-start">
@@ -102,9 +111,7 @@ export const Booking = () => {
   );
 };
 
-// ==========================================
-// 重寫 FlightCard：外層黑框 + 內部完美復刻 IMG_6113
-// ==========================================
+// --- FlightCard 保持前版優化設計 (IMG_6113/6120) ---
 const FlightCard = ({ item, onEdit, onViewDetails }: any) => {
   const theme = getTheme(item.airline);
   const [showActions, setShowActions] = useState(false);
@@ -126,46 +133,28 @@ const FlightCard = ({ item, onEdit, onViewDetails }: any) => {
 
   return (
     <div className="relative active:scale-[0.98] transition-transform cursor-pointer group" onClick={handleCardClick}>
-      
-      {/* 編輯按鈕 */}
       <div className={`absolute top-4 right-4 z-30 transition-opacity duration-300 ${showActions ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
         <button onClick={onEdit} className="p-2.5 bg-splat-yellow border-[3px] border-splat-dark rounded-full text-splat-dark shadow-splat-solid-sm hover:scale-110 transition-transform">
           <Edit3 size={18} strokeWidth={3}/>
         </button>
       </div>
 
-      {/* 📍 外圍：Splatoon 黑框與實色陰影 */}
       <div className="rounded-[2rem] overflow-hidden border-[3px] border-splat-dark shadow-splat-solid bg-[#FDFBF7]">
-        
-        {/* 1. 頂部深色品牌區塊 (高度與比例) */}
         <div className={`relative h-[88px] w-full flex items-center justify-center ${theme.bgClass}`} style={theme.bgStyle}>
            {theme.logoHtml}
         </div>
-
-        {/* 2. 下半部米色紙張內容區 */}
         <div className="relative w-full pt-10 pb-6 px-5 border-t-0 rounded-b-[2rem]">
-          
-          {/* 📍 完美復刻：置中的膠囊航班編號 */}
           <div className="absolute -top-[18px] left-1/2 -translate-x-1/2 bg-white px-8 py-2 border border-gray-100 text-gray-400 font-black rounded-full text-base shadow-sm tracking-widest z-10">
             {item.flightNo || 'FLIGHT'}
           </div>
-
-          {/* 📍 完美復刻：左側虛線 (從膠囊下方延伸到底) */}
           <div className="absolute left-6 top-6 bottom-6 border-l-[3px] border-dotted border-gray-300"></div>
-          
           <div className="pl-6 pr-2">
-            
-            {/* 時間、地點、代碼 排版 */}
             <div className="flex justify-between items-center mb-8">
-              
-              {/* 左側：出發 */}
               <div className="flex flex-col items-center">
                 <span className="text-[26px] font-black text-gray-400 tracking-widest uppercase mb-1">{item.depIata || 'TPE'}</span>
                 <span className="text-[46px] leading-none font-black text-[#1A1917] tracking-tighter">{item.depTime || '--:--'}</span>
                 <span className="mt-3 bg-[#447A5A] text-white text-[11px] px-4 py-1 rounded-full font-bold tracking-widest">{item.depCity || '出發地'}</span>
               </div>
-
-              {/* 中間：飛行時間、飛機圖標與日期 */}
               <div className="flex flex-col items-center flex-1 px-3">
                 <span className="text-[12px] font-bold text-[#6D6A65] mb-1">{formatDurationDisplay(item.duration)}</span>
                 <div className="w-full flex items-center text-[#4A72C8]">
@@ -175,39 +164,31 @@ const FlightCard = ({ item, onEdit, onViewDetails }: any) => {
                 </div>
                 <span className="text-[11px] font-bold text-gray-400 mt-1 tracking-widest">{item.date?.replace(/-/g, '/')}</span>
               </div>
-
-              {/* 右側：抵達 */}
               <div className="flex flex-col items-center">
                 <span className="text-[26px] font-black text-gray-400 tracking-widest uppercase mb-1">{item.arrIata || 'KIX'}</span>
                 <span className="text-[46px] leading-none font-black text-[#1A1917] tracking-tighter">{item.arrTime || '--:--'}</span>
                 <span className="mt-3 bg-[#B3936E] text-white text-[11px] px-4 py-1 rounded-full font-bold tracking-widest">{item.arrCity || '目的地'}</span>
               </div>
             </div>
-
-            {/* 📍 完美復刻：底部 行李/座位/機型 的圓角淺灰色底框 */}
             <div className="bg-[#F8F9FA] rounded-2xl flex items-center justify-between p-4 border border-gray-100">
-              
               <div className="flex-1 flex flex-col items-center justify-center border-r-[2px] border-gray-200/60">
                 <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1">BAGGAGE</span>
                 <div className="flex items-center gap-1.5 text-[#1A1917] font-black text-sm">
                   <Luggage size={16} className="text-[#519B96]"/> {item.baggage || '--'}
                 </div>
               </div>
-
               <div className="flex-1 flex flex-col items-center justify-center border-r-[2px] border-gray-200/60">
                 <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1">SEAT</span>
                 <div className="flex items-center gap-1.5 text-[#1A1917] font-black text-sm uppercase">
                   {item.seat || '--'}
                 </div>
               </div>
-
               <div className="flex-1 flex flex-col items-center justify-center">
                 <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest mb-1">AIRCRAFT</span>
                 <div className="flex items-center gap-1.5 text-[#1A1917] font-black text-sm uppercase">
                   <Plane size={16} className="text-[#C29562] fill-current" /> {item.aircraft || '--'}
                 </div>
               </div>
-              
             </div>
           </div>
         </div>
@@ -216,7 +197,6 @@ const FlightCard = ({ item, onEdit, onViewDetails }: any) => {
   );
 };
 
-// HotelCard 維持原樣，只確保外框也是 Splatoon 風格
 const HotelCard = ({ item, onEdit, onViewDetails }: any) => {
   const [showActions, setShowActions] = useState(false);
 
@@ -253,6 +233,7 @@ const HotelCard = ({ item, onEdit, onViewDetails }: any) => {
     </div>
   );
 };
+
 
 
 

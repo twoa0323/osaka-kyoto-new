@@ -1,6 +1,9 @@
-// src/types/index.ts
+// filepath: src/types/index.ts
+
+// --- 貨幣代碼列舉 ---
 export type CurrencyCode = 'TWD' | 'JPY' | 'KRW' | 'USD' | 'EUR' | 'THB' | 'GBP' | 'CNY' | 'HKD' | 'SGD' | 'VND';
 
+// --- 成員個人定義 ---
 export interface Member {
   id: string;
   name: string;
@@ -9,6 +12,7 @@ export interface Member {
   pin: string;
 }
 
+// --- 1. 行程 (Schedule) 項目 ---
 export interface ScheduleItem {
   id: string;
   date: string;
@@ -20,6 +24,7 @@ export interface ScheduleItem {
   images: string[];
 }
 
+// --- 2. 預訂 (Booking) 項目 ---
 export interface BookingItem {
   id: string;
   type: 'flight' | 'hotel' | 'spot' | 'voucher';
@@ -32,8 +37,9 @@ export interface BookingItem {
   images: string[];
   qrCode?: string;
   website?: string;
+  
   // 機票專用欄位
-  airline?: string; // 新增：航空公司模板 ID
+  airline?: string; 
   flightNo?: string;
   depIata?: string;
   arrIata?: string;
@@ -44,27 +50,64 @@ export interface BookingItem {
   duration?: string;
   baggage?: string;
   aircraft?: string;
-  seat?: string; // 新增：座位
+  seat?: string; 
+  
   // 住宿專用欄位
   price?: number;
   nights?: number;
 }
 
+// --- 3. 記帳 (Expense) 項目 ---
 export interface ExpenseItem {
   id: string;
   date: string;
+  storeName: string; // [關鍵修復] 補回店家名稱，確保與 Expense.tsx 的輸入邏輯對齊
   title: string;
   amount: number;
   currency: CurrencyCode;
-  method: '現金' | '信用卡' | '行動支付';
+  method: '現金' | '信用卡' | '行動支付' | 'IC卡' | '其他'; // 更新支付方式選項
   location: string;
-  category: string;
+  category: '餐飲' | '購物' | '交通' | '住宿' | '娛樂' | '藥妝' | '便利商店' | '超市' | '其他'; // 更新類別選項
   payerId: string;
   splitWith: string[];
   images: string[];
-  items?: { name: string; price: number }[];
+  items?: { name: string; price: number }[]; // 存放 AI 掃描辨識的細項
 }
 
+// --- 4. 美食日誌 (Journal) 項目 ---
+export interface JournalItem { 
+  id: string; 
+  date: string; 
+  title: string; 
+  content: string; 
+  images: string[]; 
+  rating: number; 
+  location: string; 
+}
+
+// --- 5. 購物清單 (Shopping) 項目 ---
+export interface ShoppingItem { 
+  id: string; 
+  title: string; 
+  price: number; 
+  currency: CurrencyCode; 
+  isBought: boolean; 
+  images: string[]; 
+  note: string; 
+  category: string; 
+}
+
+// --- 6. 旅遊資訊 (Info) 項目 ---
+export interface InfoItem { 
+  id: string; 
+  type: string; 
+  title: string; 
+  content: string; 
+  images: string[]; 
+  url: string; 
+}
+
+// --- 根節點：整趟旅程 (Trip) 定義 ---
 export interface Trip {
   id: string;
   dest: string;
@@ -74,16 +117,20 @@ export interface Trip {
   startDate: string;
   endDate: string;
   baseCurrency: CurrencyCode;
+  
+  // 安全與預算設定
   tripPin: string;
   adminEmail: string;
   members: Member[];
   budget?: number;
+  
+  // 6 大模組資料集合
   items: ScheduleItem[];
   bookings: BookingItem[];
   expenses: ExpenseItem[];
-  journals: any[];
-  shoppingList: any[];
-  infoItems: any[];
+  journals: JournalItem[];      // [修正] 改用強型別而非 any[]
+  shoppingList: ShoppingItem[]; // [修正] 改用強型別而非 any[]
+  infoItems: InfoItem[];        // [修正] 改用強型別而非 any[]
 }
 
 
