@@ -34,16 +34,47 @@ export const Journal = () => {
       <div className="grid grid-cols-2 gap-4">
         {(trip.journals || []).length === 0 && <div className="col-span-2 text-center py-20 bg-white border-[3px] border-dashed border-gray-400 rounded-[32px] text-gray-500 font-black italic shadow-sm">拍下第一張美食吧！🍔</div>}
         {(trip.journals || []).map(item => (
-          <div key={item.id} className="bg-white p-2 pb-4 rounded-[24px] shadow-splat-solid border-[3px] border-splat-dark rotate-[-1deg] hover:rotate-0 transition-transform group relative [content-visibility:auto] [contain-intrinsic-size:200px]">
-             <div className="aspect-square bg-gray-100 rounded-[16px] overflow-hidden mb-3 border-2 border-splat-dark relative">
-                <img src={item.images[0]} loading="lazy" decoding="async" className="w-full h-full object-cover" alt="food" />
-                {item.images.length > 1 && <div className="absolute bottom-2 right-2 bg-splat-dark text-white text-[10px] px-2 py-1 rounded-md font-black shadow-sm">+{item.images.length - 1}</div>}
-             </div>
-             <h3 className="font-black text-splat-dark text-sm truncate px-1 uppercase">{item.title}</h3>
-             <div className="flex items-center gap-1 px-1 mt-1.5">
-                {Array.from({length: 5}).map((_, i) => <Star key={i} size={12} strokeWidth={3} className={i < item.rating ? "text-splat-yellow fill-splat-yellow" : "text-gray-300"} />)}
-             </div>
-             <button onClick={() => deleteJournalItem(trip.id, item.id)} className="absolute top-4 right-4 p-2 bg-white/90 border-2 border-splat-dark rounded-lg opacity-100 sm:opacity-0 sm:group-hover:opacity-100 text-red-500 transition-opacity shadow-sm"><Trash2 size={14}/></button>
+          <div key={item.id} className="bg-white p-3 rounded-[24px] border-[3px] border-splat-dark shadow-splat-solid flex flex-col group relative active:scale-[0.98] transition-transform">
+            {/* 拍立得照片區塊 */}
+            <div className="aspect-square bg-gray-100 rounded-[16px] overflow-hidden mb-3 border-[3px] border-splat-dark relative shadow-inner">
+               <img src={item.images[0] || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c'} loading="lazy" decoding="async" className="w-full h-full object-cover" alt="food" />
+               {item.images.length > 1 && (
+                 <div className="absolute top-2 right-2 bg-white border-2 border-splat-dark text-splat-dark text-[10px] px-2 py-1 rounded-full font-black shadow-sm flex items-center gap-1">
+                   <ImageIcon size={10} strokeWidth={3}/> +{item.images.length - 1}
+                 </div>
+               )}
+               {/* 刪除按鈕 (懸浮/手機版點擊可見) */}
+               <button onClick={(e) => { e.stopPropagation(); deleteJournalItem(trip.id, item.id); }} className="absolute bottom-2 right-2 p-2 bg-white border-2 border-red-500 text-red-500 rounded-xl opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity shadow-sm active:scale-90">
+                 <Trash2 size={14} strokeWidth={3}/>
+               </button>
+            </div>
+
+            {/* 餐廳名稱與星等 */}
+            <div className="flex-1 flex flex-col justify-between">
+              <div>
+                <h3 className="font-black text-splat-dark text-base leading-tight mb-1 line-clamp-2 pr-1">{item.title}</h3>
+                <div className="flex items-center gap-0.5 mb-2">
+                   {Array.from({length: 5}).map((_, i) => <Star key={i} size={14} strokeWidth={2.5} className={i < item.rating ? "text-splat-yellow fill-splat-yellow drop-shadow-sm" : "text-gray-200 fill-gray-100"} />)}
+                </div>
+              </div>
+
+              {/* 地點標籤與日期 */}
+              {(item.location || item.date) && (
+                <div className="flex flex-col gap-1.5 mt-2 border-t-2 border-dashed border-gray-200 pt-2">
+                  {item.location && (
+                    <div className="flex items-start gap-1 text-[10px] font-bold text-gray-500 bg-gray-50 p-1.5 rounded-lg border border-gray-200">
+                      <MapPin size={12} className="shrink-0 text-splat-pink mt-0.5"/>
+                      <span className="truncate">{item.location}</span>
+                    </div>
+                  )}
+                  {item.date && (
+                    <div className="text-[9px] font-black text-gray-400 uppercase tracking-widest pl-1">
+                      {item.date.replace(/-/g, '/')}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
         ))}
       </div>
