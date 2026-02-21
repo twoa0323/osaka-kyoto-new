@@ -61,17 +61,17 @@ export interface BookingItem {
 export interface ExpenseItem {
   id: string;
   date: string;
-  storeName: string; // [關鍵修復] 補回店家名稱，確保與 Expense.tsx 的輸入邏輯對齊
+  storeName: string; // [關鍵新增] 店家名稱
   title: string;
   amount: number;
   currency: CurrencyCode;
-  method: '現金' | '信用卡' | '行動支付' | 'IC卡' | '其他'; // 更新支付方式選項
+  method: '現金' | '信用卡' | '行動支付' | 'IC卡' | '其他'; // [更新] 支付方式
   location: string;
-  category: '餐飲' | '購物' | '交通' | '住宿' | '娛樂' | '藥妝' | '便利商店' | '超市' | '其他'; // 更新類別選項
+  category: '餐飲' | '購物' | '交通' | '住宿' | '娛樂' | '藥妝' | '便利商店' | '超市' | '其他'; // [更新] 類別
   payerId: string;
   splitWith: string[];
   images: string[];
-  items?: { name: string; price: number }[]; // 存放 AI 掃描辨識的細項
+  items?: { name: string; price: number }[]; // [關鍵新增] AI 辨識細項
 }
 
 // --- 4. 美食日誌 (Journal) 項目 ---
@@ -122,16 +122,17 @@ export interface Trip {
   tripPin: string;
   adminEmail: string;
   members: Member[];
-  budget?: number;
+  budget?: number; // 總預算
   
   // 6 大模組資料集合
   items: ScheduleItem[];
   bookings: BookingItem[];
   expenses: ExpenseItem[];
-  journals: JournalItem[];      // [修正] 改用強型別而非 any[]
-  shoppingList: ShoppingItem[]; // [修正] 改用強型別而非 any[]
-  infoItems: InfoItem[];        // [修正] 改用強型別而非 any[]
+  journals: JournalItem[];
+  shoppingList: ShoppingItem[];
+  infoItems: InfoItem[];
 }
+
 
 
 
