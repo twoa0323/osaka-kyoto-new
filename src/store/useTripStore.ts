@@ -10,6 +10,9 @@ const deepSanitize = (obj: any): any => {
   return JSON.parse(JSON.stringify(obj, (k, v) => (v === undefined ? null : v)));
 };
 
+// 加入 Debounce (防抖) 寫入，避免頻繁觸發 Firebase 浪費效能
+const syncTimeouts = new Map<string, any>();
+
 // 雲端同步函式
 const syncToCloud = async (trip: Trip) => {
   if (!trip?.id) return;
