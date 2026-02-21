@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useTripStore } from '../store/useTripStore';
-import { Plane, Home, MapPin, Plus, Edit3, Globe, QrCode, ArrowRight, X, Luggage } from 'lucide-react';
+import { Plane, Home, MapPin, Plus, Edit3, Globe, QrCode, ArrowRight, X, Luggage, Phone, Camera, Ticket } from 'lucide-react';
 import { BookingItem } from '../types';
 import { BookingEditor } from './BookingEditor';
 
