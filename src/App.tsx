@@ -84,8 +84,11 @@ const App: React.FC = () => {
                 {currentTrip.startDate} — {currentTrip.endDate}
               </h2>
               <div className="flex items-center gap-1 cursor-pointer group mt-1" onClick={() => setMenuOpen(!menuOpen)}>
-                <h1 className="text-2xl font-black tracking-tight drop-shadow-md">{currentTrip.dest}</h1>
-                <ChevronDown size={24} className={`stroke-[3px] transition-transform ${menuOpen ? 'rotate-180' : ''}`} />
+                {/* ✅ 改用旅行名稱，若無則顯示目的地。加入 truncate 避免長檔名跑版 */}
+                <h1 className="text-2xl font-black tracking-tight drop-shadow-md truncate max-w-[200px]">
+                  {currentTrip.tripName || currentTrip.dest}
+                </h1>
+                <ChevronDown size={24} className={`stroke-[3px] transition-transform shrink-0 ${menuOpen ? 'rotate-180' : ''}`} />
               </div>
               
               {menuOpen && (
@@ -202,14 +205,15 @@ const App: React.FC = () => {
          <div className="flex-1 pr-4">
            {/* ✅ 這裡已成功取代 TRIP MATES 並加入即時同步動畫 */}
            <div className="flex items-center gap-2 mb-2">
-             <h2 className="text-2xl font-black italic text-splat-dark tracking-tighter leading-tight uppercase break-words">
-               {currentTrip.tripName || "TRIP MATES"}
-             </h2>
-             <div className="flex items-center gap-1 px-2 py-0.5 bg-splat-green/10 border border-splat-green/30 rounded-full">
-               <RefreshCcw size={10} className="text-splat-green animate-spin-slow" />
-               <span className="text-[8px] font-black text-splat-green uppercase">Live</span>
-             </div>
-           </div>
+                   {/* ✅ 恢復為原本的 TRIP MATES */}
+                   <h2 className="text-2xl font-black italic text-splat-dark tracking-tighter leading-tight uppercase break-words">
+                     TRIP MATES
+                   </h2>
+                   <div className="flex items-center gap-1 px-2 py-0.5 bg-splat-green/10 border border-splat-green/30 rounded-full">
+                     <RefreshCcw size={10} className="text-splat-green animate-spin-slow" />
+                     <span className="text-[8px] font-black text-splat-green uppercase">Live</span>
+                   </div>
+                 </div>
            
            <div className="flex flex-wrap gap-2">
               <span className="text-[9px] font-black bg-white border-2 border-splat-dark px-1.5 py-0.5 rounded shadow-sm text-splat-dark select-all">ID: {currentTrip.id}</span>
