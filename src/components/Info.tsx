@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useTripStore } from '../store/useTripStore';
-import { ExternalLink, ShieldAlert, Plus, X, Camera, Trash2, Globe, Phone, Loader2 } from 'lucide-react';
+import { ExternalLink, ShieldAlert, Plus, X, Camera, Trash2, Globe, Phone, Loader2, ChevronDown, FileText } from 'lucide-react';
 import { uploadImage } from '../utils/imageUtils';
 import { InfoItem } from '../types';
 
@@ -10,6 +10,7 @@ export const Info = () => {
   const [isAdding, setIsAdding] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [form, setForm] = useState<Partial<InfoItem>>({ type: 'note', title: '', content: '', images: [], url: '' });
+  const [expandedId, setExpandedId] = useState<string | null>(null); // 👈 新增控制展開/收合的狀態
 
   if (!trip) return null;
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -50,20 +51,58 @@ export const Info = () => {
 
       <div className="space-y-4">
         {(trip.infoItems || []).map(item => (
-          <div key={item.id} className="bg-white border-[3px] border-splat-dark rounded-[24px] shadow-splat-solid p-6 group relative">
-            <div className="flex justify-between items-start mb-2">
-              <h4 className="font-black text-splat-dark text-xl uppercase pr-8">{item.title}</h4>
-              <button onClick={() => deleteInfoItem(trip.id, item.id)} className="absolute top-4 right-4 p-2 bg-gray-100 border-2 border-splat-dark rounded-lg text-red-500 hover:bg-splat-pink hover:text-white transition-colors shadow-sm"><Trash2 size={16} strokeWidth={2.5}/></button>
+          <div key={item.id} className={`bg-white border-[3px] border-splat-dark rounded-[24px] overflow-hidden transition-all duration-300 ${expandedId === item.id ? 'shadow-[8px_8px_0px_#1A1A1A] -translate-y-1' : 'shadow-splat-solid-sm'}`}>
+            
+            {/* 標題列 (點擊展開/收合) */}
+            <div className="p-5 flex justify-between items-center cursor-pointer select-none bg-white hover:bg-gray-50 active:bg-gray-100 transition-colors" onClick={() => setExpandedId(prev => prev === item.id ? null : item.id)}>
+              <div className="flex items-center gap-3 flex-1 min-w-0 pr-4">
+                <div className="w-10 h-10 bg-splat-blue border-2 border-splat-dark rounded-xl flex items-center justify-center text-white shadow-sm shrink-0">
+                   <FileText size={20} strokeWidth={2.5}/>
+                </div>
+                <h4 className="font-black text-splat-dark text-lg uppercase truncate">{item.title}</h4>
+              </div>
+              <ChevronDown size={24} strokeWidth={3} className={`text-splat-dark shrink-0 transition-transform duration-300 ${expandedId === item.id ? 'rotate-180' : ''}`} />
             </div>
-            {item.content && <div className="bg-gray-50 border-2 border-dashed border-gray-300 p-3 rounded-xl mt-3"><p className="text-sm text-gray-700 font-bold whitespace-pre-wrap">{item.content}</p></div>}
-            {item.images.length > 0 && (
-              <div className="flex gap-2 overflow-x-auto py-3 hide-scrollbar">
-                {item.images.map((img, i) => <img key={i} src={img} className="w-24 h-24 rounded-xl object-cover border-[3px] border-splat-dark shadow-sm" alt="info" />)}
+
+            {/* 展開的詳細內容區塊 */}
+            {expandedId === item.id && (
+              <div className="p-5 pt-0 border-t-2 border-dashed border-gray-200 bg-gray-50/50 animate-in slide-in-from-top-2 fade-in relative">
+                <button onClick={() => deleteInfoItem(trip.id, item.id)} className="absolute top-4 right-4 p-2 bg-white border-2 border-splat-dark rounded-lg text-red-500 hover:bg-red-50 transition-colors shadow-sm active:scale-95"><Trash2 size={16} strokeWidth={2.5}/></button>
+                
+                {item.content && (
+                  <div className="mt-4 pr-12">
+                    <p className="text-sm text-gray-700 font-bold whitespace-pre-wrap leading-relaxed">{item.content}</p>
+                  </div>
+                )}
+                
+                {item.images && item.images.length > 0 && (
+                  <div className="flex gap-3 overflow-x-auto py-4 hide-scrollbar">
+                    {item.images.map((img, i) => (
+                      <div key={i} className="min-w-[120px] h-32 rounded-xl overflow-hidden border-[3px] border-splat-dark shadow-sm shrink-0 relative group cursor-pointer" onClick={() => window.open(img, '_blank')}>
+                        <img src={img} loading="lazy" decoding="async" className="w-full h-full object-cover transition-transform group-hover:scale-110" alt="info" />
+                        <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                          <span className="text-white text-[10px] font-black border-2 border-white px-2 py-1 rounded-md">放大</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {item.url && (
+                  <a href={item.url} target="_blank" rel="noreferrer" className="mt-2 inline-flex items-center gap-2 text-xs font-black text-splat-dark bg-white px-4 py-3 rounded-xl border-[3px] border-splat-dark uppercase tracking-widest shadow-sm active:translate-y-1 active:shadow-none transition-all w-full justify-center">
+                    <ExternalLink size={16} strokeWidth={3}/> 前往相關網站
+                  </a>
+                )}
               </div>
             )}
-            {item.url && <a href={item.url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 text-xs font-black text-white bg-splat-blue px-4 py-2 rounded-lg border-2 border-splat-dark mt-3 uppercase tracking-widest shadow-sm active:translate-y-1 transition-transform"><ExternalLink size={14} strokeWidth={3}/> 查看連結</a>}
           </div>
         ))}
+        
+        {(trip.infoItems || []).length === 0 && (
+           <div className="text-center py-16 bg-white border-[3px] border-dashed border-gray-400 rounded-[32px] text-gray-500 font-black italic shadow-sm">
+             把重要的截圖跟筆記存在這吧！📂
+           </div>
+        )}
       </div>
 
       {isAdding && (
