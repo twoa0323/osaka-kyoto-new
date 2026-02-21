@@ -1,12 +1,14 @@
-// filepath: src/components/Onboarding.tsx
 import React, { useState, useEffect, useRef } from 'react';
 import { useTripStore } from '../store/useTripStore';
 import { getCurrencyByCountry } from '../utils/currencyMapping';
 import { fetchExchangeRate } from '../utils/exchange';
-import { Plane, MapPin, Calendar, Banknote, RefreshCw, Rocket, Loader2, Mail, Lock } from 'lucide-react';
+import { Plane, MapPin, Calendar, Banknote, RefreshCw, Rocket, Loader2, Mail, Lock, Plus } from 'lucide-react';
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from '../services/firebase';
 
 export const Onboarding = ({ onComplete }: { onComplete: () => void }) => {
-  const addTrip = useTripStore((state) => state.addTrip);
+  // ✅ 修復 3：引入 addTripLocal 與 trips 來處理加入邏輯
+  const { addTrip, addTripLocal, trips } = useTripStore();
   const [query, setQuery] = useState('');
   const [suggestions, setSuggestions] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
@@ -29,7 +31,6 @@ export const Onboarding = ({ onComplete }: { onComplete: () => void }) => {
       if (query.length >= 2) {
         setLoading(true);
         try {
-          // ✅ 替換為原生 fetch
           const res = await fetch(`https://nominatim.openstreetmap.org/search?q=${query}&format=json&addressdetails=1&limit=5&accept-language=zh-TW`);
           const data = await res.json();
           setSuggestions(data);
@@ -66,9 +67,50 @@ export const Onboarding = ({ onComplete }: { onComplete: () => void }) => {
     onComplete();
   };
 
+  // ✅ 新增：處理加入朋友行程的邏輯
+  const handleJoinTrip = async () => {
+    const shareId = prompt("請輸入好友的行程代碼 (ID):");
+    if (!shareId) return;
+    
+    // 防呆：如果已經加入了就不要重複加入
+    if (trips.find(t => t.id === shareId)) {
+      alert("您已經有這個行程囉！");
+      onComplete(); 
+      return;
+    }
+    
+    try {
+      const docSnap = await getDoc(doc(db, "trips", shareId));
+      if (docSnap.exists()) {
+        const tripData = docSnap.data() as any;
+        const pin = prompt(`找到「${tripData.dest}」！請輸入密碼加入：`);
+        if (pin === tripData.tripPin) {
+          addTripLocal(tripData);
+          alert("成功加入行程！🎉 (已自動儲存於本機)");
+          onComplete(); // 進入主畫面
+        } else {
+          alert("密碼錯誤！🔒");
+        }
+      } else {
+        alert("找不到這個行程代碼喔 🥲");
+      }
+    } catch (e) {
+      alert("網路錯誤，請稍後再試！");
+    }
+  };
+
   return (
     <div className="fixed inset-0 bg-gradient-to-b from-[#328383] to-[#2E6A9E] flex flex-col items-center justify-center p-6 font-sans text-white z-[500] overflow-y-auto">
-      <div className="w-full max-w-md flex flex-col items-center py-10">
+      
+      {/* 📍 右上角：新增加入好友行程按鈕 */}
+      <button 
+        onClick={handleJoinTrip}
+        className="absolute top-6 right-6 bg-white/20 hover:bg-white/30 backdrop-blur-md border border-white/40 px-4 py-2 rounded-full flex items-center gap-2 font-black transition-all active:scale-95 shadow-lg"
+      >
+        <Plus size={18} strokeWidth={3} /> 加入行程
+      </button>
+
+      <div className="w-full max-w-md flex flex-col items-center py-10 mt-10">
         <div className="w-20 h-20 bg-white/10 rounded-full flex items-center justify-center border border-white/30 backdrop-blur-md mb-6 shrink-0"><Plane size={36} className="rotate-45" /></div>
         <h1 className="text-4xl font-black mb-10 tracking-wide">Travel Plan</h1>
         <div className="bg-white rounded-[40px] w-full p-8 shadow-2xl space-y-4 text-left">
@@ -112,5 +154,6 @@ export const Onboarding = ({ onComplete }: { onComplete: () => void }) => {
     </div>
   );
 };
+
 
 

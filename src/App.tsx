@@ -1,4 +1,3 @@
-// filepath: src/App.tsx
 import React, { useState, useEffect } from 'react';
 import { useTripStore } from './store/useTripStore';
 import { useFirebaseSync } from './hooks/useFirebaseSync';
@@ -9,10 +8,11 @@ import { Expense } from './components/Expense';
 import { Journal } from './components/Journal';
 import { Shopping } from './components/Shopping';
 import { Info } from './components/Info';
-import { Plus, ChevronDown, Trash2, Calendar, CreditCard, Wallet, Utensils, ShoppingBag, Info as InfoIcon, Lock, User, Camera } from 'lucide-react';
+// ✅ 修復 1：補上漏掉的 X 與 auth import
+import { Plus, ChevronDown, Trash2, Calendar, CreditCard, Wallet, Utensils, ShoppingBag, Info as InfoIcon, Lock, User, Camera, X } from 'lucide-react';
 import { format, addDays, differenceInDays, parseISO } from 'date-fns';
-import { zhTW } from 'date-fns/locale';
-import { compressImage } from './utils/imageUtils';
+import { uploadImage } from './utils/imageUtils';
+import { auth } from './services/firebase';
 
 const App: React.FC = () => {
   const { trips, currentTripId, switchTrip, deleteTrip, activeTab, setActiveTab, updateTripData } = useTripStore();
@@ -58,12 +58,12 @@ const App: React.FC = () => {
   };
 
   return (
-    // 📍 修復：確保全局波點背景在此層級生效
     <div className="flex flex-col min-h-screen font-sans text-splat-dark relative bg-[#F4F5F7] bg-[radial-gradient(#D1D5DB_2px,transparent_2px)] bg-[size:24px_24px]">
       
       {activeTab === 'schedule' && (
         <header className="p-4 sticky top-0 z-[100] w-full max-w-md mx-auto animate-fade-in bg-[#F4F5F7]/95 backdrop-blur-sm border-b-[3px] border-splat-dark shadow-sm">
           <div className="bg-splat-yellow border-[3px] border-splat-dark rounded-[24px] shadow-splat-solid p-4 flex justify-between items-center relative z-20">
+            
             <div className="relative text-left">
               <h2 className="text-[10px] font-black text-splat-dark uppercase tracking-widest mb-0.5 bg-white inline-block px-2 border-2 border-splat-dark rounded-full shadow-splat-solid-sm -rotate-2">
                 {currentTrip.startDate} — {currentTrip.endDate}
@@ -72,18 +72,69 @@ const App: React.FC = () => {
                 <h1 className="text-2xl font-black tracking-tight drop-shadow-md">{currentTrip.dest}</h1>
                 <ChevronDown size={24} className={`stroke-[3px] transition-transform ${menuOpen ? 'rotate-180' : ''}`} />
               </div>
+              
+              {/* ✅ 修復 2 & 4：左上角直接顯示 ID 與 PIN，並加上 select-all 方便使用者點擊複製 */}
+              <div className="mt-1.5 flex gap-2">
+                <span className="text-[9px] font-black bg-white border-2 border-splat-dark px-1.5 py-0.5 rounded shadow-sm text-splat-dark select-all">ID: {currentTrip.id}</span>
+                <span className="text-[9px] font-black bg-white border-2 border-splat-dark px-1.5 py-0.5 rounded shadow-sm text-splat-dark select-all">PIN: {currentTrip.tripPin}</span>
+              </div>
+
               {menuOpen && (
-                <div className="absolute top-[120%] left-0 w-64 bg-white border-[3px] border-splat-dark rounded-[24px] shadow-splat-solid z-[110] p-3 animate-in fade-in slide-in-from-top-2">
-                  {trips.map(t => (
-                    <div key={t.id} className={`flex items-center justify-between p-3 rounded-xl border-2 mb-2 ${t.id === currentTrip.id ? 'bg-splat-yellow border-splat-dark' : 'border-transparent hover:border-gray-200'}`}>
-                      <button className="flex-1 text-left font-black text-sm" onClick={() => { if(t.id === currentTrip.id) return; setLockedTripId(t.id); setVerifyPin(''); }}>{t.dest}</button>
-                      <button onClick={() => { if(confirm('移除行程？')) deleteTrip(t.id); }} className="text-red-500 hover:scale-110 transition-transform"><Trash2 size={18}/></button>
-                    </div>
-                  ))}
-                  <button onClick={() => setShowOnboarding(true)} className="w-full mt-2 p-3 bg-splat-green text-white text-sm font-black rounded-xl border-2 border-splat-dark shadow-splat-solid-sm flex items-center justify-center gap-2 active:translate-y-1 active:shadow-none transition-all"><Plus strokeWidth={3} size={16}/> 新增行程</button>
+                <div className="absolute top-[130%] left-0 w-64 bg-white border-[3px] border-splat-dark rounded-[24px] shadow-splat-solid z-[110] overflow-hidden animate-in fade-in slide-in-from-top-2">
+                  <div className="p-3 max-h-48 overflow-y-auto hide-scrollbar">
+                    {trips.map(t => {
+                      // 判斷是否為建立者
+                      const isCreator = t.creatorId === (auth.currentUser?.uid || 'unknown');
+                      return (
+                        <div key={t.id} className={`flex items-center justify-between p-3 rounded-xl border-2 mb-2 ${t.id === currentTrip.id ? 'bg-splat-yellow border-splat-dark' : 'border-transparent hover:border-gray-200'}`}>
+                          <button className="flex-1 text-left font-black text-sm truncate pr-2" onClick={() => { if(t.id === currentTrip.id) return; setLockedTripId(t.id); setVerifyPin(''); }}>{t.dest}</button>
+                          <button onClick={() => { 
+                            if (isCreator) {
+                              if(confirm('⚠️ 確定要永久刪除此行程嗎？(所有旅伴都會遺失資料)')) useTripStore.getState().deleteTrip(t.id);
+                            } else {
+                              if(confirm('要退出此行程嗎？(僅從您的設備移除，其他人仍可查看)')) useTripStore.getState().removeTripLocal(t.id);
+                            }
+                          }} className="text-red-500 hover:scale-110 transition-transform shrink-0">
+                            <Trash2 size={16}/>
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  
+                  <div className="p-3 border-t-[3px] border-splat-dark bg-gray-50 space-y-2">
+                    <button 
+                      onClick={async () => {
+                        const shareId = prompt("請輸入旅伴提供的行程代碼 (ID):");
+                        if (!shareId) return;
+                        if (trips.find(t => t.id === shareId)) return alert("您已經在這個行程裡囉！");
+                        
+                        const { doc, getDoc } = await import('firebase/firestore');
+                        const { db } = await import('./services/firebase');
+                        const docSnap = await getDoc(doc(db, "trips", shareId));
+                        
+                        if (docSnap.exists()) {
+                          const tripData = docSnap.data() as import('./types').Trip;
+                          const pin = prompt(`找到「${tripData.dest}」！請輸入密碼加入：`);
+                          if (pin === tripData.tripPin) {
+                            useTripStore.getState().addTripLocal(tripData);
+                            alert("成功加入行程！🎉 (已儲存於本機)");
+                            setMenuOpen(false);
+                          } else { alert("密碼錯誤！🔒"); }
+                        } else { alert("找不到這個行程代碼喔 🥲"); }
+                      }} 
+                      className="w-full p-3 bg-white text-splat-blue text-sm font-black rounded-xl border-2 border-splat-dark shadow-sm flex items-center justify-center gap-2 active:scale-95 transition-all"
+                    >
+                      🤝 加入好友行程
+                    </button>
+                    <button onClick={() => { setMenuOpen(false); setShowOnboarding(true); }} className="w-full p-3 bg-splat-green text-white text-sm font-black rounded-xl border-2 border-splat-dark shadow-[2px_2px_0px_#1A1A1A] flex items-center justify-center gap-2 active:translate-y-0.5 active:shadow-none transition-all">
+                      <Plus strokeWidth={3} size={16}/> 建立新行程
+                    </button>
+                  </div>
                 </div>
               )}
             </div>
+            
             <div className="w-14 h-14 rounded-full border-[3px] border-splat-dark shadow-splat-solid overflow-hidden bg-white shrink-0 cursor-pointer active:scale-90 transition-transform rotate-3" onClick={() => setMemberOpen(true)}>
                <img src={myProfile?.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=Adventurer`} alt="avatar" className="w-full h-full object-cover" />
             </div>
@@ -196,3 +247,4 @@ const NavIcon = ({ icon, label, id, active, onClick, color }: any) => {
 };
 
 export default App;
+
