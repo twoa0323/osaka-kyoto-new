@@ -115,6 +115,7 @@ export interface InfoItem {
 export interface Trip {
   id: string;
   creatorId?: string;
+  tripName: string;
   dest: string;
   destination: string;
   lat?: number;

@@ -18,6 +18,7 @@ export const Onboarding = ({ onComplete }: { onComplete: () => void }) => {
 
   const [form, setForm] = useState({
     selectedPlace: null as any,
+    tripName: '', // 👈 新增
     start: new Date().toISOString().split('T')[0],
     end: new Date().toISOString().split('T')[0],
     currency: 'TWD' as any,
@@ -141,10 +142,26 @@ export const Onboarding = ({ onComplete }: { onComplete: () => void }) => {
             </>
           ) : (
             <div className="space-y-6 py-4 animate-in zoom-in-95 duration-300">
-               <div className="text-center space-y-2"><div className="w-16 h-16 bg-[#E2F1E7] rounded-full flex items-center justify-center mx-auto text-ac-green"><Lock size={32}/></div><h3 className="text-xl font-black text-ac-brown italic">設定存取密碼</h3></div>
+               {/* ✅ 修復紅框：確保 Lock 圖示正確顯示 */}
+               <div className="text-center space-y-2">
+                 <div className="w-16 h-16 bg-splat-yellow rounded-full flex items-center justify-center mx-auto border-[3px] border-splat-dark shadow-sm text-splat-dark">
+                   <Lock size={32} strokeWidth={2.5}/>
+                 </div>
+                 <h3 className="text-xl font-black text-splat-dark italic uppercase tracking-tighter">Secure Your Trip</h3>
+               </div>
+
                <div className="space-y-4">
-                  <div className="bg-[#EDF1F7] rounded-2xl p-4 flex items-center gap-4"><Mail className="text-[#5C6B89]" size={20}/><input placeholder="Email (找回密碼用)" className="bg-transparent w-full text-ac-brown font-black outline-none" value={form.adminEmail} onChange={e => setForm({...form, adminEmail: e.target.value})} /></div>
-                  <div className="bg-[#EDF1F7] rounded-2xl p-4 flex items-center gap-4"><Lock className="text-[#5C6B89]" size={20}/><input type="password" maxLength={4} inputMode="numeric" placeholder="4 位數進入密碼" className="bg-transparent w-full text-ac-brown font-black outline-none text-2xl tracking-[0.5em]" value={form.tripPin} onChange={e => setForm({...form, tripPin: e.target.value})} /></div>
+                  {/* ✅ 藍框處新增：旅行名稱 */}
+                  <div className="bg-[#EDF1F7] rounded-2xl p-4 border-2 border-transparent focus-within:border-splat-blue transition-all">
+                    <label className="text-[9px] font-black text-[#8E99AF] uppercase mb-1 block tracking-widest">Trip Name</label>
+                    <div className="flex items-center gap-4">
+                      <Plane className="text-[#5C6B89]" size={20}/>
+                      <input placeholder="例如：2024 京阪神大冒險" className="bg-transparent w-full text-splat-dark font-black outline-none" value={form.tripName} onChange={e => setForm({...form, tripName: e.target.value})} />
+                    </div>
+                  </div>
+
+                  <div className="bg-[#EDF1F7] rounded-2xl p-4 flex items-center gap-4"><Mail className="text-[#5C6B89]" size={20}/><input placeholder="Email (管理員信箱)" className="bg-transparent w-full text-splat-dark font-black outline-none" value={form.adminEmail} onChange={e => setForm({...form, adminEmail: e.target.value})} /></div>
+                  <div className="bg-[#EDF1F7] rounded-2xl p-4 flex items-center gap-4"><Lock className="text-[#5C6B89]" size={20}/><input type="password" maxLength={4} inputMode="numeric" placeholder="4 位數進入密碼" className="bg-transparent w-full text-splat-dark font-black outline-none text-2xl tracking-[0.5em]" value={form.tripPin} onChange={e => setForm({...form, tripPin: e.target.value})} /></div>
                </div>
                <div className="flex gap-3"><button onClick={() => setStep('info')} className="flex-1 py-4 border-2 border-ac-border rounded-full font-black text-ac-border">上一步</button><button onClick={handleFinish} className="flex-[2] bg-ac-green text-white py-4 rounded-full font-black shadow-zakka">確認啟航 ➔</button></div>
             </div>

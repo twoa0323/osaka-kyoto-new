@@ -199,9 +199,12 @@ const App: React.FC = () => {
           <div className="relative w-[85%] max-w-xs bg-splat-bg h-full shadow-2xl border-l-[6px] border-splat-dark p-8 animate-in slide-in-from-right duration-300 overflow-y-auto">
              
              <div className="flex justify-between items-start mb-8">
-               <div>
-                 <h2 className="text-2xl font-black italic text-splat-dark tracking-tighter mb-2">TRIP MATES</h2>
-                 {/* ✅ ID & PIN 移至此處 */}
+               <div className="flex-1 pr-4">
+                 {/* ✅ 取代 TRIP MATES 為旅行名稱，並處理長文字溢出 */}
+                 <h2 className="text-2xl font-black italic text-splat-dark tracking-tighter mb-2 leading-tight uppercase break-words">
+                   {currentTrip.tripName || "TRIP MATES"}
+                 </h2>
+                 <div className="flex flex-wrap gap-2">
                  <div className="flex gap-2">
                     <span className="text-[9px] font-black bg-white border-2 border-splat-dark px-1.5 py-0.5 rounded shadow-sm text-splat-dark select-all">ID: {currentTrip.id}</span>
                     <span className="text-[9px] font-black bg-white border-2 border-splat-dark px-1.5 py-0.5 rounded shadow-sm text-splat-dark select-all">PIN: {currentTrip.tripPin}</span>
