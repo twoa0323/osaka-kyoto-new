@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useTripStore } from '../store/useTripStore';
 import { format, addDays, differenceInDays, parseISO, isValid } from 'date-fns';
-import { MapPin, Plus, Edit3, Trash2, Utensils, Plane, Home, Camera, Sparkles, X, Loader2, Wind, Umbrella, Sunrise, ChevronUp, ChevronDown, Clock, Cloud, CloudRain, Sun, Droplets } from 'lucide-react';
+import { MapPin, Plus, Edit3, Trash2, Utensils, Plane, Home, Camera, Sparkles, X, Loader2, Wind, Umbrella, Sunrise, ChevronUp, ChevronDown, Clock, Cloud, CloudRain, Sun, Droplets, AlertTriangle, Wand2 } from 'lucide-react';
 import { ScheduleEditor } from './ScheduleEditor';
 import { ScheduleItem } from '../types';
 import { GoogleGenerativeAI } from "@google/generative-ai";
@@ -66,6 +66,47 @@ export const Schedule = ({ externalDateIdx = 0 }: { externalDateIdx?: number }) 
   const [isAiOpen, setIsAiOpen] = useState(false);
   const [aiText, setAiText] = useState('');
   const [isAiLoading, setIsAiLoading] = useState(false);
+  
+  // 📍 新增：空檔 AI 專用的載入狀態與邏輯
+  const [gapAiLoading, setGapAiLoading] = useState<string | null>(null);
+
+  // 輔助：將時間字串 "10:30" 轉換為分鐘數，方便計算空檔
+  const timeToMins = (t: string) => {
+    if (!t) return 0;
+    const [h, m] = t.split(':').map(Number);
+    return (h || 0) * 60 + (m || 0);
+  };
+
+  // 📍 核心魔法：向 Gemini 詢問兩個景點間的順遊推薦
+  const handleGapAiSuggest = async (prevItem: ScheduleItem, nextItem: ScheduleItem) => {
+    if (!GEMINI_API_KEY) return alert("請先設定 Gemini API Key 才能使用魔法唷！✨");
+    setGapAiLoading(prevItem.id);
+    try {
+      const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
+      // ✅ 嚴格套用最新預覽版模型
+      const model = genAI.getGenerativeModel({ model: "gemini-3-flash-preview" });
+      const prompt = `你在規劃日本旅遊行程。使用者上一個行程是 ${prevItem.time} 在「${prevItem.location} ${prevItem.title}」，下一個行程是 ${nextItem.time} 在「${nextItem.location} ${nextItem.title}」。這兩個行程中間有較長的空檔。
+      請推薦一個【順路且評價好】的景點或美食（例如下午茶或小神社），時間請設定在兩者之間。
+      請回傳純 JSON 格式，必須包含以下欄位：{"time":"HH:mm", "title":"推薦地點", "location":"地址或站名", "category":"sightseeing或food", "note":"推薦理由(簡短15字內)"}`;
+      
+      const res = await model.generateContent(prompt);
+      const text = res.response.text();
+      const match = text.match(/\{[\s\S]*\}/);
+      if (match) {
+        const data = JSON.parse(match[0]);
+        addScheduleItem(trip.id, { 
+          ...data, 
+          id: `ai-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`, 
+          date: selectedDateStr, 
+          images: [] 
+        });
+      }
+    } catch (e) {
+      alert("AI 目前想不出好點子，換個時間再試試吧！🤔");
+    } finally {
+      setGapAiLoading(null);
+    }
+  };
 
   const dateRange = useMemo(() => {
     if (!trip?.startDate || !trip?.endDate) return [];
@@ -314,49 +355,86 @@ export const Schedule = ({ externalDateIdx = 0 }: { externalDateIdx?: number }) 
                dayItems.map((item, idx) => {
                  const catStyle = CATEGORY_STYLE[item.category as keyof typeof CATEGORY_STYLE] || CATEGORY_STYLE.sightseeing;
                  
+                 // 📍 計算空檔與防呆
+                 const prevItem = idx > 0 ? dayItems[idx - 1] : null;
+                 let warningMsg = null;
+                 let showAiGap = false;
+                 
+                 if (prevItem) {
+                   const diff = timeToMins(item.time) - timeToMins(prevItem.time);
+                   if (diff < 0) warningMsg = "時間順序重疊囉！⏳";
+                   else if (diff < 40 && prevItem.location !== item.location) warningMsg = "行程有點趕，留意交通！🏃";
+                   if (diff >= 120) showAiGap = true;
+                 }
+
                  return (
-                   <div key={item.id} className="flex gap-3 mb-6 relative group animate-in slide-in-from-bottom-4">
-                      
-                      {/* 粗黑連接線 */}
-                      {idx !== dayItems.length - 1 && (
-                        <div className="absolute left-7 top-12 bottom-[-32px] w-[3px] bg-splat-dark z-0" />
+                   <React.Fragment key={item.id}>
+                      {/* 📍 AI 魔法填空按鈕 */}
+                      {showAiGap && prevItem && (
+                        <div className="ml-16 pl-3 mb-4 -mt-2 relative z-20 animate-in fade-in">
+                           <button 
+                             disabled={gapAiLoading === prevItem.id} 
+                             onClick={() => handleGapAiSuggest(prevItem, item)} 
+                             className="py-2 px-4 bg-white border-[3px] border-splat-dark rounded-xl text-[10px] font-black text-splat-dark shadow-[2px_2px_0px_#1A1A1A] hover:bg-splat-yellow active:translate-y-0.5 active:shadow-none transition-all flex items-center gap-2"
+                           >
+                             {gapAiLoading === prevItem.id ? <Loader2 size={16} className="animate-spin text-splat-blue"/> : <Wand2 size={16} className="text-splat-orange" />}
+                             {gapAiLoading === prevItem.id ? 'AI 魔法調閱地圖中...' : `空檔 ${Math.floor((timeToMins(item.time) - timeToMins(prevItem.time))/60)} 小時，讓 AI 推薦順遊點 ✨`}
+                           </button>
+                        </div>
                       )}
 
-                      {/* 📍 獨立時間徽章 (Time Badge) */}
-                      <div className="w-16 shrink-0 flex flex-col items-center mt-3 z-10 relative">
-                        <div className={`bg-white text-splat-dark rounded-xl py-2 w-full text-center font-black text-base border-[3px] border-splat-dark shadow-splat-solid-sm -rotate-3 relative`}>
-                          {item.time}
-                          {/* 頂部裝飾釘 */}
-                          <div className={`absolute -top-1.5 -right-1.5 w-3.5 h-3.5 rounded-full border-2 border-splat-dark ${catStyle.bg}`} />
-                        </div>
-                      </div>
+                      <div className="flex gap-3 mb-6 relative group animate-in slide-in-from-bottom-4">
+                         
+                         {/* 粗黑連接線 */}
+                         {idx !== dayItems.length - 1 && (
+                           <div className="absolute left-7 top-12 bottom-[-32px] w-[3px] bg-splat-dark z-0" />
+                         )}
 
-                      {/* 行程內容卡片 */}
-                      <div 
-                        onClick={() => isEditMode ? (setEditingItem(item), setIsEditorOpen(true)) : setDetailItem(item)}
-                        className={`flex-1 card-splat p-0 overflow-hidden cursor-pointer flex flex-col transition-transform active:scale-[0.98] ${isEditMode ? 'border-dashed border-splat-pink ring-2 ring-splat-pink/30' : ''}`}
-                      >
-                         {/* 頂部標籤條 */}
-                         <div className={`h-7 w-full ${catStyle.bg} border-b-[3px] border-splat-dark flex items-center px-3`}>
-                            <span className={`text-[10px] font-black uppercase tracking-widest ${catStyle.text}`}>{catStyle.label}</span>
-                         </div>
-
-                         <div className="p-4 flex justify-between items-center bg-white">
-                           <div className="flex-1 min-w-0 pr-2">
-                             <h4 className="font-black text-xl text-splat-dark uppercase leading-tight truncate">{item.title}</h4>
-                             <p className="text-xs font-bold text-gray-500 flex items-center gap-1 mt-1.5 truncate"><MapPin size={14}/> {item.location}</p>
+                         {/* 📍 獨立時間徽章 (Time Badge) */}
+                         <div className="w-16 shrink-0 flex flex-col items-center mt-3 z-10 relative">
+                           <div className={`bg-white text-splat-dark rounded-xl py-2 w-full text-center font-black text-base border-[3px] border-splat-dark shadow-splat-solid-sm -rotate-3 relative`}>
+                             {item.time}
+                             {/* 頂部裝飾釘 */}
+                             <div className={`absolute -top-1.5 -right-1.5 w-3.5 h-3.5 rounded-full border-2 border-splat-dark ${catStyle.bg}`} />
                            </div>
-                           
-                           {/* 編輯模式排序按鈕 */}
-                           {isEditMode && (
-                             <div className="flex flex-col gap-1 ml-2 shrink-0">
-                                <button onClick={(e) => { e.stopPropagation(); handleMove(idx, 'up'); }} className="p-1.5 bg-gray-100 rounded border-2 border-splat-dark text-splat-dark active:bg-splat-yellow"><ChevronUp size={16}/></button>
-                                <button onClick={(e) => { e.stopPropagation(); handleMove(idx, 'down'); }} className="p-1.5 bg-gray-100 rounded border-2 border-splat-dark text-splat-dark active:bg-splat-yellow"><ChevronDown size={16}/></button>
-                             </div>
-                           )}
+                         </div>
+                         
+                         {/* 📍 右側內容區塊 */}
+                         <div className="flex-1 min-w-0 flex flex-col gap-2">
+                            {/* 顯示防呆警告標籤 */}
+                            {warningMsg && (
+                                <div className="bg-white border-2 border-splat-dark text-splat-dark px-3 py-1.5 rounded-lg text-[10px] font-black flex items-center gap-1.5 shadow-[2px_2px_0px_#FFC000] w-fit animate-in zoom-in-95">
+                                   <AlertTriangle size={14} className="text-splat-orange" /> {warningMsg}
+                                </div>
+                            )}
+
+                            <div 
+                              onClick={() => isEditMode ? (setEditingItem(item), setIsEditorOpen(true)) : setDetailItem(item)}
+                              className={`card-splat p-0 overflow-hidden cursor-pointer flex flex-col transition-transform active:scale-[0.98] ${isEditMode ? 'border-dashed border-splat-pink ring-2 ring-splat-pink/30' : ''}`}
+                            >
+                               {/* 頂部標籤條 */}
+                               <div className={`h-7 w-full ${catStyle.bg} border-b-[3px] border-splat-dark flex items-center px-3`}>
+                                  <span className={`text-[10px] font-black uppercase tracking-widest ${catStyle.text}`}>{catStyle.label}</span>
+                               </div>
+
+                               <div className="p-4 flex justify-between items-center bg-white">
+                                 <div className="flex-1 min-w-0 pr-2">
+                                   <h4 className="font-black text-xl text-splat-dark uppercase leading-tight truncate">{item.title}</h4>
+                                   <p className="text-xs font-bold text-gray-500 flex items-center gap-1 mt-1.5 truncate"><MapPin size={14}/> {item.location}</p>
+                                 </div>
+                                 
+                                 {/* 編輯模式排序按鈕 */}
+                                 {isEditMode && (
+                                   <div className="flex flex-col gap-1 ml-2 shrink-0">
+                                      <button onClick={(e) => { e.stopPropagation(); handleMove(idx, 'up'); }} className="p-1.5 bg-gray-100 rounded border-2 border-splat-dark text-splat-dark active:bg-splat-yellow"><ChevronUp size={16}/></button>
+                                      <button onClick={(e) => { e.stopPropagation(); handleMove(idx, 'down'); }} className="p-1.5 bg-gray-100 rounded border-2 border-splat-dark text-splat-dark active:bg-splat-yellow"><ChevronDown size={16}/></button>
+                                   </div>
+                                 )}
+                               </div>
+                            </div>
                          </div>
                       </div>
-                   </div>
+                   </React.Fragment>
                  );
                })
              )}
