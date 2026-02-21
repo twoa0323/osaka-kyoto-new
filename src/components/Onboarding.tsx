@@ -57,6 +57,7 @@ export const Onboarding = ({ onComplete }: { onComplete: () => void }) => {
     if (!form.adminEmail || form.tripPin.length < 4) return alert("Email 與 4 位密碼都要填唷！🔒");
     addTrip({
       id: Date.now().toString(),
+      tripName: form.tripName || form.selectedPlace.display_name.split(',')[0], // 👈 ✅ 關鍵修復：把旅行名稱寫入資料庫
       dest: form.selectedPlace.display_name.split(',')[0],
       destination: form.selectedPlace.display_name,
       lat: parseFloat(form.selectedPlace.lat),
@@ -163,7 +164,15 @@ export const Onboarding = ({ onComplete }: { onComplete: () => void }) => {
                   <div className="bg-[#EDF1F7] rounded-2xl p-4 flex items-center gap-4"><Mail className="text-[#5C6B89]" size={20}/><input placeholder="Email (管理員信箱)" className="bg-transparent w-full text-splat-dark font-black outline-none" value={form.adminEmail} onChange={e => setForm({...form, adminEmail: e.target.value})} /></div>
                   <div className="bg-[#EDF1F7] rounded-2xl p-4 flex items-center gap-4"><Lock className="text-[#5C6B89]" size={20}/><input type="password" maxLength={4} inputMode="numeric" placeholder="4 位數進入密碼" className="bg-transparent w-full text-splat-dark font-black outline-none text-2xl tracking-[0.5em]" value={form.tripPin} onChange={e => setForm({...form, tripPin: e.target.value})} /></div>
                </div>
-               <div className="flex gap-3"><button onClick={() => setStep('info')} className="flex-1 py-4 border-2 border-ac-border rounded-full font-black text-ac-border">上一步</button><button onClick={handleFinish} className="flex-[2] bg-ac-green text-white py-4 rounded-full font-black shadow-zakka">確認啟航 ➔</button></div>
+               {/* ✅ 關鍵修復：更新按鈕的 CSS 樣式，讓它顯現並符合您的 UI 風格 */}
+               <div className="flex gap-3 pt-4">
+                  <button onClick={() => setStep('info')} className="flex-1 py-4 border-[3px] border-splat-dark bg-white rounded-xl font-black text-splat-dark hover:bg-gray-100 transition-colors shadow-splat-solid-sm active:translate-y-1 active:shadow-none">
+                     上一步
+                  </button>
+                  <button onClick={handleFinish} className="flex-[2] bg-splat-green text-white py-4 rounded-xl font-black border-[3px] border-splat-dark shadow-splat-solid active:translate-y-1 active:shadow-none transition-all uppercase tracking-widest">
+                     確認啟航 ➔
+                  </button>
+               </div>
             </div>
           )}
         </div>
