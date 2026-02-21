@@ -1,36 +1,52 @@
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useTripStore } from '../store/useTripStore';
 import { db } from '../services/firebase';
-import { collection, onSnapshot, query, orderBy, limit } from 'firebase/firestore';
+import { collection, onSnapshot, query, where } from 'firebase/firestore';
 import { Trip } from '../types';
 
 export const useFirebaseSync = () => {
-  const { setTrips } = useTripStore();
+  const { trips } = useTripStore();
+  
+  // 提取本機端擁有的行程 ID，用來告訴 Firebase 要監聽哪些
+  const localTripIdsString = useMemo(() => trips.map(t => t.id).filter(Boolean).sort().join(','), [trips]);
 
   useEffect(() => {
-    const q = query(
-      collection(db, "trips"), 
-      orderBy("id", "desc"), 
-      limit(5)
-    );
-    
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      // [關鍵修復] 如果快照包含本地尚未完成寫入的變更，忽略此次雲端回傳
-      // 這能解決「新增後2秒消失」的問題
-      if (snapshot.metadata.hasPendingWrites) return;
+    const tripIds = localTripIdsString.split(',').filter(Boolean);
+    if (tripIds.length === 0) return;
 
-      const tripsData: Trip[] = [];
-      snapshot.forEach((doc) => {
-        tripsData.push(doc.data() as Trip);
+    // Firebase 的 'in' 查詢最多支援 10 個項目。分批處理。
+    const chunks: string[][] = [];
+    for (let i = 0; i < tripIds.length; i += 10) {
+      chunks.push(tripIds.slice(i, i + 10));
+    }
+
+    const unsubscribes = chunks.map(chunk => {
+      const q = query(collection(db, "trips"), where("id", "in", chunk));
+
+      return onSnapshot(q, (snapshot) => {
+        if (snapshot.metadata.hasPendingWrites) return;
+
+        const updatedRemoteTrips: Trip[] = [];
+        snapshot.forEach((doc) => {
+          updatedRemoteTrips.push(doc.data() as Trip);
+        });
+
+        if (updatedRemoteTrips.length > 0) {
+          // 精準將雲端的更新塞回 Zustand，確保共同編輯能即時顯示
+          useTripStore.setState(state => {
+             const newTrips = state.trips.map(localTrip => {
+                const remoteTrip = updatedRemoteTrips.find(rt => rt.id === localTrip.id);
+                return remoteTrip ? remoteTrip : localTrip;
+             });
+             return { trips: newTrips };
+          });
+        }
+      }, (error) => {
+        console.error("Firebase 同步錯誤:", error);
       });
-      
-      if (tripsData.length > 0) {
-        setTrips(tripsData);
-      }
-    }, (error) => {
-      console.error("Firebase 同步錯誤:", error);
     });
 
-    return () => unsubscribe();
-  }, [setTrips]);
+    return () => unsubscribes.forEach(unsub => unsub());
+  }, [localTripIdsString]); 
 };
+

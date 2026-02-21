@@ -110,6 +110,7 @@ export interface InfoItem {
 // --- 根節點：整趟旅程 (Trip) 定義 ---
 export interface Trip {
   id: string;
+  creatorId?: string; // 👈 [新增] 紀錄建立者的設備 UID
   dest: string;
   destination: string;
   lat?: number;
