@@ -200,12 +200,11 @@ const App: React.FC = () => {
              
              <div className="flex justify-between items-start mb-8">
                <div className="flex-1 pr-4">
-                 {/* ✅ 取代 TRIP MATES 為旅行名稱，並處理長文字溢出 */}
+                 {/* ✅ 顯示旅行名稱 */}
                  <h2 className="text-2xl font-black italic text-splat-dark tracking-tighter mb-2 leading-tight uppercase break-words">
                    {currentTrip.tripName || "TRIP MATES"}
                  </h2>
                  <div className="flex flex-wrap gap-2">
-                 <div className="flex gap-2">
                     <span className="text-[9px] font-black bg-white border-2 border-splat-dark px-1.5 py-0.5 rounded shadow-sm text-splat-dark select-all">ID: {currentTrip.id}</span>
                     <span className="text-[9px] font-black bg-white border-2 border-splat-dark px-1.5 py-0.5 rounded shadow-sm text-splat-dark select-all">PIN: {currentTrip.tripPin}</span>
                  </div>
@@ -224,11 +223,9 @@ const App: React.FC = () => {
                     </div>
                     <div className="text-left flex-1 min-w-0">
                       <p className="font-black text-sm text-splat-dark truncate">{m.name}</p>
-                      {/* ✅ 顯示心情留言，若無則顯示信箱 */}
                       <p className="text-[8px] font-bold text-gray-400 uppercase tracking-tighter truncate">{m.mood || m.email}</p>
                     </div>
                     
-                    {/* ✅ 點擊後出現的隱藏編輯圖示 */}
                     {m.id === myProfile?.id && showEditIcon === m.id && (
                        <button onClick={(e) => { 
                          e.stopPropagation(); 
@@ -245,7 +242,7 @@ const App: React.FC = () => {
           </div>
         </div>
       )}
-
+      
       {/* ✅ 全新功能：個人資料編輯視窗 */}
       {editingProfile && myProfile && (
         <div className="fixed inset-0 z-[2000] bg-splat-dark/60 backdrop-blur-sm flex items-center justify-center p-4">
