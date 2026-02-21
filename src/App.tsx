@@ -200,12 +200,12 @@ const InkSplatOverlay = ({ color }: { color: string }) => (
       </main>
 
       <nav className="fixed bottom-6 left-1/2 -translate-x-1/2 w-[92%] max-w-md bg-white border-[3px] border-splat-dark rounded-[32px] shadow-splat-solid px-2 py-3 flex justify-between items-center z-50">
-        <NavIcon icon={<Calendar />} label="行程" id="schedule" active={activeTab} onClick={setActiveTab} color="text-splat-blue" />
-        <NavIcon icon={<CreditCard />} label="預訂" id="booking" active={activeTab} onClick={setActiveTab} color="text-splat-pink" />
-        <NavIcon icon={<Wallet />} label="記帳" id="expense" active={activeTab} onClick={setActiveTab} color="text-splat-yellow" />
-        <NavIcon icon={<Utensils />} label="美食" id="food" active={activeTab} onClick={setActiveTab} color="text-splat-orange" />
-        <NavIcon icon={<ShoppingBag />} label="購物" id="shop" active={activeTab} onClick={setActiveTab} color="text-splat-green" />
-        <NavIcon icon={<InfoIcon />} label="資訊" id="info" active={activeTab} onClick={setActiveTab} color="text-splat-dark" />
+        <NavIcon icon={<Calendar />} label="行程" id="schedule" active={activeTab} onClick={setActiveTab} color="text-splat-blue" splatColor="bg-splat-blue" />
+        <NavIcon icon={<CreditCard />} label="預訂" id="booking" active={activeTab} onClick={setActiveTab} color="text-splat-pink" splatColor="bg-splat-pink" />
+        <NavIcon icon={<Wallet />} label="記帳" id="expense" active={activeTab} onClick={setActiveTab} color="text-splat-yellow" splatColor="bg-splat-yellow" />
+        <NavIcon icon={<Utensils />} label="美食" id="food" active={activeTab} onClick={setActiveTab} color="text-splat-orange" splatColor="bg-splat-orange" />
+        <NavIcon icon={<ShoppingBag />} label="購物" id="shop" active={activeTab} onClick={setActiveTab} color="text-splat-green" splatColor="bg-splat-green" />
+        <NavIcon icon={<InfoIcon />} label="資訊" id="info" active={activeTab} onClick={setActiveTab} color="text-splat-dark" splatColor="bg-splat-dark" />
       </nav>
 
       {/* 切換行程密碼鎖定畫面 */}
