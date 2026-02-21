@@ -14,6 +14,7 @@ import { format, addDays, differenceInDays, parseISO } from 'date-fns';
 import { zhTW } from 'date-fns/locale';
 import { compressImage, uploadImage } from './utils/imageUtils';
 import { auth } from './services/firebase';
+import { motion, AnimatePresence } from 'framer-motion';
 
 // 預設提供選擇的 AI 大頭貼
 const PRESET_AVATARS = [
@@ -31,6 +32,32 @@ const App: React.FC = () => {
   const [verifyPin, setVerifyPin] = useState('');
   const [selectedDateIdx, setSelectedDateIdx] = useState(0);
   
+  // 墨水噴濺組件 (可放在 App.tsx 外部或獨立檔案)
+const InkSplatOverlay = ({ color }: { color: string }) => (
+  <motion.div
+    initial={{ scale: 0, opacity: 1 }}
+    animate={{ 
+      scale: 4, 
+      opacity: 0,
+      transition: { duration: 0.6, ease: "easeOut" } 
+    }}
+    exit={{ opacity: 0 }}
+    style={{
+      position: 'fixed',
+      top: '50%',
+      left: '50%',
+      x: '-50%',
+      y: '-50%',
+      width: '150px',
+      height: '150px',
+      backgroundColor: color,
+      borderRadius: '45% 55% 70% 30% / 30% 60% 40% 70%', // 不規則形狀
+      zIndex: 9999,
+      pointerEvents: 'none',
+    }}
+  />
+);
+
   // 會員區塊狀態
   const [memberOpen, setMemberOpen] = useState(false);
   const [showPersonalSetup, setShowPersonalSetup] = useState(false);
@@ -333,15 +360,29 @@ const App: React.FC = () => {
   );
 };
 
-const NavIcon = ({ icon, label, id, active, onClick, color }: any) => {
+// 3. 修改 NavIcon 增加 iOS 般的 Q 彈手感
+const NavIcon = ({ icon, label, id, active, onClick, color, splatColor }: any) => {
   const isActive = active === id;
   return (
-    <button onClick={() => onClick(id)} className={`flex flex-col items-center gap-1 flex-1 transition-all duration-300 ${isActive ? `${color} scale-110 -translate-y-2` : 'text-gray-400 hover:text-gray-600'}`}>
-      {React.cloneElement(icon, { size: 24, strokeWidth: isActive ? 3 : 2.5 })}
-      <span className="text-[10px] font-black tracking-widest transition-opacity">{label}</span>
-    </button>
+    <motion.button 
+      whileTap={{ scale: 0.85 }} // iOS 觸感模擬：按下縮小
+      onClick={() => onClick(id)} 
+      className={`flex flex-col items-center gap-1 flex-1 transition-all duration-300 ${isActive ? `${color} -translate-y-2` : 'text-gray-400'}`}
+    >
+      <div className="relative">
+        {isActive && (
+          <motion.div 
+            layoutId="nav-glow"
+            className={`absolute inset-0 blur-md opacity-40 ${splatColor}`}
+          />
+        )}
+        {React.cloneElement(icon, { size: 24, strokeWidth: isActive ? 3 : 2.5 })}
+      </div>
+      <span className="text-[10px] font-black tracking-widest">{label}</span>
+    </motion.button>
   );
 };
+
 
 export default App;
 

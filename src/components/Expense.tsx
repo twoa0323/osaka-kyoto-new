@@ -1,10 +1,14 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useTripStore } from '../store/useTripStore';
-import { Wallet, Coins, Trash2, Camera, BarChart3, Upload, PenTool, LayoutList, Settings, CheckCircle, Image as ImageIcon, Loader2, Store, Search, X, ChevronRight, Edit3, ArrowLeft, Info, ThermometerSun } from 'lucide-react';
-import { ExpenseItem, CurrencyCode } from '../types';
+import { 
+  Wallet, Coins, Trash2, Camera, BarChart3, Upload, PenTool, 
+  LayoutList, Settings, CheckCircle, Image as ImageIcon, 
+  Loader2, Store, Search, X, ChevronRight, Edit3, ArrowLeft, 
+  Info, ArrowRight, TrendingDown
+} from 'lucide-react';
+import { ExpenseItem, CurrencyCode, Member } from '../types';
 import { compressImage, uploadImage } from '../utils/imageUtils';
 import { format, parseISO, differenceInDays } from 'date-fns';
-import { zhTW } from 'date-fns/locale';
 
 // --- 常數配置 ---
 const CURRENCY_SYMBOLS: Record<string, string> = {
@@ -14,22 +18,66 @@ const CURRENCY_SYMBOLS: Record<string, string> = {
 const CATEGORIES = ['餐飲','購物','交通','住宿','娛樂','藥妝','便利商店','超市','其他'];
 const METHODS = ['現金','信用卡','行動支付','IC卡','其他'];
 
-// --- 子組件：圓餅圖 (純 CSS) ---
-const DonutChart = ({ data, totalLabel }: { data: { label: string, value: number, color: string, percent: number }[], totalLabel: string }) => {
+// --- 核心演算法：多人分帳結算 (Debt Simplification) ---
+const calculateSettlements = (expenses: ExpenseItem[], members: Member[], rate: number) => {
+  if (!members || members.length <= 1) return [];
+
+  // 1. 初始化每個人的淨額 (Net Balance)
+  const balances: Record<string, number> = {};
+  members.forEach(m => balances[m.id] = 0);
+
+  // 2. 計算每筆支出對淨額的影響
+  expenses.forEach(exp => {
+    // 換算回主幣別 (TWD) 計算
+    const amountTwd = exp.currency === 'TWD' ? exp.amount : exp.amount * rate;
+    
+    // 付款人增加餘額 (代墊)
+    balances[exp.payerId] = (balances[exp.payerId] || 0) + amountTwd;
+    
+    // 每個人平分債務 (減少餘額)
+    const share = amountTwd / members.length;
+    members.forEach(m => {
+      balances[m.id] -= share;
+    });
+  });
+
+  // 3. 區分債務人與債權人
+  let debtors = Object.keys(balances)
+    .filter(id => balances[id] < -1)
+    .map(id => ({ id, amount: Math.abs(balances[id]) }));
+    
+  let creditors = Object.keys(balances)
+    .filter(id => balances[id] > 1)
+    .map(id => ({ id, amount: balances[id] }));
+
+  // 4. 貪婪配對結算
+  const results: { from: string; to: string; amount: number }[] = [];
+  let d = 0, c = 0;
+  while (d < debtors.length && c < creditors.length) {
+    const settle = Math.min(debtors[d].amount, creditors[c].amount);
+    results.push({
+      from: debtors[d].id,
+      to: creditors[c].id,
+      amount: Math.round(settle)
+    });
+    debtors[d].amount -= settle;
+    creditors[c].amount -= settle;
+    if (debtors[d].amount < 1) d++;
+    if (creditors[c].amount < 1) c++;
+  }
+  return results;
+};
+
+// --- 子組件：圖表 (維持原有樣式) ---
+const DonutChart = ({ data, totalLabel }: { data: any[], totalLabel: string }) => {
   const total = data.reduce((a, b) => a + b.value, 0);
-  if (total === 0) return (
-    <div className="w-48 h-48 rounded-full border-[3px] border-dashed border-gray-300 mx-auto flex items-center justify-center text-xs text-gray-400 font-black uppercase">
-      No Data
-    </div>
-  );
-  
+  if (total === 0) return <div className="w-48 h-48 rounded-full border-[3px] border-dashed border-gray-300 mx-auto flex items-center justify-center text-xs text-gray-400 font-black uppercase">No Data</div>;
   let acc = 0;
   const gradients = data.map(d => {
     const deg = (d.value / total) * 360;
     const s = `${d.color} ${acc}deg ${acc + deg}deg`;
     acc += deg; return s;
   }).join(', ');
-
   return (
     <div className="relative w-52 h-52 rounded-full mx-auto shadow-splat-solid border-[4px] border-splat-dark" style={{ background: `conic-gradient(${gradients})` }}>
       <div className="absolute inset-8 bg-white border-[3px] border-splat-dark rounded-full flex flex-col items-center justify-center text-splat-dark text-center">
@@ -40,7 +88,6 @@ const DonutChart = ({ data, totalLabel }: { data: { label: string, value: number
   );
 };
 
-// --- 子組件：每日趨勢長條圖 ---
 const BarChart = ({ data }: { data: { date: string, amount: number }[] }) => {
   const max = Math.max(...data.map(d => d.amount), 1);
   return (
@@ -52,11 +99,61 @@ const BarChart = ({ data }: { data: { date: string, amount: number }[] }) => {
                ${d.amount.toLocaleString()}
              </div>
           </div>
-          <span className="text-[9px] font-black text-gray-500 rotate-45 mt-3 origin-left uppercase whitespace-nowrap">
-            {d.date.slice(5).replace(/-/g,'/')}
-          </span>
+          <span className="text-[9px] font-black text-gray-500 rotate-45 mt-3 origin-left uppercase whitespace-nowrap">{d.date.slice(5).replace(/-/g,'/')}</span>
         </div>
       ))}
+    </div>
+  );
+};
+
+// --- 新組件：多人分帳結算區塊 ---
+const SettlementSection = ({ expenses, members, rate }: { expenses: ExpenseItem[], members: Member[], rate: number }) => {
+  const settlements = useMemo(() => calculateSettlements(expenses, members, rate), [expenses, members, rate]);
+
+  return (
+    <div className="mt-10 space-y-4">
+      <div className="flex items-center gap-2">
+         <h3 className="text-left font-black text-splat-dark flex items-center gap-2 uppercase tracking-widest">
+           <div className="w-2 h-5 bg-splat-green rounded-full shadow-splat-solid-sm"/> 
+           Who Owes Who 結算摘要
+         </h3>
+      </div>
+      
+      <div className="bg-[#F4F5F7] border-[3px] border-splat-dark rounded-[24px] p-5 space-y-3 shadow-inner">
+        {settlements.length === 0 ? (
+          <div className="text-center py-6 text-gray-400 font-black italic">
+            目前大家互不相欠 🦑
+          </div>
+        ) : (
+          settlements.map((s, i) => {
+            const fromUser = members.find(m => m.id === s.from);
+            const toUser = members.find(m => m.id === s.to);
+            return (
+              <div key={i} className="flex items-center justify-between p-4 bg-white rounded-2xl border-[3px] border-splat-dark shadow-splat-solid-sm animate-in slide-in-from-bottom-2">
+                <div className="flex flex-col items-center gap-1 w-20">
+                  <img src={fromUser?.avatar} className="w-10 h-10 rounded-full border-2 border-splat-dark shadow-sm bg-gray-50" />
+                  <span className="font-black text-[10px] text-splat-dark truncate w-full text-center">{fromUser?.name}</span>
+                </div>
+                
+                <div className="flex-1 flex flex-col items-center gap-1">
+                  <div className="flex items-center text-splat-pink">
+                    <div className="h-[2px] w-8 bg-current border-t border-dashed border-white"></div>
+                    <ArrowRight size={18} strokeWidth={3} className="mx-1" />
+                    <div className="h-[2px] w-8 bg-current border-t border-dashed border-white"></div>
+                  </div>
+                  <span className="text-sm font-black text-splat-dark">NT$ {s.amount.toLocaleString()}</span>
+                </div>
+
+                <div className="flex flex-col items-center gap-1 w-20">
+                  <img src={toUser?.avatar} className="w-10 h-10 rounded-full border-2 border-splat-dark shadow-sm bg-gray-50" />
+                  <span className="font-black text-[10px] text-splat-dark truncate w-full text-center">{toUser?.name}</span>
+                </div>
+              </div>
+            );
+          })
+        )}
+      </div>
+      <p className="text-[9px] font-bold text-gray-400 text-center uppercase tracking-widest italic">※ 此計算結果基於所有成員平均分攤 ※</p>
     </div>
   );
 };
@@ -65,16 +162,11 @@ export const Expense = () => {
   const { trips, currentTripId, exchangeRate, addExpenseItem, deleteExpenseItem, updateExpenseItem, updateTripData, setExchangeRate } = useTripStore();
   const trip = trips.find(t => t.id === currentTripId);
   
-  // 視圖狀態
   const [activeTab, setActiveTab] = useState<'record' | 'list' | 'stats'>('record');
   const [inputMode, setInputMode] = useState<'manual' | 'scan' | 'import'>('manual');
   const [statsView, setStatsView] = useState<'daily' | 'category' | 'method'>('daily');
-  
-  // 詳情與編輯狀態
   const [detailItem, setDetailItem] = useState<ExpenseItem | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
-
-  // 流程狀態
   const [isProcessing, setIsProcessing] = useState(false);
   const [isUploadingImg, setIsUploadingImg] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
@@ -87,7 +179,6 @@ export const Expense = () => {
     method: '現金', amount: 0, storeName: '', title: '', location: '', images: [], category: '餐飲', items: []
   });
 
-  // 匯率獲取邏輯
   useEffect(() => {
     if (trip?.baseCurrency && trip.baseCurrency !== 'TWD') {
       fetch(`https://open.er-api.com/v6/latest/${trip.baseCurrency}`)
@@ -99,14 +190,12 @@ export const Expense = () => {
 
   if (!trip) return null;
 
-  // --- 統計數據運算 ---
   const expenses = trip.expenses || [];
   const totalTwd = expenses.reduce((s, e) => s + (e.currency === 'TWD' ? e.amount : e.amount * (exchangeRate || 1)), 0);
   const totalForeign = expenses.filter(e => e.currency === trip.baseCurrency).reduce((s, e) => s + e.amount, 0);
   const budget = trip.budget || 0;
   const percent = budget ? Math.min(100, Math.round((totalTwd / budget) * 100)) : 0;
 
-  // 每日支出
   const dailyStats = expenses.reduce((acc, curr) => {
     const val = curr.currency === 'TWD' ? curr.amount : curr.amount * exchangeRate;
     acc[curr.date] = (acc[curr.date] || 0) + val;
@@ -114,7 +203,6 @@ export const Expense = () => {
   }, {} as Record<string, number>);
   const dailyData = Object.keys(dailyStats).sort().map(d => ({ date: d, amount: Math.round(dailyStats[d]) }));
 
-  // 類別統計
   const catStats = expenses.reduce((acc, curr) => {
     const val = curr.currency === 'TWD' ? curr.amount : curr.amount * exchangeRate;
     acc[curr.category] = (acc[curr.category] || 0) + val;
@@ -124,7 +212,6 @@ export const Expense = () => {
     label: k, value: v, percent: Math.round((v / (totalTwd || 1)) * 100), color: ['#F03C69', '#2932CF', '#FFC000', '#21CC65', '#FF6C00'][i % 5] 
   })).sort((a,b) => b.value - a.value);
 
-  // 支付方式統計
   const methodStats = expenses.reduce((acc, curr) => {
     const val = curr.currency === 'TWD' ? curr.amount : curr.amount * exchangeRate;
     acc[curr.method] = (acc[curr.method] || 0) + val;
@@ -139,13 +226,12 @@ export const Expense = () => {
     acc[curr.date].push(curr); return acc;
   }, {} as Record<string, ExpenseItem[]>);
 
-  // --- Handlers ---
   const handleSave = () => {
     if (!form.amount || !form.title) return alert("資訊不完整唷！💰");
     const item: ExpenseItem = {
       id: editingId || Date.now().toString(), date: form.date!, storeName: form.storeName || '', title: form.title!, amount: Number(form.amount),
       currency: form.currency as CurrencyCode, method: form.method as any, location: form.location || '', 
-      payerId: 'Admin', splitWith: [], images: form.images || [], category: form.category as any, items: form.items
+      payerId: trip.members?.[0]?.id || 'Admin', splitWith: [], images: form.images || [], category: form.category as any, items: form.items
     };
     if (editingId) updateExpenseItem(trip.id, editingId, item);
     else addExpenseItem(trip.id, item);
@@ -185,8 +271,6 @@ export const Expense = () => {
 
   return (
     <div className="px-4 space-y-6 animate-fade-in pb-32 text-left h-full">
-      
-      {/* 總額儀表板 (IMG_6124) */}
       <div className="bg-splat-yellow border-[3px] border-splat-dark rounded-[32px] p-6 shadow-splat-solid relative overflow-hidden">
         <p className="text-[10px] font-black uppercase text-splat-dark tracking-widest bg-white inline-block px-2 py-1 rounded-md border-2 border-splat-dark -rotate-1 mb-2 relative z-10">TOTAL BALANCE (TWD)</p>
         <div className="flex justify-between items-end relative z-10 mt-1">
@@ -206,12 +290,10 @@ export const Expense = () => {
         <button onClick={() => setActiveTab('list')} className={`flex-1 flex items-center justify-center gap-1.5 py-3 rounded-full text-sm font-black transition-all ${activeTab === 'list' ? 'bg-white text-splat-dark shadow-[2px_2px_0px_#1A1A1A] border-2 border-splat-dark' : 'text-gray-500'}`}><LayoutList size={16} strokeWidth={3}/> 明細</button>
       </div>
 
-      {/* --- 統計視圖 (IMG_6060/61/62) --- */}
       {activeTab === 'stats' && (
         <div className="space-y-6 animate-in slide-in-from-right pb-10">
           <button onClick={() => setActiveTab('record')} className="flex items-center gap-2 text-xs font-black text-gray-400 hover:text-splat-dark transition-colors pl-1 uppercase tracking-widest"><ArrowLeft size={14} strokeWidth={3}/> BACK TO RECORD</button>
           
-          {/* 預算卡片 */}
           <div className="bg-splat-blue text-white rounded-[24px] border-[3px] border-splat-dark p-6 space-y-4 shadow-splat-solid">
             <div className="flex justify-between items-start">
               <h3 className="font-black text-xl uppercase italic tracking-tighter">BUDGET Status</h3>
@@ -221,7 +303,6 @@ export const Expense = () => {
             <div className="flex justify-between text-[10px] font-black uppercase tracking-widest"><span>Used ${Math.round(totalTwd).toLocaleString()}</span><span className="text-splat-yellow">Left ${Math.round((trip.budget || 0) - totalTwd).toLocaleString()}</span></div>
           </div>
 
-          {/* 統計選項 */}
           <div className="flex bg-gray-200 p-1 rounded-xl border-[3px] border-splat-dark">
             {['daily','category','method'].map(v => (
               <button key={v} onClick={() => setStatsView(v as any)} className={`flex-1 py-2.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${statsView === v ? 'bg-white text-splat-dark border-2 border-splat-dark shadow-sm' : 'text-gray-500'}`}>
@@ -230,54 +311,55 @@ export const Expense = () => {
             ))}
           </div>
 
-          <div className="bg-white rounded-[32px] border-[3px] border-splat-dark p-8 shadow-splat-solid space-y-8">
-            {statsView === 'daily' && (
-              <div className="space-y-6">
-                 <h3 className="text-left font-black text-splat-dark flex items-center gap-2 uppercase tracking-widest"><div className="w-1.5 h-4 bg-splat-blue rounded-full"/> Daily Trends</h3>
-                 <BarChart data={dailyData} />
-                 <div className="bg-gray-100 p-4 rounded-xl border-2 border-dashed border-gray-300">
-                    <p className="text-[10px] font-black text-gray-400 uppercase mb-1 flex items-center gap-1"><Info size={10}/> AI INSIGHT</p>
-                    <p className="text-xs font-bold text-gray-600 leading-relaxed">支出趨勢穩定，目前餐飲佔比較高，建議多利用當地的便利商店省下部分預算唷！🦑</p>
-                 </div>
-              </div>
-            )}
-            {statsView === 'category' && (
-              <div className="space-y-8">
-                <DonutChart data={pieData} totalLabel="Categories" />
-                <div className="grid grid-cols-1 gap-2">
-                  {pieData.map(d => (
-                    <div key={d.label} className="flex items-center justify-between p-3 rounded-xl border-2 border-transparent hover:bg-gray-50 transition-colors">
-                      <div className="flex items-center gap-2 text-xs font-black text-splat-dark"><div className="w-3 h-3 rounded-full border-2 border-splat-dark shadow-sm" style={{background: d.color}}/> {d.label}</div>
-                      <div className="text-right flex items-center gap-3">
-                         <span className="text-xs font-black text-splat-dark">{d.percent}%</span>
-                         <span className="text-[10px] font-bold text-gray-400">${Math.round(d.value).toLocaleString()}</span>
-                      </div>
-                    </div>
-                  ))}
+          <div className="bg-white rounded-[32px] border-[3px] border-splat-dark p-8 shadow-splat-solid">
+            <div className="space-y-8">
+              {statsView === 'daily' && (
+                <div className="space-y-6">
+                   <h3 className="text-left font-black text-splat-dark flex items-center gap-2 uppercase tracking-widest"><div className="w-1.5 h-4 bg-splat-blue rounded-full"/> Daily Trends</h3>
+                   <BarChart data={dailyData} />
                 </div>
-              </div>
-            )}
-            {statsView === 'method' && (
-              <div className="space-y-8">
-                <DonutChart data={methodData} totalLabel="Methods" />
-                <div className="grid grid-cols-1 gap-2">
-                  {methodData.map(d => (
-                    <div key={d.label} className="flex items-center justify-between p-3 rounded-xl border-2 border-transparent hover:bg-gray-50 transition-colors">
-                      <div className="flex items-center gap-2 text-xs font-black text-splat-dark"><div className="w-3 h-3 rounded-full border-2 border-splat-dark shadow-sm" style={{background: d.color}}/> {d.label}</div>
-                      <div className="text-right flex items-center gap-3">
-                         <span className="text-xs font-black text-splat-dark">{d.percent}%</span>
-                         <span className="text-[10px] font-bold text-gray-400">${Math.round(d.value).toLocaleString()}</span>
+              )}
+              {statsView === 'category' && (
+                <div className="space-y-8">
+                  <DonutChart data={pieData} totalLabel="Categories" />
+                  <div className="grid grid-cols-1 gap-2">
+                    {pieData.map(d => (
+                      <div key={d.label} className="flex items-center justify-between p-3 rounded-xl border-2 border-transparent hover:bg-gray-50 transition-colors">
+                        <div className="flex items-center gap-2 text-xs font-black text-splat-dark"><div className="w-3 h-3 rounded-full border-2 border-splat-dark shadow-sm" style={{background: d.color}}/> {d.label}</div>
+                        <div className="text-right flex items-center gap-3">
+                           <span className="text-xs font-black text-splat-dark">{d.percent}%</span>
+                           <span className="text-[10px] font-bold text-gray-400">${Math.round(d.value).toLocaleString()}</span>
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
+              {statsView === 'method' && (
+                <div className="space-y-8">
+                  <DonutChart data={methodData} totalLabel="Methods" />
+                  <div className="grid grid-cols-1 gap-2">
+                    {methodData.map(d => (
+                      <div key={d.label} className="flex items-center justify-between p-3 rounded-xl border-2 border-transparent hover:bg-gray-50 transition-colors">
+                        <div className="flex items-center gap-2 text-xs font-black text-splat-dark"><div className="w-3 h-3 rounded-full border-2 border-splat-dark shadow-sm" style={{background: d.color}}/> {d.label}</div>
+                        <div className="text-right flex items-center gap-3">
+                           <span className="text-xs font-black text-splat-dark">{d.percent}%</span>
+                           <span className="text-[10px] font-bold text-gray-400">${Math.round(d.value).toLocaleString()}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              
+              {/* 多人結算摘要區塊 */}
+              <hr className="border-t-[3px] border-dashed border-gray-200 my-8" />
+              <SettlementSection expenses={expenses} members={trip.members || []} rate={exchangeRate} />
+            </div>
           </div>
         </div>
       )}
 
-      {/* --- 記帳輸入分頁 --- */}
       {activeTab === 'record' && (
         <div className="bg-white rounded-[32px] border-[3px] border-splat-dark p-6 space-y-6 animate-in fade-in relative overflow-hidden shadow-splat-solid">
           {isSuccess && <div className="absolute inset-0 bg-white/95 z-30 flex flex-col items-center justify-center animate-in zoom-in"><CheckCircle size={56} className="text-splat-green mb-3" strokeWidth={2.5}/><p className="font-black text-xl uppercase tracking-widest text-splat-dark">SUCCESS! ✨</p></div>}
@@ -301,7 +383,6 @@ export const Expense = () => {
           )}
 
           <div className={`space-y-5 transition-all ${isProcessing ? 'opacity-30 pointer-events-none' : ''}`}>
-            {/* 店家名稱 (Top Position) */}
             <div className="space-y-1">
               <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">店家名稱 *</label>
               <div className="flex gap-2 relative items-center">
@@ -310,7 +391,6 @@ export const Expense = () => {
               </div>
             </div>
 
-            {/* 日期 (Centered) */}
             <div className="space-y-1">
               <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">消費日期</label>
               <div className="flex justify-center bg-gray-100 border-[3px] border-splat-dark rounded-xl focus-within:bg-white transition-colors overflow-hidden h-14">
@@ -340,7 +420,6 @@ export const Expense = () => {
                </div>
             </div>
 
-            {/* 加大照片上傳 */}
             <div className="space-y-1">
               <label className="text-[10px] font-black text-splat-blue uppercase ml-1 tracking-widest">Receipt Photo</label>
               <button type="button" onClick={() => fileInputRef.current?.click()} className="w-full h-44 bg-white border-[3px] border-dashed border-splat-dark rounded-2xl flex flex-col items-center justify-center text-gray-400 hover:bg-gray-50 transition-colors relative overflow-hidden group active:scale-[0.99] shadow-inner">
@@ -361,7 +440,6 @@ export const Expense = () => {
         </div>
       )}
 
-      {/* --- 消費明細視圖 --- */}
       {activeTab === 'list' && (
         <div className="space-y-8 animate-in slide-in-from-right pb-10">
           {Object.keys(grouped).sort((a,b) => b.localeCompare(a)).map(date => {
@@ -396,7 +474,6 @@ export const Expense = () => {
         </div>
       )}
 
-      {/* --- 明細詳情 Modal --- */}
       {detailItem && (
          <div className="fixed inset-0 bg-splat-dark/95 backdrop-blur-md z-[1000] flex items-center justify-center p-4 animate-in fade-in" onClick={() => setDetailItem(null)}>
             <div className="bg-[#F4F5F7] w-full max-w-sm rounded-[40px] border-[4px] border-splat-dark shadow-[10px_10px_0px_#1A1A1A] overflow-hidden" onClick={e => e.stopPropagation()}>
@@ -415,7 +492,7 @@ export const Expense = () => {
                      </div>
                      <div className="text-right shrink-0">
                         <p className="text-3xl font-black text-splat-blue">{CURRENCY_SYMBOLS[detailItem.currency] || detailItem.currency}{detailItem.amount.toLocaleString()}</p>
-                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">≈ NT$ {Math.round(detailItem.amount * exchangeRate)}</p>
+                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">≈ NT$ {Math.round(detailItem.amount * (detailItem.currency === 'TWD' ? 1 : exchangeRate))}</p>
                      </div>
                   </div>
                   
