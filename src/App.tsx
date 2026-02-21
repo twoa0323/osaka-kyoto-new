@@ -194,30 +194,30 @@ const App: React.FC = () => {
 
       {/* 📍 側邊欄：旅伴列表與 ID/PIN */}
       {memberOpen && (
-        <div className="fixed inset-0 z-[1000] flex justify-end">
-          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setMemberOpen(false)} />
-          <div className="relative w-[85%] max-w-xs bg-splat-bg h-full shadow-2xl border-l-[6px] border-splat-dark p-8 animate-in slide-in-from-right duration-300 overflow-y-auto">
-             
-             <div className="flex justify-between items-start mb-8">
-               <div className="flex-1 pr-4">
-                 {/* ✅ 顯示旅行名稱 */}
-                 <div className="flex items-center gap-2 mb-2">
-                   <h2 className="text-2xl font-black italic text-splat-dark tracking-tighter leading-tight uppercase break-words">
-                     {currentTrip.tripName || "TRIP MATES"}
-                   </h2>
-                   {/* ✅ 即時同步小動畫標籤 */}
-                   <div className="flex items-center gap-1 px-2 py-0.5 bg-splat-green/10 border border-splat-green/30 rounded-full">
-                     <RefreshCcw size={10} className="text-splat-green animate-spin-slow" />
-                     <span className="text-[8px] font-black text-splat-green uppercase">Live</span>
-                   </div>
-                 </div>
-                 <div className="flex flex-wrap gap-2">
-                    <span className="text-[9px] font-black bg-white border-2 border-splat-dark px-1.5 py-0.5 rounded shadow-sm text-splat-dark select-all">ID: {currentTrip.id}</span>
-                    <span className="text-[9px] font-black bg-white border-2 border-splat-dark px-1.5 py-0.5 rounded shadow-sm text-splat-dark select-all">PIN: {currentTrip.tripPin}</span>
-                 </div>
-               </div>
-               <button onClick={() => setMemberOpen(false)} className="p-1 -mt-2 -mr-2"><X strokeWidth={3}/></button>
+  <div className="fixed inset-0 z-[1000] flex justify-end">
+    <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setMemberOpen(false)} />
+    <div className="relative w-[85%] max-w-xs bg-splat-bg h-full shadow-2xl border-l-[6px] border-splat-dark p-8 animate-in slide-in-from-right duration-300 overflow-y-auto">
+       
+       <div className="flex justify-between items-start mb-8">
+         <div className="flex-1 pr-4">
+           {/* ✅ 這裡已成功取代 TRIP MATES 並加入即時同步動畫 */}
+           <div className="flex items-center gap-2 mb-2">
+             <h2 className="text-2xl font-black italic text-splat-dark tracking-tighter leading-tight uppercase break-words">
+               {currentTrip.tripName || "TRIP MATES"}
+             </h2>
+             <div className="flex items-center gap-1 px-2 py-0.5 bg-splat-green/10 border border-splat-green/30 rounded-full">
+               <RefreshCcw size={10} className="text-splat-green animate-spin-slow" />
+               <span className="text-[8px] font-black text-splat-green uppercase">Live</span>
              </div>
+           </div>
+           
+           <div className="flex flex-wrap gap-2">
+              <span className="text-[9px] font-black bg-white border-2 border-splat-dark px-1.5 py-0.5 rounded shadow-sm text-splat-dark select-all">ID: {currentTrip.id}</span>
+              <span className="text-[9px] font-black bg-white border-2 border-splat-dark px-1.5 py-0.5 rounded shadow-sm text-splat-dark select-all">PIN: {currentTrip.tripPin}</span>
+           </div>
+         </div>
+         <button onClick={() => setMemberOpen(false)} className="p-1 -mt-2 -mr-2"><X strokeWidth={3}/></button>
+       </div>
              
              <div className="space-y-4">
                 {(currentTrip.members || []).map(m => (
