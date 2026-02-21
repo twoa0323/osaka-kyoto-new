@@ -319,8 +319,12 @@ export const Expense = () => {
             </div>
 
             <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1"><label className="text-[10px] font-black text-splat-pink uppercase ml-1">* 消費金額</label><input type="text" inputMode="numeric" pattern="[0-9]*" value={form.amount || ''} onChange={e => setForm({...form, amount: e.target.value === '' ? 0 : Number(e.target.value)})} className="w-full p-4 bg-gray-100 border-[3px] border-splat-dark rounded-xl text-2xl font-black text-splat-dark outline-none focus:bg-white" placeholder="0" />
-              <div className="space-y-1"><label className="text-[10px] font-black text-gray-500 uppercase ml-1">貨幣幣別</label>
+              <div className="space-y-1">
+                <label className="text-[10px] font-black text-splat-pink uppercase ml-1">* 消費金額</label>
+                <input type="text" inputMode="numeric" pattern="[0-9]*" value={form.amount || ''} onChange={e => setForm({...form, amount: e.target.value === '' ? 0 : Number(e.target.value)})} className="w-full p-4 bg-gray-100 border-[3px] border-splat-dark rounded-xl text-2xl font-black text-splat-dark outline-none focus:bg-white" placeholder="0" />
+              </div>
+              <div className="space-y-1">
+                <label className="text-[10px] font-black text-gray-500 uppercase ml-1">貨幣幣別</label>
                 <div className="flex gap-2 h-14">
                   {[trip.baseCurrency, 'TWD'].map(c => <button key={c} onClick={() => setForm({...form, currency: c as any})} className={`flex-1 rounded-xl font-black border-[3px] transition-all ${form.currency === c ? 'bg-splat-green border-splat-dark text-white shadow-sm' : 'bg-white border-gray-100 text-gray-300'}`}>{c}</button>)}
                 </div>
@@ -441,16 +445,3 @@ export const Expense = () => {
     </div>
   );
 };
-
-
-
-
-
-
-
-
-
-
-
-
-
