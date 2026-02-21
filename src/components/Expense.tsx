@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useTripStore } from '../store/useTripStore';
-import { Wallet, Coins, Trash2, Camera, BarChart3, Upload, PenTool, LayoutList, Settings, CheckCircle, Image as ImageIcon, Loader2, Store, Search, X, ChevronRight, Edit3, ArrowLeft, Info, Ｘ, ThermometerSun } from 'lucide-react';
+import { Wallet, Coins, Trash2, Camera, BarChart3, Upload, PenTool, LayoutList, Settings, CheckCircle, Image as ImageIcon, Loader2, Store, Search, X, ChevronRight, Edit3, ArrowLeft, Info, X, ThermometerSun } from 'lucide-react';
 import { ExpenseItem, CurrencyCode } from '../types';
 import { compressImage, uploadImage } from '../utils/imageUtils';
 import { format, parseISO, differenceInDays } from 'date-fns';
