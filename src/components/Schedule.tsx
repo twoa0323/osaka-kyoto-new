@@ -69,6 +69,7 @@ export const Schedule = ({ externalDateIdx = 0 }: { externalDateIdx?: number }) 
   
   // 📍 新增：空檔 AI 專用的載入狀態與邏輯
   const [gapAiLoading, setGapAiLoading] = useState<string | null>(null);
+  const [transportAiLoading, setTransportAiLoading] = useState<string | null>(null);
 
   // 輔助：將時間字串 "10:30" 轉換為分鐘數，方便計算空檔
   const timeToMins = (t: string) => {
@@ -85,6 +86,7 @@ export const Schedule = ({ externalDateIdx = 0 }: { externalDateIdx?: number }) 
       const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
       // ✅ 嚴格套用最新預覽版模型
       const model = genAI.getGenerativeModel({ model: "gemini-3-flash-preview" });
+      const prevEndTimeStr = prevItem.endTime || prevItem.time;
       const prompt = `你在規劃日本旅遊行程。使用者上一個行程是 ${prevItem.time} 在「${prevItem.location} ${prevItem.title}」，下一個行程是 ${nextItem.time} 在「${nextItem.location} ${nextItem.title}」。這兩個行程中間有較長的空檔。
       請推薦一個【順路且評價好】的景點或美食（例如下午茶或小神社），時間請設定在兩者之間。
       請回傳純 JSON 格式，必須包含以下欄位：{"time":"HH:mm", "title":"推薦地點", "location":"地址或站名", "category":"sightseeing或food", "note":"推薦理由(簡短15字內)"}`;
@@ -105,6 +107,42 @@ export const Schedule = ({ externalDateIdx = 0 }: { externalDateIdx?: number }) 
       alert("AI 目前想不出好點子，換個時間再試試吧！🤔");
     } finally {
       setGapAiLoading(null);
+    }
+  };
+  
+  // 📍 新增：AI 交通建議邏輯
+  const handleTransportAiSuggest = async (currentItem: ScheduleItem) => {
+    if (!GEMINI_API_KEY) return alert("請先設定 Gemini API Key 才能使用魔法唷！✨");
+    setTransportAiLoading(currentItem.id);
+    
+    const sortedItems = [...trip!.items].filter(i => i.date === currentItem.date).sort((a,b) => a.time.localeCompare(b.time));
+    const globalIdx = sortedItems.findIndex(i => i.id === currentItem.id);
+    const prevItem = globalIdx > 0 ? sortedItems[globalIdx - 1] : null;
+
+    try {
+      const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
+      const model = genAI.getGenerativeModel({ model: "gemini-3-flash-preview" });
+      
+      let prompt = "";
+      if (prevItem && prevItem.location !== currentItem.location) {
+         prompt = `你在規劃日本旅遊行程。使用者上一站是「${prevItem.location} ${prevItem.title}」，接下來要去「${currentItem.location} ${currentItem.title}」。
+         請提供大眾運輸交通建議（例如：搭乘哪一條地鐵線、在哪一站上下車、需不需要轉車、大約花費時間）。
+         請用繁體中文，語氣活潑，長度控制在 100 字以內，並直接回傳純文字，不需 Markdown。`;
+      } else {
+         prompt = `你在規劃日本旅遊行程。使用者準備前往「${currentItem.location} ${currentItem.title}」。
+         請提供如何抵達該地點的大眾運輸交通建議。
+         請用繁體中文，語氣活潑，長度控制在 100 字以內，並直接回傳純文字，不需 Markdown。`;
+      }
+      
+      const res = await model.generateContent(prompt);
+      const text = res.response.text();
+      
+      updateScheduleItem(trip!.id, currentItem.id, { ...currentItem, transportSuggestion: text });
+      setDetailItem(prev => prev ? { ...prev, transportSuggestion: text } : undefined);
+    } catch (e) {
+      alert("AI 目前想不出好點子，請稍後再試！🤔");
+    } finally {
+      setTransportAiLoading(null);
     }
   };
 
@@ -249,7 +287,7 @@ export const Schedule = ({ externalDateIdx = 0 }: { externalDateIdx?: number }) 
     try {
       const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
       const model = genAI.getGenerativeModel({ model: GEMINI_MODEL });
-      const prompt = `分析文字並回傳純 JSON 陣列。格式: [{"time":"HH:mm", "title":"景點", "location":"地址", "category":"sightseeing/food/transport/hotel", "note":"介紹"}]。日期: ${selectedDateStr}。內容: ${aiText}`;
+      const prompt = `分析文字並回傳純 JSON 陣列。格式: [{"time":"HH:mm", "endTime":"HH:mm", "title":"景點", "location":"地址", "category":"sightseeing/food/transport/hotel", "note":"介紹"}]。如果沒有結束時間，endTime請填空字串。日期: ${selectedDateStr}。內容: ${aiText}`;
       const res = await model.generateContent(prompt);
       const match = res.response.text().match(/\[[\s\S]*\]/);
       if (match) {
@@ -517,8 +555,27 @@ export const Schedule = ({ externalDateIdx = 0 }: { externalDateIdx?: number }) 
                      {detailItem.note || "尚無詳細筆記。準備好大鬧一場了嗎！🦑"}
                    </p>
                  </div>
+                 
+                 {/* 📍 AI 交通建議區塊 */}
+                 <div className="bg-white p-4 rounded-xl border-[3px] border-splat-dark shadow-sm">
+                    <h4 className="text-[10px] font-black uppercase tracking-widest text-splat-blue mb-2 flex items-center gap-1.5"><Plane size={14}/> 交通路線建議</h4>
+                    {detailItem.transportSuggestion ? (
+                      <p className="text-sm font-bold text-gray-700 whitespace-pre-wrap leading-relaxed">
+                        {detailItem.transportSuggestion}
+                      </p>
+                    ) : (
+                      <button 
+                        onClick={() => handleTransportAiSuggest(detailItem)}
+                        disabled={transportAiLoading === detailItem.id}
+                        className="w-full py-3 bg-gray-50 border-2 border-dashed border-gray-300 rounded-lg text-xs font-black text-gray-500 hover:border-splat-blue hover:text-splat-blue transition-colors flex items-center justify-center gap-2 active:scale-95"
+                      >
+                        {transportAiLoading === detailItem.id ? <Loader2 size={16} className="animate-spin" /> : <Wand2 size={16} />}
+                        {transportAiLoading === detailItem.id ? "魔法規劃中..." : "取得 AI 交通建議"}
+                      </button>
+                    )}
+                 </div>
 
-                 <button onClick={() => window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(detailItem.location)}`, '_blank')} className="btn-splat w-full py-4 bg-splat-blue text-white text-lg flex items-center justify-center gap-2 mt-2">
+                 <button onClick={() => window.open(`https://maps.google.com/?q=${encodeURIComponent(detailItem.location)}`, '_blank')} className="btn-splat w-full py-4 bg-splat-blue text-white text-lg flex items-center justify-center gap-2 mt-2">
                    <MapPin size={20}/> 開啟地圖導航
                  </button>
               </div>
