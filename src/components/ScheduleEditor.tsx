@@ -19,7 +19,7 @@ export const ScheduleEditor: React.FC<Props> = ({ tripId, date, item, onClose })
   const [isUploading, setIsUploading] = useState(false);
   
   const [form, setForm] = useState<ScheduleItem>(item || {
-    id: Date.now().toString(), date, time: '09:00', title: '', location: '', category: 'sightseeing', note: '', images: []
+    id: Date.now().toString(), date, time: '09:00', endTime: '', title: '', location: '', category: 'sightseeing', note: '', images: []
   });
 
   const handlePhoto = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -58,12 +58,15 @@ export const ScheduleEditor: React.FC<Props> = ({ tripId, date, item, onClose })
 
         <div className="p-6 space-y-5">
           <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-1"><label className="text-[10px] font-black opacity-40 uppercase tracking-widest">Time</label>
-            <input type="time" className="w-full p-4 bg-white border-2 border-ac-border rounded-2xl font-black text-ac-brown" value={form.time} onChange={e => setForm({...form, time: e.target.value})} /></div>
-            <div className="space-y-1"><label className="text-[10px] font-black opacity-40 uppercase tracking-widest">Category</label>
-            <select className="w-full p-4 bg-white border-2 border-ac-border rounded-2xl font-black outline-none appearance-none" value={form.category} onChange={e => setForm({...form, category: e.target.value as any})}>
+            <div className="space-y-1"><label className="text-[10px] font-black opacity-40 uppercase tracking-widest">Start Time</label>
+            <input type="time" className="w-full p-4 bg-white border-2 border-ac-border rounded-2xl font-black text-ac-brown outline-none" value={form.time} onChange={e => setForm({...form, time: e.target.value})} /></div>
+            <div className="space-y-1"><label className="text-[10px] font-black opacity-40 uppercase tracking-widest">End Time (選填)</label>
+            <input type="time" className="w-full p-4 bg-white border-2 border-ac-border rounded-2xl font-black text-ac-brown outline-none" value={form.endTime || ''} onChange={e => setForm({...form, endTime: e.target.value})} /></div>
+          </div>
+          <div className="space-y-1"><label className="text-[10px] font-black opacity-40 uppercase tracking-widest">Category</label>
+            <select className="w-full p-4 bg-white border-2 border-ac-border rounded-2xl font-black outline-none appearance-none cursor-pointer" value={form.category} onChange={e => setForm({...form, category: e.target.value as any})}>
               {CATEGORIES.map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
-            </select></div>
+            </select>
           </div>
           
           <div className="space-y-1"><label className="text-[10px] font-black opacity-40 uppercase">Title</label>
