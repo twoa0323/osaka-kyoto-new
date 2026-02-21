@@ -9,7 +9,7 @@ import { Expense } from './components/Expense';
 import { Journal } from './components/Journal';
 import { Shopping } from './components/Shopping';
 import { Info } from './components/Info';
-import { Plus, ChevronDown, Trash2, Calendar, CreditCard, Wallet, Utensils, ShoppingBag, Info as InfoIcon, Lock, User, Camera, X, Edit3 } from 'lucide-react';
+import { Plus, ChevronDown, Trash2, Calendar, CreditCard, Wallet, Utensils, ShoppingBag, Info as InfoIcon, Lock, User, Camera, X, Edit3, ArrowLeft, RefreshCcw } from 'lucide-react';
 import { format, addDays, differenceInDays, parseISO } from 'date-fns';
 import { zhTW } from 'date-fns/locale';
 import { compressImage, uploadImage } from './utils/imageUtils';
@@ -201,9 +201,16 @@ const App: React.FC = () => {
              <div className="flex justify-between items-start mb-8">
                <div className="flex-1 pr-4">
                  {/* ✅ 顯示旅行名稱 */}
-                 <h2 className="text-2xl font-black italic text-splat-dark tracking-tighter mb-2 leading-tight uppercase break-words">
-                   {currentTrip.tripName || "TRIP MATES"}
-                 </h2>
+                 <div className="flex items-center gap-2 mb-2">
+                   <h2 className="text-2xl font-black italic text-splat-dark tracking-tighter leading-tight uppercase break-words">
+                     {currentTrip.tripName || "TRIP MATES"}
+                   </h2>
+                   {/* ✅ 即時同步小動畫標籤 */}
+                   <div className="flex items-center gap-1 px-2 py-0.5 bg-splat-green/10 border border-splat-green/30 rounded-full">
+                     <RefreshCcw size={10} className="text-splat-green animate-spin-slow" />
+                     <span className="text-[8px] font-black text-splat-green uppercase">Live</span>
+                   </div>
+                 </div>
                  <div className="flex flex-wrap gap-2">
                     <span className="text-[9px] font-black bg-white border-2 border-splat-dark px-1.5 py-0.5 rounded shadow-sm text-splat-dark select-all">ID: {currentTrip.id}</span>
                     <span className="text-[9px] font-black bg-white border-2 border-splat-dark px-1.5 py-0.5 rounded shadow-sm text-splat-dark select-all">PIN: {currentTrip.tripPin}</span>
