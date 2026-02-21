@@ -1,4 +1,3 @@
-// filepath: src/components/Expense.tsx
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useTripStore } from '../store/useTripStore';
 import { Wallet, Coins, Trash2, Camera, BarChart3, Upload, PenTool, LayoutList, Settings, CheckCircle, Image as ImageIcon, Loader2, Store, Search, X, ChevronRight, Edit3, ArrowLeft, Info, ThermometerSun } from 'lucide-react';
@@ -135,7 +134,7 @@ export const Expense = () => {
     label: k, value: v, percent: Math.round((v / (totalTwd || 1)) * 100), color: ['#60A5FA', '#F472B6', '#FBBF24', '#34D399', '#A78BFA'][i % 5] 
   })).sort((a,b) => b.value - a.value);
 
-  const groupedByDate = expenses.reduce((acc, curr) => {
+  const grouped = expenses.reduce((acc, curr) => {
     if (!acc[curr.date]) acc[curr.date] = [];
     acc[curr.date].push(curr); return acc;
   }, {} as Record<string, ExpenseItem[]>);
@@ -384,9 +383,10 @@ export const Expense = () => {
                         <ChevronRight className="text-gray-300" size={18} />
                       </div>
                     </div>
-                  ))}
+                  );
+                })}
               </div>
-            )
+            );
           })}
           {expenses.length === 0 && <div className="text-center py-20 bg-white border-[3px] border-dashed border-gray-400 rounded-[32px] text-gray-500 font-black italic shadow-sm uppercase tracking-widest">Empty Wallet 🏮</div>}
         </div>
@@ -431,7 +431,7 @@ export const Expense = () => {
                   </div>
 
                   <div className="flex gap-4">
-                     <button onClick={() => startEdit(detailItem)} className="flex-1 py-4 bg-white border-[3px] border-splat-dark rounded-2xl font-black text-splat-dark flex items-center justify-center gap-2 active:translate-y-1 shadow-splat-solid-sm uppercase tracking-widest"><Edit3 size={18} strokeWidth={3}/> Edit</button>
+                     <button onClick={() => { setForm(detailItem); setEditingId(detailItem.id); setDetailItem(null); setActiveTab('record'); }} className="flex-1 py-4 bg-white border-[3px] border-splat-dark rounded-2xl font-black text-splat-dark flex items-center justify-center gap-2 active:translate-y-1 shadow-splat-solid-sm uppercase tracking-widest"><Edit3 size={18} strokeWidth={3}/> Edit</button>
                      <button onClick={() => { if(confirm('⚠️ DELETE RECORD PERMANENTLY?')) { deleteExpenseItem(trip.id, detailItem.id); setDetailItem(null); } }} className="flex-1 py-4 bg-white border-[3px] border-splat-dark rounded-2xl font-black text-splat-pink flex items-center justify-center gap-2 active:translate-y-1 shadow-splat-solid-sm uppercase tracking-widest"><Trash2 size={18} strokeWidth={3}/> Delete</button>
                   </div>
                </div>
