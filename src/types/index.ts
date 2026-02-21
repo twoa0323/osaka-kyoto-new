@@ -59,6 +59,13 @@ export interface BookingItem {
   // 住宿專用欄位
   price?: number;
   nights?: number;
+  roomType?: string;      // 👈 新增：房型
+  contactPhone?: string;  // 👈 新增：飯店電話
+
+  // 景點/憑證專用欄位
+  entryTime?: string;       // 👈 新增：指定入場時間 (景點)
+  ticketType?: string;      // 👈 新增：票券種類 (例如：成人票x2)
+  exchangeLocation?: string;// 👈 新增：實體票兌換地點 (憑證)
 }
 
 // --- 3. 記帳 (Expense) 項目 ---

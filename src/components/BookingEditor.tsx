@@ -47,29 +47,14 @@ export const BookingEditor: React.FC<Props> = ({ tripId, type, item, onClose }) 
       const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
       const model = genAI.getGenerativeModel({ model: "gemini-3-flash-preview" }); 
       
-      const prompt = type === 'flight' 
-        ? `這是一張機票或航班預訂截圖。請解析圖片內容，並以純 JSON 格式回傳（只回傳 JSON，不要 markdown 標記）。
-           必須包含以下 key (若無資訊請留空字串)：
-           - airline (從此列表擇一：tigerair, starlux, cathay, china, eva, peach, ana, other)
-           - flightNo (如 JX820)
-           - date (YYYY-MM-DD)
-           - depIata (出發機場代碼，如 TPE)
-           - arrIata (抵達機場代碼，如 KIX)
-           - depTime (HH:mm)
-           - arrTime (HH:mm)
-           - depCity (出發城市中文)
-           - arrCity (抵達城市中文)
-           - duration (如 02h 45m)
-           - baggage (如 23kg)
-           - seat (如 14F)
-           - aircraft (如 A350-900)`
-        : `這是一張住宿預訂截圖。請解析圖片內容，並以純 JSON 格式回傳（只回傳 JSON，不要 markdown 標記）。
-           必須包含以下 key (若無資訊請留空字串)：
-           - title (飯店或住宿名稱)
-           - location (地址)
-           - date (入住日期 YYYY-MM-DD)
-           - nights (數字，入住晚數，預設 1)
-           - confirmationNo (訂單編號)`;
+      let prompt = "";
+      if (type === 'flight') {
+        prompt = `這是一張機票或航班預訂截圖。請解析並回傳純 JSON 格式。包含：airline, flightNo, date, depIata, arrIata, depTime, arrTime, depCity, arrCity, duration, baggage, seat, aircraft (無資訊留空)。`;
+      } else if (type === 'hotel') {
+        prompt = `這是一張住宿預訂截圖。請解析並回傳純 JSON 格式。包含：title(飯店名), location(地址), date(入住日期YYYY-MM-DD), endDate(退房日期), nights(晚數數字), confirmationNo(訂單編號), roomType(房型), contactPhone(飯店電話)。無資訊請留空字串。`;
+      } else {
+        prompt = `這是一張景點門票或交通憑證截圖。請解析並回傳純 JSON 格式。包含：title(票券名稱), date(使用日期YYYY-MM-DD), endDate(失效日期，若無留空), entryTime(指定入場時間HH:mm), ticketType(票種/人數，如成人x2), confirmationNo(訂單或憑證號), exchangeLocation(兌換地點), location(景點地址)。無資訊請留空字串。`;
+      }
 
       const result = await model.generateContent([
         prompt,
@@ -106,8 +91,14 @@ export const BookingEditor: React.FC<Props> = ({ tripId, type, item, onClose }) 
             title: data.title || prev.title,
             location: data.location || prev.location,
             date: data.date || prev.date,
+            endDate: data.endDate || prev.endDate,
             nights: data.nights || prev.nights,
-            confirmationNo: data.confirmationNo || prev.confirmationNo
+            confirmationNo: data.confirmationNo || prev.confirmationNo,
+            roomType: data.roomType || prev.roomType,
+            contactPhone: data.contactPhone || prev.contactPhone,
+            entryTime: data.entryTime || prev.entryTime,
+            ticketType: data.ticketType || prev.ticketType,
+            exchangeLocation: data.exchangeLocation || prev.exchangeLocation
           }));
         }
         alert("✨ AI 解析成功！已為您自動填入資訊。");
@@ -292,9 +283,50 @@ export const BookingEditor: React.FC<Props> = ({ tripId, type, item, onClose }) 
                <div className="space-y-1.5"><label className="text-[10px] font-black text-ac-brown/40 uppercase ml-1 tracking-widest">地址 / 位置</label>
                <input placeholder="輸入具體地址" className="w-full h-14 px-4 bg-white border-2 border-ac-border rounded-2xl font-bold outline-none focus:border-ac-green" value={form.location} onChange={e => setForm({...form, location: e.target.value})} /></div>
                {type === 'hotel' && (
-                 <div className="space-y-1.5"><label className="text-[10px] font-black text-ac-brown/40 uppercase ml-1 tracking-widest">入住晚數</label>
-                 <input type="number" className="w-full h-14 px-4 bg-white border-2 border-ac-border rounded-2xl font-bold outline-none focus:border-ac-green" value={form.nights} onChange={e => setForm({...form, nights: Number(e.target.value)})} /></div>
-               )}
+            <div className="space-y-4 animate-in slide-in-from-bottom-2">
+              <div className="bg-gray-50 p-4 rounded-2xl border-2 border-gray-100 space-y-4">
+                <div className="space-y-1"><label className="text-[10px] font-black text-gray-400 uppercase tracking-widest pl-1">Hotel Name</label><input placeholder="飯店名稱" value={form.title} onChange={e => setForm({...form, title: e.target.value})} className="w-full p-4 bg-white border-2 border-splat-dark rounded-xl font-black text-splat-dark" /></div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1"><label className="text-[10px] font-black text-gray-400 uppercase tracking-widest pl-1">Check-in</label><input type="date" value={form.date} onChange={e => setForm({...form, date: e.target.value})} className="w-full p-3 bg-white border-2 border-splat-dark rounded-xl font-black text-sm" /></div>
+                  <div className="space-y-1"><label className="text-[10px] font-black text-gray-400 uppercase tracking-widest pl-1">Check-out</label><input type="date" value={form.endDate || ''} onChange={e => setForm({...form, endDate: e.target.value})} className="w-full p-3 bg-white border-2 border-splat-dark rounded-xl font-black text-sm" /></div>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1"><label className="text-[10px] font-black text-gray-400 uppercase tracking-widest pl-1">Room Type</label><input placeholder="房型 (如雙人房)" value={form.roomType || ''} onChange={e => setForm({...form, roomType: e.target.value})} className="w-full p-3 bg-white border-2 border-splat-dark rounded-xl font-black text-sm" /></div>
+                  <div className="space-y-1"><label className="text-[10px] font-black text-gray-400 uppercase tracking-widest pl-1">Conf. No.</label><input placeholder="訂單編號" value={form.confirmationNo} onChange={e => setForm({...form, confirmationNo: e.target.value})} className="w-full p-3 bg-white border-2 border-splat-dark rounded-xl font-black text-sm text-splat-blue" /></div>
+                </div>
+                <div className="space-y-1"><label className="text-[10px] font-black text-gray-400 uppercase tracking-widest pl-1">Address / Phone</label>
+                  <input placeholder="飯店地址" value={form.location} onChange={e => setForm({...form, location: e.target.value})} className="w-full p-3 bg-white border-2 border-splat-dark rounded-xl font-black text-sm mb-2" />
+                  <input placeholder="連絡電話" value={form.contactPhone || ''} onChange={e => setForm({...form, contactPhone: e.target.value})} className="w-full p-3 bg-white border-2 border-splat-dark rounded-xl font-black text-sm" />
+                </div>
+              </div>
+            </div>
+          )}
+          {/* 🎢🎫 Spot (景點) & Voucher (憑證) 專屬表單區塊 */}
+              {(type === 'spot' || type === 'voucher') && (
+                <div className="bg-white p-5 rounded-[2.5rem] border-2 border-ac-border space-y-4 shadow-sm animate-in slide-in-from-bottom-2">
+                  <div className="space-y-1.5"><label className="text-[10px] font-black text-ac-brown/40 uppercase tracking-widest ml-1">{type === 'spot' ? '景點名稱' : '憑證名稱'}</label><input placeholder={type === 'spot' ? '如: 環球影城門票' : '如: JR Pass'} value={form.title} onChange={e => setForm({...form, title: e.target.value})} className="w-full h-14 px-4 bg-[#F5F6F8] border border-ac-border/30 rounded-xl font-black text-ac-brown outline-none focus:border-ac-green focus:bg-white" /></div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1.5"><label className="text-[10px] font-black text-ac-brown/40 uppercase tracking-widest ml-1">使用日期</label><input type="date" value={form.date} onChange={e => setForm({...form, date: e.target.value})} className="w-full h-12 px-3 bg-[#F5F6F8] border border-ac-border/30 rounded-xl font-black text-sm outline-none focus:border-ac-green focus:bg-white" /></div>
+                    <div className="space-y-1.5"><label className="text-[10px] font-black text-ac-brown/40 uppercase tracking-widest ml-1">憑證/訂單編號</label><input placeholder="12345678" value={form.confirmationNo} onChange={e => setForm({...form, confirmationNo: e.target.value})} className="w-full h-12 px-3 bg-[#F5F6F8] border border-ac-border/30 rounded-xl font-black text-sm text-ac-green outline-none focus:border-ac-green focus:bg-white" /></div>
+                  </div>
+                  
+                  {type === 'spot' && (
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-1.5"><label className="text-[10px] font-black text-ac-brown/40 uppercase tracking-widest ml-1">入場/場次時間</label><input type="time" value={form.entryTime || ''} onChange={e => setForm({...form, entryTime: e.target.value})} className="w-full h-12 px-3 bg-[#F5F6F8] border border-ac-border/30 rounded-xl font-black text-sm outline-none focus:border-ac-green focus:bg-white" /></div>
+                      <div className="space-y-1.5"><label className="text-[10px] font-black text-ac-brown/40 uppercase tracking-widest ml-1">票種人數</label><input placeholder="如: 成人票x2" value={form.ticketType || ''} onChange={e => setForm({...form, ticketType: e.target.value})} className="w-full h-12 px-3 bg-[#F5F6F8] border border-ac-border/30 rounded-xl font-black text-sm outline-none focus:border-ac-green focus:bg-white" /></div>
+                    </div>
+                  )}
+
+                  {type === 'voucher' && (
+                    <div className="space-y-1.5"><label className="text-[10px] font-black text-ac-brown/40 uppercase tracking-widest ml-1">兌換/領取地點</label><input placeholder="如: 關西機場 JR 綠色窗口" value={form.exchangeLocation || ''} onChange={e => setForm({...form, exchangeLocation: e.target.value})} className="w-full h-12 px-3 bg-[#F5F6F8] border border-ac-border/30 rounded-xl font-black text-sm text-[#FF8A00] outline-none focus:border-ac-green focus:bg-white" /></div>
+                  )}
+                  
+                  {type === 'spot' && (
+                     <div className="space-y-1.5"><label className="text-[10px] font-black text-ac-brown/40 uppercase tracking-widest ml-1">景點地址</label><input placeholder="輸入具體地址" value={form.location} onChange={e => setForm({...form, location: e.target.value})} className="w-full h-12 px-3 bg-[#F5F6F8] border border-ac-border/30 rounded-xl font-black text-sm outline-none focus:border-ac-green focus:bg-white" /></div>
+                  )}
+                </div>
+              )}
+
             </div>
           )}
 
