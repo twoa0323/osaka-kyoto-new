@@ -1,8 +1,11 @@
 import React, { useState, useRef } from 'react';
 import { useTripStore } from '../store/useTripStore';
-import { X, Camera, Globe, QrCode, Loader2, Trash2, Plane, ChevronDown } from 'lucide-react';
+import { X, Camera, Globe, QrCode, Loader2, Trash2, Plane, ChevronDown, Sparkles } from 'lucide-react';
 import { BookingItem } from '../types';
-import { uploadImage } from '../utils/imageUtils';
+import { uploadImage, compressImage } from '../utils/imageUtils';
+import { GoogleGenerativeAI } from "@google/generative-ai";
+
+const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY || "";
 
 interface Props {
   tripId: string;
@@ -26,7 +29,97 @@ export const BookingEditor: React.FC<Props> = ({ tripId, type, item, onClose }) 
   const { addBookingItem, updateBookingItem, deleteBookingItem } = useTripStore();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const qrInputRef = useRef<HTMLInputElement>(null);
+  const aiInputRef = useRef<HTMLInputElement>(null); // 👈 新增 AI 檔案選擇
   const [uploadingField, setUploadingField] = useState<'images' | 'qrCode' | null>(null);
+  const [isAiLoading, setIsAiLoading] = useState(false); // 👈 新增 AI 載入狀態
+
+  // 📍 殺手級功能：AI 截圖解析邏輯
+  const handleAiParse = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!GEMINI_API_KEY) return alert("請先設定 VITE_GEMINI_API_KEY 才能使用 AI 解析喔！");
+    
+    setIsAiLoading(true);
+    try {
+      const base64 = await compressImage(file);
+      const base64Data = base64.split(',')[1];
+      
+      const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
+      const model = genAI.getGenerativeModel({ model: "gemini-3-flash-preview" }); 
+      
+      const prompt = type === 'flight' 
+        ? `這是一張機票或航班預訂截圖。請解析圖片內容，並以純 JSON 格式回傳（只回傳 JSON，不要 markdown 標記）。
+           必須包含以下 key (若無資訊請留空字串)：
+           - airline (從此列表擇一：tigerair, starlux, cathay, china, eva, peach, ana, other)
+           - flightNo (如 JX820)
+           - date (YYYY-MM-DD)
+           - depIata (出發機場代碼，如 TPE)
+           - arrIata (抵達機場代碼，如 KIX)
+           - depTime (HH:mm)
+           - arrTime (HH:mm)
+           - depCity (出發城市中文)
+           - arrCity (抵達城市中文)
+           - duration (如 02h 45m)
+           - baggage (如 23kg)
+           - seat (如 14F)
+           - aircraft (如 A350-900)`
+        : `這是一張住宿預訂截圖。請解析圖片內容，並以純 JSON 格式回傳（只回傳 JSON，不要 markdown 標記）。
+           必須包含以下 key (若無資訊請留空字串)：
+           - title (飯店或住宿名稱)
+           - location (地址)
+           - date (入住日期 YYYY-MM-DD)
+           - nights (數字，入住晚數，預設 1)
+           - confirmationNo (訂單編號)`;
+
+      const result = await model.generateContent([
+        prompt,
+        { inlineData: { data: base64Data, mimeType: "image/jpeg" } }
+      ]);
+      
+      const text = result.response.text();
+      const match = text.match(/\{[\s\S]*\}/);
+      if (match) {
+        const data = JSON.parse(match[0]);
+        if (type === 'flight') {
+          setForm(prev => ({
+            ...prev,
+            airline: data.airline || prev.airline,
+            flightNo: data.flightNo || prev.flightNo,
+            date: data.date || prev.date,
+            depIata: data.depIata || prev.depIata,
+            arrIata: data.arrIata || prev.arrIata,
+            depTime: data.depTime || prev.depTime,
+            arrTime: data.arrTime || prev.arrTime,
+            depCity: data.depCity || prev.depCity,
+            arrCity: data.arrCity || prev.arrCity,
+            baggage: data.baggage || prev.baggage,
+            seat: data.seat || prev.seat,
+            aircraft: data.aircraft || prev.aircraft
+          }));
+          if (data.duration) {
+             const durMatch = data.duration.match(/(\d+)h\s*(\d+)m/i);
+             if (durMatch) { setDurH(durMatch[1]); setDurM(durMatch[2]); }
+          }
+        } else {
+          setForm(prev => ({
+            ...prev,
+            title: data.title || prev.title,
+            location: data.location || prev.location,
+            date: data.date || prev.date,
+            nights: data.nights || prev.nights,
+            confirmationNo: data.confirmationNo || prev.confirmationNo
+          }));
+        }
+        alert("✨ AI 解析成功！已為您自動填入資訊。");
+      }
+    } catch (e) {
+      console.error(e);
+      alert("AI 解析失敗，請手動確認填寫。");
+    } finally {
+      setIsAiLoading(false);
+      if (aiInputRef.current) aiInputRef.current.value = '';
+    }
+  };
   
   const parseInitialDuration = (dur: string | undefined) => {
     if (!dur) return { h: '', m: '' };
@@ -96,7 +189,18 @@ export const BookingEditor: React.FC<Props> = ({ tripId, type, item, onClose }) 
         </div>
         
         <div className="p-6 space-y-6">
+          
+          {/* 📍 新增：超有質感的 AI 截圖解析按鈕 */}
+          <div className="relative">
+             <button onClick={() => aiInputRef.current?.click()} disabled={isAiLoading} className="w-full bg-[#1A1A1A] text-white p-4 rounded-2xl font-black tracking-widest flex items-center justify-center gap-2 active:scale-95 transition-all shadow-[4px_4px_0px_#C4A97A] border-2 border-transparent hover:border-[#C4A97A]">
+               {isAiLoading ? <Loader2 className="animate-spin" size={20} /> : <Sparkles size={20} className="text-[#C4A97A] animate-pulse" />}
+               {isAiLoading ? 'AI 魔法解析中... 🚀' : '📸 上傳截圖，AI 自動帶入'}
+             </button>
+             <input ref={aiInputRef} type="file" accept="image/*" className="hidden" onChange={handleAiParse} />
+          </div>
+
           {type === 'flight' ? (
+
             <div className="space-y-6">
               
               <div className="space-y-1.5">
