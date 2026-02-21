@@ -75,7 +75,7 @@ export const ScheduleEditor: React.FC<Props> = ({ tripId, date, item, onClose })
           <div className="space-y-1"><label className="text-[10px] font-black opacity-40 uppercase">Location (Google Map)</label>
           <div className="flex gap-2">
             <input className="flex-1 p-4 bg-white border-2 border-ac-border rounded-2xl font-bold text-ac-brown outline-none" value={form.location} onChange={e => setForm({...form, location: e.target.value})} placeholder="點右側搜尋 ➔" />
-            <button onClick={() => window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(form.location || '目的地')}`, '_blank')} className="w-14 h-14 bg-blue-50 border-2 border-blue-200 rounded-2xl flex items-center justify-center text-blue-500 shadow-sm active:scale-90 transition-all"><Search size={24}/></button>
+            <button onClick={() => window.open(`https://www.google.com/maps/search/?api=$&query=${encodeURIComponent(form.location || '目的地')}`, '_blank')} className="w-14 h-14 bg-blue-50 border-2 border-blue-200 rounded-2xl flex items-center justify-center text-blue-500 shadow-sm active:scale-90 transition-all"><Search size={24}/></button>
           </div></div>
 
           <div className="space-y-1"><label className="text-[10px] font-black opacity-40 uppercase tracking-widest">Photo</label>

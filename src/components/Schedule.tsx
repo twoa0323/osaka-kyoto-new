@@ -390,7 +390,7 @@ export const Schedule = ({ externalDateIdx = 0 }: { externalDateIdx?: number }) 
                  <span className="text-sm mt-2 inline-block font-bold">點擊上方 + 號建立行程</span>
                </div>
              ) : (
-               ddayItems.map((item, idx) => {
+               dayItems.map((item, idx) => {
                  const catStyle = CATEGORY_STYLE[item.category as keyof typeof CATEGORY_STYLE] || CATEGORY_STYLE.sightseeing;
                  
                  // 📍 全新智慧防呆與空檔偵測 (支援結束時間)
