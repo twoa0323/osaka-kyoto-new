@@ -98,8 +98,9 @@ const App: React.FC = () => {
                       const isCreator = t.creatorId === (auth.currentUser?.uid || 'unknown');
                       return (
                         <div key={t.id} className={`flex items-center justify-between p-3 rounded-xl border-2 mb-2 ${t.id === currentTrip.id ? 'bg-splat-yellow border-splat-dark' : 'border-transparent hover:border-gray-200'}`}>
-                          <button className="flex-1 text-left font-black text-sm truncate pr-2" onClick={() => { if(t.id === currentTrip.id) return; setLockedTripId(t.id); setVerifyPin(''); }}>{t.dest}</button>
-                          <button onClick={() => { 
+                          {/* ✅ 這裡改為顯示旅遊名稱 (tripName) */}
+                          <button className="flex-1 text-left font-black text-sm truncate pr-2" onClick={() => { if(t.id === currentTrip.id) return; setLockedTripId(t.id); setVerifyPin(''); }}>{t.tripName || t.dest}</button>
+                          <button onClick={() => {
                             if (isCreator) {
                               if(confirm('⚠️ 確定要永久刪除此行程嗎？(所有旅伴都會遺失資料)')) useTripStore.getState().deleteTrip(t.id);
                             } else {
