@@ -1,3 +1,4 @@
+// filepath: src/App.tsx
 import React, { useState, useEffect } from 'react';
 import { useTripStore } from './store/useTripStore';
 import { useFirebaseSync } from './hooks/useFirebaseSync';
@@ -57,11 +58,11 @@ const App: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col min-h-screen font-sans text-splat-dark relative bg-[#F4F5F7]">
+    // 📍 修復：確保全局波點背景在此層級生效
+    <div className="flex flex-col min-h-screen font-sans text-splat-dark relative bg-[#F4F5F7] bg-[radial-gradient(#D1D5DB_2px,transparent_2px)] bg-[size:24px_24px]">
       
-      {/* 📍 UI 調整 1：只在「行程 (schedule)」頁面顯示包含地點、日期與頭像的 Header */}
       {activeTab === 'schedule' && (
-        <header className="p-4 sticky top-0 z-[100] w-full max-w-md mx-auto animate-fade-in">
+        <header className="p-4 sticky top-0 z-[100] w-full max-w-md mx-auto animate-fade-in bg-[#F4F5F7]/95 backdrop-blur-sm border-b-[3px] border-splat-dark shadow-sm">
           <div className="bg-splat-yellow border-[3px] border-splat-dark rounded-[24px] shadow-splat-solid p-4 flex justify-between items-center relative z-20">
             <div className="relative text-left">
               <h2 className="text-[10px] font-black text-splat-dark uppercase tracking-widest mb-0.5 bg-white inline-block px-2 border-2 border-splat-dark rounded-full shadow-splat-solid-sm -rotate-2">
@@ -88,7 +89,7 @@ const App: React.FC = () => {
             </div>
           </div>
 
-          <div className="flex overflow-x-auto gap-3 hide-scrollbar pt-4 pb-2 px-1">
+          <div className="flex overflow-x-auto gap-3 hide-scrollbar pt-4 px-1 date-btn-container">
             {dateRange.map((date, i) => (
               <button key={i} onClick={() => setSelectedDateIdx(i)} className={`flex flex-col items-center min-w-[70px] p-2.5 rounded-2xl border-[3px] transition-all font-black ${selectedDateIdx === i ? 'bg-splat-blue border-splat-dark text-white shadow-splat-solid -translate-y-1' : 'bg-white border-splat-dark text-gray-400 shadow-[2px_2px_0px_#1A1A1A]'}`}>
                 <span className="text-[10px] uppercase">DAY {i+1}</span>
@@ -99,7 +100,6 @@ const App: React.FC = () => {
         </header>
       )}
 
-      {/* 如果不是行程頁面，增加頂部 padding 避免內容太貼邊 */}
       <main className={`flex-1 w-full max-w-md mx-auto overflow-x-hidden ${activeTab !== 'schedule' ? 'pt-6' : 'pt-2'}`}>
         <div className={activeTab === 'schedule' ? 'block' : 'hidden'}><Schedule externalDateIdx={selectedDateIdx} /></div>
         <div className={activeTab === 'booking' ? 'block' : 'hidden'}><Booking /></div>
@@ -118,21 +118,12 @@ const App: React.FC = () => {
         <NavIcon icon={<InfoIcon />} label="資訊" id="info" active={activeTab} onClick={setActiveTab} color="text-splat-dark" />
       </nav>
 
-      {/* 密碼驗證 Modal */}
       {lockedTripId && (
         <div className="fixed inset-0 bg-splat-dark/80 backdrop-blur-sm z-[1000] flex items-center justify-center p-4">
           <div className="bg-white border-4 border-splat-dark w-full max-w-sm rounded-[32px] shadow-[8px_8px_0px_#FFC000] p-8 text-center space-y-4 animate-in zoom-in-95">
             <Lock size={48} className="mx-auto text-splat-dark mb-2" strokeWidth={2.5} />
             <h3 className="text-2xl font-black text-splat-dark uppercase">切換行程</h3>
-            <input
-              type="password"
-              maxLength={4}
-              inputMode="numeric"
-              placeholder="****"
-              className="w-full bg-gray-100 text-splat-dark font-black p-4 rounded-xl text-center text-3xl tracking-[0.5em] outline-none border-4 border-splat-dark focus:bg-white transition-colors"
-              value={verifyPin}
-              onChange={(e) => setVerifyPin(e.target.value)}
-            />
+            <input type="password" maxLength={4} inputMode="numeric" placeholder="****" className="w-full bg-gray-100 text-splat-dark font-black p-4 rounded-xl text-center text-3xl tracking-[0.5em] outline-none border-4 border-splat-dark focus:bg-white transition-colors" value={verifyPin} onChange={(e) => setVerifyPin(e.target.value)} />
             <div className="flex gap-3 mt-4">
               <button onClick={() => { setLockedTripId(null); setVerifyPin(''); }} className="flex-1 py-3 border-4 border-splat-dark bg-gray-200 font-black rounded-xl active:translate-y-1 transition-all shadow-splat-solid-sm">取消</button>
               <button onClick={confirmTripSwitch} className="flex-[2] py-3 bg-splat-blue text-white border-4 border-splat-dark font-black rounded-xl shadow-splat-solid-sm active:translate-y-1 active:shadow-none transition-all">解鎖 ➔</button>
@@ -141,37 +132,27 @@ const App: React.FC = () => {
         </div>
       )}
 
-      {/* 旅伴管理 Modal */}
       {memberOpen && (
         <div className="fixed inset-0 z-[1000] flex justify-end">
           <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setMemberOpen(false)} />
           <div className="relative w-[85%] max-w-xs bg-splat-bg h-full shadow-2xl border-l-[6px] border-splat-dark p-8 animate-in slide-in-from-right duration-300">
-             <div className="flex justify-between items-center mb-8">
-               <h2 className="text-2xl font-black italic text-splat-dark tracking-tighter">TRIP MATES</h2>
-               <button onClick={() => setMemberOpen(false)}><X strokeWidth={3}/></button>
-             </div>
+             <div className="flex justify-between items-center mb-8"><h2 className="text-2xl font-black italic text-splat-dark tracking-tighter">TRIP MATES</h2><button onClick={() => setMemberOpen(false)}><X strokeWidth={3}/></button></div>
              <div className="space-y-4">
                 {(currentTrip.members || []).map(m => (
                   <div key={m.id} className="bg-white border-[3px] border-splat-dark rounded-2xl p-4 flex items-center gap-3 relative group">
                     <div className="relative">
                       <img src={m.avatar} className="w-12 h-12 rounded-full border-2 border-splat-dark object-cover" />
                       {m.id === myProfile?.id && (
-                        <label className="absolute -bottom-1 -right-1 bg-white p-1 rounded-full shadow-sm border-2 border-splat-dark cursor-pointer">
-                          <Camera size={10}/>
-                          <input type="file" className="hidden" onChange={async e => {
-                            if(e.target.files?.[0]) {
-                              const b64 = await compressImage(e.target.files[0]);
-                              const nm = currentTrip.members.map(x => x.id === m.id ? {...x, avatar: b64} : x);
-                              updateTripData(currentTrip.id, { members: nm });
-                            }
-                          }}/>
-                        </label>
+                        <label className="absolute -bottom-1 -right-1 bg-white p-1 rounded-full shadow-sm border-2 border-splat-dark cursor-pointer"><Camera size={10}/><input type="file" className="hidden" onChange={async e => {
+                          if(e.target.files?.[0]) {
+                            const url = await uploadImage(e.target.files[0]);
+                            const nm = currentTrip.members.map(x => x.id === m.id ? {...x, avatar: url} : x);
+                            updateTripData(currentTrip.id, { members: nm });
+                          }
+                        }}/></label>
                       )}
                     </div>
-                    <div className="text-left">
-                      <p className="font-black text-sm text-splat-dark">{m.name}</p>
-                      <p className="text-[8px] font-bold text-gray-400 uppercase tracking-tighter">{m.email}</p>
-                    </div>
+                    <div className="text-left"><p className="font-black text-sm text-splat-dark">{m.name}</p><p className="text-[8px] font-bold text-gray-400 uppercase tracking-tighter">{m.email}</p></div>
                   </div>
                 ))}
              </div>
@@ -179,7 +160,6 @@ const App: React.FC = () => {
         </div>
       )}
 
-      {/* 個人設定 Modal */}
       {showPersonalSetup && (
         <div className="fixed inset-0 z-[2000] bg-white flex items-center justify-center p-8">
            <div className="w-full max-w-sm space-y-8 text-center">
