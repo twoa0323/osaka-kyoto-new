@@ -390,10 +390,10 @@ export const Schedule = ({ externalDateIdx = 0 }: { externalDateIdx?: number }) 
                  <span className="text-sm mt-2 inline-block font-bold">點擊上方 + 號建立行程</span>
                </div>
              ) : (
-               dayItems.map((item, idx) => {
+               ddayItems.map((item, idx) => {
                  const catStyle = CATEGORY_STYLE[item.category as keyof typeof CATEGORY_STYLE] || CATEGORY_STYLE.sightseeing;
                  
-                 // 📍 智慧防呆與空檔偵測
+                 // 📍 全新智慧防呆與空檔偵測 (支援結束時間)
                  const prevItem = idx > 0 ? dayItems[idx - 1] : null;
                  let warningMsg = null;
                  let showAiGap = false;
@@ -426,13 +426,12 @@ export const Schedule = ({ externalDateIdx = 0 }: { externalDateIdx?: number }) 
                       )}
 
                       <div className="flex gap-3 mb-6 relative group animate-in slide-in-from-bottom-4">
-                         
-                         {/* 粗黑連接線 (恢復原本的位置) */}
+                         {/* 粗黑連接線 */}
                          {idx !== dayItems.length - 1 && (
                            <div className="absolute left-7 top-12 bottom-[-32px] w-[3px] bg-splat-dark z-0" />
                          )}
 
-                         {/* 📍 獨立時間徽章 (改為可點擊，並顯示結束時間) */}
+                         {/* 📍 獨立時間徽章 (改為可點擊的按鈕，支援反灰與結束時間) */}
                          <div className="w-16 shrink-0 flex flex-col items-center mt-3 z-10 relative">
                            <button 
                              onClick={(e) => {
@@ -447,14 +446,14 @@ export const Schedule = ({ externalDateIdx = 0 }: { externalDateIdx?: number }) 
                            >
                              <span className="font-black text-[15px] leading-tight">{item.time}</span>
                              {/* 顯示結束時間 */}
-                             {item.endTime && <span className="text-[10px] font-bold opacity-70 leading-tight">~ {item.endTime}</span>}
+                             {item.endTime && <span className="text-[10px] font-bold opacity-70 leading-tight mt-0.5">~ {item.endTime}</span>}
                              
                              {/* 頂部裝飾釘 (完成時變灰) */}
                              <div className={`absolute -top-1.5 -right-1.5 w-3.5 h-3.5 rounded-full border-2 border-splat-dark ${item.isCompleted ? 'bg-gray-400' : catStyle.bg}`} />
                            </button>
                          </div>
                          
-                         {/* 📍 右側內容區塊 (完全維持您原本的設計) */}
+                         {/* 📍 右側內容區塊 */}
                          <div className="flex-1 min-w-0 flex flex-col gap-2">
                             {warningMsg && (
                                 <div className="bg-white border-2 border-splat-dark text-splat-dark px-3 py-1.5 rounded-lg text-[10px] font-black flex items-center gap-1.5 shadow-[2px_2px_0px_#FFC000] w-fit animate-in zoom-in-95">
@@ -488,7 +487,8 @@ export const Schedule = ({ externalDateIdx = 0 }: { externalDateIdx?: number }) 
                       </div>
                    </React.Fragment>
                  );
-               })             )}
+               })            
+           )}
           </div>
         </div>
       </div>
