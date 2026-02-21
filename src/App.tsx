@@ -1,4 +1,3 @@
-// filepath: src/App.tsx
 import React, { useState, useEffect } from 'react';
 import { useTripStore } from './store/useTripStore';
 import { useFirebaseSync } from './hooks/useFirebaseSync';
@@ -9,9 +8,12 @@ import { Expense } from './components/Expense';
 import { Journal } from './components/Journal';
 import { Shopping } from './components/Shopping';
 import { Info } from './components/Info';
-import { Plus, ChevronDown, Trash2, Calendar, CreditCard, Wallet, Utensils, ShoppingBag, Info as InfoIcon, Lock, User, Camera, X, Edit3, ArrowLeft, RefreshCcw } from 'lucide-react';
+import { 
+  Plus, ChevronDown, Trash2, Calendar, CreditCard, Wallet, 
+  Utensils, ShoppingBag, Info as InfoIcon, Lock, User, 
+  Camera, X, Edit3, RefreshCcw 
+} from 'lucide-react';
 import { format, addDays, differenceInDays, parseISO } from 'date-fns';
-import { zhTW } from 'date-fns/locale';
 import { compressImage, uploadImage } from './utils/imageUtils';
 import { auth } from './services/firebase';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -24,48 +26,50 @@ const PRESET_AVATARS = [
   `https://api.dicebear.com/7.x/avataaars/svg?seed=Max`,
 ];
 
+const SPLAT_COLORS = ['#FFC000', '#2932CF', '#F03C69', '#21CC65', '#FF6C00'];
+
+// --- 墨水噴濺特效組件 ---
+const InkSplat = ({ color }: { color: string }) => (
+  <motion.div
+    initial={{ scale: 0, opacity: 1 }}
+    animate={{ scale: 4.5, opacity: 0 }}
+    exit={{ opacity: 0 }}
+    transition={{ duration: 0.6, ease: "easeOut" }}
+    className="fixed pointer-events-none z-[9999]"
+    style={{
+      top: '50%',
+      left: '50%',
+      width: '150px',
+      height: '150px',
+      backgroundColor: color,
+      marginLeft: '-75px',
+      marginTop: '-75px',
+      borderRadius: '43% 57% 38% 62% / 57% 43% 57% 43%', // 不規則墨水形狀
+      filter: 'blur(2px)'
+    }}
+  />
+);
+
 const App: React.FC = () => {
-  const { trips, currentTripId, switchTrip, deleteTrip, activeTab, setActiveTab, updateTripData } = useTripStore();
+  const { trips, currentTripId, switchTrip, activeTab, setActiveTab, updateTripData } = useTripStore();
   const [menuOpen, setMenuOpen] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [lockedTripId, setLockedTripId] = useState<string | null>(null);
   const [verifyPin, setVerifyPin] = useState('');
   const [selectedDateIdx, setSelectedDateIdx] = useState(0);
   
-  // 墨水噴濺組件 (可放在 App.tsx 外部或獨立檔案)
-const InkSplatOverlay = ({ color }: { color: string }) => (
-  <motion.div
-    initial={{ scale: 0, opacity: 1 }}
-    animate={{ 
-      scale: 4, 
-      opacity: 0,
-      transition: { duration: 0.6, ease: "easeOut" } 
-    }}
-    exit={{ opacity: 0 }}
-    style={{
-      position: 'fixed',
-      top: '50%',
-      left: '50%',
-      x: '-50%',
-      y: '-50%',
-      width: '150px',
-      height: '150px',
-      backgroundColor: color,
-      borderRadius: '45% 55% 70% 30% / 30% 60% 40% 70%', // 不規則形狀
-      zIndex: 9999,
-      pointerEvents: 'none',
-    }}
-  />
-);
-
   // 會員區塊狀態
   const [memberOpen, setMemberOpen] = useState(false);
   const [showPersonalSetup, setShowPersonalSetup] = useState(false);
   
-  // 新增：個人資料編輯狀態
+  // 個人資料編輯狀態
   const [showEditIcon, setShowEditIcon] = useState<string | null>(null);
   const [editingProfile, setEditingProfile] = useState(false);
   const [editForm, setEditForm] = useState({ name: '', mood: '', avatar: '' });
+
+  // 轉場特效狀態
+  const [isSplatting, setIsSplatting] = useState(false);
+  const [splatColor, setSplatColor] = useState('#FFC000');
 
   useFirebaseSync();
   
@@ -88,6 +92,17 @@ const InkSplatOverlay = ({ color }: { color: string }) => (
     return Array.from({ length: diff }, (_, i) => addDays(start, i));
   })() : [];
 
+  const handleTabChange = (tabId: string) => {
+    if (tabId === activeTab) return;
+    // 觸發噴墨
+    setSplatColor(SPLAT_COLORS[Math.floor(Math.random() * SPLAT_COLORS.length)]);
+    setIsSplatting(true);
+    setTimeout(() => setIsSplatting(false), 600);
+    setActiveTab(tabId);
+    // 觸發震動 (僅 Android 支援，iOS 模擬手感靠 Motion)
+    if (navigator.vibrate) navigator.vibrate(10);
+  };
+
   const confirmTripSwitch = () => {
     const target = trips.find(t => t.id === lockedTripId);
     if (target?.tripPin === verifyPin) {
@@ -103,31 +118,39 @@ const InkSplatOverlay = ({ color }: { color: string }) => (
   return (
     <div className="flex flex-col min-h-screen font-sans text-splat-dark relative bg-[#F4F5F7] bg-[radial-gradient(#D1D5DB_2px,transparent_2px)] bg-[size:24px_24px]">
       
+      {/* 轉場噴墨動畫 */}
+      <AnimatePresence>
+        {isSplatting && <InkSplat color={splatColor} />}
+      </AnimatePresence>
+
       {activeTab === 'schedule' && (
         <header className="p-4 sticky top-0 z-[100] w-full max-w-md mx-auto animate-fade-in bg-[#F4F5F7]/95 backdrop-blur-sm border-b-[3px] border-splat-dark shadow-sm">
           <div className="bg-splat-yellow border-[3px] border-splat-dark rounded-[24px] shadow-splat-solid p-4 flex justify-between items-center relative z-20">
-            <div className="relative text-left">
+            <div className="relative text-left min-w-0">
               <h2 className="text-[10px] font-black text-splat-dark uppercase tracking-widest mb-0.5 bg-white inline-block px-2 border-2 border-splat-dark rounded-full shadow-splat-solid-sm -rotate-2">
                 {currentTrip.startDate} — {currentTrip.endDate}
               </h2>
               <div className="flex items-center gap-1 cursor-pointer group mt-1" onClick={() => setMenuOpen(!menuOpen)}>
-                {/* ✅ 改用旅行名稱，若無則顯示目的地。加入 truncate 避免長檔名跑版 */}
                 <h1 className="text-2xl font-black tracking-tight drop-shadow-md truncate max-w-[200px]">
                   {currentTrip.tripName || currentTrip.dest}
                 </h1>
                 <ChevronDown size={24} className={`stroke-[3px] transition-transform shrink-0 ${menuOpen ? 'rotate-180' : ''}`} />
               </div>
               
+              {/* 下拉選單加入動畫 */}
               {menuOpen && (
-                <div className="absolute top-[120%] left-0 w-64 bg-white border-[3px] border-splat-dark rounded-[24px] shadow-splat-solid z-[110] overflow-hidden animate-in fade-in slide-in-from-top-2">
+                <motion.div 
+                  initial={{ y: -20, opacity: 0 }} 
+                  animate={{ y: 0, opacity: 1 }}
+                  className="absolute top-[120%] left-0 w-64 bg-white border-[3px] border-splat-dark rounded-[24px] shadow-splat-solid z-[110] overflow-hidden"
+                >
                   <div className="p-3 max-h-48 overflow-y-auto hide-scrollbar">
                     {trips.map(t => {
                       const isCreator = t.creatorId === (auth.currentUser?.uid || 'unknown');
                       return (
                         <div key={t.id} className={`flex items-center justify-between p-3 rounded-xl border-2 mb-2 ${t.id === currentTrip.id ? 'bg-splat-yellow border-splat-dark' : 'border-transparent hover:border-gray-200'}`}>
-                          {/* ✅ 這裡改為顯示旅遊名稱 (tripName) */}
                           <button className="flex-1 text-left font-black text-sm truncate pr-2" onClick={() => { if(t.id === currentTrip.id) return; setLockedTripId(t.id); setVerifyPin(''); }}>{t.tripName || t.dest}</button>
-                          <button onClick={() => {
+                          <button onClick={() => { 
                             if (isCreator) {
                               if(confirm('⚠️ 確定要永久刪除此行程嗎？(所有旅伴都會遺失資料)')) useTripStore.getState().deleteTrip(t.id);
                             } else {
@@ -170,13 +193,17 @@ const InkSplatOverlay = ({ color }: { color: string }) => (
                       <Plus strokeWidth={3} size={16}/> 建立新行程
                     </button>
                   </div>
-                </div>
+                </motion.div>
               )}
             </div>
             
-            <div className="w-14 h-14 rounded-full border-[3px] border-splat-dark shadow-splat-solid overflow-hidden bg-white shrink-0 cursor-pointer active:scale-90 transition-transform rotate-3" onClick={() => setMemberOpen(true)}>
+            <motion.div 
+              whileTap={{ scale: 0.9, rotate: 10 }}
+              className="w-14 h-14 rounded-full border-[3px] border-splat-dark shadow-splat-solid overflow-hidden bg-white shrink-0 cursor-pointer rotate-3" 
+              onClick={() => setMemberOpen(true)}
+            >
                <img src={myProfile?.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=Adventurer`} alt="avatar" className="w-full h-full object-cover" />
-            </div>
+            </motion.div>
           </div>
 
           <div className="flex overflow-x-auto gap-3 hide-scrollbar pt-4 px-1 date-btn-container">
@@ -190,22 +217,33 @@ const InkSplatOverlay = ({ color }: { color: string }) => (
         </header>
       )}
 
+      {/* 主內容區塊加入左右滑動轉場 */}
       <main className={`flex-1 w-full max-w-md mx-auto overflow-x-hidden ${activeTab !== 'schedule' ? 'pt-6' : 'pt-2'}`}>
-        <div className={activeTab === 'schedule' ? 'block' : 'hidden'}><Schedule externalDateIdx={selectedDateIdx} /></div>
-        <div className={activeTab === 'booking' ? 'block' : 'hidden'}><Booking /></div>
-        <div className={activeTab === 'expense' ? 'block' : 'hidden'}><Expense /></div>
-        <div className={activeTab === 'food' ? 'block' : 'hidden'}><Journal /></div>
-        <div className={activeTab === 'shop' ? 'block' : 'hidden'}><Shopping /></div>
-        <div className={activeTab === 'info' ? 'block' : 'hidden'}><Info /></div>
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={activeTab}
+            initial={{ opacity: 0, x: 10 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -10 }}
+            transition={{ duration: 0.2 }}
+          >
+            <div className={activeTab === 'schedule' ? 'block' : 'hidden'}><Schedule externalDateIdx={selectedDateIdx} /></div>
+            <div className={activeTab === 'booking' ? 'block' : 'hidden'}><Booking /></div>
+            <div className={activeTab === 'expense' ? 'block' : 'hidden'}><Expense /></div>
+            <div className={activeTab === 'food' ? 'block' : 'hidden'}><Journal /></div>
+            <div className={activeTab === 'shop' ? 'block' : 'hidden'}><Shopping /></div>
+            <div className={activeTab === 'info' ? 'block' : 'hidden'}><Info /></div>
+          </motion.div>
+        </AnimatePresence>
       </main>
 
       <nav className="fixed bottom-6 left-1/2 -translate-x-1/2 w-[92%] max-w-md bg-white border-[3px] border-splat-dark rounded-[32px] shadow-splat-solid px-2 py-3 flex justify-between items-center z-50">
-        <NavIcon icon={<Calendar />} label="行程" id="schedule" active={activeTab} onClick={setActiveTab} color="text-splat-blue" splatColor="bg-splat-blue" />
-        <NavIcon icon={<CreditCard />} label="預訂" id="booking" active={activeTab} onClick={setActiveTab} color="text-splat-pink" splatColor="bg-splat-pink" />
-        <NavIcon icon={<Wallet />} label="記帳" id="expense" active={activeTab} onClick={setActiveTab} color="text-splat-yellow" splatColor="bg-splat-yellow" />
-        <NavIcon icon={<Utensils />} label="美食" id="food" active={activeTab} onClick={setActiveTab} color="text-splat-orange" splatColor="bg-splat-orange" />
-        <NavIcon icon={<ShoppingBag />} label="購物" id="shop" active={activeTab} onClick={setActiveTab} color="text-splat-green" splatColor="bg-splat-green" />
-        <NavIcon icon={<InfoIcon />} label="資訊" id="info" active={activeTab} onClick={setActiveTab} color="text-splat-dark" splatColor="bg-splat-dark" />
+        <NavIcon icon={<Calendar />} label="行程" id="schedule" active={activeTab} onClick={handleTabChange} color="text-splat-blue" />
+        <NavIcon icon={<CreditCard />} label="預訂" id="booking" active={activeTab} onClick={handleTabChange} color="text-splat-pink" />
+        <NavIcon icon={<Wallet />} label="記帳" id="expense" active={activeTab} onClick={handleTabChange} color="text-splat-yellow" />
+        <NavIcon icon={<Utensils />} label="美食" id="food" active={activeTab} onClick={handleTabChange} color="text-splat-orange" />
+        <NavIcon icon={<ShoppingBag />} label="購物" id="shop" active={activeTab} onClick={handleTabChange} color="text-splat-green" />
+        <NavIcon icon={<InfoIcon />} label="資訊" id="info" active={activeTab} onClick={handleTabChange} color="text-splat-dark" />
       </nav>
 
       {/* 切換行程密碼鎖定畫面 */}
@@ -225,15 +263,13 @@ const InkSplatOverlay = ({ color }: { color: string }) => (
 
       {/* 📍 側邊欄：旅伴列表與 ID/PIN */}
       {memberOpen && (
-  <div className="fixed inset-0 z-[1000] flex justify-end">
-    <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setMemberOpen(false)} />
-    <div className="relative w-[85%] max-w-xs bg-splat-bg h-full shadow-2xl border-l-[6px] border-splat-dark p-8 animate-in slide-in-from-right duration-300 overflow-y-auto">
-       
-       <div className="flex justify-between items-start mb-8">
-         <div className="flex-1 pr-4">
-           {/* ✅ 這裡已成功取代 TRIP MATES 並加入即時同步動畫 */}
-           <div className="flex items-center gap-2 mb-2">
-                   {/* ✅ 恢復為原本的 TRIP MATES */}
+        <div className="fixed inset-0 z-[1000] flex justify-end">
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setMemberOpen(false)} />
+          <div className="relative w-[85%] max-w-xs bg-splat-bg h-full shadow-2xl border-l-[6px] border-splat-dark p-8 animate-in slide-in-from-right duration-300 overflow-y-auto">
+             
+             <div className="flex justify-between items-start mb-8">
+               <div className="flex-1 pr-4">
+                 <div className="flex items-center gap-2 mb-2">
                    <h2 className="text-2xl font-black italic text-splat-dark tracking-tighter leading-tight uppercase break-words">
                      TRIP MATES
                    </h2>
@@ -242,14 +278,14 @@ const InkSplatOverlay = ({ color }: { color: string }) => (
                      <span className="text-[8px] font-black text-splat-green uppercase">Live</span>
                    </div>
                  </div>
-           
-           <div className="flex flex-wrap gap-2">
-              <span className="text-[9px] font-black bg-white border-2 border-splat-dark px-1.5 py-0.5 rounded shadow-sm text-splat-dark select-all">ID: {currentTrip.id}</span>
-              <span className="text-[9px] font-black bg-white border-2 border-splat-dark px-1.5 py-0.5 rounded shadow-sm text-splat-dark select-all">PIN: {currentTrip.tripPin}</span>
-           </div>
-         </div>
-         <button onClick={() => setMemberOpen(false)} className="p-1 -mt-2 -mr-2"><X strokeWidth={3}/></button>
-       </div>
+                 
+                 <div className="flex flex-wrap gap-2">
+                    <span className="text-[9px] font-black bg-white border-2 border-splat-dark px-1.5 py-0.5 rounded shadow-sm text-splat-dark select-all">ID: {currentTrip.id}</span>
+                    <span className="text-[9px] font-black bg-white border-2 border-splat-dark px-1.5 py-0.5 rounded shadow-sm text-splat-dark select-all">PIN: {currentTrip.tripPin}</span>
+                 </div>
+               </div>
+               <button onClick={() => setMemberOpen(false)} className="p-1 -mt-2 -mr-2"><X strokeWidth={3}/></button>
+             </div>
              
              <div className="space-y-4">
                 {(currentTrip.members || []).map(m => (
@@ -282,7 +318,7 @@ const InkSplatOverlay = ({ color }: { color: string }) => (
         </div>
       )}
       
-      {/* ✅ 全新功能：個人資料編輯視窗 */}
+      {/* 個人資料編輯視窗 */}
       {editingProfile && myProfile && (
         <div className="fixed inset-0 z-[2000] bg-splat-dark/60 backdrop-blur-sm flex items-center justify-center p-4">
            <div className="w-full max-w-sm space-y-6 text-center bg-[#F4F5F7] border-[4px] border-splat-dark rounded-[2.5rem] shadow-[8px_8px_0px_#1A1A1A] p-8 relative animate-in zoom-in-95">
@@ -291,7 +327,6 @@ const InkSplatOverlay = ({ color }: { color: string }) => (
               <h2 className="text-2xl font-black italic uppercase text-splat-dark">EDIT PROFILE</h2>
               
               <div className="space-y-6">
-                 {/* Avatar 選擇 */}
                  <div className="space-y-3">
                    <div className="relative inline-block">
                      <img src={editForm.avatar} className="w-20 h-20 rounded-full border-[3px] border-splat-dark object-cover bg-white mx-auto" />
@@ -333,7 +368,7 @@ const InkSplatOverlay = ({ color }: { color: string }) => (
         </div>
       )}
 
-      {/* 初次加入的設定畫面 (預設帶入一句可愛的留言) */}
+      {/* 初次加入的設定畫面 */}
       {showPersonalSetup && (
         <div className="fixed inset-0 z-[2000] bg-white flex items-center justify-center p-8">
            <div className="w-full max-w-sm space-y-8 text-center">
@@ -348,7 +383,6 @@ const InkSplatOverlay = ({ color }: { color: string }) => (
                    const e = (document.getElementById('setup-email') as HTMLInputElement).value;
                    const p = (document.getElementById('setup-pin') as HTMLInputElement).value;
                    if(!n || !e || p.length < 4) return alert("資訊要填完整唷！🦑");
-                   // 加入時自動塞入預設留言
                    updateTripData(currentTrip.id, { members: [{ id: 'm-'+Date.now(), name: n, avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${n}`, email: e, pin: p, mood: '準備出發！✈️' }] });
                    setShowPersonalSetup(false);
                  }} className="btn-splat w-full py-5 text-xl bg-splat-blue text-white">READY GO! ➔</button>
@@ -360,20 +394,21 @@ const InkSplatOverlay = ({ color }: { color: string }) => (
   );
 };
 
-// 3. 修改 NavIcon 增加 iOS 般的 Q 彈手感
-const NavIcon = ({ icon, label, id, active, onClick, color, splatColor }: any) => {
+// --- 優化後的 NavIcon (iOS 級物理回饋) ---
+const NavIcon = ({ icon, label, id, active, onClick, color }: any) => {
   const isActive = active === id;
   return (
     <motion.button 
-      whileTap={{ scale: 0.85 }} // iOS 觸感模擬：按下縮小
+      whileTap={{ scale: 0.8, y: 5 }} // iOS 按壓感：縮小並稍微下沉
       onClick={() => onClick(id)} 
-      className={`flex flex-col items-center gap-1 flex-1 transition-all duration-300 ${isActive ? `${color} -translate-y-2` : 'text-gray-400'}`}
+      className={`flex flex-col items-center gap-1 flex-1 transition-colors duration-300 ${isActive ? `${color} scale-110` : 'text-gray-400'}`}
     >
       <div className="relative">
         {isActive && (
           <motion.div 
-            layoutId="nav-glow"
-            className={`absolute inset-0 blur-md opacity-40 ${splatColor}`}
+            layoutId="nav-pill" 
+            className="absolute -inset-2 bg-gray-100 rounded-full -z-10"
+            transition={{ type: "spring", bounce: 0.4, duration: 0.5 }}
           />
         )}
         {React.cloneElement(icon, { size: 24, strokeWidth: isActive ? 3 : 2.5 })}
@@ -382,7 +417,6 @@ const NavIcon = ({ icon, label, id, active, onClick, color, splatColor }: any) =
     </motion.button>
   );
 };
-
 
 export default App;
 
