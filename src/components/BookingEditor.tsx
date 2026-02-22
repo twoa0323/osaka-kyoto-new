@@ -157,7 +157,7 @@ export const BookingEditor: React.FC<Props> = ({ tripId, type, item, onClose }) 
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[400] flex items-end sm:items-center justify-center p-4">
-      <div className="bg-ac-bg w-full max-w-md rounded-t-[40px] sm:rounded-[40px] shadow-2xl overflow-hidden animate-in slide-in-from-bottom-10 max-h-[90vh] overflow-y-auto text-left">
+      <div className="bg-ac-bg w-full max-w-md rounded-t-[40px] sm:rounded-[40px] shadow-2xl overflow-hidden animate-in slide-in-from-bottom-10 max-h-[90vh] flex flex-col text-left">
 
         <div className="p-6 flex justify-between items-center border-b-4 border-ac-border sticky top-0 bg-ac-bg z-10">
           <h2 className="text-xl font-black text-ac-brown italic">🖋️ 編輯資訊</h2>
@@ -169,7 +169,7 @@ export const BookingEditor: React.FC<Props> = ({ tripId, type, item, onClose }) 
           </div>
         </div>
 
-        <div className="p-6 space-y-6">
+        <div className="flex-1 overflow-y-auto p-6 space-y-6">
 
           {/* 📍 新增：超有質感的 AI 截圖解析按鈕 */}
           <div className="relative">
@@ -218,19 +218,19 @@ export const BookingEditor: React.FC<Props> = ({ tripId, type, item, onClose }) 
                   <Plane size={150} className="text-ac-brown rotate-90" />
                 </div>
 
-                <div className="grid grid-cols-2 gap-8 relative z-10">
-                  <div className="space-y-3">
+                <div className="grid grid-cols-2 gap-4 relative z-10">
+                  <div className="space-y-2.5">
                     <label className="text-[10px] font-black text-ac-brown/30 uppercase tracking-widest text-center block w-full">出發地</label>
-                    <input placeholder="TPE" className="w-full h-12 bg-[#F5F6F8] border border-ac-border/30 rounded-xl font-black text-center text-lg uppercase outline-none focus:border-ac-green focus:bg-white transition-colors" value={form.depIata} onChange={e => setForm({ ...form, depIata: e.target.value })} />
-                    <input type="time" className="w-full h-12 bg-[#F5F6F8] border border-ac-border/30 rounded-xl font-black text-center text-sm outline-none focus:border-ac-green focus:bg-white transition-colors" value={form.depTime} onChange={e => setForm({ ...form, depTime: e.target.value })} />
-                    <input placeholder="台北" className="w-full h-10 bg-[#F5F6F8] border border-ac-border/30 rounded-lg font-bold text-center text-[11px] outline-none focus:border-ac-green focus:bg-white transition-colors" value={form.depCity} onChange={e => setForm({ ...form, depCity: e.target.value })} />
+                    <input placeholder="TPE" className="w-full h-12 bg-[#F5F6F8] border-2 border-ac-border/30 rounded-xl font-black text-center text-lg uppercase outline-none focus:border-ac-green focus:bg-white transition-colors" value={form.depIata} onChange={e => setForm({ ...form, depIata: e.target.value })} />
+                    <input type="time" className="w-full h-12 bg-[#F5F6F8] border-2 border-ac-border/30 rounded-xl font-black text-center text-sm outline-none focus:border-ac-green focus:bg-white transition-colors" value={form.depTime} onChange={e => setForm({ ...form, depTime: e.target.value })} />
+                    <input placeholder="台北" className="w-full h-10 bg-[#F5F6F8] border-2 border-ac-border/30 rounded-xl font-bold text-center text-[11px] outline-none focus:border-ac-green focus:bg-white transition-colors" value={form.depCity} onChange={e => setForm({ ...form, depCity: e.target.value })} />
                   </div>
 
-                  <div className="space-y-3">
+                  <div className="space-y-2.5">
                     <label className="text-[10px] font-black text-ac-brown/30 uppercase tracking-widest text-center block w-full">目的地</label>
-                    <input placeholder="KIX" className="w-full h-12 bg-[#F5F6F8] border border-ac-border/30 rounded-xl font-black text-center text-lg uppercase outline-none focus:border-ac-green focus:bg-white transition-colors" value={form.arrIata} onChange={e => setForm({ ...form, arrIata: e.target.value })} />
-                    <input type="time" className="w-full h-12 bg-[#F5F6F8] border border-ac-border/30 rounded-xl font-black text-center text-sm outline-none focus:border-ac-green focus:bg-white transition-colors" value={form.arrTime} onChange={e => setForm({ ...form, arrTime: e.target.value })} />
-                    <input placeholder="大阪" className="w-full h-10 bg-[#F5F6F8] border border-ac-border/30 rounded-lg font-bold text-center text-[11px] outline-none focus:border-ac-green focus:bg-white transition-colors" value={form.arrCity} onChange={e => setForm({ ...form, arrCity: e.target.value })} />
+                    <input placeholder="KIX" className="w-full h-12 bg-[#F5F6F8] border-2 border-ac-border/30 rounded-xl font-black text-center text-lg uppercase outline-none focus:border-ac-green focus:bg-white transition-colors" value={form.arrIata} onChange={e => setForm({ ...form, arrIata: e.target.value })} />
+                    <input type="time" className="w-full h-12 bg-[#F5F6F8] border-2 border-ac-border/30 rounded-xl font-black text-center text-sm outline-none focus:border-ac-green focus:bg-white transition-colors" value={form.arrTime} onChange={e => setForm({ ...form, arrTime: e.target.value })} />
+                    <input placeholder="大阪" className="w-full h-10 bg-[#F5F6F8] border-2 border-ac-border/30 rounded-xl font-bold text-center text-[11px] outline-none focus:border-ac-green focus:bg-white transition-colors" value={form.arrCity} onChange={e => setForm({ ...form, arrCity: e.target.value })} />
                   </div>
                 </div>
 
@@ -274,19 +274,20 @@ export const BookingEditor: React.FC<Props> = ({ tripId, type, item, onClose }) 
                 <input placeholder="輸入具體地址" className="w-full h-14 px-4 bg-white border-2 border-ac-border rounded-2xl font-bold outline-none focus:border-ac-green" value={form.location} onChange={e => setForm({ ...form, location: e.target.value })} /></div>
               {type === 'hotel' && (
                 <div className="space-y-4 animate-in slide-in-from-bottom-2">
-                  <div className="bg-gray-50 p-4 rounded-2xl border-2 border-gray-100 space-y-4">
-                    <div className="space-y-1"><label className="text-[10px] font-black text-gray-400 uppercase tracking-widest pl-1">Hotel Name</label><input placeholder="飯店名稱" value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} className="w-full p-4 bg-white border-2 border-splat-dark rounded-xl font-black text-splat-dark" /></div>
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="space-y-1"><label className="text-[10px] font-black text-gray-400 uppercase tracking-widest pl-1">Check-in</label><input type="date" value={form.date} onChange={e => setForm({ ...form, date: e.target.value })} className="w-full p-3 bg-white border-2 border-splat-dark rounded-xl font-black text-sm" /></div>
-                      <div className="space-y-1"><label className="text-[10px] font-black text-gray-400 uppercase tracking-widest pl-1">Check-out</label><input type="date" value={form.endDate || ''} onChange={e => setForm({ ...form, endDate: e.target.value })} className="w-full p-3 bg-white border-2 border-splat-dark rounded-xl font-black text-sm" /></div>
+                  <div className="bg-white p-5 rounded-[2.5rem] border-2 border-ac-border space-y-5 shadow-sm">
+                    <div className="space-y-1.5"><label className="text-[10px] font-black text-ac-brown/40 uppercase tracking-widest ml-1">Check-in / Check-out</label>
+                      <div className="grid grid-cols-2 gap-3">
+                        <input type="date" value={form.date} onChange={e => setForm({ ...form, date: e.target.value })} className="w-full h-12 px-3 bg-[#F5F6F8] border border-ac-border/30 rounded-xl font-black text-sm outline-none focus:border-ac-green focus:bg-white transition-colors" />
+                        <input type="date" value={form.endDate || ''} onChange={e => setForm({ ...form, endDate: e.target.value })} className="w-full h-12 px-3 bg-[#F5F6F8] border border-ac-border/30 rounded-xl font-black text-sm outline-none focus:border-ac-green focus:bg-white transition-colors" />
+                      </div>
                     </div>
                     <div className="grid grid-cols-2 gap-3">
-                      <div className="space-y-1"><label className="text-[10px] font-black text-gray-400 uppercase tracking-widest pl-1">Room Type</label><input placeholder="房型 (如雙人房)" value={form.roomType || ''} onChange={e => setForm({ ...form, roomType: e.target.value })} className="w-full p-3 bg-white border-2 border-splat-dark rounded-xl font-black text-sm" /></div>
-                      <div className="space-y-1"><label className="text-[10px] font-black text-gray-400 uppercase tracking-widest pl-1">Conf. No.</label><input placeholder="訂單編號" value={form.confirmationNo} onChange={e => setForm({ ...form, confirmationNo: e.target.value })} className="w-full p-3 bg-white border-2 border-splat-dark rounded-xl font-black text-sm text-splat-blue" /></div>
+                      <div className="space-y-1.5"><label className="text-[10px] font-black text-ac-brown/40 uppercase tracking-widest ml-1">Room Type</label><input placeholder="房型 (如：雙人房)" value={form.roomType || ''} onChange={e => setForm({ ...form, roomType: e.target.value })} className="w-full h-12 px-3 bg-[#F5F6F8] border border-ac-border/30 rounded-xl font-black text-sm outline-none focus:border-ac-green focus:bg-white transition-colors" /></div>
+                      <div className="space-y-1.5"><label className="text-[10px] font-black text-ac-brown/40 uppercase tracking-widest ml-1">Conf. No.</label><input placeholder="訂單編號" value={form.confirmationNo} onChange={e => setForm({ ...form, confirmationNo: e.target.value })} className="w-full h-12 px-3 bg-[#F5F6F8] border border-ac-border/30 rounded-xl font-black text-sm text-ac-green outline-none focus:border-ac-green focus:bg-white transition-colors" /></div>
                     </div>
-                    <div className="space-y-1"><label className="text-[10px] font-black text-gray-400 uppercase tracking-widest pl-1">Address / Phone</label>
-                      <input placeholder="飯店地址" value={form.location} onChange={e => setForm({ ...form, location: e.target.value })} className="w-full p-3 bg-white border-2 border-splat-dark rounded-xl font-black text-sm mb-2" />
-                      <input placeholder="連絡電話" value={form.contactPhone || ''} onChange={e => setForm({ ...form, contactPhone: e.target.value })} className="w-full p-3 bg-white border-2 border-splat-dark rounded-xl font-black text-sm" />
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-black text-ac-brown/40 uppercase tracking-widest ml-1">Contact Phone</label>
+                      <input placeholder="連絡電話" value={form.contactPhone || ''} onChange={e => setForm({ ...form, contactPhone: e.target.value })} className="w-full h-12 px-3 bg-[#F5F6F8] border border-ac-border/30 rounded-xl font-black text-sm outline-none focus:border-ac-green focus:bg-white transition-colors" />
                     </div>
                   </div>
                 </div>

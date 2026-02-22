@@ -254,29 +254,31 @@ const FlightCard = ({ item, onEdit, onViewDetails, onQrClick }: any) => {
       </div>
 
       <div className="relative w-full pt-6 pb-6 px-5 flex items-center">
-        {/* 垂直齒線 */}
-        <div className="absolute top-0 bottom-0 right-[88px] w-0 border-l-[2.5px] border-dashed border-gray-300" />
+        <div className="flex-1 pr-6">
+          <div className="grid grid-cols-3 gap-0 mb-6 relative">
+            {/* Departure */}
+            <div className="flex flex-col items-center">
+              <span className="text-[20px] font-black text-gray-400 tracking-widest uppercase mb-1">{item.depIata || 'TPE'}</span>
+              <span className="text-[32px] leading-none font-black text-[#1A1917] tracking-tighter tabular-nums">{item.depTime || '--:--'}</span>
+              <span className="mt-2 text-[#447A5A] text-[10px] font-black tracking-widest uppercase truncate w-full text-center px-1">{item.depCity || '出發地'}</span>
+            </div>
 
-        <div className="flex-1 pr-6 border-r-2 border-transparent">
-          <div className="flex justify-between items-center mb-6">
-            <div className="flex flex-col items-center">
-              <span className="text-[26px] font-black text-gray-400 tracking-widest uppercase mb-1">{item.depIata || 'TPE'}</span>
-              <span className="text-[40px] leading-none font-black text-[#1A1917] tracking-tighter">{item.depTime || '--:--'}</span>
-              <span className="mt-2 text-[#447A5A] text-[11px] font-bold tracking-widest uppercase">{item.depCity || '出發地'}</span>
-            </div>
-            <div className="flex flex-col items-center flex-1 px-3">
-              <span className="text-[10px] font-bold text-[#6D6A65] mb-1">{formatDurationDisplay(item.duration)}</span>
+            {/* Middle Section */}
+            <div className="flex flex-col items-center justify-center px-2">
+              <span className="text-[9px] font-bold text-[#6D6A65] mb-1 whitespace-nowrap">{formatDurationDisplay(item.duration)}</span>
               <div className="w-full flex items-center text-[#4A72C8]">
-                <div className="h-[2px] flex-1 bg-gray-300 border-dashed border-t-[2px]"></div>
-                <Plane size={20} className="mx-2 fill-current rotate-45" />
-                <div className="h-[2px] flex-1 bg-gray-300 border-dashed border-t-[2px]"></div>
+                <div className="h-[2px] flex-1 bg-gray-200 border-dashed border-t-[2px]"></div>
+                <Plane size={16} className="mx-1.5 fill-current rotate-45 shrink-0" />
+                <div className="h-[2px] flex-1 bg-gray-200 border-dashed border-t-[2px]"></div>
               </div>
-              <span className="text-[10px] font-bold text-gray-400 mt-1 tracking-widest">{item.date?.replace(/-/g, '/')}</span>
+              <span className="text-[9px] font-bold text-gray-400 mt-1 tracking-widest">{item.date?.replace(/-/g, '/')}</span>
             </div>
+
+            {/* Arrival */}
             <div className="flex flex-col items-center">
-              <span className="text-[26px] font-black text-gray-400 tracking-widest uppercase mb-1">{item.arrIata || 'KIX'}</span>
-              <span className="text-[40px] leading-none font-black text-[#1A1917] tracking-tighter">{item.arrTime || '--:--'}</span>
-              <span className="mt-2 text-[#B3936E] text-[11px] font-bold tracking-widest uppercase">{item.arrCity || '目的地'}</span>
+              <span className="text-[20px] font-black text-gray-400 tracking-widest uppercase mb-1">{item.arrIata || 'KIX'}</span>
+              <span className="text-[32px] leading-none font-black text-[#1A1917] tracking-tighter tabular-nums">{item.arrTime || '--:--'}</span>
+              <span className="mt-2 text-[#B3936E] text-[10px] font-black tracking-widest uppercase truncate w-full text-center px-1">{item.arrCity || '目的地'}</span>
             </div>
           </div>
 
