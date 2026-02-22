@@ -29,6 +29,7 @@ interface TripState {
   activeTab: string;
   exchangeRate: number;
   
+
   // 全域狀態設定
   setTrips: (trips: Trip[]) => void;
   setActiveTab: (tab: string) => void;
@@ -70,6 +71,13 @@ interface TripState {
   // 6. 旅遊資訊 (Info)
   addInfoItem: (tid: string, item: InfoItem) => void;
   deleteInfoItem: (tid: string, iid: string) => void;
+
+  uiSettings: {
+    showSplash: boolean;    // 潑墨特效開關
+    enableHaptics: boolean; // 觸覺回饋開關
+    showBudgetAlert: boolean; // 預算警報開關
+  };
+  setUISettings: (settings: Partial<TripState['uiSettings']>) => void;
 }
 
 export const useTripStore = create<TripState>()(
@@ -79,6 +87,15 @@ export const useTripStore = create<TripState>()(
       currentTripId: null, 
       activeTab: 'schedule', 
       exchangeRate: 1,
+      
+      uiSettings: {
+        showSplash: true,
+        enableHaptics: true,
+        showBudgetAlert: true,
+      },
+      setUISettings: (newSettings) => set((s) => ({
+        uiSettings: { ...s.uiSettings, ...newSettings }
+      })),
       
       setTrips: (trips) => set({ trips }),
       setActiveTab: (tab) => set({ activeTab: tab }),

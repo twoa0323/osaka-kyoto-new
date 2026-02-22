@@ -17,6 +17,112 @@ import { format, addDays, differenceInDays, parseISO } from 'date-fns';
 import { compressImage, uploadImage } from './utils/imageUtils';
 import { auth } from './services/firebase';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Settings as SettingsIcon, ToggleLeft, ToggleRight, Vibration } from 'lucide-react';
+
+const App: React.FC = () => {
+  // ... 引入 uiSettings
+  const { uiSettings, setUISettings } = useTripStore();
+  const [showSettings, setShowSettings] = useState(false);
+
+  // 修改 handleTabChange 邏輯
+  const handleTabChange = (tabId: string) => {
+    if (tabId === activeTab) return;
+    
+    // 只有在設定開啟時才噴墨
+    if (uiSettings.showSplash) {
+      setSplatColor(SPLAT_COLORS[Math.floor(Math.random() * SPLAT_COLORS.length)]);
+      setIsSplatting(true);
+      setTimeout(() => setIsSplatting(false), 600);
+    }
+    
+    setActiveTab(tabId);
+    
+    // 只有在設定開啟時才震動
+    if (uiSettings.enableHaptics && navigator.vibrate) {
+      navigator.vibrate(10);
+    }
+  };
+
+  return (
+    <div className="...">
+      {/* ... 噴墨組件 ... */}
+
+      {/* 📍 修改後的側邊欄：新增齒輪圖示 (IMG_6138 紅色位置) */}
+      {memberOpen && (
+        <div className="fixed inset-0 z-[1000] flex justify-end">
+          <div className="absolute inset-0 bg-black/40" onClick={() => setMemberOpen(false)} />
+          <div className="relative w-[85%] max-w-xs bg-splat-bg h-full border-l-[6px] border-splat-dark p-8 animate-in slide-in-from-right">
+             
+             {/* 設定齒輪按鈕 */}
+             <button 
+               onClick={() => setShowSettings(true)}
+               className="absolute top-20 right-8 p-3 bg-white border-[3px] border-splat-dark rounded-xl shadow-splat-solid-sm active:translate-y-0.5 transition-all text-splat-dark z-50"
+             >
+               <SettingsIcon size={24} strokeWidth={3} className="animate-spin-slow" />
+             </button>
+
+             {/* ... 原本的旅伴列表內容 ... */}
+          </div>
+        </div>
+      )}
+
+      {/* 📍 UI 設定視窗 */}
+      <AnimatePresence>
+        {showSettings && (
+          <div className="fixed inset-0 z-[2000] flex items-center justify-center p-6">
+            <motion.div initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} onClick={()=>setShowSettings(false)} className="absolute inset-0 bg-splat-dark/80 backdrop-blur-sm" />
+            <motion.div initial={{scale:0.9, y:20}} animate={{scale:1, y:0}} exit={{scale:0.9, y:20}} className="bg-white w-full max-w-sm rounded-[32px] border-[4px] border-splat-dark shadow-splat-solid p-8 relative z-10">
+              <h2 className="text-2xl font-black italic uppercase mb-8 flex items-center gap-2">
+                <SettingsIcon /> UI SETTINGS
+              </h2>
+              
+              <div className="space-y-6">
+                {/* 潑墨特效開關 */}
+                <SettingToggle 
+                  label="潑墨轉場特效" 
+                  desc="切換分頁時的噴漆動畫" 
+                  enabled={uiSettings.showSplash} 
+                  onChange={(v) => setUISettings({ showSplash: v })} 
+                />
+                
+                {/* 觸覺回饋開關 */}
+                <SettingToggle 
+                  label="觸覺回饋 (Haptic)" 
+                  desc="按鈕點擊時的輕微震動" 
+                  enabled={uiSettings.enableHaptics} 
+                  onChange={(v) => setUISettings({ enableHaptics: v })} 
+                />
+
+                {/* 預算警報開關 (額外推薦) */}
+                <SettingToggle 
+                  label="智慧預算警報" 
+                  desc="支出超過預算 80% 時顯示提示" 
+                  enabled={uiSettings.showBudgetAlert} 
+                  onChange={(v) => setUISettings({ showBudgetAlert: v })} 
+                />
+              </div>
+
+              <button onClick={()=>setShowSettings(false)} className="btn-splat w-full py-4 mt-10 bg-splat-dark text-white uppercase">Confirm ➔</button>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+};
+
+// 設定開關小組件
+const SettingToggle = ({ label, desc, enabled, onChange }: any) => (
+  <div className="flex justify-between items-center bg-gray-50 p-4 rounded-2xl border-2 border-gray-100">
+    <div className="text-left">
+      <p className="font-black text-sm text-splat-dark">{label}</p>
+      <p className="text-[10px] font-bold text-gray-400">{desc}</p>
+    </div>
+    <button onClick={() => onChange(!enabled)} className={`transition-colors ${enabled ? 'text-splat-green' : 'text-gray-300'}`}>
+      {enabled ? <ToggleRight size={40} strokeWidth={2.5}/> : <ToggleLeft size={40} strokeWidth={2.5}/>}
+    </button>
+  </div>
+);
 
 // 預設提供選擇的 AI 大頭貼
 const PRESET_AVATARS = [

@@ -70,6 +70,73 @@ export const Schedule = ({ externalDateIdx = 0 }: { externalDateIdx?: number }) 
   
   const [gapAiLoading, setGapAiLoading] = useState<string | null>(null);
   const [transportAiLoading, setTransportAiLoading] = useState<string | null>(null);
+  const [dailyBriefing, setDailyBriefing] = useState<string>("");
+  const [isBriefingLoading, setIsBriefingLoading] = useState(false);
+  
+  // 📍 智慧戰報生成邏輯
+  const fetchBriefing = async () => {
+    if (!GEMINI_API_KEY || dayItems.length === 0) return;
+    setIsBriefingLoading(true);
+    try {
+      const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
+      const model = genAI.getGenerativeModel({ model: "gemini-3-flash-preview" });
+      const prompt = `你是一個旅遊導師。地點:${todayWeather.cityName}，天氣:${weatherInfo.t}。
+      當天行程: ${dayItems.map(i => i.title).join(', ')}。
+      請給予一段 40 字內幽默的斯普拉遁風格建議，必須包含一個🦑 Emoji。`;
+      
+      const res = await model.generateContent(prompt);
+      setDailyBriefing(res.response.text());
+    } catch (e) { console.error(e); }
+    finally { setIsBriefingLoading(false); }
+  };
+
+  useEffect(() => {
+    fetchBriefing(); // 切換日期時更新
+  }, [selectedDateStr, dayItems.length]);
+
+  return (
+    <div className="...">
+      {/* 📍 天氣與 AI 戰報整合模組 (IMG_6137) */}
+      <motion.div className="bg-[#5BA4E5] text-white rounded-[32px] border-[3px] border-splat-dark p-5 shadow-splat-solid relative overflow-hidden h-[180px]">
+        {/* 左側：原本的天氣資訊 */}
+        <div className="flex justify-between items-start z-10 relative">
+          <div className="w-1/2">
+             <div className="flex items-center gap-1 text-white/90 font-black text-[11px] uppercase tracking-widest mb-1">
+               <MapPin size={12}/> {todayWeather.cityName}
+             </div>
+             <div className="text-2xl font-black mb-1">{weatherInfo.t} {weatherInfo.e}</div>
+             
+             {/* 📍 新增：AI 戰報小區塊 */}
+             <div className="bg-black/20 backdrop-blur-md rounded-xl p-2.5 mt-2 border border-white/10 min-h-[70px] flex items-center">
+                {isBriefingLoading ? (
+                  <Loader2 size={16} className="animate-spin opacity-50 mx-auto" />
+                ) : (
+                  <p className="text-[10px] font-bold leading-relaxed text-blue-50">
+                    {dailyBriefing || "戰況不明，快去塗地吧！🦑"}
+                  </p>
+                )}
+             </div>
+          </div>
+          
+          {/* 右側：氣溫與數據 */}
+          <div className="text-right">
+             <div className="text-5xl font-black">{currentTempStr}°</div>
+             <div className="text-[11px] font-black opacity-80 mb-4">{todayWeather.min}° / {todayWeather.max}°</div>
+             <div className="space-y-1">
+                <div className="flex items-center justify-end gap-1 text-[10px] font-bold">
+                   <Umbrella size={10}/> {todayWeather.rain}%
+                </div>
+                <div className="flex items-center justify-end gap-1 text-[10px] font-bold">
+                   <Wind size={10}/> {todayWeather.wind}
+                </div>
+             </div>
+          </div>
+        </div>
+      </motion.div>
+      {/* ... 其餘列表 ... */}
+    </div>
+  );
+};
 
   const timeToMins = (t: string) => {
     if (!t) return 0;
