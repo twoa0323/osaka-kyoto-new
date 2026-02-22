@@ -11,107 +11,25 @@ import { Info } from './components/Info';
 import { 
   Plus, ChevronDown, Trash2, Calendar, CreditCard, Wallet, 
   Utensils, ShoppingBag, Info as InfoIcon, Lock, User, 
-  Camera, X, Edit3, RefreshCcw 
+  Camera, X, Edit3, RefreshCcw, Settings as SettingsIcon, 
+  ToggleLeft, ToggleRight
 } from 'lucide-react';
 import { format, addDays, differenceInDays, parseISO } from 'date-fns';
 import { compressImage, uploadImage } from './utils/imageUtils';
 import { auth } from './services/firebase';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Settings as SettingsIcon, ToggleLeft, ToggleRight, Vibration } from 'lucide-react';
 
-const App: React.FC = () => {
-  // ... 引入 uiSettings
-  const { uiSettings, setUISettings } = useTripStore();
-  const [showSettings, setShowSettings] = useState(false);
+// --- 常數設定 ---
+const PRESET_AVATARS = [
+  `https://api.dicebear.com/7.x/avataaars/svg?seed=Mimi`,
+  `https://api.dicebear.com/7.x/avataaars/svg?seed=Felix`,
+  `https://api.dicebear.com/7.x/avataaars/svg?seed=Aneka`,
+  `https://api.dicebear.com/7.x/avataaars/svg?seed=Max`,
+];
 
-  // 修改 handleTabChange 邏輯
-  const handleTabChange = (tabId: string) => {
-    if (tabId === activeTab) return;
-    
-    // 只有在設定開啟時才噴墨
-    if (uiSettings.showSplash) {
-      setSplatColor(SPLAT_COLORS[Math.floor(Math.random() * SPLAT_COLORS.length)]);
-      setIsSplatting(true);
-      setTimeout(() => setIsSplatting(false), 600);
-    }
-    
-    setActiveTab(tabId);
-    
-    // 只有在設定開啟時才震動
-    if (uiSettings.enableHaptics && navigator.vibrate) {
-      navigator.vibrate(10);
-    }
-  };
+const SPLAT_COLORS = ['#FFC000', '#2932CF', '#F03C69', '#21CC65', '#FF6C00'];
 
-  return (
-    <div className="...">
-      {/* ... 噴墨組件 ... */}
-
-      {/* 📍 修改後的側邊欄：新增齒輪圖示 (IMG_6138 紅色位置) */}
-      {memberOpen && (
-        <div className="fixed inset-0 z-[1000] flex justify-end">
-          <div className="absolute inset-0 bg-black/40" onClick={() => setMemberOpen(false)} />
-          <div className="relative w-[85%] max-w-xs bg-splat-bg h-full border-l-[6px] border-splat-dark p-8 animate-in slide-in-from-right">
-             
-             {/* 設定齒輪按鈕 */}
-             <button 
-               onClick={() => setShowSettings(true)}
-               className="absolute top-20 right-8 p-3 bg-white border-[3px] border-splat-dark rounded-xl shadow-splat-solid-sm active:translate-y-0.5 transition-all text-splat-dark z-50"
-             >
-               <SettingsIcon size={24} strokeWidth={3} className="animate-spin-slow" />
-             </button>
-
-             {/* ... 原本的旅伴列表內容 ... */}
-          </div>
-        </div>
-      )}
-
-      {/* 📍 UI 設定視窗 */}
-      <AnimatePresence>
-        {showSettings && (
-          <div className="fixed inset-0 z-[2000] flex items-center justify-center p-6">
-            <motion.div initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} onClick={()=>setShowSettings(false)} className="absolute inset-0 bg-splat-dark/80 backdrop-blur-sm" />
-            <motion.div initial={{scale:0.9, y:20}} animate={{scale:1, y:0}} exit={{scale:0.9, y:20}} className="bg-white w-full max-w-sm rounded-[32px] border-[4px] border-splat-dark shadow-splat-solid p-8 relative z-10">
-              <h2 className="text-2xl font-black italic uppercase mb-8 flex items-center gap-2">
-                <SettingsIcon /> UI SETTINGS
-              </h2>
-              
-              <div className="space-y-6">
-                {/* 潑墨特效開關 */}
-                <SettingToggle 
-                  label="潑墨轉場特效" 
-                  desc="切換分頁時的噴漆動畫" 
-                  enabled={uiSettings.showSplash} 
-                  onChange={(v) => setUISettings({ showSplash: v })} 
-                />
-                
-                {/* 觸覺回饋開關 */}
-                <SettingToggle 
-                  label="觸覺回饋 (Haptic)" 
-                  desc="按鈕點擊時的輕微震動" 
-                  enabled={uiSettings.enableHaptics} 
-                  onChange={(v) => setUISettings({ enableHaptics: v })} 
-                />
-
-                {/* 預算警報開關 (額外推薦) */}
-                <SettingToggle 
-                  label="智慧預算警報" 
-                  desc="支出超過預算 80% 時顯示提示" 
-                  enabled={uiSettings.showBudgetAlert} 
-                  onChange={(v) => setUISettings({ showBudgetAlert: v })} 
-                />
-              </div>
-
-              <button onClick={()=>setShowSettings(false)} className="btn-splat w-full py-4 mt-10 bg-splat-dark text-white uppercase">Confirm ➔</button>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
-    </div>
-  );
-};
-
-// 設定開關小組件
+// --- 獨立小組件 ---
 const SettingToggle = ({ label, desc, enabled, onChange }: any) => (
   <div className="flex justify-between items-center bg-gray-50 p-4 rounded-2xl border-2 border-gray-100">
     <div className="text-left">
@@ -124,17 +42,6 @@ const SettingToggle = ({ label, desc, enabled, onChange }: any) => (
   </div>
 );
 
-// 預設提供選擇的 AI 大頭貼
-const PRESET_AVATARS = [
-  `https://api.dicebear.com/7.x/avataaars/svg?seed=Mimi`,
-  `https://api.dicebear.com/7.x/avataaars/svg?seed=Felix`,
-  `https://api.dicebear.com/7.x/avataaars/svg?seed=Aneka`,
-  `https://api.dicebear.com/7.x/avataaars/svg?seed=Max`,
-];
-
-const SPLAT_COLORS = ['#FFC000', '#2932CF', '#F03C69', '#21CC65', '#FF6C00'];
-
-// --- 墨水噴濺特效組件 ---
 const InkSplat = ({ color }: { color: string }) => (
   <motion.div
     initial={{ scale: 0, opacity: 1 }}
@@ -150,32 +57,63 @@ const InkSplat = ({ color }: { color: string }) => (
       backgroundColor: color,
       marginLeft: '-75px',
       marginTop: '-75px',
-      borderRadius: '43% 57% 38% 62% / 57% 43% 57% 43%', // 不規則墨水形狀
+      borderRadius: '43% 57% 38% 62% / 57% 43% 57% 43%',
       filter: 'blur(2px)'
     }}
   />
 );
 
+const NavIcon = ({ icon, label, id, active, onClick, color }: any) => {
+  const isActive = active === id;
+  return (
+    <motion.button 
+      whileTap={{ scale: 0.8, y: 5 }} 
+      onClick={() => onClick(id)} 
+      className={`flex flex-col items-center gap-1 flex-1 transition-colors duration-300 ${isActive ? `${color} scale-110` : 'text-gray-400'}`}
+    >
+      <div className="relative">
+        {isActive && (
+          <motion.div 
+            layoutId="nav-pill" 
+            className="absolute -inset-2 bg-gray-100 rounded-full -z-10"
+            transition={{ type: "spring", bounce: 0.4, duration: 0.5 }}
+          />
+        )}
+        {React.cloneElement(icon, { size: 24, strokeWidth: isActive ? 3 : 2.5 })}
+      </div>
+      <span className="text-[10px] font-black tracking-widest">{label}</span>
+    </motion.button>
+  );
+};
+
+
+// ==========================================
+// 🚀 唯一的主要 App 元件 (完美合併版)
+// ==========================================
 const App: React.FC = () => {
   const { trips, currentTripId, switchTrip, activeTab, setActiveTab, updateTripData } = useTripStore();
+  
+  // 狀態管理
   const [menuOpen, setMenuOpen] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [lockedTripId, setLockedTripId] = useState<string | null>(null);
   const [verifyPin, setVerifyPin] = useState('');
   const [selectedDateIdx, setSelectedDateIdx] = useState(0);
   
-  // 會員區塊狀態
   const [memberOpen, setMemberOpen] = useState(false);
   const [showPersonalSetup, setShowPersonalSetup] = useState(false);
+  const [showSettings, setShowSettings] = useState(false); // 控制設定 Modal
   
-  // 個人資料編輯狀態
   const [showEditIcon, setShowEditIcon] = useState<string | null>(null);
   const [editingProfile, setEditingProfile] = useState(false);
   const [editForm, setEditForm] = useState({ name: '', mood: '', avatar: '' });
 
-  // 轉場特效狀態
+  // 動畫與 UI 設定狀態
   const [isSplatting, setIsSplatting] = useState(false);
   const [splatColor, setSplatColor] = useState('#FFC000');
+  
+  // 使用本地 state 管理 UI 設定，避免 useTripStore 尚未定義報錯
+  const [uiSettings, setUISettings] = useState({ showSplash: true, enableHaptics: true, showBudgetAlert: false });
 
   useFirebaseSync();
   
@@ -200,13 +138,18 @@ const App: React.FC = () => {
 
   const handleTabChange = (tabId: string) => {
     if (tabId === activeTab) return;
-    // 觸發噴墨
-    setSplatColor(SPLAT_COLORS[Math.floor(Math.random() * SPLAT_COLORS.length)]);
-    setIsSplatting(true);
-    setTimeout(() => setIsSplatting(false), 600);
+    
+    if (uiSettings.showSplash) {
+      setSplatColor(SPLAT_COLORS[Math.floor(Math.random() * SPLAT_COLORS.length)]);
+      setIsSplatting(true);
+      setTimeout(() => setIsSplatting(false), 600);
+    }
+    
     setActiveTab(tabId);
-    // 觸發震動 (僅 Android 支援，iOS 模擬手感靠 Motion)
-    if (navigator.vibrate) navigator.vibrate(10);
+    
+    if (uiSettings.enableHaptics && navigator.vibrate) {
+      navigator.vibrate(10);
+    }
   };
 
   const confirmTripSwitch = () => {
@@ -343,6 +286,7 @@ const App: React.FC = () => {
         </AnimatePresence>
       </main>
 
+      {/* 底部導覽列 */}
       <nav className="fixed bottom-6 left-1/2 -translate-x-1/2 w-[92%] max-w-md bg-white border-[3px] border-splat-dark rounded-[32px] shadow-splat-solid px-2 py-3 flex justify-between items-center z-50">
         <NavIcon icon={<Calendar />} label="行程" id="schedule" active={activeTab} onClick={handleTabChange} color="text-splat-blue" />
         <NavIcon icon={<CreditCard />} label="預訂" id="booking" active={activeTab} onClick={handleTabChange} color="text-splat-pink" />
@@ -367,12 +311,20 @@ const App: React.FC = () => {
         </div>
       )}
 
-      {/* 📍 側邊欄：旅伴列表與 ID/PIN */}
+      {/* 📍 側邊欄：旅伴列表與設定圖示 */}
       {memberOpen && (
         <div className="fixed inset-0 z-[1000] flex justify-end">
           <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setMemberOpen(false)} />
           <div className="relative w-[85%] max-w-xs bg-splat-bg h-full shadow-2xl border-l-[6px] border-splat-dark p-8 animate-in slide-in-from-right duration-300 overflow-y-auto">
              
+             {/* ✅ 設定齒輪按鈕 */}
+             <button 
+               onClick={() => setShowSettings(true)}
+               className="absolute top-[88px] right-8 p-3 bg-white border-[3px] border-splat-dark rounded-xl shadow-splat-solid-sm active:translate-y-0.5 transition-all text-splat-dark z-50 hover:bg-gray-50"
+             >
+               <SettingsIcon size={24} strokeWidth={3} className="animate-spin-slow" />
+             </button>
+
              <div className="flex justify-between items-start mb-8">
                <div className="flex-1 pr-4">
                  <div className="flex items-center gap-2 mb-2">
@@ -423,6 +375,45 @@ const App: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* 📍 UI 設定視窗 Modal */}
+      <AnimatePresence>
+        {showSettings && (
+          <div className="fixed inset-0 z-[2000] flex items-center justify-center p-6">
+            <motion.div initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}} onClick={()=>setShowSettings(false)} className="absolute inset-0 bg-splat-dark/80 backdrop-blur-sm" />
+            <motion.div initial={{scale:0.9, y:20}} animate={{scale:1, y:0}} exit={{scale:0.9, y:20}} className="bg-white w-full max-w-sm rounded-[32px] border-[4px] border-splat-dark shadow-splat-solid p-8 relative z-10">
+              <h2 className="text-2xl font-black italic uppercase mb-8 flex items-center gap-2">
+                <SettingsIcon /> UI SETTINGS
+              </h2>
+              
+              <div className="space-y-6">
+                <SettingToggle 
+                  label="潑墨轉場特效" 
+                  desc="切換分頁時的噴漆動畫" 
+                  enabled={uiSettings.showSplash} 
+                  onChange={(v: boolean) => setUISettings(prev => ({...prev, showSplash: v}))} 
+                />
+                
+                <SettingToggle 
+                  label="觸覺回饋 (Haptic)" 
+                  desc="按鈕點擊時的輕微震動" 
+                  enabled={uiSettings.enableHaptics} 
+                  onChange={(v: boolean) => setUISettings(prev => ({...prev, enableHaptics: v}))} 
+                />
+
+                <SettingToggle 
+                  label="智慧預算警報" 
+                  desc="支出超過預算 80% 時顯示提示" 
+                  enabled={uiSettings.showBudgetAlert} 
+                  onChange={(v: boolean) => setUISettings(prev => ({...prev, showBudgetAlert: v}))} 
+                />
+              </div>
+
+              <button onClick={()=>setShowSettings(false)} className="btn-splat w-full py-4 mt-10 bg-splat-dark text-white uppercase">Confirm ➔</button>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
       
       {/* 個人資料編輯視窗 */}
       {editingProfile && myProfile && (
@@ -500,30 +491,7 @@ const App: React.FC = () => {
   );
 };
 
-// --- 優化後的 NavIcon (iOS 級物理回饋) ---
-const NavIcon = ({ icon, label, id, active, onClick, color }: any) => {
-  const isActive = active === id;
-  return (
-    <motion.button 
-      whileTap={{ scale: 0.8, y: 5 }} // iOS 按壓感：縮小並稍微下沉
-      onClick={() => onClick(id)} 
-      className={`flex flex-col items-center gap-1 flex-1 transition-colors duration-300 ${isActive ? `${color} scale-110` : 'text-gray-400'}`}
-    >
-      <div className="relative">
-        {isActive && (
-          <motion.div 
-            layoutId="nav-pill" 
-            className="absolute -inset-2 bg-gray-100 rounded-full -z-10"
-            transition={{ type: "spring", bounce: 0.4, duration: 0.5 }}
-          />
-        )}
-        {React.cloneElement(icon, { size: 24, strokeWidth: isActive ? 3 : 2.5 })}
-      </div>
-      <span className="text-[10px] font-black tracking-widest">{label}</span>
-    </motion.button>
-  );
-};
-
 export default App;
+
 
 
