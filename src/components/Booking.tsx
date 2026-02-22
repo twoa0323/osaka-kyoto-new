@@ -242,83 +242,116 @@ const FlightCard = ({ item, onEdit, onViewDetails, onQrClick }: any) => {
   };
 
   return (
-    <motion.div whileTap={{ scale: 0.98 }} className="relative bg-[#FDFBF7] rounded-[2rem] overflow-hidden border-[3px] border-splat-dark shadow-splat-solid group cursor-pointer" onClick={handleCardClick}>
-      <div className={`absolute top-4 right-4 z-30 transition-opacity duration-300 ${showActions ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
+    <motion.div
+      whileTap={{ scale: 0.98 }}
+      className="relative bg-white rounded-[2.5rem] overflow-hidden border-[3px] border-splat-dark shadow-splat-solid group cursor-pointer"
+      onClick={handleCardClick}
+    >
+      {/* 編輯按鈕 */}
+      <div className={`absolute top-4 right-4 z-40 transition-opacity duration-300 ${showActions ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
         <button onClick={onEdit} className="p-2.5 bg-splat-yellow border-[3px] border-splat-dark rounded-full text-splat-dark shadow-splat-solid-sm hover:scale-110 transition-transform">
           <Edit3 size={18} strokeWidth={3} />
         </button>
       </div>
 
-      <div className={`relative h-16 w-full flex items-center px-6 border-b-[3px] border-splat-dark ${theme.bgClass}`}>
-        {theme.logoHtml}
+      {/* 1. Header with Dot Pattern (依航司配色) */}
+      <div
+        className={`relative h-24 w-full flex items-center justify-center border-b-[3px] border-splat-dark ${theme.bgClass}`}
+        style={{
+          backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.2) 1px, transparent 1px)',
+          backgroundSize: '12px 12px'
+        }}
+      >
+        <div className="drop-shadow-lg scale-110">
+          {theme.logoHtml}
+        </div>
       </div>
 
-      <div className="relative w-full pt-6 pb-6 px-5 flex items-center">
-        <div className="flex-1 pr-6">
-          <div className="grid grid-cols-3 gap-0 mb-6 relative">
-            {/* Departure */}
-            <div className="flex flex-col items-center">
-              <span className="text-[20px] font-black text-gray-400 tracking-widest uppercase mb-1">{item.depIata || 'TPE'}</span>
-              <span className="text-[32px] leading-none font-black text-[#1A1917] tracking-tighter tabular-nums">{item.depTime || '--:--'}</span>
-              <span className="mt-2 text-[#447A5A] text-[10px] font-black tracking-widest uppercase truncate w-full text-center px-1">{item.depCity || '出發地'}</span>
-            </div>
+      {/* 2. Overlapping Flight Badge */}
+      <div className="absolute top-[80px] left-1/2 -translate-x-1/2 bg-white px-8 py-2 rounded-full border-[3px] border-gray-50 shadow-sm z-20 flex items-center justify-center">
+        <span className="text-base font-black text-gray-400 tracking-[0.2em] uppercase">{item.flightNo || '---'}</span>
+      </div>
 
-            {/* Middle Section */}
-            <div className="flex flex-col items-center justify-center px-2">
-              <span className="text-[9px] font-bold text-[#6D6A65] mb-1 whitespace-nowrap">{formatDurationDisplay(item.duration)}</span>
-              <div className="w-full flex items-center text-[#4A72C8]">
-                <div className="h-[2px] flex-1 bg-gray-200 border-dashed border-t-[2px]"></div>
-                <Plane size={16} className="mx-1.5 fill-current rotate-45 shrink-0" />
-                <div className="h-[2px] flex-1 bg-gray-200 border-dashed border-t-[2px]"></div>
-              </div>
-              <span className="text-[9px] font-bold text-gray-400 mt-1 tracking-widest">{item.date?.replace(/-/g, '/')}</span>
-            </div>
+      {/* 3. Main Content Section */}
+      <div className="relative p-6 pt-12">
+        {/* 左側齒孔飾效 */}
+        <div className="absolute top-0 bottom-0 left-4 w-0 border-l-[3px] border-dashed border-gray-100 opacity-50" />
 
-            {/* Arrival */}
-            <div className="flex flex-col items-center">
-              <span className="text-[20px] font-black text-gray-400 tracking-widest uppercase mb-1">{item.arrIata || 'KIX'}</span>
-              <span className="text-[32px] leading-none font-black text-[#1A1917] tracking-tighter tabular-nums">{item.arrTime || '--:--'}</span>
-              <span className="mt-2 text-[#B3936E] text-[10px] font-black tracking-widest uppercase truncate w-full text-center px-1">{item.arrCity || '目的地'}</span>
+        <div className="grid grid-cols-3 gap-0 mb-8 items-center">
+          {/* Departure */}
+          <div className="flex flex-col items-center">
+            <span className="text-[20px] font-black text-gray-400 tracking-wider uppercase mb-1">{item.depIata || 'TPE'}</span>
+            <span className="text-[40px] leading-none font-black text-[#1A1917] tracking-tighter tabular-nums">{item.depTime || '--:--'}</span>
+            <div className="mt-3 bg-[#447A5A] text-white px-4 py-1 rounded-full text-[11px] font-black tracking-widest whitespace-nowrap shadow-sm">
+              {item.depCity || '出發地'}
             </div>
           </div>
 
-          <div className="flex gap-4">
-            <div className="flex-1 bg-gray-50 border-2 border-gray-200 rounded-xl p-2 text-center">
-              <p className="text-[8px] font-black text-gray-400 uppercase tracking-widest mb-0.5">Flight No.</p>
-              <p className="font-black text-sm text-splat-dark">{item.flightNo || '---'}</p>
+          {/* Middle Transition */}
+          <div className="flex flex-col items-center justify-center px-2">
+            <span className="text-[10px] font-bold text-gray-400 mb-1.5 tabular-nums">{formatDurationDisplay(item.duration)}</span>
+            <div className="w-full flex items-center text-splat-blue">
+              <div className="h-[2px] flex-1 bg-gray-100 border-dashed border-t-[2.5px]"></div>
+              <Plane size={18} className="mx-2 fill-current rotate-45 shrink-0 drop-shadow-sm" />
+              <div className="h-[2px] flex-1 bg-gray-100 border-dashed border-t-[2.5px]"></div>
             </div>
-            <div className="flex-1 bg-gray-50 border-2 border-gray-200 rounded-xl p-2 text-center">
-              <p className="text-[8px] font-black text-gray-400 uppercase tracking-widest mb-0.5">Seat</p>
-              <p className="font-black text-sm text-splat-dark">{item.seat || '---'}</p>
+            <span className="text-[10px] font-bold text-gray-300 mt-2 tracking-[0.1em]">{item.date?.replace(/-/g, '/')}</span>
+          </div>
+
+          {/* Arrival */}
+          <div className="flex flex-col items-center">
+            <span className="text-[20px] font-black text-gray-400 tracking-wider uppercase mb-1">{item.arrIata || 'KIX'}</span>
+            <span className="text-[40px] leading-none font-black text-[#1A1917] tracking-tighter tabular-nums">{item.arrTime || '--:--'}</span>
+            <div className="mt-3 bg-[#B3936E] text-white px-4 py-1 rounded-full text-[11px] font-black tracking-widest whitespace-nowrap shadow-sm">
+              {item.arrCity || '目的地'}
             </div>
           </div>
         </div>
 
-        {/* QR Code 預覽區塊 */}
-        <div className="w-[80px] h-[80px] flex items-center justify-center shrink-0 pl-4 z-10 bg-transparent">
-          {item.qrCode ? (
-            <motion.div
-              whileHover={{ scale: 1.1 }}
-              onClick={(e) => { e.stopPropagation(); onQrClick(item.qrCode!); }}
-              className="cursor-zoom-in bg-white p-1 border-2 border-gray-200 rounded-xl shadow-inner relative group"
-            >
-              <LazyImage src={item.qrCode} containerClassName="w-14 h-14" alt="QR" />
-              <div className="absolute inset-0 bg-splat-blue/10 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded-xl">
-                <Plus size={16} className="text-splat-blue" strokeWidth={4} />
-              </div>
-            </motion.div>
-          ) : (
-            <div className="text-gray-300 opacity-50 flex flex-col items-center gap-1">
-              <QrCode size={24} />
-              <span className="text-[8px] font-black">NO QR</span>
+        {/* 4. Bottom Info Bar (3 Columns) */}
+        <div className="bg-[#F8F9FB] rounded-[1.5rem] p-5 grid grid-cols-3 divide-x-2 divide-gray-100">
+          {/* BAGGAGE */}
+          <div className="flex flex-col items-center">
+            <span className="text-[9px] font-black text-gray-400 uppercase tracking-[0.15em] mb-2">BAGGAGE</span>
+            <div className="flex items-center gap-2">
+              <Luggage size={14} className="text-ac-green" strokeWidth={3} />
+              <span className="text-sm font-black text-splat-dark">{item.baggage || '---'}</span>
             </div>
-          )}
+          </div>
+
+          {/* SEAT */}
+          <div className="flex flex-col items-center">
+            <span className="text-[9px] font-black text-gray-400 uppercase tracking-[0.15em] mb-2">SEAT</span>
+            <span className="text-sm font-black text-splat-dark">{item.seat || '---'}</span>
+          </div>
+
+          {/* AIRCRAFT */}
+          <div className="flex flex-col items-center">
+            <span className="text-[9px] font-black text-gray-400 uppercase tracking-[0.15em] mb-2">AIRCRAFT</span>
+            <div className="flex items-center gap-1.5 px-1 truncate w-full justify-center">
+              <Plane size={14} className="text-[#B3936E] rotate-45 shrink-0" strokeWidth={3} />
+              <span className="text-sm font-black text-splat-dark truncate">{item.aircraft || '---'}</span>
+            </div>
+          </div>
         </div>
       </div>
+
+      {/* QR Code 浮動入口 (如果是縮小態則靠右展示) */}
+      {item.qrCode && (
+        <div className="absolute right-6 top-[130px] z-10">
+          <motion.div
+            whileHover={{ scale: 1.1 }}
+            onClick={(e) => { e.stopPropagation(); onQrClick(item.qrCode!); }}
+            className="cursor-zoom-in bg-white p-1 border-2 border-gray-100 rounded-xl shadow-sm hover:shadow-md transition-shadow"
+          >
+            <LazyImage src={item.qrCode} containerClassName="w-10 h-10" alt="QR" />
+          </motion.div>
+        </div>
+      )}
 
       {/* 經典票券左右半圓齒孔 */}
-      <div className="absolute top-[64px] -left-3 w-6 h-6 bg-[#F4F5F7] rounded-full border-[3px] border-splat-dark z-10 shadow-inner" />
-      <div className="absolute top-[64px] -right-3 w-6 h-6 bg-[#F4F5F7] rounded-full border-[3px] border-splat-dark z-10 shadow-inner" />
+      <div className="absolute top-[84px] -left-3.5 w-7 h-7 bg-[#F4F5F7] rounded-full border-[3px] border-splat-dark z-30 shadow-inner" />
+      <div className="absolute top-[84px] -right-3.5 w-7 h-7 bg-[#F4F5F7] rounded-full border-[3px] border-splat-dark z-30 shadow-inner" />
     </motion.div>
   );
 };
