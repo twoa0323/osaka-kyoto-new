@@ -59,11 +59,28 @@ export default async function handler(req, res) {
                 break;
 
             case 'batch-parse':
-                prompt = `分析以下文字旅遊行程並回傳純 JSON 陣列。
-        格式: [{"time":"HH:mm", "endTime":"HH:mm", "title":"景點", "location":"地址", "category":"sightseeing/food/transport/hotel", "note":"介紹"}]。
-        如果沒有結束時間，endTime請填空字串。
-        日期: ${payload.date}。
-        內容: ${payload.text}`;
+                prompt = `分析以下文字旅遊行程或筆記，並將資訊分類後回傳純 JSON 物件。
+        
+        回傳結構必須如下：
+        {
+          "schedule": [{"time":"HH:mm", "endTime":"HH:mm", "title":"景點", "location":"地址", "category":"sightseeing/food/transport/hotel", "note":"介紹"}],
+          "booking": [{"type":"flight/hotel/spot/voucher", "title":"名稱", "date":"YYYY-MM-DD", "location":"地址", "note":"備註", "flightNo":"航班號", "airline":"航空公司", "confirmationNo":"確認號"}],
+          "journal": [{"title":"美食或回憶名稱", "content":"內容", "rating":1-5數字, "location":"地址", "date":"YYYY-MM-DD"}],
+          "shopping": [{"title":"想買的東西", "note":"備註", "category":"分類"}],
+          "info": [{"type":"note/ticket/custom", "title":"標題", "content":"筆記內容", "url":"網址"}]
+        }
+
+        規則：
+        1.日期為 ${payload.date}。
+        2.如果資訊非常明確是機票、住宿預訂或票券憑證，請放入 booking。
+        3.如果資訊包含美食評價或星等，請放入 journal。
+        4.如果是簡單的採買項目，請放入 shopping。
+        5.如果是行程表中的活動（幾點去哪），請放入 schedule。
+        6.如果資訊不明，請放 info。
+        7.內容語系請統一使用繁體中文。
+        
+        內容如下：
+        ${payload.text}`;
                 break;
 
             case 'suggest-briefing':

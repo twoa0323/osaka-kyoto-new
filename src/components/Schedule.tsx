@@ -59,7 +59,10 @@ const CITY_DB = [
 ];
 
 export const Schedule: React.FC<{ externalDateIdx?: number }> = ({ externalDateIdx = 0 }) => {
-  const { trips, currentTripId, deleteScheduleItem, addScheduleItem, reorderScheduleItems, updateScheduleItem } = useTripStore();
+  const {
+    trips, currentTripId, deleteScheduleItem, addScheduleItem, reorderScheduleItems, updateScheduleItem,
+    addBookingItem, addJournalItem, addShoppingItem, addInfoItem
+  } = useTripStore();
   const trip = trips.find(t => t.id === currentTripId);
   const isOnline = useNetworkStatus();
   const [isEditorOpen, setIsEditorOpen] = useState(false);
@@ -324,15 +327,52 @@ export const Schedule: React.FC<{ externalDateIdx?: number }> = ({ externalDateI
         })
       });
       const data = await res.json();
-      if (Array.isArray(data)) {
-        data.forEach((i: any) => addScheduleItem(trip!.id, {
-          ...i,
-          id: `ai-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
-          date: selectedDateStr,
-          images: i.images || []
-        }));
+      if (data && !data.error) {
+        // 分發到不同分頁
+        if (Array.isArray(data.schedule)) {
+          data.schedule.forEach((i: any) => addScheduleItem(trip!.id, {
+            ...i,
+            id: `ai-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+            date: selectedDateStr,
+            images: i.images || []
+          }));
+        }
+        if (Array.isArray(data.booking)) {
+          data.booking.forEach((i: any) => addBookingItem(trip!.id, {
+            ...i,
+            id: `ai-bk-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+            images: i.images || []
+          }));
+        }
+        if (Array.isArray(data.journal)) {
+          data.journal.forEach((i: any) => addJournalItem(trip!.id, {
+            ...i,
+            id: `ai-jr-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+            images: i.images || []
+          }));
+        }
+        if (Array.isArray(data.shopping)) {
+          data.shopping.forEach((i: any) => addShoppingItem(trip!.id, {
+            ...i,
+            id: `ai-sh-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+            price: 0,
+            currency: trip!.baseCurrency,
+            isBought: false,
+            images: [],
+            category: i.category || '未分類'
+          }));
+        }
+        if (Array.isArray(data.info)) {
+          data.info.forEach((i: any) => addInfoItem(trip!.id, {
+            ...i,
+            id: `ai-if-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+            images: []
+          }));
+        }
+
         setIsAiOpen(false);
-        triggerHaptic('light');
+        triggerHaptic('success');
+        alert("✨ 智慧分析完成！已將資訊自動分類到行程、預定、美食日記、購物清單與筆記中。");
       } else {
         throw new Error("AI returned invalid format");
       }
