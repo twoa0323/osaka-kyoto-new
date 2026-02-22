@@ -32,6 +32,13 @@ export interface ScheduleItem extends SyncMetadata {
   images: string[];
   isCompleted?: boolean;        // 👈 新增：是否已完成 (灰底)
   transportSuggestion?: string; // 👈 新增：AI 交通建議
+  spotGuide?: {                 // 👈 新增：AI 景點導覽 (背景與亮點)
+    background: string;
+    highlights: string[];
+    suggestedDuration?: string;
+  };
+  lat?: number;                 // 👈 新增：緯度
+  lng?: number;                 // 👈 新增：經度
 }
 
 // --- 2. 預訂 (Booking) 項目 ---
@@ -107,11 +114,19 @@ export interface ShoppingItem extends SyncMetadata {
   id: string;
   title: string;
   price: number;
+  targetPrice?: number;   // 👈 新增：目標促銷價 / 願望價格
   currency: CurrencyCode;
   isBought: boolean;
   images: string[];
   note: string;
   category: string;
+  aiPriceInfo?: {         // 👈 新增：AI 魔法格價資訊
+    currentMarketPrice: number;
+    shopName?: string;
+    lastChecked: number;
+    advice: string;
+    lowPriceAlert?: boolean;
+  };
 }
 
 // --- 6. 旅遊資訊 (Info) 項目 ---
@@ -122,6 +137,16 @@ export interface InfoItem extends SyncMetadata {
   content: string;
   images: string[];
   url: string;
+}
+
+// --- 7. 行李清單 (Packing) 項目 ---
+export interface PackingItem extends SyncMetadata {
+  id: string;
+  title: string;
+  category: string;
+  quantity: number;
+  isPacked: boolean;
+  note?: string;
 }
 
 // --- 根節點：整趟旅程 (Trip) 定義 ---
@@ -150,6 +175,7 @@ export interface Trip extends SyncMetadata {
   journals: JournalItem[];
   shoppingList: ShoppingItem[];
   infoItems: InfoItem[];
+  packingList: PackingItem[];
 
   // 匯率暫存 (離線使用)
   lastFetchedRate?: number;

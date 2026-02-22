@@ -2,9 +2,12 @@ import React, { useState } from 'react';
 import { useTripStore } from '../store/useTripStore';
 import {
   Plane, Home, MapPin, Plus, Edit3, Globe, QrCode,
-  ArrowRight, X, Luggage, Phone, Camera, Ticket, Download, CheckCircle2
+  ArrowRight, X, Luggage, Phone, Camera, Ticket, Download, CheckCircle2, Calendar, Clock
 } from 'lucide-react';
 import { cacheAsset, isAssetCached } from '../utils/offlineCache';
+import { downloadIcs } from '../utils/icsGenerator';
+import { formatDistanceToNow, parseISO, isPast, isToday } from 'date-fns';
+import { zhTW } from 'date-fns/locale';
 import { BookingItem } from '../types';
 import { BookingEditor } from './BookingEditor';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -32,6 +35,20 @@ const getTheme = (airline?: string) => {
 // 子分頁顏色
 const SUBTAB_COLORS: Record<string, string> = {
   flight: 'bg-splat-blue', hotel: 'bg-splat-pink', spot: 'bg-splat-green', voucher: 'bg-splat-yellow'
+};
+
+// --- 倒數計時輔助函數 ---
+const getCountdown = (dateStr: string, timeStr?: string) => {
+  try {
+    const target = parseISO(timeStr ? `${dateStr}T${timeStr}` : dateStr);
+    if (isPast(target) && !isToday(target)) return { text: '已結束', color: 'bg-gray-400' };
+    if (isToday(target)) return { text: '今天', color: 'bg-splat-orange animate-pulse' };
+
+    const dist = formatDistanceToNow(target, { locale: zhTW, addSuffix: true });
+    return { text: dist.replace('約 ', '').replace('內', ''), color: 'bg-splat-blue' };
+  } catch (e) {
+    return null;
+  }
 };
 
 export const Booking = () => {
@@ -145,53 +162,73 @@ export const Booking = () => {
       </div>
 
       {/* 3. 詳情 Modal */}
-      {detailItem && (
-        <div className="fixed inset-0 bg-splat-dark/80 backdrop-blur-sm z-[300] flex items-center justify-center p-4" onClick={() => setDetailItem(undefined)}>
-          <motion.div
-            initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
-            className="bg-[#F4F5F7] w-full max-w-sm rounded-[32px] border-[4px] border-splat-dark shadow-[8px_8px_0px_#1A1A1A] overflow-hidden"
-            onClick={e => e.stopPropagation()}
-          >
-            <div className="p-6 space-y-6 max-h-[80vh] overflow-y-auto hide-scrollbar">
-              <div className="flex justify-between items-start">
-                <h2 className="text-2xl font-black text-splat-dark uppercase pr-8">{detailItem.title}</h2>
-                <button onClick={() => setDetailItem(undefined)} className="p-2 bg-white rounded-full border-2 border-splat-dark shadow-sm active:scale-90 transition-transform"><X size={16} strokeWidth={3} /></button>
-              </div>
-              {detailItem.images?.[0] && <LazyImage src={detailItem.images[0]} containerClassName="w-full aspect-video rounded-2xl object-cover border-[3px] border-splat-dark shadow-splat-solid-sm" />}
-              <div className="bg-white p-4 border-[3px] border-splat-dark rounded-xl shadow-sm">
-                <p className="text-sm text-gray-700 font-bold whitespace-pre-wrap leading-relaxed">{detailItem.note || "尚無備註資訊"}</p>
-              </div>
-              {detailItem.qrCode && (
-                <div onClick={() => setFocusedQr(detailItem.qrCode!)} className="bg-white p-4 rounded-2xl flex flex-col items-center gap-2 border-[3px] border-splat-dark shadow-splat-solid-sm cursor-zoom-in active:scale-95 transition-transform">
-                  <img src={detailItem.qrCode} className="w-40 h-40 object-contain" alt="QR" />
-                  <span className="text-[10px] font-black text-splat-pink uppercase tracking-widest bg-gray-100 px-3 py-1 rounded-md">Tap to Scan</span>
+      <AnimatePresence>
+        {detailItem && (
+          <div className="fixed inset-0 bg-splat-dark/80 backdrop-blur-sm z-[300] flex items-center justify-center p-4" onClick={() => setDetailItem(undefined)}>
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-[#F4F5F7] w-full max-w-sm rounded-[32px] border-[4px] border-splat-dark shadow-[8px_8px_0px_#1A1A1A] overflow-hidden"
+              onClick={e => e.stopPropagation()}
+            >
+              <div className="p-6 space-y-6 max-h-[80vh] overflow-y-auto hide-scrollbar">
+                <div className="flex justify-between items-start">
+                  <h2 className="text-2xl font-black text-splat-dark uppercase pr-8 font-['Barlow'] tracking-tight">{detailItem.title}</h2>
+                  <button onClick={() => setDetailItem(undefined)} className="p-2 bg-white rounded-full border-2 border-splat-dark shadow-sm active:scale-90 transition-transform"><X size={16} strokeWidth={3} /></button>
                 </div>
-              )}
-              {detailItem.website && <a href={detailItem.website} target="_blank" rel="noreferrer" className="btn-splat w-full py-4 bg-splat-blue text-white flex items-center justify-center gap-2 font-black"><Globe size={18} /> 前往官方網站</a>}
-              {detailItem.location && (
-                <a
-                  href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(detailItem.location)}&travelmode=walking`}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="w-full py-4 bg-splat-green text-white border-[3px] border-splat-dark rounded-2xl font-black text-center shadow-splat-solid-sm flex items-center justify-center gap-2 active:translate-y-1 active:shadow-none transition-all"
-                >
-                  <MapPin size={18} strokeWidth={3} />
-                  導航至預訂地點
-                </a>
-              )}
-              {detailItem.qrCode && (
-                <button
-                  onClick={() => handleDownload(detailItem.qrCode!)}
-                  className={`w-full py-3 rounded-2xl border-[3px] border-splat-dark font-black flex items-center justify-center gap-2 transition-all ${cachedUrls.has(detailItem.qrCode!) ? 'bg-gray-100 text-gray-400' : 'bg-white text-splat-dark shadow-splat-solid-sm active:translate-y-1 active:shadow-none'}`}
-                >
-                  {cachedUrls.has(detailItem.qrCode!) ? <CheckCircle2 size={18} /> : <Download size={18} />}
-                  {cachedUrls.has(detailItem.qrCode!) ? '已快取離線資源' : '下載離線憑證'}
-                </button>
-              )}
-            </div>
-          </motion.div>
-        </div>
-      )}
+
+                {detailItem.images?.[0] && <LazyImage src={detailItem.images[0]} containerClassName="w-full aspect-video rounded-2xl object-cover border-[3px] border-splat-dark shadow-splat-solid-sm" />}
+
+                <div className="bg-white p-4 border-[3px] border-splat-dark rounded-xl shadow-sm">
+                  <p className="text-sm text-gray-700 font-bold whitespace-pre-wrap leading-relaxed">{detailItem.note || "尚無備註資訊"}</p>
+                </div>
+
+                {detailItem.qrCode && (
+                  <div onClick={() => setFocusedQr(detailItem.qrCode!)} className="bg-white p-4 rounded-2xl flex flex-col items-center gap-2 border-[3px] border-splat-dark shadow-splat-solid-sm cursor-zoom-in active:scale-95 transition-transform">
+                    <img src={detailItem.qrCode} className="w-40 h-40 object-contain" alt="QR" />
+                    <span className="text-[10px] font-black text-splat-pink uppercase tracking-widest bg-gray-100 px-3 py-1 rounded-md">Tap to Scan</span>
+                  </div>
+                )}
+
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    onClick={() => { downloadIcs(detailItem!); triggerHaptic('medium'); }}
+                    className="btn-splat py-4 bg-white text-splat-dark flex items-center justify-center gap-2 font-black"
+                  >
+                    <Calendar size={18} /> 加入行事曆
+                  </button>
+                  {detailItem.website && (
+                    <a href={detailItem.website} target="_blank" rel="noreferrer" className="btn-splat py-4 bg-splat-blue text-white flex items-center justify-center gap-2 font-black">
+                      <Globe size={18} /> 官方網站
+                    </a>
+                  )}
+                </div>
+
+                {detailItem.location && (
+                  <a
+                    href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(detailItem.location)}&travelmode=walking`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="w-full py-4 bg-splat-green text-white border-[3px] border-splat-dark rounded-2xl font-black text-center shadow-splat-solid-sm flex items-center justify-center gap-2 active:translate-y-1 active:shadow-none transition-all"
+                  >
+                    <MapPin size={18} strokeWidth={3} />
+                    導航至預訂地點
+                  </a>
+                )}
+
+                {detailItem.qrCode && (
+                  <button
+                    onClick={() => handleDownload(detailItem!.qrCode!)}
+                    className={`w-full py-3 rounded-2xl border-[3px] border-splat-dark font-black flex items-center justify-center gap-2 transition-all ${detailItem.qrCode && cachedUrls.has(detailItem.qrCode) ? 'bg-gray-100 text-gray-400' : 'bg-white text-splat-dark shadow-splat-solid-sm active:translate-y-1 active:shadow-none'}`}
+                  >
+                    {detailItem.qrCode && cachedUrls.has(detailItem.qrCode) ? <CheckCircle2 size={18} /> : <Download size={18} />}
+                    {detailItem.qrCode && cachedUrls.has(detailItem.qrCode) ? '已快取離線資源' : '下載離線憑證'}
+                  </button>
+                )}
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       {/* 4. QR Code 全螢幕亮點模式 */}
       <AnimatePresence>
@@ -206,7 +243,7 @@ export const Booking = () => {
               className="bg-white p-6 border-[6px] border-splat-dark rounded-[40px] shadow-2xl flex flex-col items-center"
             >
               <img src={focusedQr} className="w-64 h-64 object-contain mb-8" alt="Focus QR" />
-              <p className="text-2xl font-black text-splat-dark uppercase tracking-widest italic animate-pulse">Scan Me! 🦑</p>
+              <p className="text-2xl font-black text-splat-dark uppercase tracking-widest italic animate-pulse font-['Barlow']">Scan Me! 🦑</p>
               <p className="text-xs text-gray-400 font-black mt-4 border-2 border-gray-200 px-4 py-1 rounded-full uppercase">Tap Screen to Close</p>
             </motion.div>
           </motion.div>
@@ -219,7 +256,7 @@ export const Booking = () => {
 };
 
 // ============================================================================
-// 各類型獨立卡片組件 (保留原版面 + 融入 Apple Wallet 實體齒孔與 QrCode 點擊)
+// 各類型獨立卡片組件
 // ============================================================================
 
 const FlightCard = ({ item, onEdit, onViewDetails, onQrClick }: any) => {
@@ -254,7 +291,16 @@ const FlightCard = ({ item, onEdit, onViewDetails, onQrClick }: any) => {
         </button>
       </div>
 
-      {/* 1. Header with Dot Pattern (依航司配色) - 精確縮減 1/6 (112px -> 93px) */}
+      {/* 倒數計時標籤 */}
+      {(() => {
+        const cd = getCountdown(item.date, item.depTime);
+        return cd && (
+          <div className={`absolute top-4 left-4 z-40 px-3 py-1 rounded-full border-2 border-splat-dark text-[9px] font-black text-white shadow-sm -rotate-3 ${cd.color}`}>
+            {cd.text}
+          </div>
+        );
+      })()}
+
       <div
         className={`relative h-[93px] w-full flex items-center justify-center border-b-[3px] border-splat-dark ${theme.bgClass}`}
         style={{
@@ -267,18 +313,14 @@ const FlightCard = ({ item, onEdit, onViewDetails, onQrClick }: any) => {
         </div>
       </div>
 
-      {/* 2. Overlapping Flight Badge - 全 Barlow 粗體 (中性色調優化) */}
       <div className="absolute top-[75px] left-1/2 -translate-x-1/2 bg-white px-8 py-1.5 rounded-full border-[3px] border-gray-50 shadow-md z-30 flex items-center justify-center">
         <span className="text-base font-bold font-['Barlow'] text-gray-700/90 tracking-[0.2em] outline-none">{item.flightNo || '---'}</span>
       </div>
 
-      {/* 3. Main Content Section - 全 Barlow 粗體 */}
       <div className="relative p-3.5 pt-8 pb-3.5 font-['Barlow']">
-        {/* 左側齒孔飾效 */}
         <div className="absolute top-0 bottom-0 left-4 w-0 border-l-[3px] border-dashed border-gray-100 opacity-20" />
 
         <div className="grid grid-cols-3 gap-0 mb-4 items-center">
-          {/* Departure */}
           <div className="flex flex-col items-center">
             <span className="text-[19px] font-bold text-gray-400 tracking-tight uppercase mb-0">{item.depIata || 'TPE'}</span>
             <span className="text-[44px] leading-tight font-bold text-[#1A1A1A] tracking-tighter tabular-nums">{item.depTime || '--:--'}</span>
@@ -287,7 +329,6 @@ const FlightCard = ({ item, onEdit, onViewDetails, onQrClick }: any) => {
             </div>
           </div>
 
-          {/* Middle Transition */}
           <div className="flex flex-col items-center justify-center px-1">
             <span className="text-[10px] font-bold text-gray-500 mb-1 tabular-nums">{formatDurationDisplay(item.duration)}</span>
             <div className="w-full flex items-center text-splat-blue">
@@ -298,7 +339,6 @@ const FlightCard = ({ item, onEdit, onViewDetails, onQrClick }: any) => {
             <span className="text-[10px] font-bold text-gray-300 mt-1.5 tracking-wide">{item.date?.replace(/-/g, '/')}</span>
           </div>
 
-          {/* Arrival */}
           <div className="flex flex-col items-center">
             <span className="text-[19px] font-bold text-gray-400 tracking-tight uppercase mb-0">{item.arrIata || 'KIX'}</span>
             <span className="text-[44px] leading-tight font-bold text-[#1A1A1A] tracking-tighter tabular-nums">{item.arrTime || '--:--'}</span>
@@ -308,7 +348,6 @@ const FlightCard = ({ item, onEdit, onViewDetails, onQrClick }: any) => {
           </div>
         </div>
 
-        {/* 4. Bottom Info Bar - 全 Barlow 粗體 */}
         <div className="bg-[#F1F3F5] rounded-[1.2rem] border-2 border-gray-100/50 p-3 grid grid-cols-3 divide-x-2 divide-white/60">
           <div className="flex flex-col items-center">
             <span className="text-[9px] font-bold text-gray-500 uppercase tracking-[0.15em] mb-1.5">BAGGAGE</span>
@@ -331,7 +370,6 @@ const FlightCard = ({ item, onEdit, onViewDetails, onQrClick }: any) => {
         </div>
       </div>
 
-      {/* QR Code 入口 - 縮減位置 */}
       {item.qrCode && (
         <div className="absolute right-5 top-[115px] z-[25]">
           <motion.div
@@ -344,7 +382,6 @@ const FlightCard = ({ item, onEdit, onViewDetails, onQrClick }: any) => {
         </div>
       )}
 
-      {/* 經典票券左右半圓齒孔 - 位置同步校準 */}
       <div className="absolute top-[80px] -left-3.5 w-7 h-7 bg-[#F4F5F7] rounded-full border-[3px] border-splat-dark z-30 shadow-inner" />
       <div className="absolute top-[80px] -right-3.5 w-7 h-7 bg-[#F4F5F7] rounded-full border-[3px] border-splat-dark z-30 shadow-inner" />
     </motion.div>
@@ -361,36 +398,40 @@ const HotelCard = ({ item, onEdit, onViewDetails, onQrClick }: any) => {
         <button onClick={onEdit} className="p-2.5 bg-splat-yellow border-[3px] border-splat-dark rounded-full text-splat-dark shadow-splat-solid-sm"><Edit3 size={18} strokeWidth={3} /></button>
       </div>
 
+      {/* 倒數計時標籤 */}
+      {(() => {
+        const cd = getCountdown(item.date);
+        return cd && (
+          <div className={`absolute top-4 left-4 z-20 px-3 py-1 rounded-full border-2 border-splat-dark text-[9px] font-black text-white shadow-sm -rotate-2 ${cd.color}`}>
+            {cd.text}
+          </div>
+        );
+      })()}
+
       <div className="h-32 bg-gray-200 relative border-b-[3px] border-splat-dark">
         {item.images?.[0] ? (<LazyImage src={item.images[0]} containerClassName="w-full h-full" />) : (<div className="w-full h-full flex items-center justify-center bg-splat-pink/10"><Home size={40} className="text-splat-pink/40" /></div>)}
         <div className="absolute top-3 left-3 bg-white border-2 border-splat-dark px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest text-splat-dark shadow-[2px_2px_0px_#1A1A1A]">HOTEL</div>
       </div>
 
       <div className="p-5 flex items-center relative">
-        {/* 垂直齒線 */}
         <div className="absolute top-0 bottom-0 right-[88px] w-0 border-l-[2.5px] border-dashed border-gray-200" />
-
         <div className="flex-1 pr-6 space-y-4">
-          <h3 className="font-black text-xl text-splat-dark leading-tight pr-4">{item.title}</h3>
-
-          <div className="flex gap-2">
+          <h3 className="font-black text-xl text-splat-dark leading-tight pr-4 font-['Barlow']">{item.title}</h3>
+          <div className="flex gap-2 font-['Barlow']">
             <div className="flex-1 bg-gray-50 border-2 border-dashed border-gray-300 rounded-xl p-2 text-center">
               <div className="text-[8px] font-black text-gray-400 uppercase tracking-widest mb-0.5">Check-in</div>
-              <div className="font-black text-sm text-splat-dark">{item.date}</div>
+              <div className="font-black text-sm text-splat-dark tabular-nums">{item.date}</div>
             </div>
             <div className="flex-1 bg-gray-50 border-2 border-dashed border-gray-300 rounded-xl p-2 text-center">
               <div className="text-[8px] font-black text-gray-400 uppercase tracking-widest mb-0.5">Check-out</div>
-              <div className="font-black text-sm text-splat-dark">{item.endDate || '-'}</div>
+              <div className="font-black text-sm text-splat-dark tabular-nums">{item.endDate || '-'}</div>
             </div>
           </div>
-
           <div className="flex items-start gap-1.5 text-xs font-bold text-gray-600 bg-gray-50 p-2 rounded-xl border-2 border-gray-100">
             <MapPin size={14} className="shrink-0 text-splat-pink mt-0.5" />
             <span className="leading-snug truncate">{item.location || '地址待確認'}</span>
           </div>
         </div>
-
-        {/* QR Code 預覽區塊 */}
         <div className="w-[80px] flex flex-col items-center justify-center shrink-0 pl-2 z-10 gap-3">
           {item.qrCode ? (
             <motion.div whileHover={{ scale: 1.1 }} onClick={(e) => { e.stopPropagation(); onQrClick(item.qrCode!); }} className="cursor-zoom-in bg-white p-1 border-2 border-gray-100 rounded-xl shadow-inner relative group">
@@ -400,12 +441,11 @@ const HotelCard = ({ item, onEdit, onViewDetails, onQrClick }: any) => {
           ) : (
             <div className="text-center shrink-0 bg-gray-50 rounded-xl px-2 py-3 border-2 border-gray-200">
               <div className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">Nights</div>
-              <div className="font-black text-splat-dark text-lg leading-none">{item.nights || 1}</div>
+              <div className="font-black text-splat-dark text-lg leading-none tabular-nums">{item.nights || 1}</div>
             </div>
           )}
         </div>
       </div>
-
       <div className="absolute top-[128px] -left-3 w-6 h-6 bg-[#F4F5F7] rounded-full border-[3px] border-splat-dark z-10 shadow-inner" />
       <div className="absolute top-[128px] -right-3 w-6 h-6 bg-[#F4F5F7] rounded-full border-[3px] border-splat-dark z-10 shadow-inner" />
     </motion.div>
@@ -422,31 +462,39 @@ const SpotCard = ({ item, onEdit, onViewDetails, onQrClick }: any) => {
         <button onClick={onEdit} className="p-2.5 bg-splat-yellow border-[3px] border-splat-dark rounded-full text-splat-dark shadow-splat-solid-sm"><Edit3 size={18} strokeWidth={3} /></button>
       </div>
 
+      {/* 倒數計時標籤 */}
+      {(() => {
+        const cd = getCountdown(item.date, item.entryTime);
+        return cd && (
+          <div className={`absolute top-4 left-4 z-20 px-3 py-1 rounded-full border-2 border-splat-dark text-[9px] font-black text-white shadow-sm -rotate-2 ${cd.color}`}>
+            {cd.text}
+          </div>
+        );
+      })()}
+
       <div className="p-5 border-b-[3px] border-dashed border-gray-300 relative bg-[#FFFAF0]">
         <div className="flex justify-between items-start mb-3">
           <div className="bg-splat-yellow border-2 border-splat-dark px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest text-splat-dark shadow-sm">🎫 SPOT TICKET</div>
         </div>
-        <h3 className="font-black text-xl text-splat-dark leading-tight pr-4 truncate">{item.title}</h3>
+        <h3 className="font-black text-xl text-splat-dark leading-tight pr-4 truncate font-['Barlow']">{item.title}</h3>
       </div>
 
       <div className="p-5 bg-white flex items-center relative">
         <div className="absolute top-0 bottom-0 right-[88px] w-0 border-l-[2.5px] border-dashed border-gray-200" />
-
-        <div className="flex-1 grid grid-cols-2 gap-y-3 gap-x-2 pr-6">
+        <div className="flex-1 grid grid-cols-2 gap-y-3 gap-x-2 pr-6 font-['Barlow']">
           <div>
             <div className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-0.5">Date</div>
-            <div className="font-black text-sm text-splat-dark">{item.date}</div>
+            <div className="font-black text-sm text-splat-dark tabular-nums">{item.date}</div>
           </div>
           <div>
             <div className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-0.5">Entry Time</div>
-            <div className="font-black text-sm text-splat-pink">{item.entryTime || '不限時間'}</div>
+            <div className="font-black text-sm text-splat-pink tabular-nums">{item.entryTime || '不限時間'}</div>
           </div>
           <div className="col-span-2 mt-1">
             <div className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-0.5">Location</div>
             <div className="font-bold text-xs text-splat-dark truncate">{item.location || '---'}</div>
           </div>
         </div>
-
         <div className="w-[80px] flex items-center justify-center shrink-0 pl-2 z-10 bg-white">
           {item.qrCode ? (
             <motion.div whileHover={{ scale: 1.1 }} onClick={(e) => { e.stopPropagation(); onQrClick(item.qrCode!); }} className="cursor-zoom-in bg-white p-1.5 border-2 border-gray-100 rounded-xl shadow-inner relative group">
@@ -461,7 +509,6 @@ const SpotCard = ({ item, onEdit, onViewDetails, onQrClick }: any) => {
           )}
         </div>
       </div>
-
       <div className="absolute top-[80px] -left-3 w-6 h-6 bg-[#F4F5F7] rounded-full border-[3px] border-splat-dark z-10 shadow-inner" />
       <div className="absolute top-[80px] -right-3 w-6 h-6 bg-[#F4F5F7] rounded-full border-[3px] border-splat-dark z-10 shadow-inner" />
     </motion.div>
@@ -478,26 +525,35 @@ const VoucherCard = ({ item, onEdit, onViewDetails, onQrClick }: any) => {
         <button onClick={onEdit} className="p-2.5 bg-splat-yellow border-[3px] border-splat-dark rounded-full text-splat-dark shadow-splat-solid-sm"><Edit3 size={18} strokeWidth={3} /></button>
       </div>
 
+      {/* 倒數計時標籤 */}
+      {(() => {
+        const cd = getCountdown(item.date);
+        return cd && (
+          <div className={`absolute top-4 left-4 z-30 px-3 py-1 rounded-full border-2 border-splat-dark text-[9px] font-black text-white shadow-sm -rotate-2 ${cd.color}`}>
+            {cd.text}
+          </div>
+        );
+      })()}
+
       <div className="w-10 bg-[#FF8A00] border-r-[3px] border-splat-dark flex flex-col items-center justify-center py-4 relative shrink-0">
-        <span className="text-[11px] font-black text-white uppercase tracking-[0.4em] -rotate-90 whitespace-nowrap drop-shadow-md z-10">VOUCHER</span>
+        <span className="text-[11px] font-black text-white uppercase tracking-[0.4em] -rotate-90 whitespace-nowrap drop-shadow-md z-10 font-['Barlow']">VOUCHER</span>
       </div>
 
       <div className="flex-1 p-5 flex items-center relative">
         <div className="absolute top-0 bottom-0 right-[88px] w-0 border-l-[2.5px] border-dashed border-gray-200" />
-
-        <div className="flex-1 pr-6 space-y-3">
+        <div className="flex-1 pr-6 space-y-3 font-['Barlow']">
           <h3 className="font-black text-[17px] text-splat-dark leading-tight pr-2">{item.title}</h3>
           <div className="flex gap-3 text-sm bg-gray-50 p-2 rounded-xl border-2 border-gray-100">
             <div className="flex-1">
               <div className="text-[8px] font-black text-gray-400 uppercase tracking-widest mb-0.5">Valid Date</div>
-              <div className="font-black text-splat-dark text-xs">{item.date}</div>
+              <div className="font-black text-splat-dark text-xs tabular-nums">{item.date}</div>
             </div>
             {item.endDate && (
               <>
                 <div className="w-[2px] bg-gray-200 my-1 rounded-full"></div>
                 <div className="flex-1">
                   <div className="text-[8px] font-black text-gray-400 uppercase tracking-widest mb-0.5">End Date</div>
-                  <div className="font-black text-splat-dark text-xs">{item.endDate}</div>
+                  <div className="font-black text-splat-dark text-xs tabular-nums">{item.endDate}</div>
                 </div>
               </>
             )}
@@ -509,7 +565,6 @@ const VoucherCard = ({ item, onEdit, onViewDetails, onQrClick }: any) => {
             </div>
           )}
         </div>
-
         <div className="w-[80px] flex items-center justify-center shrink-0 pl-2 z-10 bg-white">
           {item.qrCode ? (
             <motion.div whileHover={{ scale: 1.1 }} onClick={(e) => { e.stopPropagation(); onQrClick(item.qrCode!); }} className="cursor-zoom-in bg-white p-1.5 border-2 border-gray-100 rounded-xl shadow-inner relative group">
@@ -524,22 +579,8 @@ const VoucherCard = ({ item, onEdit, onViewDetails, onQrClick }: any) => {
           )}
         </div>
       </div>
-
       <div className="absolute top-1/2 -mt-3 -left-3 w-6 h-6 bg-[#F4F5F7] rounded-full border-[3px] border-splat-dark z-20 shadow-inner" />
       <div className="absolute top-1/2 -mt-3 -right-3 w-6 h-6 bg-[#F4F5F7] rounded-full border-[3px] border-splat-dark z-20 shadow-inner" />
     </motion.div>
   );
 };
-
-
-
-
-
-
-
-
-
-
-
-
-

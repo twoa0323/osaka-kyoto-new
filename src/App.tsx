@@ -7,12 +7,13 @@ import { Booking } from './components/Booking';
 import { Expense } from './components/Expense';
 import { Journal } from './components/Journal';
 import { Shopping } from './components/Shopping';
+import { PackingList } from './components/PackingList';
 import { Info } from './components/Info';
 import {
   Plus, ChevronDown, Trash2, Calendar, CreditCard, Wallet,
   Utensils, ShoppingBag, Info as InfoIcon, Lock, User,
   Camera, X, Edit3, RefreshCcw, Settings as SettingsIcon,
-  ToggleLeft, ToggleRight
+  ToggleLeft, ToggleRight, Luggage, PenTool
 } from 'lucide-react';
 import { format, addDays, differenceInDays, parseISO } from 'date-fns';
 import { compressImage, uploadImage } from './utils/imageUtils';
@@ -22,6 +23,7 @@ import { SettingToggle, InkSplat } from './components/Common';
 import { MemberManagement, ProfileEditor, PersonalSetup } from './components/MemberModals';
 import { Member } from './types';
 import { OfflineStatus } from './components/OfflineStatus';
+import { MagicImport } from './components/MagicImport';
 import { triggerHaptic } from './utils/haptics';
 import { useHapticShake } from './hooks/useHapticShake';
 
@@ -58,7 +60,6 @@ const NavIcon = ({ icon, label, id, active, onClick, color }: any) => {
   );
 };
 
-
 // ==========================================
 // 🚀 唯一的主要 App 元件 (完美合併版)
 // ==========================================
@@ -82,8 +83,8 @@ const App: React.FC = () => {
   const [isSplatting, setIsSplatting] = useState(false);
   const [splatColor, setSplatColor] = useState('#FFC000');
 
-  // 使用本地 state 管理 UI 設定，避免 useTripStore 尚未定義報錯
-  const [uiSettings, setUISettings] = useState({ showSplash: true, enableHaptics: true, showBudgetAlert: false });
+  // 使用本地 state 管理 UI 設定，避免 useTripStore 尚未定義報測 (實際上這裡用 tripStore 的 UI 設定也可以，但此處維持原樣)
+  const [uiSettings, setUISettingsLocal] = useState({ showSplash: true, enableHaptics: true, showBudgetAlert: false });
   useHapticShake();
 
   useFirebaseSync();
@@ -138,7 +139,6 @@ const App: React.FC = () => {
   return (
     <div className="flex flex-col min-h-screen font-sans text-splat-dark relative bg-[#F4F5F7] bg-[radial-gradient(#D1D5DB_2px,transparent_2px)] bg-[size:24px_24px]">
 
-      {/* 轉場噴墨動畫 */}
       <AnimatePresence>
         {isSplatting && <InkSplat color={splatColor} />}
       </AnimatePresence>
@@ -160,7 +160,6 @@ const App: React.FC = () => {
                 </div>
               </div>
 
-              {/* 下拉選單加入動畫 */}
               {menuOpen && (
                 <motion.div
                   initial={{ y: -20, opacity: 0 }}
@@ -240,7 +239,6 @@ const App: React.FC = () => {
         </header>
       )}
 
-      {/* 主內容區塊加入左右滑動轉場 */}
       <main className={`flex-1 w-full max-w-md mx-auto overflow-x-hidden ${activeTab !== 'schedule' ? 'pt-6' : 'pt-2'}`}>
         <AnimatePresence mode="wait">
           <motion.div
@@ -255,22 +253,22 @@ const App: React.FC = () => {
             <div className={activeTab === 'expense' ? 'block' : 'hidden'}><Expense /></div>
             <div className={activeTab === 'food' ? 'block' : 'hidden'}><Journal /></div>
             <div className={activeTab === 'shop' ? 'block' : 'hidden'}><Shopping /></div>
+            <div className={activeTab === 'packing' ? 'block' : 'hidden'}><PackingList /></div>
             <div className={activeTab === 'info' ? 'block' : 'hidden'}><Info /></div>
           </motion.div>
         </AnimatePresence>
       </main>
 
-      {/* 底部導覽列 */}
       <nav className="fixed bottom-6 left-1/2 -translate-x-1/2 w-[92%] max-w-md bg-white border-[3px] border-splat-dark rounded-[32px] shadow-splat-solid px-2 py-3 flex justify-between items-center z-50">
         <NavIcon icon={<Calendar />} label="行程" id="schedule" active={activeTab} onClick={handleTabChange} color="text-splat-blue" />
         <NavIcon icon={<CreditCard />} label="預訂" id="booking" active={activeTab} onClick={handleTabChange} color="text-splat-pink" />
         <NavIcon icon={<Wallet />} label="記帳" id="expense" active={activeTab} onClick={handleTabChange} color="text-splat-yellow" />
         <NavIcon icon={<Utensils />} label="美食" id="food" active={activeTab} onClick={handleTabChange} color="text-splat-orange" />
         <NavIcon icon={<ShoppingBag />} label="購物" id="shop" active={activeTab} onClick={handleTabChange} color="text-splat-green" />
+        <NavIcon icon={<Luggage />} label="打包" id="packing" active={activeTab} onClick={handleTabChange} color="text-splat-purple" />
         <NavIcon icon={<InfoIcon />} label="資訊" id="info" active={activeTab} onClick={handleTabChange} color="text-splat-dark" />
       </nav>
 
-      {/* 切換行程密碼鎖定畫面 */}
       {lockedTripId && (
         <div className="fixed inset-0 bg-splat-dark/80 backdrop-blur-sm z-[1000] flex items-center justify-center p-4">
           <div className="bg-white border-4 border-splat-dark w-full max-w-sm rounded-[32px] shadow-[8px_8px_0px_#FFC000] p-8 text-center space-y-4 animate-in zoom-in-95">
@@ -285,7 +283,6 @@ const App: React.FC = () => {
         </div>
       )}
 
-      {/* 📍 側邊欄：旅伴列表與設定圖示 */}
       {memberOpen && (
         <MemberManagement
           trip={currentTrip}
@@ -296,46 +293,23 @@ const App: React.FC = () => {
         />
       )}
 
-      {/* 📍 UI 設定視窗 Modal */}
       <AnimatePresence>
         {showSettings && (
           <div className="fixed inset-0 z-[2000] flex items-center justify-center p-6">
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowSettings(false)} className="absolute inset-0 bg-splat-dark/80 backdrop-blur-sm" />
             <motion.div initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.9, y: 20 }} className="bg-white w-full max-w-sm rounded-[32px] border-[4px] border-splat-dark shadow-splat-solid p-8 relative z-10">
-              <h2 className="text-2xl font-black italic uppercase mb-8 flex items-center gap-2">
-                <SettingsIcon /> UI SETTINGS
-              </h2>
-
+              <h2 className="text-2xl font-black italic uppercase mb-8 flex items-center gap-2"><SettingsIcon /> UI SETTINGS</h2>
               <div className="space-y-6">
-                <SettingToggle
-                  label="潑墨轉場特效"
-                  desc="切換分頁時的噴漆動畫"
-                  enabled={uiSettings.showSplash}
-                  onChange={(v: boolean) => setUISettings(prev => ({ ...prev, showSplash: v }))}
-                />
-
-                <SettingToggle
-                  label="觸覺回饋 (Haptic)"
-                  desc="按鈕點擊時的輕微震動"
-                  enabled={uiSettings.enableHaptics}
-                  onChange={(v: boolean) => setUISettings(prev => ({ ...prev, enableHaptics: v }))}
-                />
-
-                <SettingToggle
-                  label="智慧預算警報"
-                  desc="支出超過預算 80% 時顯示提示"
-                  enabled={uiSettings.showBudgetAlert}
-                  onChange={(v: boolean) => setUISettings(prev => ({ ...prev, showBudgetAlert: v }))}
-                />
+                <SettingToggle label="潑墨轉場特效" desc="切換分頁時的噴漆動畫" enabled={uiSettings.showSplash} onChange={(v: boolean) => setUISettingsLocal(prev => ({ ...prev, showSplash: v }))} />
+                <SettingToggle label="觸覺回饋 (Haptic)" desc="按鈕點擊時的輕微震動" enabled={uiSettings.enableHaptics} onChange={(v: boolean) => setUISettingsLocal(prev => ({ ...prev, enableHaptics: v }))} />
+                <SettingToggle label="智慧預算警報" desc="支出超過預算 80% 時顯示提示" enabled={uiSettings.showBudgetAlert} onChange={(v: boolean) => setUISettingsLocal(prev => ({ ...prev, showBudgetAlert: v }))} />
               </div>
-
               <button onClick={() => setShowSettings(false)} className="btn-splat w-full py-4 mt-10 bg-splat-dark text-white uppercase">Confirm ➔</button>
             </motion.div>
           </div>
         )}
       </AnimatePresence>
 
-      {/* 個人資料編輯視窗 */}
       {editingProfile && myProfile && (
         <ProfileEditor
           myProfile={myProfile}
@@ -348,7 +322,6 @@ const App: React.FC = () => {
         />
       )}
 
-      {/* 初次加入的設定畫面 */}
       {showPersonalSetup && (
         <PersonalSetup
           onComplete={(data) => {
@@ -357,6 +330,7 @@ const App: React.FC = () => {
           }}
         />
       )}
+      <MagicImport />
     </div>
   );
 };

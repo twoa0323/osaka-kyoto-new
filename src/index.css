@@ -91,5 +91,14 @@ textarea {
 .virtual-group {
   content-visibility: auto;
   contain-intrinsic-size: 500px;
-  /* Estimated height of a day group */
+}
+
+/* 🗺️ Leaflet Custom Marker Styles */
+.custom-div-icon {
+  background: transparent !important;
+  border: none !important;
+}
+
+.custom-div-icon>div {
+  filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.2));
 }

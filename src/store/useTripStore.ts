@@ -1,7 +1,7 @@
 // filepath: src/store/useTripStore.ts
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import { Trip, ScheduleItem, BookingItem, ExpenseItem, JournalItem, ShoppingItem, InfoItem } from '../types';
+import { Trip, ScheduleItem, BookingItem, ExpenseItem, JournalItem, ShoppingItem, InfoItem, PackingItem } from '../types';
 import { idbStorage } from '../utils/idbStorage';
 import { db, auth } from '../services/firebase'; // 👈 引入 auth 來抓取設備指紋
 import { doc, setDoc, deleteDoc, updateDoc } from 'firebase/firestore';
@@ -17,7 +17,7 @@ const syncTimeouts = new Map<string, any>();
 // 雲端同步函式 - 元資料 (Metadata) 同步
 const syncMetadataToCloud = (trip: Trip) => {
   if (!trip?.id) return;
-  const { items, bookings, expenses, journals, shoppingList, infoItems, ...metadata } = trip;
+  const { items, bookings, expenses, journals, shoppingList, infoItems, packingList, ...metadata } = trip;
 
   const currentUser = auth.currentUser?.displayName || auth.currentUser?.email || "Guest";
   const updatedAt = Date.now();
@@ -115,12 +115,20 @@ interface TripState {
 
   // 5. 購物清單 (Shopping)
   addShoppingItem: (tid: string, item: ShoppingItem) => void;
+  updateShoppingItem: (tid: string, iid: string, ni: Partial<ShoppingItem>) => void;
   toggleShoppingItem: (tid: string, iid: string) => void;
   deleteShoppingItem: (tid: string, iid: string) => void;
 
   // 6. 旅遊資訊 (Info)
   addInfoItem: (tid: string, item: InfoItem) => void;
   deleteInfoItem: (tid: string, iid: string) => void;
+
+  // 7. 行李清單 (Packing)
+  addPackingItem: (tid: string, item: PackingItem) => void;
+  updatePackingItem: (tid: string, iid: string, ni: Partial<PackingItem>) => void;
+  togglePackingItem: (tid: string, iid: string) => void;
+  deletePackingItem: (tid: string, iid: string) => void;
+  clearPackingList: (tid: string) => void;
 
   uiSettings: {
     showSplash: boolean;    // 潑墨特效開關
@@ -158,7 +166,7 @@ export const useTripStore = create<TripState>()(
           currentTripId: newTrip.id
         }));
         // 初次建立仍需建立主文件
-        const { items, bookings, expenses, journals, shoppingList, infoItems, ...meta } = newTrip;
+        const { items, bookings, expenses, journals, shoppingList, infoItems, packingList, ...meta } = newTrip;
         setDoc(doc(db, "trips", newTrip.id), deepSanitize(meta));
         // 子項目則個別建立 (如果有初始資料)
         items?.forEach(i => syncItemToCloud(newTrip.id, "items", i));
@@ -167,6 +175,7 @@ export const useTripStore = create<TripState>()(
         journals?.forEach(j => syncItemToCloud(newTrip.id, "journals", j));
         shoppingList?.forEach(s => syncItemToCloud(newTrip.id, "shopping", s));
         infoItems?.forEach(i => syncItemToCloud(newTrip.id, "info", i));
+        packingList?.forEach(p => syncItemToCloud(newTrip.id, "packing", p));
       },
 
       // 📍 加入行程：存入本機即可，無需上傳，Zustand Persist 會記住它
@@ -191,9 +200,10 @@ export const useTripStore = create<TripState>()(
         });
         try {
           // 刪除子集合項目 (客端需個別刪除)
-          const subCollections = ["items", "bookings", "expenses", "journals", "shopping", "info"];
+          const subCollections = ["items", "bookings", "expenses", "journals", "shopping", "info", "packing"];
           for (const sub of subCollections) {
-            const items = (tripToDelete as any)?.[sub === "shopping" ? "shoppingList" : sub === "info" ? "infoItems" : sub] || [];
+            const listKey = sub === "shopping" ? "shoppingList" : sub === "info" ? "infoItems" : sub === "packing" ? "packingList" : sub;
+            const items = (tripToDelete as any)?.[listKey] || [];
             for (const item of items) {
               await deleteDoc(doc(db, "trips", id, sub, item.id));
             }
@@ -313,6 +323,17 @@ export const useTripStore = create<TripState>()(
         }));
         syncItemToCloud(tid, "shopping", i);
       },
+      updateShoppingItem: (tid, iid, ni) => {
+        set(s => ({
+          trips: s.trips.map(t => t.id === tid ? {
+            ...t,
+            shoppingList: (t.shoppingList || []).map(x => x.id === iid ? { ...x, ...ni, updatedAt: Date.now() } : x)
+          } : t)
+        }));
+        const updatedTrip = get().trips.find(x => x.id === tid);
+        const item = updatedTrip?.shoppingList.find(x => x.id === iid);
+        if (item) syncItemToCloud(tid, "shopping", item);
+      },
       toggleShoppingItem: (tid, iid) => {
         set(s => ({
           trips: s.trips.map(t => t.id === tid ? {
@@ -343,6 +364,50 @@ export const useTripStore = create<TripState>()(
           trips: s.trips.map(t => t.id === tid ? { ...t, infoItems: (t.infoItems || []).filter(x => x.id !== iid) } : t)
         }));
         deleteItemFromCloud(tid, "info", iid);
+      },
+
+      // --- 7. Packing ---
+      addPackingItem: (tid, i) => {
+        set(s => ({
+          trips: s.trips.map(t => t.id === tid ? { ...t, packingList: [...(t.packingList || []), i] } : t)
+        }));
+        syncItemToCloud(tid, "packing", i);
+      },
+      updatePackingItem: (tid, iid, ni) => {
+        set(s => ({
+          trips: s.trips.map(t => t.id === tid ? {
+            ...t,
+            packingList: (t.packingList || []).map(x => x.id === iid ? { ...x, ...ni, updatedAt: Date.now() } : x)
+          } : t)
+        }));
+        const ut = get().trips.find(x => x.id === tid);
+        const item = ut?.packingList.find(x => x.id === iid);
+        if (item) syncItemToCloud(tid, "packing", item);
+      },
+      togglePackingItem: (tid, iid) => {
+        set(s => ({
+          trips: s.trips.map(t => t.id === tid ? {
+            ...t,
+            packingList: (t.packingList || []).map(x => x.id === iid ? { ...x, isPacked: !x.isPacked, updatedAt: Date.now() } : x)
+          } : t)
+        }));
+        const ut = get().trips.find(x => x.id === tid);
+        const item = ut?.packingList.find(x => x.id === iid);
+        if (item) syncItemToCloud(tid, "packing", item);
+      },
+      deletePackingItem: (tid, iid) => {
+        set(s => ({
+          trips: s.trips.map(t => t.id === tid ? { ...t, packingList: (t.packingList || []).filter(x => x.id !== iid) } : t)
+        }));
+        deleteItemFromCloud(tid, "packing", iid);
+      },
+      clearPackingList: (tid) => {
+        const trip = get().trips.find(t => t.id === tid);
+        const ids = (trip?.packingList || []).map(p => p.id);
+        set(s => ({
+          trips: s.trips.map(t => t.id === tid ? { ...t, packingList: [] } : t)
+        }));
+        ids.forEach(id => deleteItemFromCloud(tid, "packing", id));
       },
     }),
     {

@@ -4,12 +4,13 @@ import {
   Wallet, Coins, Trash2, Camera, BarChart3, Upload, PenTool,
   LayoutList, Settings, CheckCircle, Image as ImageIcon,
   Loader2, Store, Search, X, ChevronRight, Edit3, ArrowLeft,
-  Info, ArrowRight, TrendingDown
+  Info, ArrowRight, TrendingDown, Sparkles, AlertTriangle, AlertOctagon
 } from 'lucide-react';
 import { ExpenseItem, CurrencyCode, Member } from '../types';
 import { triggerHaptic } from '../utils/haptics';
 import { compressImage, uploadImage } from '../utils/imageUtils';
 import { format, parseISO, differenceInDays } from 'date-fns';
+import { motion, AnimatePresence } from 'framer-motion';
 
 // --- 常數配置 ---
 const CURRENCY_SYMBOLS: Record<string, string> = {
@@ -94,40 +95,52 @@ const calculateSettlements = (expenses: ExpenseItem[], members: Member[], rate: 
   return results;
 };
 
-// --- 子組件：圖表 (維持原有樣式) ---
-const DonutChart = ({ data, totalLabel }: { data: any[], totalLabel: string }) => {
-  const total = data.reduce((a, b) => a + b.value, 0);
-  if (total === 0) return <div className="w-48 h-48 rounded-full border-[3px] border-dashed border-gray-300 mx-auto flex items-center justify-center text-xs text-gray-400 font-black uppercase">No Data</div>;
+// --- 子組件：增強型圖表 ---
+const DonutChart = ({ data, totalLabel, totalValue }: { data: any[], totalLabel: string, totalValue: number }) => {
+  if (totalValue === 0) return <div className="w-48 h-48 rounded-full border-[3px] border-dashed border-gray-300 mx-auto flex items-center justify-center text-xs text-gray-400 font-black uppercase">No Data</div>;
   let acc = 0;
   const gradients = data.map(d => {
-    const deg = (d.value / total) * 360;
+    const deg = (d.value / totalValue) * 360;
     const s = `${d.color} ${acc}deg ${acc + deg}deg`;
     acc += deg; return s;
   }).join(', ');
   return (
-    <div className="relative w-52 h-52 rounded-full mx-auto shadow-splat-solid border-[4px] border-splat-dark" style={{ background: `conic-gradient(${gradients})` }}>
-      <div className="absolute inset-8 bg-white border-[3px] border-splat-dark rounded-full flex flex-col items-center justify-center text-splat-dark text-center">
-        <span className="text-3xl font-black">{data.length}</span>
-        <span className="text-[10px] text-gray-400 font-black uppercase block tracking-tighter">{totalLabel}</span>
+    <div className="relative w-48 h-48 rounded-full mx-auto shadow-splat-solid border-[4px] border-splat-dark group transition-transform hover:scale-105" style={{ background: `conic-gradient(${gradients})` }}>
+      <div className="absolute inset-7 bg-white border-[3px] border-splat-dark rounded-full flex flex-col items-center justify-center text-splat-dark text-center">
+        <span className="text-[9px] text-gray-400 font-black uppercase block tracking-tighter mb-0.5">{totalLabel}</span>
+        <span className="text-2xl font-black tabular-nums">${Math.round(totalValue).toLocaleString()}</span>
       </div>
     </div>
   );
 };
 
-const BarChart = ({ data }: { data: { date: string, amount: number }[] }) => {
+const EnhancedBarChart = ({ data, onBarClick }: { data: { date: string, amount: number }[], onBarClick?: (date: string) => void }) => {
   const max = Math.max(...data.map(d => d.amount), 1);
   return (
-    <div className="flex items-end justify-between h-44 gap-2 px-2 mt-4 overflow-x-auto hide-scrollbar">
-      {data.map((d, i) => (
-        <div key={i} className="flex-1 flex flex-col items-center gap-1 group min-w-[30px]">
-          <div className="w-full bg-splat-blue rounded-t-lg relative transition-all group-hover:bg-splat-pink border-x-2 border-t-2 border-splat-dark" style={{ height: `${(d.amount / max) * 100}%` }}>
-            <div className="absolute -top-10 left-1/2 -translate-x-1/2 text-[10px] font-black opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap bg-white border-2 border-splat-dark px-2 py-1 rounded shadow-sm text-splat-dark z-10">
-              ${d.amount.toLocaleString()}
+    <div className="relative h-56 w-full bg-white border-[3px] border-splat-dark rounded-[24px] p-6 shadow-splat-solid-sm overflow-hidden">
+      <div className="absolute top-0 left-0 w-full h-1 bg-splat-blue/10" />
+      <div className="flex items-end justify-between h-full gap-2 px-1">
+        {data.map((d, i) => {
+          const height = (d.amount / max) * 100;
+          return (
+            <div key={i} className="flex-1 flex flex-col items-center gap-2 group min-w-[30px]" onClick={() => onBarClick?.(d.date)}>
+              <div className="w-full relative flex flex-col items-center justify-end h-[140px]">
+                <div className="absolute -top-8 text-[10px] font-black opacity-0 group-hover:opacity-100 transition-all bg-splat-dark text-white px-2 py-0.5 rounded-md shadow-sm z-20 -translate-y-1">
+                  ${Math.round(d.amount).toLocaleString()}
+                </div>
+                <motion.div
+                  initial={{ height: 0 }}
+                  animate={{ height: `${height}%` }}
+                  className={`w-full rounded-t-lg border-x-[2.5px] border-t-[2.5px] border-splat-dark transition-colors duration-300 ${height > 70 ? 'bg-splat-pink' : height > 30 ? 'bg-splat-blue' : 'bg-splat-green'} group-hover:bg-splat-yellow`}
+                />
+              </div>
+              <span className="text-[10px] font-black text-splat-dark rotate-45 mt-2 origin-left uppercase whitespace-nowrap opacity-60 tabular-nums">
+                {d.date.split('-').slice(1).join('/')}
+              </span>
             </div>
-          </div>
-          <span className="text-[9px] font-black text-gray-500 rotate-45 mt-3 origin-left uppercase whitespace-nowrap">{d.date.slice(5).replace(/-/g, '/')}</span>
-        </div>
-      ))}
+          );
+        })}
+      </div>
     </div>
   );
 };
@@ -196,6 +209,9 @@ export const Expense = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [isUploadingImg, setIsUploadingImg] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+  const [aiInsight, setAiInsight] = useState<{ summary: string, tips: string[], alertLevel: 'safe' | 'warning' | 'critical' } | null>(null);
+  const [isAiInsightLoading, setIsAiInsightLoading] = useState(false);
+  const [showExplodeModal, setShowExplodeModal] = useState(false);
 
   const aiInputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -311,15 +327,104 @@ export const Expense = () => {
       });
       const data = await res.json();
       const url = await uploadImage(file);
+      const items = data.items || [];
+
       setForm(prev => ({
         ...prev, storeName: data.storeName, title: data.title, amount: data.amount,
         date: data.date, category: data.category, method: data.paymentMethod,
-        currency: data.currency || prev.currency, items: data.items, images: [url]
+        currency: data.currency || prev.currency, items: items, images: [url]
       }));
-      alert("AI 辨識成功！請確認欄位 ✨");
+
+      if (items.length > 0) {
+        setShowExplodeModal(true);
+        triggerHaptic('success');
+      } else {
+        alert("AI 辨識成功！請確認欄位 ✨");
+      }
       setInputMode('manual');
     } catch (err) { alert("AI 辨識失敗，請手動填寫 🥲"); }
     finally { setIsProcessing(false); }
+  };
+
+  const handleExplodeItems = (selectedItemIndices: number[]) => {
+    if (!trip || !form.items) return;
+
+    // 1. 先為選中的項目創建獨立支出
+    selectedItemIndices.forEach(idx => {
+      const item = form.items![idx];
+      const newItem: ExpenseItem = {
+        id: `exp-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+        date: form.date!,
+        storeName: form.storeName || '',
+        title: item.name,
+        amount: item.price,
+        currency: form.currency as CurrencyCode,
+        method: form.method as any,
+        category: form.category as any,
+        location: form.location || '',
+        payerId: form.payerId || trip.members?.[0]?.id || 'Admin',
+        splitWith: form.splitWith || [],
+        images: form.images || [],
+        updatedAt: Date.now()
+      };
+      addExpenseItem(trip.id, newItem);
+    });
+
+    // 2. 計算剩餘金額（未選中的項目）
+    const selectedTotal = selectedItemIndices.reduce((sum, idx) => sum + form.items![idx].price, 0);
+    const remainingAmount = Math.max(0, (form.amount || 0) - selectedTotal);
+
+    if (remainingAmount > 0) {
+      // 如果還有剩餘金額，更新目前的 form，但不包含已拆出的項目
+      setForm(prev => ({
+        ...prev,
+        amount: remainingAmount,
+        title: `${prev.title || prev.storeName} (剩餘項目)`,
+        items: prev.items?.filter((_, i) => !selectedItemIndices.includes(i))
+      }));
+      alert(`已將 ${selectedItemIndices.length} 個項目拆分為獨立支出，其餘金額存回草稿。`);
+    } else {
+      // 全部拆完了，重設表單
+      resetForm();
+      alert(`已將全部 ${selectedItemIndices.length} 個項目拆分為獨立支出！✨`);
+    }
+
+    setShowExplodeModal(false);
+    triggerHaptic('success');
+  };
+
+  const handleGetAiInsight = async () => {
+    if (expenses.length === 0) return alert("還沒有任何支出資訊唷！🤑");
+    setIsAiInsightLoading(true);
+    triggerHaptic('medium');
+
+    try {
+      const res = await fetch('/api/ai', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'get-expense-insight',
+          payload: {
+            expenses: expenses.map(e => ({ title: e.title, amount: e.amount, currency: e.currency, category: e.category })),
+            budget: budget,
+            totalSpent: totalTwd,
+            rate: exchangeRate
+          }
+        })
+      });
+      const data = await res.json();
+      if (data && !data.error) {
+        setAiInsight(data);
+        triggerHaptic('success');
+      } else {
+        throw new Error(data.error || "Insight failure");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("AI 離線中或解析失敗，請稍後再試。");
+    } finally {
+      setIsAiInsightLoading(false);
+    }
   };
 
   return (
@@ -338,6 +443,27 @@ export const Expense = () => {
         <Coins className="absolute -bottom-4 -right-4 text-white opacity-40 rotate-12" size={100} />
       </div>
 
+      {/* --- Budget Alerts (Splatoon Style) --- */}
+      {percent >= 80 && (
+        <motion.div
+          initial={{ x: -100, opacity: 0 }} animate={{ x: 0, opacity: 1 }}
+          className={`relative overflow-hidden border-[3px] border-splat-dark rounded-2xl p-4 flex items-center gap-4 shadow-splat-solid-sm ${percent >= 100 ? 'bg-splat-pink text-white' : 'bg-splat-orange text-white'}`}
+        >
+          <div className="shrink-0 w-12 h-12 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center border-2 border-white/50">
+            {percent >= 100 ? <AlertOctagon size={28} className="animate-bounce" /> : <AlertTriangle size={28} className="animate-pulse" />}
+          </div>
+          <div className="flex-1">
+            <h4 className="font-black text-xs uppercase tracking-widest italic">{percent >= 100 ? 'Budget Overload! 🚨' : 'Danger Zone! ⚠️'}</h4>
+            <p className="font-black text-[10px] opacity-90 uppercase leading-tight mt-0.5">
+              {percent >= 100 ? 'You have exceeded your total budget limit.' : `You have consumed ${percent}% of your total budget.`}
+            </p>
+          </div>
+          <div className="absolute -right-2 -bottom-2 opacity-20 pointer-events-none">
+            <TrendingDown size={60} strokeWidth={4} />
+          </div>
+        </motion.div>
+      )}
+
       <div className="flex bg-gray-200 p-1.5 rounded-[32px] border-[3px] border-splat-dark shadow-splat-solid relative z-10">
         <button onClick={() => { setActiveTab('record'); setEditingId(null); }} className={`flex-1 flex items-center justify-center gap-1.5 py-3 rounded-full text-sm font-black transition-all ${activeTab === 'record' ? 'bg-white text-splat-dark shadow-[2px_2px_0px_#1A1A1A] border-2 border-splat-dark' : 'text-gray-500'}`}><PenTool size={16} strokeWidth={3} /> 記帳</button>
         <button onClick={() => setActiveTab('list')} className={`flex-1 flex items-center justify-center gap-1.5 py-3 rounded-full text-sm font-black transition-all ${activeTab === 'list' ? 'bg-white text-splat-dark shadow-[2px_2px_0px_#1A1A1A] border-2 border-splat-dark' : 'text-gray-500'}`}><LayoutList size={16} strokeWidth={3} /> 明細</button>
@@ -347,67 +473,182 @@ export const Expense = () => {
         <div className="space-y-6 animate-in slide-in-from-right pb-10">
           <button onClick={() => setActiveTab('record')} className="flex items-center gap-2 text-xs font-black text-gray-400 hover:text-splat-dark transition-colors pl-1 uppercase tracking-widest"><ArrowLeft size={14} strokeWidth={3} /> BACK TO RECORD</button>
 
-          <div className="bg-splat-blue text-white rounded-[24px] border-[3px] border-splat-dark p-6 space-y-4 shadow-splat-solid">
-            <div className="flex justify-between items-start">
-              <h3 className="font-black text-xl uppercase italic tracking-tighter">BUDGET Status</h3>
-              <button onClick={() => { const b = prompt("設定預算 (TWD):", trip.budget?.toString()); if (b) updateTripData(trip.id, { budget: Number(b) }); }} className="p-2 bg-white text-splat-dark rounded-full border-2 border-splat-dark active:scale-95"><Settings size={16} strokeWidth={3} /></button>
+          {/* 1. 預算卡片 (更精緻的進度條) */}
+          <div className="bg-splat-dark text-white rounded-[32px] border-[3px] border-splat-dark p-6 space-y-4 shadow-splat-solid relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -mr-16 -mt-16 blur-3xl" />
+            <div className="flex justify-between items-start relative z-10">
+              <div className="space-y-1">
+                <h3 className="font-black text-xl uppercase italic tracking-tighter text-splat-yellow">BUDGET TRACKER</h3>
+                <p className="text-[10px] font-black text-white/50 uppercase tracking-[0.2em]">{trip.baseCurrency} SETTING</p>
+              </div>
+              <button onClick={() => { const b = prompt("設定預算 (TWD):", trip.budget?.toString()); if (b) updateTripData(trip.id, { budget: Number(b) }); }} className="p-2.5 bg-white text-splat-dark rounded-full border-[3px] border-splat-dark active:scale-95 transition-transform"><Settings size={18} strokeWidth={3} /></button>
             </div>
-            <div className="h-5 bg-splat-dark rounded-full overflow-hidden border-[2px] border-white shadow-inner"><div className={`h-full transition-all duration-1000 ${percent > 90 ? 'bg-splat-pink' : 'bg-splat-yellow'}`} style={{ width: `${percent}%` }} /></div>
-            <div className="flex justify-between text-[10px] font-black uppercase tracking-widest"><span>Used ${Math.round(totalTwd).toLocaleString()}</span><span className="text-splat-yellow">Left ${Math.round((trip.budget || 0) - totalTwd).toLocaleString()}</span></div>
+
+            <div className="relative h-10 flex items-center">
+              <div className="absolute inset-0 bg-white/10 rounded-full border-2 border-white/20" />
+              <motion.div
+                initial={{ width: 0 }}
+                animate={{ width: `${percent}%` }}
+                className={`h-6 mx-1.5 rounded-full border-2 border-splat-dark shadow-sm relative overflow-hidden ${percent > 100 ? 'bg-splat-pink' : percent > 80 ? 'bg-splat-orange' : 'bg-splat-green'}`}
+              >
+                <div className="absolute inset-0 bg-gradient-to-r from-white/20 to-transparent animate-shimmer" style={{ backgroundSize: '200% 100%' }} />
+              </motion.div>
+              <div className="absolute right-4 text-[11px] font-black text-white mix-blend-difference uppercase">{percent}%</div>
+            </div>
+
+            <div className="flex justify-between items-end relative z-10 pt-1">
+              <div className="space-y-1">
+                <p className="text-[9px] font-black text-white/40 uppercase tracking-widest">Spent</p>
+                <p className="text-lg font-black tabular-nums">${Math.round(totalTwd).toLocaleString()}</p>
+              </div>
+              <div className="text-right space-y-1">
+                <p className="text-[9px] font-black text-white/40 uppercase tracking-widest">Limit</p>
+                <p className="text-lg font-black tabular-nums">${(trip.budget || 0).toLocaleString()}</p>
+              </div>
+            </div>
           </div>
 
-          <div className="flex bg-gray-200 p-1 rounded-xl border-[3px] border-splat-dark">
+          {/* 2. 數據切換選單 */}
+          <div className="flex bg-white p-1.5 rounded-2xl border-[3px] border-splat-dark shadow-splat-solid-sm gap-2">
             {['daily', 'category', 'method'].map(v => (
-              <button key={v} onClick={() => setStatsView(v as any)} className={`flex-1 py-2.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${statsView === v ? 'bg-white text-splat-dark border-2 border-splat-dark shadow-sm' : 'text-gray-500'}`}>
-                {v === 'daily' ? '每日支出' : v === 'category' ? '支出類別' : '支付方式'}
+              <button key={v} onClick={() => { setStatsView(v as any); triggerHaptic('light'); }} className={`flex-1 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${statsView === v ? 'bg-splat-blue text-white border-2 border-splat-dark shadow-inner' : 'text-gray-400 hover:text-splat-dark'}`}>
+                {v === 'daily' ? '每日趨勢' : v === 'category' ? '支出類別' : '支付方式'}
               </button>
             ))}
           </div>
 
-          <div className="bg-white rounded-[32px] border-[3px] border-splat-dark p-8 shadow-splat-solid">
-            <div className="space-y-8">
+          {/* 3. 內容顯示區 */}
+          <div className="space-y-6">
+            <AnimatePresence mode="wait">
               {statsView === 'daily' && (
-                <div className="space-y-6">
-                  <h3 className="text-left font-black text-splat-dark flex items-center gap-2 uppercase tracking-widest"><div className="w-1.5 h-4 bg-splat-blue rounded-full" /> Daily Trends</h3>
-                  <BarChart data={dailyData} />
-                </div>
-              )}
-              {statsView === 'category' && (
-                <div className="space-y-8">
-                  <DonutChart data={pieData} totalLabel="Categories" />
-                  <div className="grid grid-cols-1 gap-2">
-                    {pieData.map(d => (
-                      <div key={d.label} className="flex items-center justify-between p-3 rounded-xl border-2 border-transparent hover:bg-gray-50 transition-colors">
-                        <div className="flex items-center gap-2 text-xs font-black text-splat-dark"><div className="w-3 h-3 rounded-full border-2 border-splat-dark shadow-sm" style={{ background: d.color }} /> {d.label}</div>
-                        <div className="text-right flex items-center gap-3">
-                          <span className="text-xs font-black text-splat-dark">{d.percent}%</span>
-                          <span className="text-[10px] font-bold text-gray-400">${Math.round(d.value).toLocaleString()}</span>
-                        </div>
-                      </div>
-                    ))}
+                <motion.div key="daily" initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.98 }} className="space-y-8">
+                  <div className="space-y-4">
+                    <h3 className="font-black text-splat-dark flex items-center gap-2 uppercase tracking-widest text-sm pl-2">
+                      <div className="w-2 h-5 bg-splat-blue rounded-full shadow-splat-solid-sm" />
+                      Spending Flow 🌊
+                    </h3>
+                    <EnhancedBarChart data={dailyData} />
                   </div>
-                </div>
-              )}
-              {statsView === 'method' && (
-                <div className="space-y-8">
-                  <DonutChart data={methodData} totalLabel="Methods" />
-                  <div className="grid grid-cols-1 gap-2">
-                    {methodData.map(d => (
-                      <div key={d.label} className="flex items-center justify-between p-3 rounded-xl border-2 border-transparent hover:bg-gray-50 transition-colors">
-                        <div className="flex items-center gap-2 text-xs font-black text-splat-dark"><div className="w-3 h-3 rounded-full border-2 border-splat-dark shadow-sm" style={{ background: d.color }} /> {d.label}</div>
-                        <div className="text-right flex items-center gap-3">
-                          <span className="text-xs font-black text-splat-dark">{d.percent}%</span>
-                          <span className="text-[10px] font-bold text-gray-400">${Math.round(d.value).toLocaleString()}</span>
+
+                  <div className="space-y-4">
+                    <h3 className="font-black text-splat-dark flex items-center gap-2 uppercase tracking-widest text-sm pl-2">
+                      <div className="w-2 h-5 bg-splat-pink rounded-full shadow-splat-solid-sm" />
+                      All Days Detail 📜
+                    </h3>
+                    <div className="space-y-3">
+                      {dailyData.slice().reverse().map(d => (
+                        <div key={d.date} className="bg-white border-[3px] border-splat-dark rounded-[24px] p-5 shadow-splat-solid-sm group hover:-translate-y-1 transition-transform">
+                          <div className="flex justify-between items-center mb-3">
+                            <span className="bg-splat-dark text-white px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest shadow-sm">
+                              {d.date}
+                            </span>
+                            <span className="font-black text-lg text-splat-dark tabular-nums">${d.amount.toLocaleString()}</span>
+                          </div>
+                          <div className="space-y-2">
+                            {expenses.filter(e => e.date === d.date).map(e => (
+                              <div key={e.id} className="flex items-center justify-between py-2 border-t border-dashed border-gray-100 group">
+                                <div className="flex items-center gap-3">
+                                  <div className={`w-3 h-3 rounded-full border-2 border-splat-dark ${e.category === '餐飲' ? 'bg-splat-orange' : e.category === '交通' ? 'bg-splat-blue' : 'bg-splat-green'}`} />
+                                  <span className="text-xs font-black text-gray-600 truncate max-w-[150px] uppercase tracking-tight">{e.title || e.storeName}</span>
+                                </div>
+                                <span className="text-xs font-bold text-gray-400 tabular-nums">
+                                  {CURRENCY_SYMBOLS[e.currency] || e.currency} {e.amount.toLocaleString()}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      ))}
+                    </div>
                   </div>
-                </div>
+                </motion.div>
               )}
 
-              {/* 多人結算摘要區塊 */}
-              <hr className="border-t-[3px] border-dashed border-gray-200 my-8" />
+              {statsView === 'category' && (
+                <motion.div key="category" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} className="space-y-8">
+                  <div className="bg-white rounded-[32px] border-[3px] border-splat-dark p-8 shadow-splat-solid">
+                    <DonutChart data={pieData} totalLabel="Categories" totalValue={totalTwd} />
+                    <div className="mt-10 space-y-2">
+                      {pieData.map(d => (
+                        <div key={d.label} className="flex items-center justify-between p-4 bg-[#F8F9FA] rounded-2xl border-[2.5px] border-splat-dark/5 hover:border-splat-dark transition-all">
+                          <div className="flex items-center gap-3">
+                            <div className="w-4 h-4 rounded-full border-2 border-splat-dark shadow-sm" style={{ background: d.color }} />
+                            <span className="text-xs font-black text-splat-dark uppercase tracking-widest">{d.label}</span>
+                          </div>
+                          <div className="text-right">
+                            <div className="text-sm font-black text-splat-dark tabular-nums">${Math.round(d.value).toLocaleString()}</div>
+                            <div className="text-[10px] font-black text-gray-400 uppercase tracking-tighter">{d.percent}% Of Total</div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+
+              {statsView === 'method' && (
+                <motion.div key="method" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} className="space-y-8">
+                  <div className="bg-white rounded-[32px] border-[3px] border-splat-dark p-8 shadow-splat-solid">
+                    <DonutChart data={methodData} totalLabel="Methods" totalValue={totalTwd} />
+                    <div className="mt-10 space-y-2">
+                      {methodData.map(d => (
+                        <div key={d.label} className="flex items-center justify-between p-4 bg-[#F8F9FA] rounded-2xl border-[2.5px] border-splat-dark/5 hover:border-splat-dark transition-all">
+                          <div className="flex items-center gap-3">
+                            <div className="w-4 h-4 rounded-full border-2 border-splat-dark shadow-sm" style={{ background: d.color }} />
+                            <span className="text-xs font-black text-splat-dark uppercase tracking-widest">{d.label}</span>
+                          </div>
+                          <div className="text-right">
+                            <div className="text-sm font-black text-splat-dark tabular-nums">${Math.round(d.value).toLocaleString()}</div>
+                            <div className="text-[10px] font-black text-gray-400 uppercase tracking-tighter">{d.percent}% Usage</div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {/* --- AI Magic Insight & Settlement (整合至底部) --- */}
+            <div className="space-y-12 pb-10">
+              <hr className="border-t-[3px] border-dashed border-gray-200" />
               <SettlementSection expenses={expenses} members={trip.members || []} rate={exchangeRate} />
+
+              <div className="space-y-4">
+                <div className="flex justify-between items-center">
+                  <h3 className="font-black text-splat-dark flex items-center gap-2 uppercase tracking-widest text-sm pl-2">
+                    <div className="w-2 h-5 bg-splat-yellow rounded-full shadow-splat-solid-sm" />
+                    AI Intelligence 🔮
+                  </h3>
+                  <button
+                    onClick={handleGetAiInsight}
+                    disabled={isAiInsightLoading}
+                    className={`px-4 py-2 rounded-xl border-[3px] border-splat-dark font-black text-[9px] uppercase tracking-widest flex items-center gap-2 transition-all shadow-splat-solid-sm active:translate-y-0.5 active:shadow-none ${isAiInsightLoading ? 'bg-gray-100 text-gray-400' : 'bg-splat-yellow text-splat-dark'}`}
+                  >
+                    {isAiInsightLoading ? <Loader2 className="animate-spin" size={12} /> : <Sparkles size={12} />}
+                    {isAiInsightLoading ? 'Analysing...' : 'Smart Advice'}
+                  </button>
+                </div>
+
+                <AnimatePresence>
+                  {aiInsight && (
+                    <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} className="bg-white border-[3px] border-splat-dark rounded-[24px] overflow-hidden shadow-splat-solid-sm">
+                      <div className={`h-2 w-full ${aiInsight.alertLevel === 'critical' ? 'bg-splat-pink' : aiInsight.alertLevel === 'warning' ? 'bg-splat-orange' : 'bg-splat-green'}`} />
+                      <div className="p-5 space-y-4 text-left">
+                        <p className="font-black text-sm text-splat-dark leading-snug">{aiInsight.summary}</p>
+                        <div className="space-y-2">
+                          {aiInsight.tips.map((tip, idx) => (
+                            <div key={idx} className="flex gap-2 items-start bg-gray-50 p-2 rounded-lg border border-gray-100">
+                              <Sparkles size={12} className="shrink-0 text-splat-yellow mt-0.5" />
+                              <p className="text-[11px] font-bold text-gray-600 leading-snug">{tip}</p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
             </div>
           </div>
         </div>
@@ -618,7 +859,7 @@ export const Expense = () => {
                   </div>
                 </div>
                 <div className="text-right shrink-0">
-                  <p className="text-3xl font-black text-splat-blue">{CURRENCY_SYMBOLS[detailItem.currency] || detailItem.currency}{detailItem.amount.toLocaleString()}</p>
+                  <p className="text-3xl font-black text-splat-blue">{CURRENCY_SYMBOLS[detailItem.currency] || detailItem.currency} {detailItem.amount.toLocaleString()}</p>
                   <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">≈ NT$ {Math.round(detailItem.amount * (detailItem.currency === 'TWD' ? 1 : exchangeRate))}</p>
                 </div>
               </div>
@@ -646,6 +887,56 @@ export const Expense = () => {
           </div>
         </div>
       )}
+
+      {/* 📍 收據明細拆解彈窗 (Explode Modal) */}
+      <AnimatePresence>
+        {showExplodeModal && form.items && form.items.length > 0 && (
+          <div className="fixed inset-0 bg-splat-dark/60 backdrop-blur-md z-[2000] p-6 flex items-center justify-center">
+            <motion.div
+              initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.9, y: 20 }}
+              className="bg-white w-full max-w-sm rounded-[32px] border-[4px] border-splat-dark shadow-splat-solid-lg p-6 overflow-hidden relative flex flex-col max-h-[85vh]"
+              onClick={e => e.stopPropagation()}
+            >
+              <div className="flex justify-between items-center mb-6">
+                <div>
+                  <h3 className="text-2xl font-black italic text-splat-blue uppercase tracking-tighter">Explode Items</h3>
+                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">發現了 {form.items.length} 個明細，要分開記帳嗎？</p>
+                </div>
+                <button onClick={() => setShowExplodeModal(false)} className="p-1 bg-gray-100 rounded-full border-2 border-splat-dark"><X size={20} /></button>
+              </div>
+
+              <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar space-y-3 mb-6">
+                {form.items.map((item, i) => (
+                  <div key={i} className="bg-gray-50 border-[3px] border-splat-dark rounded-2xl p-4 flex justify-between items-center group active:translate-y-0.5 transition-all">
+                    <div className="flex-1 min-w-0 pr-4">
+                      <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Item {i + 1}</p>
+                      <h4 className="font-black text-sm text-splat-dark truncate leading-tight">{item.name}</h4>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-lg font-black text-splat-dark tabular-nums">{CURRENCY_SYMBOLS[form.currency || 'JPY']} {item.price.toLocaleString()}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="space-y-3 shrink-0">
+                <button
+                  onClick={() => handleExplodeItems(form.items!.map((_, i) => i))}
+                  className="w-full py-4 bg-splat-blue text-white border-[3px] border-splat-dark rounded-2xl font-black text-sm shadow-splat-solid-sm active:translate-y-0.5 active:shadow-none transition-all flex items-center justify-center gap-2"
+                >
+                  <Sparkles size={18} /> 全部拆分為獨立項目
+                </button>
+                <button
+                  onClick={() => setShowExplodeModal(false)}
+                  className="w-full py-3 bg-white text-gray-400 border-[3px] border-gray-200 rounded-2xl font-black text-[10px] uppercase tracking-widest active:translate-y-0.5 transition-all"
+                >
+                  先不用，維持單筆記錄 🦑
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
