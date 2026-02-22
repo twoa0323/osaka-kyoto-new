@@ -254,99 +254,99 @@ const FlightCard = ({ item, onEdit, onViewDetails, onQrClick }: any) => {
         </button>
       </div>
 
-      {/* 1. Header with Dot Pattern (依航司配色) - 恢復經典高度比例 */}
+      {/* 1. Header with Dot Pattern (依航司配色) - 精確縮減 1/6 (112px -> 93px) */}
       <div
-        className={`relative h-28 w-full flex items-center justify-center border-b-[3px] border-splat-dark ${theme.bgClass}`}
+        className={`relative h-[93px] w-full flex items-center justify-center border-b-[3px] border-splat-dark ${theme.bgClass}`}
         style={{
           backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.15) 1px, transparent 1px)',
           backgroundSize: '12px 12px'
         }}
       >
-        <div className="drop-shadow-md scale-125">
+        <div className="drop-shadow-md scale-110">
           {theme.logoHtml}
         </div>
       </div>
 
-      {/* 2. Overlapping Flight Badge - 強化文字對比 */}
-      <div className="absolute top-[88px] left-1/2 -translate-x-1/2 bg-white px-9 py-2 rounded-full border-[3px] border-gray-50 shadow-md z-30 flex items-center justify-center">
-        <span className="text-lg font-black text-gray-600/80 tracking-[0.2em] outline-none">{item.flightNo || '---'}</span>
+      {/* 2. Overlapping Flight Badge - 全 Barlow 粗體 (中性色調優化) */}
+      <div className="absolute top-[75px] left-1/2 -translate-x-1/2 bg-white px-8 py-1.5 rounded-full border-[3px] border-gray-50 shadow-md z-30 flex items-center justify-center">
+        <span className="text-base font-bold font-['Barlow'] text-gray-700/90 tracking-[0.2em] outline-none">{item.flightNo || '---'}</span>
       </div>
 
-      {/* 3. Main Content Section - 極致緊湊版面 */}
-      <div className="relative p-4 pt-10 pb-4">
+      {/* 3. Main Content Section - 全 Barlow 粗體 */}
+      <div className="relative p-3.5 pt-8 pb-3.5 font-['Barlow']">
         {/* 左側齒孔飾效 */}
         <div className="absolute top-0 bottom-0 left-4 w-0 border-l-[3px] border-dashed border-gray-100 opacity-20" />
 
-        <div className="grid grid-cols-3 gap-0 mb-5 items-center">
+        <div className="grid grid-cols-3 gap-0 mb-4 items-center">
           {/* Departure */}
           <div className="flex flex-col items-center">
-            <span className="text-[20px] font-bold text-gray-400 tracking-tight uppercase mb-0">{item.depIata || 'TPE'}</span>
-            <span className="text-[44px] leading-tight font-black text-[#1A1A1A] tracking-tighter tabular-nums">{item.depTime || '--:--'}</span>
-            <div className="mt-2 bg-[#447A5A] text-white px-4 py-1 rounded-full text-[11px] font-black tracking-widest whitespace-nowrap shadow-sm">
+            <span className="text-[19px] font-bold text-gray-400 tracking-tight uppercase mb-0">{item.depIata || 'TPE'}</span>
+            <span className="text-[44px] leading-tight font-bold text-[#1A1A1A] tracking-tighter tabular-nums">{item.depTime || '--:--'}</span>
+            <div className="mt-1.5 bg-[#447A5A] text-white px-3.5 py-0.5 rounded-full text-[10px] font-bold tracking-widest whitespace-nowrap shadow-sm">
               {item.depCity || '出發地'}
             </div>
           </div>
 
           {/* Middle Transition */}
           <div className="flex flex-col items-center justify-center px-1">
-            <span className="text-[11px] font-bold text-gray-500 mb-1.5 tabular-nums">{formatDurationDisplay(item.duration)}</span>
+            <span className="text-[10px] font-bold text-gray-500 mb-1 tabular-nums">{formatDurationDisplay(item.duration)}</span>
             <div className="w-full flex items-center text-splat-blue">
               <div className="h-[2px] flex-1 bg-gray-100 border-dashed border-t-[2.5px]"></div>
-              <Plane size={18} className="mx-2 fill-current rotate-45 shrink-0" />
+              <Plane size={16} className="mx-1.5 fill-current rotate-45 shrink-0" />
               <div className="h-[2px] flex-1 bg-gray-100 border-dashed border-t-[2.5px]"></div>
             </div>
-            <span className="text-[11px] font-bold text-gray-300 mt-2 tracking-wide">{item.date?.replace(/-/g, '/')}</span>
+            <span className="text-[10px] font-bold text-gray-300 mt-1.5 tracking-wide">{item.date?.replace(/-/g, '/')}</span>
           </div>
 
           {/* Arrival */}
           <div className="flex flex-col items-center">
-            <span className="text-[20px] font-bold text-gray-400 tracking-tight uppercase mb-0">{item.arrIata || 'KIX'}</span>
-            <span className="text-[44px] leading-tight font-black text-[#1A1A1A] tracking-tighter tabular-nums">{item.arrTime || '--:--'}</span>
-            <div className="mt-2 bg-[#B3936E] text-white px-4 py-1 rounded-full text-[11px] font-black tracking-widest whitespace-nowrap shadow-sm">
+            <span className="text-[19px] font-bold text-gray-400 tracking-tight uppercase mb-0">{item.arrIata || 'KIX'}</span>
+            <span className="text-[44px] leading-tight font-bold text-[#1A1A1A] tracking-tighter tabular-nums">{item.arrTime || '--:--'}</span>
+            <div className="mt-1.5 bg-[#B3936E] text-white px-3.5 py-0.5 rounded-full text-[10px] font-bold tracking-widest whitespace-nowrap shadow-sm">
               {item.arrCity || '目的地'}
             </div>
           </div>
         </div>
 
-        {/* 4. Bottom Info Bar - 強化底色對比與文字清晰度 */}
-        <div className="bg-[#F1F3F5] rounded-[1.5rem] border-2 border-gray-100/50 p-4 grid grid-cols-3 divide-x-2 divide-white/60">
+        {/* 4. Bottom Info Bar - 全 Barlow 粗體 */}
+        <div className="bg-[#F1F3F5] rounded-[1.2rem] border-2 border-gray-100/50 p-3 grid grid-cols-3 divide-x-2 divide-white/60">
           <div className="flex flex-col items-center">
-            <span className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.2em] mb-2">BAGGAGE</span>
-            <div className="flex items-center gap-1.5 font-black text-[#1A1A1A]">
-              <Luggage size={14} className="text-[#447A5A] opacity-80" strokeWidth={3} />
+            <span className="text-[9px] font-bold text-gray-500 uppercase tracking-[0.15em] mb-1.5">BAGGAGE</span>
+            <div className="flex items-center gap-1 font-bold text-[#1A1A1A] text-sm">
+              <Luggage size={12} className="text-[#447A5A] opacity-80" strokeWidth={3} />
               {item.baggage || '---'}
             </div>
           </div>
           <div className="flex flex-col items-center">
-            <span className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.2em] mb-2">SEAT</span>
-            <div className="font-black text-[#1A1A1A]">{item.seat || '---'}</div>
+            <span className="text-[9px] font-bold text-gray-500 uppercase tracking-[0.15em] mb-1.5">SEAT</span>
+            <div className="font-bold text-[#1A1A1A] text-sm">{item.seat || '---'}</div>
           </div>
           <div className="flex flex-col items-center overflow-hidden">
-            <span className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.2em] mb-2 text-center">AIRCRAFT</span>
-            <div className="flex items-center gap-1.5 font-black text-[#1A1A1A] truncate w-full justify-center">
-              <Plane size={14} className="text-[#B3936E] rotate-45 shrink-0 opacity-80" strokeWidth={3} />
+            <span className="text-[9px] font-bold text-gray-500 uppercase tracking-[0.15em] mb-1.5 text-center">AIRCRAFT</span>
+            <div className="flex items-center gap-1 font-bold text-[#1A1A1A] truncate w-full justify-center text-sm">
+              <Plane size={12} className="text-[#B3936E] rotate-45 shrink-0 opacity-80" strokeWidth={3} />
               <span className="truncate">{item.aircraft || '---'}</span>
             </div>
           </div>
         </div>
       </div>
 
-      {/* QR Code 入口 - 浮動對齊 */}
+      {/* QR Code 入口 - 縮減位置 */}
       {item.qrCode && (
-        <div className="absolute right-6 top-[135px] z-[25]">
+        <div className="absolute right-5 top-[115px] z-[25]">
           <motion.div
             whileHover={{ scale: 1.1 }}
             onClick={(e) => { e.stopPropagation(); onQrClick(item.qrCode!); }}
             className="cursor-zoom-in bg-white p-1.5 border-2 border-gray-100 rounded-xl shadow-md"
           >
-            <LazyImage src={item.qrCode} containerClassName="w-12 h-12" alt="QR" />
+            <LazyImage src={item.qrCode} containerClassName="w-11 h-11" alt="QR" />
           </motion.div>
         </div>
       )}
 
-      {/* 經典票券左右半圓齒孔 - 對準新的 Header 邊界 */}
-      <div className="absolute top-[100px] -left-3.5 w-7 h-7 bg-[#F4F5F7] rounded-full border-[3px] border-splat-dark z-30 shadow-inner" />
-      <div className="absolute top-[100px] -right-3.5 w-7 h-7 bg-[#F4F5F7] rounded-full border-[3px] border-splat-dark z-30 shadow-inner" />
+      {/* 經典票券左右半圓齒孔 - 位置同步校準 */}
+      <div className="absolute top-[80px] -left-3.5 w-7 h-7 bg-[#F4F5F7] rounded-full border-[3px] border-splat-dark z-30 shadow-inner" />
+      <div className="absolute top-[80px] -right-3.5 w-7 h-7 bg-[#F4F5F7] rounded-full border-[3px] border-splat-dark z-30 shadow-inner" />
     </motion.div>
   );
 };
