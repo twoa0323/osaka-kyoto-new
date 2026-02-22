@@ -3,8 +3,10 @@ import React, { useState, useMemo } from 'react';
 import { useTripStore } from '../store/useTripStore';
 import {
   Camera, MapPin, Star, Plus, X, Image as ImageIcon,
-  Trash2, Loader2, Map as MapIcon, UtensilsCrossed
+  Trash2, Loader2, Map as MapIcon, UtensilsCrossed, CheckCircle, WifiOff
 } from 'lucide-react';
+import { triggerHaptic } from '../utils/haptics';
+import { useNetworkStatus } from '../hooks/useNetworkStatus';
 import { uploadImage } from '../utils/imageUtils';
 import { JournalItem } from '../types';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -13,6 +15,7 @@ import { LazyImage } from './LazyImage';
 export const Journal = () => {
   const { trips, currentTripId, addJournalItem, deleteJournalItem } = useTripStore();
   const trip = trips.find(t => t.id === currentTripId);
+  const isOnline = useNetworkStatus();
 
   const [isAdding, setIsAdding] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
@@ -56,7 +59,7 @@ export const Journal = () => {
     addJournalItem(trip.id, newItem);
     setIsAdding(false);
     setForm({ title: '', content: '', images: [], rating: 5, location: '' });
-    if (navigator.vibrate) navigator.vibrate([10, 20, 10]);
+    triggerHaptic('success');
   };
 
   return (

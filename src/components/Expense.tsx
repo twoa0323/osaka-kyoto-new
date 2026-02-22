@@ -7,6 +7,7 @@ import {
   Info, ArrowRight, TrendingDown
 } from 'lucide-react';
 import { ExpenseItem, CurrencyCode, Member } from '../types';
+import { triggerHaptic } from '../utils/haptics';
 import { compressImage, uploadImage } from '../utils/imageUtils';
 import { format, parseISO, differenceInDays } from 'date-fns';
 
@@ -563,7 +564,7 @@ export const Expense = () => {
           {Object.keys(grouped).sort((a, b) => b.localeCompare(a)).map(date => {
             const dayDiff = differenceInDays(parseISO(date), parseISO(trip.startDate)) + 1;
             return (
-              <div key={date} className="space-y-3">
+              <div key={date} className="space-y-3 virtual-group">
                 <h3 className="text-[11px] font-black text-splat-dark pl-3 border-l-[4px] border-splat-pink flex items-center gap-2 uppercase tracking-widest bg-white inline-block py-1 pr-3 rounded-r-md border-y-2 border-r-2 shadow-sm">
                   DAY {dayDiff} <span className="opacity-40">{format(parseISO(date), 'MM/dd')}</span>
                 </h3>
@@ -631,7 +632,7 @@ export const Expense = () => {
 
               <div className="flex gap-4">
                 <button onClick={() => { setForm(detailItem); setEditingId(detailItem.id); setDetailItem(null); setActiveTab('record'); }} className="flex-1 py-4 bg-white border-[3px] border-splat-dark rounded-2xl font-black text-splat-dark flex items-center justify-center gap-2 active:translate-y-1 shadow-splat-solid-sm uppercase tracking-widest"><Edit3 size={18} strokeWidth={3} /> Edit</button>
-                <button onClick={() => { if (confirm('⚠️ DELETE RECORD PERMANENTLY?')) { deleteExpenseItem(trip.id, detailItem.id); setDetailItem(null); if (navigator.vibrate) navigator.vibrate(20); } }} className="flex-1 py-4 bg-white border-[3px] border-splat-dark rounded-2xl font-black text-splat-pink flex items-center justify-center gap-2 active:translate-y-1 shadow-splat-solid-sm uppercase tracking-widest"><Trash2 size={18} strokeWidth={3} /> Delete</button>
+                <button onClick={() => { if (confirm('⚠️ DELETE RECORD PERMANENTLY?')) { deleteExpenseItem(trip.id, detailItem.id); setDetailItem(null); triggerHaptic('warning'); } }} className="flex-1 py-4 bg-white border-[3px] border-splat-dark rounded-2xl font-black text-splat-pink flex items-center justify-center gap-2 active:translate-y-1 shadow-splat-solid-sm uppercase tracking-widest"><Trash2 size={18} strokeWidth={3} /> Delete</button>
               </div>
             </div>
           </div>

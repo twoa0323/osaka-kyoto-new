@@ -1,7 +1,8 @@
 // filepath: src/store/useTripStore.ts
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { persist, createJSONStorage } from 'zustand/middleware';
 import { Trip, ScheduleItem, BookingItem, ExpenseItem, JournalItem, ShoppingItem, InfoItem } from '../types';
+import { idbStorage } from '../utils/idbStorage';
 import { db, auth } from '../services/firebase'; // 👈 引入 auth 來抓取設備指紋
 import { doc, setDoc, deleteDoc, updateDoc } from 'firebase/firestore';
 
@@ -344,13 +345,12 @@ export const useTripStore = create<TripState>()(
         deleteItemFromCloud(tid, "info", iid);
       },
     }),
-    { name: 'zakka-trip-storage' }
+    {
+      name: 'trip-storage',
+      storage: createJSONStorage(() => idbStorage)
+    }
   )
 );
-
-
-
-
 
 
 

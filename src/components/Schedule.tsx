@@ -1,13 +1,15 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useTripStore } from '../store/useTripStore';
 import { format, addDays, differenceInDays, parseISO, isValid } from 'date-fns';
-import { MapPin, Plus, Edit3, Trash2, Utensils, Plane, Home, Camera, Sparkles, X, Loader2, Wind, Umbrella, Sunrise, ChevronUp, ChevronDown, Clock, Cloud, CloudRain, Sun, Droplets, AlertTriangle, Wand2, Check } from 'lucide-react';
+import { MapPin, Plus, Edit3, Trash2, Utensils, Plane, Home, Camera, Sparkles, X, Loader2, Wind, Umbrella, Sunrise, ChevronUp, ChevronDown, Clock, Cloud, CloudRain, Sun, Droplets, AlertTriangle, Wand2, Check, WifiOff } from 'lucide-react';
 import { ScheduleEditor } from './ScheduleEditor';
 import { ScheduleItem } from '../types';
 import { WeatherReportModal, AiImportModal } from './ScheduleModals';
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, Reorder } from 'framer-motion';
 import { LazyImage } from './LazyImage';
+import { useNetworkStatus } from '../hooks/useNetworkStatus';
+import { triggerHaptic } from '../utils/haptics';
 
 const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY || "";
 const GEMINI_MODEL = "gemini-3-flash-preview";
@@ -56,9 +58,10 @@ const CITY_DB = [
   { keys: ['福岡', 'Fukuoka', '博多', '天神'], name: 'FUKUOKA', lat: 33.5902, lng: 130.4017 },
 ];
 
-export const Schedule = ({ externalDateIdx = 0 }: { externalDateIdx?: number }) => {
+export const Schedule: React.FC<{ externalDateIdx?: number }> = ({ externalDateIdx = 0 }) => {
   const { trips, currentTripId, deleteScheduleItem, addScheduleItem, reorderScheduleItems, updateScheduleItem } = useTripStore();
   const trip = trips.find(t => t.id === currentTripId);
+  const isOnline = useNetworkStatus();
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [editingItem, setEditingItem] = useState<ScheduleItem | undefined>();
@@ -209,7 +212,7 @@ export const Schedule = ({ externalDateIdx = 0 }: { externalDateIdx?: number }) 
 
   // 📍 智慧戰報生成邏輯
   const fetchBriefing = async () => {
-    if (!GEMINI_API_KEY || dayItems.length === 0) return;
+    if (!GEMINI_API_KEY || dayItems.length === 0 || !isOnline) return;
     setIsBriefingLoading(true);
     try {
       const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
@@ -226,7 +229,7 @@ export const Schedule = ({ externalDateIdx = 0 }: { externalDateIdx?: number }) 
 
   useEffect(() => {
     fetchBriefing(); // 切換日期時更新
-  }, [selectedDateStr, dayItems.length]);
+  }, [selectedDateStr, dayItems.length, isOnline]);
 
   const timeToMins = (t: string) => {
     if (!t) return 0;
@@ -235,7 +238,7 @@ export const Schedule = ({ externalDateIdx = 0 }: { externalDateIdx?: number }) 
   };
 
   const handleGapAiSuggest = async (prevItem: ScheduleItem, nextItem: ScheduleItem) => {
-    if (!GEMINI_API_KEY) return alert("請先設定 Gemini API Key 才能使用魔法唷！✨");
+    if (!GEMINI_API_KEY || !isOnline) return alert("請先設定 Gemini API Key 或檢查網路連線才能使用魔法唷！✨");
     setGapAiLoading(prevItem.id);
     try {
       const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
@@ -255,6 +258,7 @@ export const Schedule = ({ externalDateIdx = 0 }: { externalDateIdx?: number }) 
           date: selectedDateStr,
           images: []
         });
+        triggerHaptic('light');
       }
     } catch (e) {
       alert("AI 目前想不出好點子，換個時間再試試吧！🤔");
@@ -264,7 +268,7 @@ export const Schedule = ({ externalDateIdx = 0 }: { externalDateIdx?: number }) 
   };
 
   const handleTransportAiSuggest = async (currentItem: ScheduleItem) => {
-    if (!GEMINI_API_KEY) return alert("請先設定 Gemini API Key 才能使用魔法唷！✨");
+    if (!GEMINI_API_KEY || !isOnline) return alert("請先設定 Gemini API Key 或檢查網路連線才能使用魔法唷！✨");
     setTransportAiLoading(currentItem.id);
 
     const sortedItems = [...trip!.items].filter(i => i.date === currentItem.date).sort((a, b) => a.time.localeCompare(b.time));
@@ -291,6 +295,7 @@ export const Schedule = ({ externalDateIdx = 0 }: { externalDateIdx?: number }) 
 
       updateScheduleItem(trip!.id, currentItem.id, { ...currentItem, transportSuggestion: text });
       setDetailItem(prev => prev ? { ...prev, transportSuggestion: text } : undefined);
+      triggerHaptic('light');
     } catch (e) {
       alert("AI 目前想不出好點子，請稍後再試！🤔");
     } finally {
@@ -299,7 +304,7 @@ export const Schedule = ({ externalDateIdx = 0 }: { externalDateIdx?: number }) 
   };
 
   const handleAiAnalyze = async (text: string) => {
-    if (!GEMINI_API_KEY) return alert("請設定 Gemini Key");
+    if (!GEMINI_API_KEY || !isOnline) return alert("請設定 Gemini Key 或檢查網路連線");
     setIsAiLoading(true);
     try {
       const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
@@ -315,21 +320,19 @@ export const Schedule = ({ externalDateIdx = 0 }: { externalDateIdx?: number }) 
           images: []
         }));
         setIsAiOpen(false);
+        triggerHaptic('light');
       }
     } catch (e) { alert("AI 解析失敗"); }
     finally { setIsAiLoading(false); }
   };
 
-  const handleMove = (idx: number, dir: 'up' | 'down') => {
-    const ni = [...trip!.items];
-    const itemsOfThisDay = ni.filter(i => i.date === selectedDateStr);
-    const globalIdx = ni.findIndex(x => x.id === itemsOfThisDay[idx].id);
-    const targetGlobalIdx = ni.findIndex(x => x.id === itemsOfThisDay[dir === 'up' ? idx - 1 : idx + 1].id);
-
-    if (targetGlobalIdx !== -1) {
-      [ni[globalIdx], ni[targetGlobalIdx]] = [ni[targetGlobalIdx], ni[globalIdx]];
-      reorderScheduleItems(trip!.id, ni);
-    }
+  const onReorder = (newOrder: ScheduleItem[]) => {
+    // 取得該日期以外的其他行程
+    const otherItems = trip!.items.filter(it => it.date !== selectedDateStr);
+    // 合併新的順序
+    const nextItems = [...otherItems, ...newOrder];
+    if (currentTripId) reorderScheduleItems(currentTripId, nextItems);
+    triggerHaptic('medium');
   };
 
   if (!trip || dateRange.length === 0) return null;
@@ -414,139 +417,146 @@ export const Schedule = ({ externalDateIdx = 0 }: { externalDateIdx?: number }) 
           </div>
 
           <div className="relative mt-4">
-            <AnimatePresence mode="popLayout">
-              {dayItems.length === 0 ? (
-                <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="text-center py-12 bg-white border-[3px] border-dashed border-gray-400 rounded-[32px] text-gray-500 font-black italic shadow-sm">
-                  NO MISSION TODAY 🦑 <br />
-                  <span className="text-sm mt-2 inline-block font-bold">點擊上方 + 號建立行程</span>
-                </motion.div>
-              ) : (
-                dayItems.map((item, idx) => {
-                  const catStyle = CATEGORY_STYLE[item.category as keyof typeof CATEGORY_STYLE] || CATEGORY_STYLE.sightseeing;
-                  const Icon = ICON_MAP[item.category as keyof typeof ICON_MAP] || Camera;
+            <Reorder.Group axis="y" values={dayItems} onReorder={onReorder} className="space-y-4">
+              <AnimatePresence mode="popLayout">
+                {dayItems.length === 0 ? (
+                  <motion.div
+                    initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+                    className="text-center py-20 bg-white border-[3px] border-dashed border-gray-300 rounded-[40px] text-gray-400 font-black italic shadow-inner"
+                  >
+                    今天還沒有計畫，來點冒險吧！🗺️
+                  </motion.div>
+                ) : (
+                  dayItems.map((item, idx) => {
+                    const catStyle = CATEGORY_STYLE[item.category as keyof typeof CATEGORY_STYLE] || CATEGORY_STYLE.sightseeing;
+                    const Icon = ICON_MAP[item.category as keyof typeof ICON_MAP] || Camera;
 
-                  const prevItem = idx > 0 ? dayItems[idx - 1] : null;
-                  let warningMsg = null;
-                  let showAiGap = false;
-                  let gapMins = 0;
+                    const prevItem = idx > 0 ? dayItems[idx - 1] : null;
+                    let warningMsg = null;
+                    let showAiGap = false;
+                    let gapMins = 0;
 
-                  if (prevItem) {
-                    const prevEndTimeMins = prevItem.endTime ? timeToMins(prevItem.endTime) : timeToMins(prevItem.time);
-                    const currentStartTimeMins = timeToMins(item.time);
-                    gapMins = currentStartTimeMins - prevEndTimeMins;
+                    if (prevItem) {
+                      const prevEndTimeMins = prevItem.endTime ? timeToMins(prevItem.endTime) : timeToMins(prevItem.time);
+                      const currentStartTimeMins = timeToMins(item.time);
+                      gapMins = currentStartTimeMins - prevEndTimeMins;
 
-                    if (gapMins < 0) warningMsg = "行程時間重疊囉！請確認時間或結束時間 ⏳";
-                    else if (gapMins > 0 && gapMins < 30 && prevItem.location !== item.location) warningMsg = "行程有點趕，請留意交通移動時間喔！🏃";
-                    if (gapMins >= 120) showAiGap = true;
-                  }
+                      if (gapMins < 0) warningMsg = "行程時間重疊囉！請確認時間或結束時間 ⏳";
+                      else if (gapMins > 0 && gapMins < 30 && prevItem.location !== item.location) warningMsg = "行程有點趕，請留意交通移動時間喔！🏃";
+                      if (gapMins >= 120) showAiGap = true;
+                    }
 
-                  return (
-                    <motion.div
-                      key={item.id}
-                      layout
-                      initial={{ x: -20, opacity: 0 }}
-                      animate={{ x: 0, opacity: 1 }}
-                      exit={{ scale: 0.8, opacity: 0 }}
-                      transition={{ type: "spring", stiffness: 300, damping: 25 }}
-                    >
-                      {/* 📍 AI 魔法填空按鈕 */}
-                      {showAiGap && prevItem && (
-                        <div className="ml-16 pl-3 mb-4 -mt-2 relative z-20">
-                          <button
-                            disabled={gapAiLoading === prevItem.id}
-                            onClick={() => handleGapAiSuggest(prevItem, item)}
-                            className="py-2 px-4 bg-white border-[3px] border-splat-dark rounded-xl text-[10px] font-black text-splat-dark shadow-[2px_2px_0px_#1A1A1A] hover:bg-splat-yellow active:translate-y-0.5 active:shadow-none transition-all flex items-center gap-2"
-                          >
-                            {gapAiLoading === prevItem.id ? <Loader2 size={16} className="animate-spin text-splat-blue" /> : <Wand2 size={16} className="text-splat-orange" />}
-                            {gapAiLoading === prevItem.id ? 'AI 魔法調閱地圖中...' : `空檔約 ${Math.floor(gapMins / 60)} 小時，讓 AI 推薦順遊點 ✨`}
-                          </button>
-                        </div>
-                      )}
+                    return (
+                      <Reorder.Item
+                        key={item.id}
+                        value={item}
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, scale: 0.9 }}
+                        whileDrag={{ scale: 1.05, boxShadow: "0px 10px 30px rgba(0,0,0,0.1)" }}
+                        dragListener={isEditMode}
+                        className="virtual-group"
+                      >
+                        <div className="relative pl-6">
+                          <div className={`absolute left-[7px] top-6 bottom-[-24px] w-1 border-r-[3px] border-dashed border-splat-dark opacity-20 ${idx === dayItems.length - 1 ? 'hidden' : ''}`} />
+                          <div className={`absolute left-0 top-[18px] w-4 h-4 rounded-full border-[3px] border-splat-dark z-10 ${catStyle.bg}`} />
 
-                      <div className="flex gap-3 mb-6 relative group">
-                        {/* 粗黑連接線 */}
-                        {idx !== dayItems.length - 1 && (
-                          <div className={`absolute left-7 top-12 bottom-[-32px] w-[3px] z-0 transition-colors ${item.isCompleted ? 'bg-gray-300' : 'bg-splat-dark'}`} />
-                        )}
-
-                        {/* 📍 獨立時間徽章 (Q彈打勾) */}
-                        <div className="w-16 shrink-0 flex flex-col items-center mt-3 z-10 relative">
-                          <motion.button
-                            whileTap={{ scale: 0.9 }}
-                            onClick={(e: any) => {
-                              e.stopPropagation();
-                              updateScheduleItem(trip!.id, item.id, { ...item, isCompleted: !item.isCompleted });
-                            }}
-                            className={`rounded-xl py-1.5 w-full text-center border-[3px] border-splat-dark -rotate-3 relative flex flex-col items-center justify-center transition-colors ${item.isCompleted
-                              ? 'bg-gray-300 text-gray-500 border-gray-400'
-                              : 'bg-white text-splat-dark shadow-splat-solid-sm'
-                              }`}
-                          >
-                            <span className="font-black text-[15px] leading-tight">{item.time}</span>
-                            {item.endTime && <span className="text-[10px] font-bold opacity-70 leading-tight mt-0.5">~ {item.endTime}</span>}
-
-                            <div className={`absolute -top-1.5 -right-1.5 w-3.5 h-3.5 rounded-full border-2 border-splat-dark ${item.isCompleted ? 'bg-gray-400' : catStyle.bg}`} />
-                          </motion.button>
-                        </div>
-
-                        {/* 📍 右側內容區塊 */}
-                        <div className="flex-1 min-w-0 flex flex-col gap-2">
-                          {warningMsg && (
-                            <div className="bg-white border-2 border-splat-dark text-splat-dark px-3 py-1.5 rounded-lg text-[10px] font-black flex items-center gap-1.5 shadow-[2px_2px_0px_#FFC000] w-fit">
-                              <AlertTriangle size={14} className="text-splat-orange" /> {warningMsg}
+                          {/* 📍 AI 魔法填空按鈕 */}
+                          {showAiGap && prevItem && (
+                            <div className="ml-16 pl-3 mb-4 -mt-2 relative z-20">
+                              <button
+                                disabled={gapAiLoading === prevItem.id || !isOnline}
+                                onClick={() => handleGapAiSuggest(prevItem, item)}
+                                className={`py-2 px-4 bg-white border-[3px] border-splat-dark rounded-xl text-[10px] font-black text-splat-dark shadow-[2px_2px_0px_#1A1A1A] hover:bg-splat-yellow active:translate-y-0.5 active:shadow-none transition-all flex items-center gap-2 ${!isOnline ? 'opacity-50 cursor-not-allowed' : ''}`}
+                              >
+                                {!isOnline ? <WifiOff size={16} /> : (gapAiLoading === prevItem.id ? <Loader2 size={16} className="animate-spin text-splat-blue" /> : <Wand2 size={16} className="text-splat-orange" />)}
+                                {!isOnline ? "離線中，無法使用 AI" : (gapAiLoading === prevItem.id ? 'AI 魔法調閱地圖中...' : `空檔約 ${Math.floor(gapMins / 60)} 小時，讓 AI 推薦順遊點 ✨`)}
+                              </button>
                             </div>
                           )}
 
-                          <motion.div
-                            whileHover={{ scale: isEditMode ? 1 : 1.02 }}
-                            whileTap={{ scale: isEditMode ? 1 : 0.98 }}
-                            onClick={() => isEditMode ? (setEditingItem(item), setIsEditorOpen(true)) : setDetailItem(item)}
-                            className={`card-splat p-0 overflow-hidden cursor-pointer flex flex-col transition-all bg-white border-[3px] border-splat-dark rounded-[24px] shadow-splat-solid relative ${item.isCompleted ? 'opacity-60 grayscale' : ''} ${isEditMode ? 'pr-12' : ''}`}
-                          >
-                            {/* 📍 噴墨完成線特效 */}
-                            {item.isCompleted && (
-                              <motion.div
-                                initial={{ width: 0 }}
-                                animate={{ width: '110%' }}
-                                className="absolute top-[45%] left-[-5%] h-4 z-20 pointer-events-none mix-blend-multiply"
-                                style={{ backgroundColor: catStyle.splat, rotate: '-3deg', opacity: 0.8, borderRadius: '10px' }}
-                              />
-                            )}
+                          <div className="flex gap-3 mb-6 relative group">
+                            {/* 📍 獨立時間徽章 (Q彈打勾) */}
+                            <div className="w-16 shrink-0 flex flex-col items-center mt-3 z-10 relative">
+                              <motion.button
+                                whileTap={{ scale: 0.9 }}
+                                onClick={(e: any) => {
+                                  e.stopPropagation();
+                                  updateScheduleItem(trip!.id, item.id, { ...item, isCompleted: !item.isCompleted });
+                                  triggerHaptic('light');
+                                }}
+                                className={`rounded-xl py-1.5 w-full text-center border-[3px] border-splat-dark -rotate-3 relative flex flex-col items-center justify-center transition-colors ${item.isCompleted
+                                  ? 'bg-gray-300 text-gray-500 border-gray-400'
+                                  : 'bg-white text-splat-dark shadow-splat-solid-sm'
+                                  }`}
+                              >
+                                <span className="font-black text-[15px] leading-tight">{item.time}</span>
+                                {item.endTime && <span className="text-[10px] font-bold opacity-70 leading-tight mt-0.5">~ {item.endTime}</span>}
 
-                            <div className={`h-7 w-full ${catStyle.bg} border-b-[3px] border-splat-dark flex items-center px-3 justify-between`}>
-                              <span className={`text-[10px] font-black uppercase tracking-widest ${catStyle.text}`}>{catStyle.label}</span>
-                              {item.endTime && <span className={`text-[9px] font-bold ${catStyle.text} opacity-80`}>until {item.endTime}</span>}
+                                <div className={`absolute -top-1.5 -right-1.5 w-3.5 h-3.5 rounded-full border-2 border-splat-dark ${item.isCompleted ? 'bg-gray-400' : catStyle.bg}`} />
+                              </motion.button>
                             </div>
 
-                            <div className="p-4 flex justify-between items-center bg-white relative">
-                              <div className="flex-1 min-w-0 pr-2">
-                                <h4 className={`font-black text-xl uppercase leading-tight truncate ${item.isCompleted ? 'text-gray-400' : 'text-splat-dark'}`}>{item.title}</h4>
-                                <p className="text-xs font-bold text-gray-500 flex items-center gap-1 mt-1.5 truncate"><MapPin size={14} /> {item.location}</p>
-                              </div>
-
-                              {item.isCompleted ? (
-                                <div className="bg-splat-green p-1.5 rounded-full border-[3px] border-splat-dark text-white shrink-0 shadow-sm"><Check size={16} strokeWidth={4} /></div>
-                              ) : (
-                                <div className={`p-2 rounded-xl border-2 border-gray-100 shrink-0 ${catStyle.text.replace('text-white', 'text-gray-400')}`}><Icon size={20} strokeWidth={2.5} /></div>
-                              )}
-
-                              {isEditMode && (
-                                <div className="absolute right-0 top-0 bottom-0 w-12 bg-gray-50 border-l-[3px] border-splat-dark flex flex-col z-30">
-                                  <button onClick={(e) => { e.stopPropagation(); handleMove(idx, 'up'); }} disabled={idx === 0} className="flex-1 flex items-center justify-center hover:bg-gray-200 disabled:opacity-30 border-b-[3px] border-splat-dark"><ChevronUp size={20} strokeWidth={3} /></button>
-                                  <button onClick={(e) => { e.stopPropagation(); setEditingItem(item); setIsEditorOpen(true); }} className="flex-1 flex items-center justify-center hover:bg-splat-yellow text-splat-dark border-b-[3px] border-splat-dark"><Edit3 size={16} strokeWidth={3} /></button>
-                                  <button onClick={(e) => { e.stopPropagation(); handleMove(idx, 'down'); }} disabled={idx === dayItems.length - 1} className="flex-1 flex items-center justify-center hover:bg-gray-200 disabled:opacity-30 border-b-[3px] border-splat-dark"><ChevronDown size={20} strokeWidth={3} /></button>
-                                  <button onClick={(e) => { e.stopPropagation(); if (confirm('確定要刪除嗎？')) deleteScheduleItem(trip!.id, item.id); }} className="flex-1 flex items-center justify-center hover:bg-red-50 text-red-500"><Trash2 size={16} strokeWidth={3} /></button>
+                            {/* 📍 右側內容區塊 */}
+                            <div className="flex-1 min-w-0 flex flex-col gap-2">
+                              {warningMsg && (
+                                <div className="bg-white border-2 border-splat-dark text-splat-dark px-3 py-1.5 rounded-lg text-[10px] font-black flex items-center gap-1.5 shadow-[2px_2px_0px_#FFC000] w-fit">
+                                  <AlertTriangle size={14} className="text-splat-orange" /> {warningMsg}
                                 </div>
                               )}
+
+                              <motion.div
+                                whileHover={{ scale: isEditMode ? 1 : 1.02 }}
+                                whileTap={{ scale: isEditMode ? 1 : 0.98 }}
+                                onClick={() => isEditMode ? (setEditingItem(item), setIsEditorOpen(true)) : setDetailItem(item)}
+                                className={`card-splat p-0 overflow-hidden cursor-pointer flex flex-col transition-all bg-white border-[3px] border-splat-dark rounded-[24px] shadow-splat-solid relative ${item.isCompleted ? 'opacity-60 grayscale' : ''} ${isEditMode ? 'pr-12' : ''}`}
+                              >
+                                {/* 📍 噴墨完成線特效 */}
+                                {item.isCompleted && (
+                                  <motion.div
+                                    initial={{ width: 0 }}
+                                    animate={{ width: '110%' }}
+                                    className="absolute top-[45%] left-[-5%] h-4 z-20 pointer-events-none mix-blend-multiply"
+                                    style={{ backgroundColor: catStyle.splat, rotate: '-3deg', opacity: 0.8, borderRadius: '10px' }}
+                                  />
+                                )}
+
+                                <div className={`h-7 w-full ${catStyle.bg} border-b-[3px] border-splat-dark flex items-center px-3 justify-between`}>
+                                  <span className={`text-[10px] font-black uppercase tracking-widest ${catStyle.text}`}>{catStyle.label}</span>
+                                  {item.endTime && <span className={`text-[9px] font-bold ${catStyle.text} opacity-80`}>until {item.endTime}</span>}
+                                </div>
+
+                                <div className="p-4 flex justify-between items-center bg-white relative">
+                                  <div className="flex-1 min-w-0 pr-2">
+                                    <h4 className={`font-black text-xl uppercase leading-tight truncate ${item.isCompleted ? 'text-gray-400' : 'text-splat-dark'}`}>{item.title}</h4>
+                                    <p className="text-xs font-bold text-gray-500 flex items-center gap-1 mt-1.5 truncate"><MapPin size={14} /> {item.location}</p>
+                                  </div>
+
+                                  {item.isCompleted ? (
+                                    <div className="bg-splat-green p-1.5 rounded-full border-[3px] border-splat-dark text-white shrink-0 shadow-sm"><Check size={16} strokeWidth={4} /></div>
+                                  ) : (
+                                    <div className={`p-2 rounded-xl border-2 border-gray-100 shrink-0 ${catStyle.text.replace('text-white', 'text-gray-400')}`}><Icon size={20} strokeWidth={2.5} /></div>
+                                  )}
+
+                                  {isEditMode && (
+                                    <div className="absolute right-0 top-0 bottom-0 w-12 bg-gray-50 border-l-[3px] border-splat-dark flex flex-col z-30">
+                                      <div className="flex-1 flex items-center justify-center hover:bg-gray-200 border-b-[3px] border-splat-dark cursor-grab active:cursor-grabbing"><ChevronUp size={20} strokeWidth={3} className="opacity-30" /></div>
+                                      <button onClick={(e) => { e.stopPropagation(); setEditingItem(item); setIsEditorOpen(true); }} className="flex-1 flex items-center justify-center hover:bg-splat-yellow text-splat-dark border-b-[3px] border-splat-dark"><Edit3 size={16} strokeWidth={3} /></button>
+                                      <div className="flex-1 flex items-center justify-center hover:bg-gray-200 border-b-[3px] border-splat-dark cursor-grab active:cursor-grabbing"><ChevronDown size={20} strokeWidth={3} className="opacity-30" /></div>
+                                      <button onClick={(e) => { e.stopPropagation(); if (confirm('確定要刪除嗎？')) { deleteScheduleItem(trip!.id, item.id); triggerHaptic('medium'); } }} className="flex-1 flex items-center justify-center hover:bg-red-50 text-red-500"><Trash2 size={16} strokeWidth={3} /></button>
+                                    </div>
+                                  )}
+                                </div>
+                              </motion.div>
                             </div>
-                          </motion.div>
+                          </div>
                         </div>
-                      </div>
-                    </motion.div>
-                  );
-                })
-              )}
-            </AnimatePresence>
+                      </Reorder.Item>
+                    );
+                  })
+                )}
+              </AnimatePresence>
+            </Reorder.Group>
           </div>
         </div>
       </div>
@@ -616,7 +626,6 @@ export const Schedule = ({ externalDateIdx = 0 }: { externalDateIdx?: number }) 
                   </p>
                 </div>
 
-                {/* 📍 AI 交通建議區塊 */}
                 <div className="card-splat p-4">
                   <h4 className="text-[10px] font-black uppercase tracking-widest text-splat-blue mb-2 flex items-center gap-1.5"><Plane size={14} /> 交通路線建議</h4>
                   {detailItem.transportSuggestion ? (
@@ -626,14 +635,14 @@ export const Schedule = ({ externalDateIdx = 0 }: { externalDateIdx?: number }) 
                   ) : (
                     <button
                       onClick={() => handleTransportAiSuggest(detailItem)}
-                      disabled={transportAiLoading === detailItem.id}
-                      className="w-full py-3 bg-gray-50 border-2 border-dashed border-gray-300 rounded-lg text-xs font-black text-gray-500 hover:border-splat-blue hover:text-splat-blue transition-colors flex items-center justify-center gap-2 active:scale-95"
+                      disabled={transportAiLoading === detailItem.id || !isOnline}
+                      className={`w-full py-3 border-2 border-dashed rounded-lg text-xs font-black transition-colors flex items-center justify-center gap-2 active:scale-95 ${!isOnline ? 'bg-gray-100 border-gray-200 text-gray-300' : 'bg-gray-50 border-gray-300 text-gray-500 hover:border-splat-blue hover:text-splat-blue'}`}
                     >
-                      {transportAiLoading === detailItem.id ? <Loader2 size={16} className="animate-spin" /> : <Wand2 size={16} />}
-                      {transportAiLoading === detailItem.id ? "魔法規劃中..." : "取得 AI 交通建議"}
+                      {!isOnline ? <WifiOff size={16} /> : (transportAiLoading === detailItem.id ? <Loader2 size={16} className="animate-spin" /> : <Wand2 size={16} />)}
+                      {!isOnline ? "離線中，無法取得建議" : (transportAiLoading === detailItem.id ? "魔法規劃中..." : "取得 AI 交通建議")}
                     </button>
                   )}
-                  {navigator.vibrate && transportAiLoading === detailItem.id && <div className="sr-only" onAnimationStart={() => navigator.vibrate(10)}></div>}
+                  {transportAiLoading === detailItem.id && <div className="sr-only" onAnimationStart={() => triggerHaptic('light')}></div>}
                 </div>
 
                 <button onClick={() => window.open(`https://googleusercontent.com/maps.google.com/?q=${encodeURIComponent(detailItem.location)}`, '_blank')} className="btn-splat w-full py-4 bg-splat-blue text-white text-lg flex items-center justify-center gap-2 mt-2">
@@ -645,9 +654,6 @@ export const Schedule = ({ externalDateIdx = 0 }: { externalDateIdx?: number }) 
         )}
       </AnimatePresence>
 
-      {/* ==================================================== */}
-      {/* AI 解析匯入 Modal                                    */}
-      {/* ==================================================== */}
       <AnimatePresence>
         {isAiOpen && (
           <AiImportModal

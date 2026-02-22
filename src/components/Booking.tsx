@@ -9,6 +9,7 @@ import { BookingItem } from '../types';
 import { BookingEditor } from './BookingEditor';
 import { motion, AnimatePresence } from 'framer-motion';
 import { LazyImage } from './LazyImage';
+import { triggerHaptic } from '../utils/haptics';
 
 // --- 航空公司主題配色優化 ---
 const AIRLINE_THEMES: Record<string, any> = {
@@ -66,7 +67,7 @@ export const Booking = () => {
     const success = await cacheAsset(url);
     if (success) {
       setCachedUrls(prev => new Set([...prev, url]));
-      if (navigator.vibrate) navigator.vibrate(10);
+      triggerHaptic('success');
     }
   };
 

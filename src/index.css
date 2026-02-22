@@ -20,31 +20,76 @@
 }
 
 @layer components {
+
   /* 斯普拉遁風格通用卡片 */
   .card-splat {
     @apply bg-white border-[3px] border-splat-dark rounded-[20px] shadow-splat-solid transition-transform;
   }
-  
+
   /* 斯普拉遁風格通用按鈕 */
   .btn-splat {
-    @apply font-black uppercase tracking-widest border-[3px] border-splat-dark shadow-splat-solid 
-           active:shadow-splat-active active:translate-x-1 active:translate-y-1 transition-all rounded-full;
+    @apply font-black uppercase tracking-widest border-[3px] border-splat-dark shadow-splat-solid active:shadow-splat-active active:translate-x-1 active:translate-y-1 transition-all rounded-full;
   }
 }
 
-.hide-scrollbar::-webkit-scrollbar { display: none; }
-.hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.hide-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
 
 /* 🚀 讓網頁變身原生 APP 的終極防護罩 */
 body {
-  -webkit-touch-callout: none; /* 禁用 iOS 長按彈出選單 (拷貝/分享) */
-  -webkit-user-select: none;   /* 禁用 iOS Safari 的文字反白 */
-  user-select: none;           /* 禁用所有瀏覽器的文字反白 */
-  -webkit-tap-highlight-color: transparent; /* 移除手機點擊按鈕時出現的閃爍灰框 */
+  -webkit-touch-callout: none;
+  /* 禁用 iOS 長按彈出選單 (拷貝/分享) */
+  -webkit-user-select: none;
+  /* 禁用 iOS Safari 的文字反白 */
+  user-select: none;
+  /* 禁用所有瀏覽器的文字反白 */
+  -webkit-tap-highlight-color: transparent;
+  /* 移除手機點擊按鈕時出現的閃爍灰框 */
 }
 
 /* ⚠️ 必須讓輸入框例外，否則您會無法點擊輸入文字！ */
-input, textarea {
+input,
+textarea {
   -webkit-user-select: auto !important;
   user-select: auto !important;
+}
+
+/* 🫨 iOS Haptic Fallback Shake */
+@keyframes haptic-shake {
+  0% {
+    transform: translate(0, 0);
+  }
+
+  25% {
+    transform: translate(-2px, 1px);
+  }
+
+  50% {
+    transform: translate(2px, -1px);
+  }
+
+  75% {
+    transform: translate(-2px, -1px);
+  }
+
+  100% {
+    transform: translate(0, 0);
+  }
+}
+
+.haptic-shake {
+  animation: haptic-shake 0.1s cubic-bezier(.36, .07, .19, .97) both;
+}
+
+/* ⚡️ Lightweight Virtualization Fallback */
+.virtual-group {
+  content-visibility: auto;
+  contain-intrinsic-size: 500px;
+  /* Estimated height of a day group */
 }

@@ -21,6 +21,9 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { SettingToggle, InkSplat } from './components/Common';
 import { MemberManagement, ProfileEditor, PersonalSetup } from './components/MemberModals';
 import { Member } from './types';
+import { OfflineStatus } from './components/OfflineStatus';
+import { triggerHaptic } from './utils/haptics';
+import { useHapticShake } from './hooks/useHapticShake';
 
 // --- 常數設定 ---
 const PRESET_AVATARS = [
@@ -81,6 +84,7 @@ const App: React.FC = () => {
 
   // 使用本地 state 管理 UI 設定，避免 useTripStore 尚未定義報錯
   const [uiSettings, setUISettings] = useState({ showSplash: true, enableHaptics: true, showBudgetAlert: false });
+  useHapticShake();
 
   useFirebaseSync();
 
@@ -114,8 +118,8 @@ const App: React.FC = () => {
 
     setActiveTab(tabId);
 
-    if (uiSettings.enableHaptics && typeof navigator !== 'undefined' && navigator.vibrate) {
-      navigator.vibrate(20);
+    if (uiSettings.enableHaptics) {
+      triggerHaptic('light');
     }
   };
 
@@ -151,6 +155,9 @@ const App: React.FC = () => {
                   {currentTrip.tripName || currentTrip.dest}
                 </h1>
                 <ChevronDown size={24} className={`stroke-[3px] transition-transform shrink-0 ${menuOpen ? 'rotate-180' : ''}`} />
+                <div className="ml-2">
+                  <OfflineStatus />
+                </div>
               </div>
 
               {/* 下拉選單加入動畫 */}
