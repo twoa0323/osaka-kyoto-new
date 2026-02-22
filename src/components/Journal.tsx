@@ -1,5 +1,5 @@
 // filepath: src/components/Journal.tsx
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useTripStore } from '../store/useTripStore';
 import { 
   Camera, MapPin, Star, Plus, X, Image as ImageIcon, 
@@ -251,9 +251,6 @@ const PolaroidCard = ({ item, index, onDelete, onClick }: { item: JournalItem, i
     </motion.div>
   );
 };
-
-// 為了讓 rotation 只在初始計算一次
-import { useMemo } from 'react';
 
 
 
