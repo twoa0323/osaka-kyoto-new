@@ -246,6 +246,12 @@ export const Expense = () => {
   const budget = trip.budget || 0;
   const percent = budget ? Math.min(100, Math.round((totalTwd / budget) * 100)) : 0;
 
+  // 預算守門員：預測新增該筆支出後的總額與百分比
+  const editingOriginalTwd = editingId ? (expenses.find(e => e.id === editingId)?.currency === 'TWD' ? (expenses.find(e => e.id === editingId)?.amount || 0) : (expenses.find(e => e.id === editingId)?.amount || 0) * exchangeRate) : 0;
+  const inputTwd = form.currency === 'TWD' ? (form.amount || 0) : (form.amount || 0) * exchangeRate;
+  const predictiveTotal = totalTwd - editingOriginalTwd + inputTwd;
+  const predictivePercent = budget ? Math.round((predictiveTotal / budget) * 100) : 0;
+
   const dailyStats = expenses.reduce((acc, curr) => {
     const val = curr.currency === 'TWD' ? curr.amount : curr.amount * exchangeRate;
     acc[curr.date] = (acc[curr.date] || 0) + val;
@@ -696,6 +702,12 @@ export const Expense = () => {
               <div className="space-y-1">
                 <label className="text-[10px] font-black text-splat-pink uppercase ml-1">* 消費金額</label>
                 <input type="text" inputMode="numeric" pattern="[0-9]*" value={form.amount || ''} onChange={e => setForm({ ...form, amount: e.target.value === '' ? 0 : Number(e.target.value) })} className="w-full p-4 bg-gray-100 border-[3px] border-splat-dark rounded-xl text-2xl font-black text-splat-dark outline-none focus:bg-white" placeholder="0" />
+                {budget > 0 && predictivePercent >= 90 && (
+                  <motion.div initial={{ opacity: 0, y: -5 }} animate={{ opacity: 1, y: 0 }} className={`mt-2 p-2 rounded-lg border-2 text-[10px] font-black flex items-center gap-1.5 ${predictivePercent > 100 ? 'bg-splat-pink/10 border-splat-pink text-splat-pink' : 'bg-splat-orange/10 border-splat-orange text-splat-orange'}`}>
+                    <AlertTriangle size={12} strokeWidth={3} />
+                    {predictivePercent > 100 ? `Budget Sentinel: 超過預算 ${predictivePercent - 100}%！💸` : `Budget Sentinel: 將達預算 ${predictivePercent}%！⚠️`}
+                  </motion.div>
+                )}
               </div>
               <div className="space-y-1">
                 <label className="text-[10px] font-black text-gray-500 uppercase ml-1">貨幣幣別</label>

@@ -15,13 +15,15 @@ interface ParsedResult {
     journals: any[];
     shopping: any[];
     info: any[];
+    triggers?: string[];
+    suggestedPackingItems?: string[];
 }
 
 export const MagicImport = () => {
     const {
         trips, currentTripId,
         addExpenseItem, addBookingItem, addScheduleItem,
-        addJournalItem, addShoppingItem, addInfoItem
+        addJournalItem, addShoppingItem, addInfoItem, addPackingItem
     } = useTripStore();
     const trip = trips.find(t => t.id === currentTripId);
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -180,6 +182,23 @@ export const MagicImport = () => {
             });
         });
 
+        // 處理跨模組觸發：加入建議的行李清單
+        if (parsedData.triggers?.includes('add_to_packing') && parsedData.suggestedPackingItems) {
+            parsedData.suggestedPackingItems.forEach(itemName => {
+                addPackingItem(trip.id, {
+                    id: 'pack-' + Math.random().toString(36).substr(2, 9),
+                    title: itemName,
+                    quantity: 1,
+                    category: '其他',
+                    isPacked: false,
+                    updatedAt: Date.now()
+                });
+            });
+        }
+
+        // 處理預算警告觸發
+        const hasBudgetAlert = parsedData.triggers?.includes('budget_alert');
+
         triggerHaptic('success');
         setIsOpen(false);
         setParsedData(null);
@@ -189,7 +208,14 @@ export const MagicImport = () => {
             parsedData.schedules.length + (parsedData.journals?.length || 0) +
             (parsedData.shopping?.length || 0) + (parsedData.info?.length || 0);
 
-        alert(`成功噴漆！已新增 ${total} 筆旅遊墨跡！🎨🦑`);
+        let alertMsg = `成功噴漆！已新增 ${total} 筆旅遊墨跡！🎨🦑`;
+        if (parsedData.suggestedPackingItems?.length) {
+            alertMsg += `\n✨ AI 智能連動：已為您自動加入 ${parsedData.suggestedPackingItems.length} 項推薦行李！💼`;
+        }
+        if (hasBudgetAlert) {
+            alertMsg += `\n⚠️ 預算守門員提醒：本次匯入中包含超額支出，請注意預算！💸`;
+        }
+        alert(alertMsg);
     };
 
     return (

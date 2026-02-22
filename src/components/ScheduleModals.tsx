@@ -51,46 +51,87 @@ export const WeatherReportModal: React.FC<WeatherReportModalProps> = ({
     </div>
 );
 
-interface AiImportModalProps {
+interface AiAssistantModalProps {
     onClose: () => void;
     onAnalyze: (text: string) => Promise<void>;
     isAiLoading: boolean;
+    onOptimize: () => void;
+    isOptimizing: boolean;
+    canOptimize: boolean;
+    onWeather: () => void;
+    isWizardLoading: boolean;
+    onFillGaps: () => void;
 }
 
-export const AiImportModal: React.FC<AiImportModalProps> = ({
-    onClose, onAnalyze, isAiLoading
+export const AiAssistantModal: React.FC<AiAssistantModalProps> = ({
+    onClose, onAnalyze, isAiLoading, onOptimize, isOptimizing, canOptimize, onWeather, isWizardLoading, onFillGaps
 }) => {
     const [aiText, setAiText] = useState('');
 
     return (
-        <div className="fixed inset-0 bg-splat-dark/60 backdrop-blur-md z-[700] flex items-center justify-center p-4">
+        <div className="fixed inset-0 bg-splat-dark/60 backdrop-blur-md z-[700] flex items-center justify-center p-4" onClick={onClose}>
             <motion.div
                 initial={{ y: 50, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
                 className="bg-white w-full max-w-sm rounded-[32px] border-[4px] border-splat-dark shadow-splat-solid p-6 space-y-4"
+                onClick={e => e.stopPropagation()}
             >
                 <div className="flex justify-between items-center">
                     <h2 className="text-2xl font-black text-splat-dark flex items-center gap-2 italic uppercase">
-                        <div className="p-2 bg-splat-blue text-white rounded-xl border-2 border-splat-dark -rotate-3"><Sparkles size={20} /></div> AI 匯入
+                        <div className="p-2 bg-splat-blue text-white rounded-xl border-2 border-splat-dark -rotate-3"><Sparkles size={20} /></div> AI 魔法助手
                     </h2>
                     <button onClick={onClose} className="p-2 bg-gray-100 rounded-full border-2 border-splat-dark active:scale-90 transition-transform"><X strokeWidth={3} /></button>
                 </div>
 
-                <textarea
-                    placeholder="貼上你的行程文字（例如：10:00 抵達清水寺...）"
-                    className="w-full h-40 bg-[#F4F5F7] border-[3px] border-splat-dark rounded-2xl p-4 font-bold text-splat-dark outline-none focus:border-splat-blue focus:bg-white resize-none shadow-inner"
-                    value={aiText}
-                    onChange={e => setAiText(e.target.value)}
-                />
+                <div className="space-y-4 pt-2">
+                    <div className="bg-gray-50 border-[3px] border-splat-dark rounded-2xl p-4">
+                        <textarea
+                            placeholder="貼上你的行程文字（例如：10:00...）"
+                            className="w-full h-24 bg-white border-[2px] border-gray-300 rounded-xl p-3 font-bold text-splat-dark outline-none focus:border-splat-blue resize-none shadow-inner text-sm"
+                            value={aiText}
+                            onChange={e => setAiText(e.target.value)}
+                        />
+                        <motion.button
+                            whileTap={{ scale: 0.95 }}
+                            onClick={() => onAnalyze(aiText)}
+                            disabled={isAiLoading || !aiText.trim()}
+                            className="btn-splat w-full py-3 mt-3 bg-splat-yellow text-splat-dark text-sm flex items-center justify-center gap-2 rounded-xl"
+                        >
+                            {isAiLoading ? <Loader2 className="animate-spin" size={18} /> : "開始解析行程文字 ➔"}
+                        </motion.button>
+                    </div>
 
-                <motion.button
-                    whileTap={{ scale: 0.95 }}
-                    onClick={() => onAnalyze(aiText)}
-                    disabled={isAiLoading || !aiText.trim()}
-                    className="btn-splat w-full py-4 bg-splat-yellow text-splat-dark text-lg flex items-center justify-center gap-2"
-                >
-                    {isAiLoading ? <Loader2 className="animate-spin" size={24} /> : "開始解析 ➔"}
-                </motion.button>
+                    <div className="grid grid-cols-2 gap-3">
+                        <motion.button
+                            whileTap={{ scale: 0.95 }}
+                            onClick={() => { onClose(); onOptimize(); }}
+                            disabled={isOptimizing || !canOptimize}
+                            className={`p-3 rounded-2xl border-[3px] border-splat-dark flex flex-col items-center justify-center gap-2 shadow-splat-solid-sm ${(isOptimizing || !canOptimize) ? 'bg-gray-100 cursor-not-allowed opacity-50' : 'bg-white active:translate-y-1 active:shadow-none'}`}
+                        >
+                            {isOptimizing ? <Loader2 className="animate-spin" size={24} /> : <Sparkles size={24} className="text-splat-blue" />}
+                            <span className="font-black text-[11px]">路線最佳化</span>
+                        </motion.button>
+
+                        <motion.button
+                            whileTap={{ scale: 0.95 }}
+                            onClick={() => { onClose(); onWeather(); }}
+                            disabled={isWizardLoading}
+                            className={`p-3 rounded-2xl border-[3px] border-splat-dark flex flex-col items-center justify-center gap-2 shadow-splat-solid-sm ${isWizardLoading ? 'bg-gray-100 cursor-not-allowed opacity-50' : 'bg-white active:translate-y-1 active:shadow-none'}`}
+                        >
+                            {isWizardLoading ? <Loader2 className="animate-spin" size={24} /> : <Sparkles size={24} className="text-splat-pink" />}
+                            <span className="font-black text-[11px]">雨天備案</span>
+                        </motion.button>
+
+                        <motion.button
+                            whileTap={{ scale: 0.95 }}
+                            onClick={() => { onClose(); onFillGaps(); }}
+                            className="col-span-2 p-3 bg-white rounded-2xl border-[3px] border-splat-dark flex items-center justify-center gap-2 shadow-splat-solid-sm active:translate-y-1 active:shadow-none"
+                        >
+                            <Sparkles size={20} className="text-splat-yellow" />
+                            <span className="font-black text-[11px]">自動填補行程空檔</span>
+                        </motion.button>
+                    </div>
+                </div>
             </motion.div>
         </div>
     );

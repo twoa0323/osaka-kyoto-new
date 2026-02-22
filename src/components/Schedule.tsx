@@ -4,7 +4,7 @@ import { format, addDays, differenceInDays, parseISO, isValid, isSameDay } from 
 import { MapPin, Plus, Edit3, Trash2, Utensils, Plane, Home, Camera, Sparkles, X, Loader2, Wind, Umbrella, Sunrise, ChevronUp, ChevronDown, Clock, Cloud, CloudRain, Sun, Droplets, AlertTriangle, Wand2, Check, WifiOff, Star, Map as MapIcon } from 'lucide-react';
 import { ScheduleEditor } from './ScheduleEditor';
 import { ScheduleItem, Trip } from '../types';
-import { WeatherReportModal, AiImportModal } from './ScheduleModals';
+import { WeatherReportModal, AiAssistantModal } from './ScheduleModals';
 import { motion, AnimatePresence, Reorder } from 'framer-motion';
 import { LazyImage } from './LazyImage';
 import { useNetworkStatus } from '../hooks/useNetworkStatus';
@@ -382,11 +382,31 @@ export const Schedule: React.FC<{ externalDateIdx?: number }> = ({ externalDateI
           images: []
         });
         triggerHaptic('light');
+        alert("✨ 成功發掘順遊好去處！");
       }
     } catch (e) {
       alert("AI 目前想不出好點子，換個時間再試試吧！🤔");
     } finally {
       setGapAiLoading(null);
+    }
+  };
+
+  const handleAutoFillGaps = async () => {
+    let foundGap = null;
+    for (let i = 1; i < dayItems.length; i++) {
+      const prev = dayItems[i - 1];
+      const curr = dayItems[i];
+      const prevEnd = prev.endTime ? timeToMins(prev.endTime) : timeToMins(prev.time);
+      const currStart = timeToMins(curr.time);
+      if (currStart - prevEnd >= 120) {
+        foundGap = { prev, curr };
+        break;
+      }
+    }
+    if (foundGap) {
+      await handleGapAiSuggest(foundGap.prev, foundGap.curr);
+    } else {
+      alert("目前行程很滿，沒有大於2小時的長空檔唷！🦑");
     }
   };
 
@@ -674,45 +694,13 @@ export const Schedule: React.FC<{ externalDateIdx?: number }> = ({ externalDateI
           </div>
         </motion.div>
 
-        {/* 🪄 降雨超能力：當下雨且有戶外行程時顯示 */}
-        <AnimatePresence>
-          {(Number(todayWeather.rain) > 50 || [51, 53, 55, 61, 63, 65, 80, 81, 82, 95, 96, 99].includes(todayWeather.code)) && dayItems.some(i => i.category === 'sightseeing' && !i.isCompleted) && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              exit={{ opacity: 0, height: 0 }}
-              className="bg-splat-pink text-white rounded-[24px] border-[3px] border-splat-dark p-4 shadow-splat-solid relative overflow-hidden"
-            >
-              <div className="absolute top-[-10px] right-[-10px] opacity-20 rotate-12">
-                <Umbrella size={80} />
-              </div>
-              <div className="relative z-10 flex justify-between items-center">
-                <div>
-                  <h4 className="text-lg font-black italic uppercase tracking-tighter">Plan B Mode Activated!</h4>
-                  <p className="text-[10px] font-bold opacity-90">偵測到降雨，需要室內備案嗎？</p>
-                </div>
-                <button
-                  disabled={isWizardLoading}
-                  onClick={handleWeatherMagic}
-                  className="btn-splat bg-white text-splat-pink px-4 py-2 text-xs flex items-center gap-2"
-                >
-                  {isWizardLoading ? <Loader2 size={16} className="animate-spin" /> : <Wand2 size={16} />} 施展魔法
-                </button>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+        {/* 🪄 降雨超能力移至 AI Menu 中統一觸發 */}
 
         <div className="flex items-center justify-between bg-white border-[3px] border-splat-dark shadow-splat-solid p-3 rounded-2xl">
           <h3 className="text-lg font-black text-splat-dark italic tracking-widest uppercase ml-2 flex items-center gap-2">
             <span className="bg-splat-yellow px-2 py-0.5 -rotate-2 rounded">SCHEDULE</span>
           </h3>
           <div className="flex gap-2 items-center">
-            {dayItems.length > 2 && (
-              <motion.button whileTap={{ scale: 0.9 }} onClick={handleOptimizeRoute} disabled={isOptimizing} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border-2 border-splat-dark font-black text-[10px] ${isOptimizing ? 'bg-gray-100 text-gray-400' : 'bg-splat-yellow text-splat-dark shadow-splat-solid-sm'}`}>
-                {isOptimizing ? <Loader2 size={12} className="animate-spin" /> : <Wand2 size={12} />} OPTIMIZE 🪄
-              </motion.button>
-            )}
             <motion.button whileTap={{ scale: 0.9 }} onClick={() => setViewMode(viewMode === 'list' ? 'map' : 'list')} className={`w-9 h-9 rounded-xl flex items-center justify-center border-2 border-splat-dark ${viewMode === 'map' ? 'bg-splat-blue text-white' : 'bg-white text-splat-dark shadow-splat-solid-sm'}`}>
               {viewMode === 'list' ? <MapIcon size={18} strokeWidth={3} /> : <Camera size={18} strokeWidth={3} />}
             </motion.button>
@@ -734,7 +722,6 @@ export const Schedule: React.FC<{ externalDateIdx?: number }> = ({ externalDateI
                     const Icon = ICON_MAP[item.category as keyof typeof ICON_MAP] || Camera;
                     const prevItem = idx > 0 ? dayItems[idx - 1] : null;
                     let warningMsg = null;
-                    let showAiGap = false;
                     let gapMins = 0;
 
                     if (prevItem) {
@@ -743,25 +730,16 @@ export const Schedule: React.FC<{ externalDateIdx?: number }> = ({ externalDateI
                       gapMins = currentStartTimeMins - prevEndTimeMins;
                       if (gapMins < 0) warningMsg = "時間重疊囉！⏳";
                       else if (gapMins > 0 && gapMins < 30 && prevItem.location !== item.location) warningMsg = "行程有點趕！🏃";
-                      if (gapMins >= 120) showAiGap = true;
                     }
 
                     return (
                       <Reorder.Item key={item.id} value={item} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, scale: 0.9 }} dragListener={isEditMode} className="relative pl-6">
                         <div className={`absolute left-[7px] top-6 bottom-[-24px] w-1 border-r-[3px] border-dashed border-splat-dark opacity-20 ${idx === dayItems.length - 1 ? 'hidden' : ''}`} />
                         <div className={`absolute left-0 top-[18px] w-4 h-4 rounded-full border-[3px] border-splat-dark z-10 ${catStyle.bg}`} />
-                        {showAiGap && prevItem && (
-                          <div className="ml-16 pl-3 mb-4 -mt-2 relative z-20">
-                            <button onClick={() => handleGapAiSuggest(prevItem, item)} className="py-2 px-4 bg-white border-[3px] border-splat-dark rounded-xl text-[10px] font-black flex items-center gap-2 shadow-splat-solid-sm">
-                              {gapAiLoading === prevItem.id ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />} 讓 AI 推薦順遊點 ✨
-                            </button>
-                          </div>
-                        )}
                         <div className="flex gap-3 mb-6 relative group">
                           <div className="w-16 shrink-0 flex flex-col items-center mt-3 z-10">
-                            <motion.button onClick={() => updateScheduleItem(trip.id, item.id, { ...item, isCompleted: !item.isCompleted })} className={`rounded-xl py-1.5 w-full text-center border-[3px] border-splat-dark -rotate-3 transition-colors ${item.isCompleted ? 'bg-gray-300 text-gray-500' : 'bg-white shadow-splat-solid-sm'}`}>
+                            <motion.button onClick={() => updateScheduleItem(trip.id, item.id, { ...item, isCompleted: !item.isCompleted })} className={`rounded-xl py-2 w-full text-center border-[3px] border-splat-dark -rotate-3 transition-colors ${item.isCompleted ? 'bg-gray-300 text-gray-500' : 'bg-white shadow-splat-solid-sm'}`}>
                               <span className="font-black text-[15px]">{item.time}</span>
-                              {item.endTime && <span className="text-[10px] block opacity-70">~ {item.endTime}</span>}
                             </motion.button>
                           </div>
                           <div className="flex-1 min-w-0 flex flex-col gap-2">
@@ -839,7 +817,19 @@ export const Schedule: React.FC<{ externalDateIdx?: number }> = ({ externalDateI
       </AnimatePresence>
 
       <AnimatePresence>
-        {isAiOpen && <AiImportModal onClose={() => setIsAiOpen(false)} isAiLoading={isAiLoading} onAnalyze={handleAiAnalyze} />}
+        {isAiOpen && (
+          <AiAssistantModal
+            onClose={() => setIsAiOpen(false)}
+            isAiLoading={isAiLoading}
+            onAnalyze={handleAiAnalyze}
+            onOptimize={handleOptimizeRoute}
+            isOptimizing={isOptimizing}
+            canOptimize={dayItems.length > 2}
+            onWeather={handleWeatherMagic}
+            isWizardLoading={isWizardLoading}
+            onFillGaps={handleAutoFillGaps}
+          />
+        )}
       </AnimatePresence>
 
       {/* 📍 天氣巫師建議彈窗 */}
