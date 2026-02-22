@@ -267,9 +267,9 @@ const FlightCard = ({ item, onEdit, onViewDetails, onQrClick }: any) => {
         </div>
       </div>
 
-      {/* 2. Overlapping Flight Badge - 精確比例與位置 */}
+      {/* 2. Overlapping Flight Badge - 強化文字對比 */}
       <div className="absolute top-[88px] left-1/2 -translate-x-1/2 bg-white px-9 py-2 rounded-full border-[3px] border-gray-50 shadow-md z-30 flex items-center justify-center">
-        <span className="text-lg font-black text-gray-400 tracking-[0.2em] outline-none">{item.flightNo || '---'}</span>
+        <span className="text-lg font-black text-gray-600/80 tracking-[0.2em] outline-none">{item.flightNo || '---'}</span>
       </div>
 
       {/* 3. Main Content Section - 極致緊湊版面 */}
@@ -308,23 +308,23 @@ const FlightCard = ({ item, onEdit, onViewDetails, onQrClick }: any) => {
           </div>
         </div>
 
-        {/* 4. Bottom Info Bar - 強化對比與節奏感 */}
-        <div className="bg-[#F8F9FA] rounded-[1.5rem] border-2 border-gray-50 p-4 grid grid-cols-3 divide-x-2 divide-gray-100">
+        {/* 4. Bottom Info Bar - 強化底色對比與文字清晰度 */}
+        <div className="bg-[#F1F3F5] rounded-[1.5rem] border-2 border-gray-100/50 p-4 grid grid-cols-3 divide-x-2 divide-white/60">
           <div className="flex flex-col items-center">
-            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.2em] mb-2">BAGGAGE</span>
+            <span className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.2em] mb-2">BAGGAGE</span>
             <div className="flex items-center gap-1.5 font-black text-[#1A1A1A]">
-              <Luggage size={14} className="text-[#447A5A]" strokeWidth={3} />
+              <Luggage size={14} className="text-[#447A5A] opacity-80" strokeWidth={3} />
               {item.baggage || '---'}
             </div>
           </div>
           <div className="flex flex-col items-center">
-            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.2em] mb-2">SEAT</span>
+            <span className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.2em] mb-2">SEAT</span>
             <div className="font-black text-[#1A1A1A]">{item.seat || '---'}</div>
           </div>
           <div className="flex flex-col items-center overflow-hidden">
-            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.2em] mb-2 text-center">AIRCRAFT</span>
+            <span className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.2em] mb-2 text-center">AIRCRAFT</span>
             <div className="flex items-center gap-1.5 font-black text-[#1A1A1A] truncate w-full justify-center">
-              <Plane size={14} className="text-[#B3936E] rotate-45 shrink-0" strokeWidth={3} />
+              <Plane size={14} className="text-[#B3936E] rotate-45 shrink-0 opacity-80" strokeWidth={3} />
               <span className="truncate">{item.aircraft || '---'}</span>
             </div>
           </div>
