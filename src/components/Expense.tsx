@@ -301,10 +301,13 @@ export const Expense = () => {
     setIsProcessing(true);
     try {
       const b64 = await compressImage(file);
-      const res = await fetch('/api/analyze-receipt', {
+      const res = await fetch('/api/ai', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ imageBase64: b64.split(',')[1] })
+        body: JSON.stringify({
+          action: 'analyze-receipt',
+          payload: { imageBase64: b64.split(',')[1] }
+        })
       });
       const data = await res.json();
       const url = await uploadImage(file);

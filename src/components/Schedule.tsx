@@ -1,17 +1,17 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { useTripStore } from '../store/useTripStore';
-import { format, addDays, differenceInDays, parseISO, isValid } from 'date-fns';
+import { format, addDays, differenceInDays, parseISO, isValid, isSameDay } from 'date-fns';
 import { MapPin, Plus, Edit3, Trash2, Utensils, Plane, Home, Camera, Sparkles, X, Loader2, Wind, Umbrella, Sunrise, ChevronUp, ChevronDown, Clock, Cloud, CloudRain, Sun, Droplets, AlertTriangle, Wand2, Check, WifiOff } from 'lucide-react';
 import { ScheduleEditor } from './ScheduleEditor';
 import { ScheduleItem } from '../types';
 import { WeatherReportModal, AiImportModal } from './ScheduleModals';
-import { GoogleGenerativeAI } from "@google/generative-ai";
 import { motion, AnimatePresence, Reorder } from 'framer-motion';
 import { LazyImage } from './LazyImage';
 import { useNetworkStatus } from '../hooks/useNetworkStatus';
 import { triggerHaptic } from '../utils/haptics';
 
-const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY || "";
+// 移除受限制的前端 API Key 引進
+// const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY || "";
 const GEMINI_MODEL = "gemini-3-flash-preview";
 const ICON_MAP = { sightseeing: Camera, food: Utensils, transport: Plane, hotel: Home };
 
@@ -213,17 +213,22 @@ export const Schedule: React.FC<{ externalDateIdx?: number }> = ({ externalDateI
 
   // 📍 智慧戰報生成邏輯
   const fetchBriefing = async () => {
-    if (!GEMINI_API_KEY || dayItems.length === 0 || !isOnline) return;
+    if (dayItems.length === 0 || !isOnline) return;
     setIsBriefingLoading(true);
     try {
-      const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-      const model = genAI.getGenerativeModel({ model: "gemini-3-flash-preview" });
-      const prompt = `你是一個旅遊導師。地點:${todayWeather.cityName}，天氣:${weatherInfo.t}。
-      當天行程: ${dayItems.map(i => i.title).join(', ')}。
-      請給予一段 40 字內幽默的斯普拉遁風格建議，必須包含一個🦑 Emoji。`;
-
-      const res = await model.generateContent(prompt);
-      setDailyBriefing(res.response.text());
+      const res = await fetch('/api/ai', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'batch-parse', // 借用 batch-parse 的邏輯或者在後端新增一個專屬 action
+          payload: {
+            text: `你是一個旅遊導師。地點:${todayWeather.cityName}，天氣:${weatherInfo.t}。當天行程: ${dayItems.map(i => i.title).join(', ')}。請給予一段 40 字內幽默的斯普拉遁風格建議，必須包含一個🦑 Emoji。`,
+            isBriefing: true // 後端可以根據這個來決定回傳文字還是 JSON
+          }
+        })
+      });
+      const data = await res.json();
+      setDailyBriefing(data.text || "");
     } catch (e) { console.error(e); }
     finally { setIsBriefingLoading(false); }
   };
@@ -239,20 +244,19 @@ export const Schedule: React.FC<{ externalDateIdx?: number }> = ({ externalDateI
   };
 
   const handleGapAiSuggest = async (prevItem: ScheduleItem, nextItem: ScheduleItem) => {
-    if (!GEMINI_API_KEY || !isOnline) return alert("請先設定 Gemini API Key 或檢查網路連線才能使用魔法唷！✨");
+    if (!isOnline) return alert("請檢查網路連線才能使用魔法唷！✨");
     setGapAiLoading(prevItem.id);
     try {
-      const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-      const model = genAI.getGenerativeModel({ model: "gemini-3-flash-preview" });
-      const prompt = `你在規劃日本旅遊行程。使用者上一個行程是 ${prevItem.time} 在「${prevItem.location} ${prevItem.title}」，下一個行程是 ${nextItem.time} 在「${nextItem.location} ${nextItem.title}」。這兩個行程中間有較長的空檔。
-      請推薦一個【順路且評價好】的景點或美食（例如下午茶或小神社），時間請設定在兩者之間。
-      請回傳純 JSON 格式，必須包含以下欄位：{"time":"HH:mm", "title":"推薦地點", "location":"地址或站名", "category":"sightseeing或food", "note":"推薦理由(簡短15字內)"}`;
-
-      const res = await model.generateContent(prompt);
-      const text = res.response.text();
-      const match = text.match(/\{[\s\S]*\}/);
-      if (match) {
-        const data = JSON.parse(match[0]);
+      const res = await fetch('/api/ai', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'suggest-gap',
+          payload: { prevItem, nextItem }
+        })
+      });
+      const data = await res.json();
+      if (data && !data.error) {
         addScheduleItem(trip!.id, {
           ...data,
           id: `ai-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
@@ -260,6 +264,8 @@ export const Schedule: React.FC<{ externalDateIdx?: number }> = ({ externalDateI
           images: []
         });
         triggerHaptic('light');
+      } else {
+        throw new Error(data.error || "AI 解析失敗");
       }
     } catch (e) {
       alert("AI 目前想不出好點子，換個時間再試試吧！🤔");
@@ -269,7 +275,7 @@ export const Schedule: React.FC<{ externalDateIdx?: number }> = ({ externalDateI
   };
 
   const handleTransportAiSuggest = async (currentItem: ScheduleItem) => {
-    if (!GEMINI_API_KEY || !isOnline) return alert("請先設定 Gemini API Key 或檢查網路連線才能使用魔法唷！✨");
+    if (!isOnline) return alert("請檢查網路連線才能使用魔法唷！✨");
     setTransportAiLoading(currentItem.id);
 
     const items = trip?.items || [];
@@ -278,22 +284,22 @@ export const Schedule: React.FC<{ externalDateIdx?: number }> = ({ externalDateI
     const prevItem = globalIdx > 0 ? sortedItems[globalIdx - 1] : null;
 
     try {
-      const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-      const model = genAI.getGenerativeModel({ model: "gemini-3-flash-preview" });
-
-      let prompt = "";
-      if (prevItem && prevItem.location !== currentItem.location) {
-        prompt = `你在規劃日本旅遊行程。使用者上一站是「${prevItem.location} ${prevItem.title}」，接下來要去「${currentItem.location} ${currentItem.title}」。
-         請提供大眾運輸交通建議（例如：搭乘哪一條地鐵線、在哪一站上下車、需不需要轉車、大約花費時間）。
-         請用繁體中文，語氣活潑，長度控制在 100 字以內，並直接回傳純文字，不需 Markdown。`;
-      } else {
-        prompt = `你在規劃日本旅遊行程。使用者準備前往「${currentItem.location} ${currentItem.title}」。
-         請提供如何抵達該地點的大眾運輸交通建議。
-         請用繁體中文，語氣活潑，長度控制在 100 字以內，並直接回傳純文字，不需 Markdown。`;
-      }
-
-      const res = await model.generateContent(prompt);
-      const text = res.response.text();
+      const res = await fetch('/api/ai', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'suggest-transport',
+          payload: {
+            prevLocation: prevItem?.location,
+            prevTitle: prevItem?.title,
+            currentLocation: currentItem.location,
+            currentTitle: currentItem.title,
+            prevItem: prevItem ? true : false
+          }
+        })
+      });
+      const data = await res.json();
+      const text = data.text || "";
 
       updateScheduleItem(trip!.id, currentItem.id, { ...currentItem, transportSuggestion: text });
       setDetailItem(prev => prev ? { ...prev, transportSuggestion: text } : undefined);
@@ -306,28 +312,29 @@ export const Schedule: React.FC<{ externalDateIdx?: number }> = ({ externalDateI
   };
 
   const handleAiAnalyze = async (text: string) => {
-    if (!GEMINI_API_KEY || !isOnline) return alert("請設定 Gemini Key 或檢查網路連線");
+    if (!isOnline) return alert("請檢查網路連線");
     setIsAiLoading(true);
     try {
-      const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-      const model = genAI.getGenerativeModel({ model: GEMINI_MODEL });
-      const prompt = `分析文字並回傳純 JSON 陣列。格式: [{"time":"HH:mm", "endTime":"HH:mm", "title":"景點", "location":"地址", "category":"sightseeing/food/transport/hotel", "note":"介紹"}]。如果沒有結束時間，endTime請填空字串。日期: ${selectedDateStr}。內容: ${text}`;
-      const res = await model.generateContent(prompt);
-      const match = res.response.text().match(/\[[\s\S]*\]/);
-      if (match) {
-        const items = JSON.parse(match[0]);
-        if (Array.isArray(items)) {
-          items.forEach((i: any) => addScheduleItem(trip!.id, {
-            ...i,
-            id: `ai-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
-            date: selectedDateStr,
-            images: i.images || []
-          }));
-          setIsAiOpen(false);
-          triggerHaptic('light');
-        } else {
-          throw new Error("AI returned invalid format");
-        }
+      const res = await fetch('/api/ai', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'batch-parse',
+          payload: { date: selectedDateStr, text }
+        })
+      });
+      const data = await res.json();
+      if (Array.isArray(data)) {
+        data.forEach((i: any) => addScheduleItem(trip!.id, {
+          ...i,
+          id: `ai-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+          date: selectedDateStr,
+          images: i.images || []
+        }));
+        setIsAiOpen(false);
+        triggerHaptic('light');
+      } else {
+        throw new Error("AI returned invalid format");
       }
     } catch (e) {
       console.error(e);
@@ -476,7 +483,7 @@ export const Schedule: React.FC<{ externalDateIdx?: number }> = ({ externalDateI
                           {showAiGap && prevItem && (
                             <div className="ml-16 pl-3 mb-4 -mt-2 relative z-20">
                               <button
-                                disabled={gapAiLoading === prevItem.id || !isOnline}
+                                disabled={isAiLoading || !isOnline}
                                 onClick={() => handleGapAiSuggest(prevItem, item)}
                                 className={`py-2 px-4 bg-white border-[3px] border-splat-dark rounded-xl text-[10px] font-black text-splat-dark shadow-[2px_2px_0px_#1A1A1A] hover:bg-splat-yellow active:translate-y-0.5 active:shadow-none transition-all flex items-center gap-2 ${!isOnline ? 'opacity-50 cursor-not-allowed' : ''}`}
                               >
@@ -623,13 +630,12 @@ export const Schedule: React.FC<{ externalDateIdx?: number }> = ({ externalDateI
                 </div>
 
                 <a
-                  href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(detailItem.location)}&travelmode=walking`}
+                  href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(detailItem.location)}`}
                   target="_blank"
                   rel="noreferrer"
-                  className="w-full py-4 bg-splat-green text-white border-[3px] border-splat-dark rounded-2xl font-black text-center shadow-splat-solid-sm flex items-center justify-center gap-2 active:translate-y-1 active:shadow-none transition-all"
+                  className="flex-1 py-4 bg-white border-[3px] border-splat-dark rounded-2xl font-black text-splat-blue flex items-center justify-center gap-2 active:translate-y-1 shadow-splat-solid-sm uppercase tracking-widest"
                 >
-                  <MapPin size={20} strokeWidth={3} />
-                  GO NAVIGATE & AR ➔
+                  <MapPin size={18} strokeWidth={3} /> Maps
                 </a>
                 <div className="card-splat p-4">
                   <p className="text-sm font-bold text-gray-700 whitespace-pre-wrap leading-relaxed">
