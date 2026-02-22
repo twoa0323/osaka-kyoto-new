@@ -73,98 +73,6 @@ export const Schedule = ({ externalDateIdx = 0 }: { externalDateIdx?: number }) 
   const [dailyBriefing, setDailyBriefing] = useState<string>("");
   const [isBriefingLoading, setIsBriefingLoading] = useState(false);
   
-  // 📍 智慧戰報生成邏輯
-  const fetchBriefing = async () => {
-    if (!GEMINI_API_KEY || dayItems.length === 0) return;
-    setIsBriefingLoading(true);
-    try {
-      const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-      const model = genAI.getGenerativeModel({ model: "gemini-3-flash-preview" });
-      const prompt = `你是一個旅遊導師。地點:${todayWeather.cityName}，天氣:${weatherInfo.t}。
-      當天行程: ${dayItems.map(i => i.title).join(', ')}。
-      請給予一段 40 字內幽默的斯普拉遁風格建議，必須包含一個🦑 Emoji。`;
-      
-      const res = await model.generateContent(prompt);
-      setDailyBriefing(res.response.text());
-    } catch (e) { console.error(e); }
-    finally { setIsBriefingLoading(false); }
-  };
-
-  useEffect(() => {
-    fetchBriefing(); // 切換日期時更新
-  }, [selectedDateStr, dayItems.length]);
-
-  const timeToMins = (t: string) => {
-    if (!t) return 0;
-    const [h, m] = t.split(':').map(Number);
-    return (h || 0) * 60 + (m || 0);
-  };
-
-  const handleGapAiSuggest = async (prevItem: ScheduleItem, nextItem: ScheduleItem) => {
-    if (!GEMINI_API_KEY) return alert("請先設定 Gemini API Key 才能使用魔法唷！✨");
-    setGapAiLoading(prevItem.id);
-    try {
-      const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-      const model = genAI.getGenerativeModel({ model: "gemini-3-flash-preview" });
-      const prevEndTimeStr = prevItem.endTime || prevItem.time;
-      const prompt = `你在規劃日本旅遊行程。使用者上一個行程是 ${prevItem.time} 在「${prevItem.location} ${prevItem.title}」，下一個行程是 ${nextItem.time} 在「${nextItem.location} ${nextItem.title}」。這兩個行程中間有較長的空檔。
-      請推薦一個【順路且評價好】的景點或美食（例如下午茶或小神社），時間請設定在兩者之間。
-      請回傳純 JSON 格式，必須包含以下欄位：{"time":"HH:mm", "title":"推薦地點", "location":"地址或站名", "category":"sightseeing或food", "note":"推薦理由(簡短15字內)"}`;
-      
-      const res = await model.generateContent(prompt);
-      const text = res.response.text();
-      const match = text.match(/\{[\s\S]*\}/);
-      if (match) {
-        const data = JSON.parse(match[0]);
-        addScheduleItem(trip!.id, { 
-          ...data, 
-          id: `ai-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`, 
-          date: selectedDateStr, 
-          images: [] 
-        });
-      }
-    } catch (e) {
-      alert("AI 目前想不出好點子，換個時間再試試吧！🤔");
-    } finally {
-      setGapAiLoading(null);
-    }
-  };
-  
-  const handleTransportAiSuggest = async (currentItem: ScheduleItem) => {
-    if (!GEMINI_API_KEY) return alert("請先設定 Gemini API Key 才能使用魔法唷！✨");
-    setTransportAiLoading(currentItem.id);
-    
-    const sortedItems = [...trip!.items].filter(i => i.date === currentItem.date).sort((a,b) => a.time.localeCompare(b.time));
-    const globalIdx = sortedItems.findIndex(i => i.id === currentItem.id);
-    const prevItem = globalIdx > 0 ? sortedItems[globalIdx - 1] : null;
-
-    try {
-      const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-      const model = genAI.getGenerativeModel({ model: "gemini-3-flash-preview" });
-      
-      let prompt = "";
-      if (prevItem && prevItem.location !== currentItem.location) {
-         prompt = `你在規劃日本旅遊行程。使用者上一站是「${prevItem.location} ${prevItem.title}」，接下來要去「${currentItem.location} ${currentItem.title}」。
-         請提供大眾運輸交通建議（例如：搭乘哪一條地鐵線、在哪一站上下車、需不需要轉車、大約花費時間）。
-         請用繁體中文，語氣活潑，長度控制在 100 字以內，並直接回傳純文字，不需 Markdown。`;
-      } else {
-         prompt = `你在規劃日本旅遊行程。使用者準備前往「${currentItem.location} ${currentItem.title}」。
-         請提供如何抵達該地點的大眾運輸交通建議。
-         請用繁體中文，語氣活潑，長度控制在 100 字以內，並直接回傳純文字，不需 Markdown。`;
-      }
-      
-      const res = await model.generateContent(prompt);
-      const text = res.response.text();
-      
-      updateScheduleItem(trip!.id, currentItem.id, { ...currentItem, transportSuggestion: text });
-      setDetailItem(prev => prev ? { ...prev, transportSuggestion: text } : undefined);
-    } catch (e) {
-      alert("AI 目前想不出好點子，請稍後再試！🤔");
-    } finally {
-      setTransportAiLoading(null);
-    }
-  };
-
   const dateRange = useMemo(() => {
     if (!trip?.startDate || !trip?.endDate) return [];
     const start = parseISO(trip.startDate);
@@ -298,6 +206,97 @@ export const Schedule = ({ externalDateIdx = 0 }: { externalDateIdx?: number }) 
     }
   }
 
+  // 📍 智慧戰報生成邏輯
+  const fetchBriefing = async () => {
+    if (!GEMINI_API_KEY || dayItems.length === 0) return;
+    setIsBriefingLoading(true);
+    try {
+      const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
+      const model = genAI.getGenerativeModel({ model: "gemini-3-flash-preview" });
+      const prompt = `你是一個旅遊導師。地點:${todayWeather.cityName}，天氣:${weatherInfo.t}。
+      當天行程: ${dayItems.map(i => i.title).join(', ')}。
+      請給予一段 40 字內幽默的斯普拉遁風格建議，必須包含一個🦑 Emoji。`;
+      
+      const res = await model.generateContent(prompt);
+      setDailyBriefing(res.response.text());
+    } catch (e) { console.error(e); }
+    finally { setIsBriefingLoading(false); }
+  };
+
+  useEffect(() => {
+    fetchBriefing(); // 切換日期時更新
+  }, [selectedDateStr, dayItems.length]);
+
+  const timeToMins = (t: string) => {
+    if (!t) return 0;
+    const [h, m] = t.split(':').map(Number);
+    return (h || 0) * 60 + (m || 0);
+  };
+
+  const handleGapAiSuggest = async (prevItem: ScheduleItem, nextItem: ScheduleItem) => {
+    if (!GEMINI_API_KEY) return alert("請先設定 Gemini API Key 才能使用魔法唷！✨");
+    setGapAiLoading(prevItem.id);
+    try {
+      const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
+      const model = genAI.getGenerativeModel({ model: "gemini-3-flash-preview" });
+      const prompt = `你在規劃日本旅遊行程。使用者上一個行程是 ${prevItem.time} 在「${prevItem.location} ${prevItem.title}」，下一個行程是 ${nextItem.time} 在「${nextItem.location} ${nextItem.title}」。這兩個行程中間有較長的空檔。
+      請推薦一個【順路且評價好】的景點或美食（例如下午茶或小神社），時間請設定在兩者之間。
+      請回傳純 JSON 格式，必須包含以下欄位：{"time":"HH:mm", "title":"推薦地點", "location":"地址或站名", "category":"sightseeing或food", "note":"推薦理由(簡短15字內)"}`;
+      
+      const res = await model.generateContent(prompt);
+      const text = res.response.text();
+      const match = text.match(/\{[\s\S]*\}/);
+      if (match) {
+        const data = JSON.parse(match[0]);
+        addScheduleItem(trip!.id, { 
+          ...data, 
+          id: `ai-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`, 
+          date: selectedDateStr, 
+          images: [] 
+        });
+      }
+    } catch (e) {
+      alert("AI 目前想不出好點子，換個時間再試試吧！🤔");
+    } finally {
+      setGapAiLoading(null);
+    }
+  };
+  
+  const handleTransportAiSuggest = async (currentItem: ScheduleItem) => {
+    if (!GEMINI_API_KEY) return alert("請先設定 Gemini API Key 才能使用魔法唷！✨");
+    setTransportAiLoading(currentItem.id);
+    
+    const sortedItems = [...trip!.items].filter(i => i.date === currentItem.date).sort((a,b) => a.time.localeCompare(b.time));
+    const globalIdx = sortedItems.findIndex(i => i.id === currentItem.id);
+    const prevItem = globalIdx > 0 ? sortedItems[globalIdx - 1] : null;
+
+    try {
+      const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
+      const model = genAI.getGenerativeModel({ model: "gemini-3-flash-preview" });
+      
+      let prompt = "";
+      if (prevItem && prevItem.location !== currentItem.location) {
+         prompt = `你在規劃日本旅遊行程。使用者上一站是「${prevItem.location} ${prevItem.title}」，接下來要去「${currentItem.location} ${currentItem.title}」。
+         請提供大眾運輸交通建議（例如：搭乘哪一條地鐵線、在哪一站上下車、需不需要轉車、大約花費時間）。
+         請用繁體中文，語氣活潑，長度控制在 100 字以內，並直接回傳純文字，不需 Markdown。`;
+      } else {
+         prompt = `你在規劃日本旅遊行程。使用者準備前往「${currentItem.location} ${currentItem.title}」。
+         請提供如何抵達該地點的大眾運輸交通建議。
+         請用繁體中文，語氣活潑，長度控制在 100 字以內，並直接回傳純文字，不需 Markdown。`;
+      }
+      
+      const res = await model.generateContent(prompt);
+      const text = res.response.text();
+      
+      updateScheduleItem(trip!.id, currentItem.id, { ...currentItem, transportSuggestion: text });
+      setDetailItem(prev => prev ? { ...prev, transportSuggestion: text } : undefined);
+    } catch (e) {
+      alert("AI 目前想不出好點子，請稍後再試！🤔");
+    } finally {
+      setTransportAiLoading(null);
+    }
+  };
+
   const handleAiAnalyze = async () => {
     if (!GEMINI_API_KEY) return alert("請設定 Gemini Key");
     setIsAiLoading(true);
@@ -359,44 +358,18 @@ export const Schedule = ({ externalDateIdx = 0 }: { externalDateIdx?: number }) 
                <div className="text-3xl font-black flex items-center gap-2 drop-shadow-sm">
                  {weatherInfo.t} <span className="text-4xl">{weatherInfo.e}</span>
                </div>
-               return (
-    <div className="...">
-      {/* 📍 天氣與 AI 戰報整合模組 (IMG_6137) */}
-      <motion.div className="bg-[#5BA4E5] text-white rounded-[32px] border-[3px] border-splat-dark p-5 shadow-splat-solid relative overflow-hidden h-[180px]">
-        {/* 左側：原本的天氣資訊 */}
-        <div className="flex justify-between items-start z-10 relative">
-          <div className="w-1/2">
-             <div className="flex items-center gap-1 text-white/90 font-black text-[11px] uppercase tracking-widest mb-1">
-               <MapPin size={12}/> {todayWeather.cityName}
-             </div>
-             <div className="text-2xl font-black mb-1">{weatherInfo.t} {weatherInfo.e}</div>
-             
-             {/* 📍 新增：AI 戰報小區塊 */}
-             <div className="bg-black/20 backdrop-blur-md rounded-xl p-2.5 mt-2 border border-white/10 min-h-[70px] flex items-center">
-                {isBriefingLoading ? (
-                  <Loader2 size={16} className="animate-spin opacity-50 mx-auto" />
-                ) : (
-                  <p className="text-[10px] font-bold leading-relaxed text-blue-50">
-                    {dailyBriefing || "戰況不明，快去塗地吧！🦑"}
-                  </p>
-                )}
-             </div>
-          </div>
-          {/* 右側：氣溫與數據 */}
-          <div className="text-right">
-             <div className="text-5xl font-black">{currentTempStr}°</div>
-             <div className="text-[11px] font-black opacity-80 mb-4">{todayWeather.min}° / {todayWeather.max}°</div>
-             <div className="space-y-1">
-                <div className="flex items-center justify-end gap-1 text-[10px] font-bold">
-                   <Umbrella size={10}/> {todayWeather.rain}%
-                </div>
-                <div className="flex items-center justify-end gap-1 text-[10px] font-bold">
-                   <Wind size={10}/> {todayWeather.wind}
-                </div>
-             </div>
-          </div>
-        </div>
-      </motion.div>
+
+               {/* 👇 AI 戰報小區塊 👇 */}
+               <div className="bg-black/20 backdrop-blur-md rounded-xl p-2.5 mt-2 border border-white/10 min-h-[70px] flex items-center w-full max-w-[180px]">
+                  {isBriefingLoading ? (
+                    <Loader2 size={16} className="animate-spin opacity-50 mx-auto" />
+                  ) : (
+                    <p className="text-[10px] font-bold leading-relaxed text-blue-50">
+                      {dailyBriefing || "戰況不明，快去塗地吧！🦑"}
+                    </p>
+                  )}
+               </div>
+
             </div>
             
             <div className="text-right mt-1 relative z-10">
@@ -687,7 +660,7 @@ export const Schedule = ({ externalDateIdx = 0 }: { externalDateIdx?: number }) 
                       )}
                    </div>
 
-                   <button onClick={() => window.open(`https://maps.google.com/?q=${encodeURIComponent(detailItem.location)}`, '_blank')} className="btn-splat w-full py-4 bg-splat-blue text-white text-lg flex items-center justify-center gap-2 mt-2">
+                   <button onClick={() => window.open(`https://googleusercontent.com/maps.google.com/?q=${encodeURIComponent(detailItem.location)}`, '_blank')} className="btn-splat w-full py-4 bg-splat-blue text-white text-lg flex items-center justify-center gap-2 mt-2">
                      <MapPin size={20}/> 開啟地圖導航
                    </button>
                 </div>
@@ -730,19 +703,4 @@ export const Schedule = ({ externalDateIdx = 0 }: { externalDateIdx?: number }) 
       {isEditorOpen && <ScheduleEditor tripId={trip.id} date={selectedDateStr} item={editingItem} onClose={() => setIsEditorOpen(false)} />}
     </div>
   );
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+};
