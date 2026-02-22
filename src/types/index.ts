@@ -7,14 +7,20 @@ export type CurrencyCode = 'TWD' | 'JPY' | 'KRW' | 'USD' | 'EUR' | 'THB' | 'GBP'
 export interface Member {
   id: string;
   name: string;
-  avatar: string; 
-  email: string;  
+  avatar: string;
+  email: string;
   pin: string;
-  mood?: string; // 👈 [新增] 心情/留言
+  mood?: string;
+}
+
+// --- 基礎欄位 (用於衝突檢查與併發控制) ---
+export interface SyncMetadata {
+  updatedAt?: number;      // Unix 時間戳 (ms)
+  lastUpdatedBy?: string;  // 最後更新者的 ID 或名稱
 }
 
 // --- 1. 行程 (Schedule) 項目 ---
-export interface ScheduleItem {
+export interface ScheduleItem extends SyncMetadata {
   id: string;
   date: string;
   time: string;
@@ -29,7 +35,7 @@ export interface ScheduleItem {
 }
 
 // --- 2. 預訂 (Booking) 項目 ---
-export interface BookingItem {
+export interface BookingItem extends SyncMetadata {
   id: string;
   type: 'flight' | 'hotel' | 'spot' | 'voucher';
   title: string;
@@ -41,9 +47,9 @@ export interface BookingItem {
   images: string[];
   qrCode?: string;
   website?: string;
-  
+
   // 機票專用欄位
-  airline?: string; 
+  airline?: string;
   flightNo?: string;
   depIata?: string;
   arrIata?: string;
@@ -54,8 +60,8 @@ export interface BookingItem {
   duration?: string;
   baggage?: string;
   aircraft?: string;
-  seat?: string; 
-  
+  seat?: string;
+
   // 住宿專用欄位
   price?: number;
   nights?: number;
@@ -69,57 +75,57 @@ export interface BookingItem {
 }
 
 // --- 3. 記帳 (Expense) 項目 ---
-export interface ExpenseItem {
+export interface ExpenseItem extends SyncMetadata {
   id: string;
   date: string;
-  storeName: string; 
+  storeName: string;
   title: string;
   amount: number;
   currency: CurrencyCode;
-  method: '現金' | '信用卡' | '行動支付' | 'IC卡' | '其他'; 
+  method: '現金' | '信用卡' | '行動支付' | 'IC卡' | '其他';
   location: string;
-  category: '餐飲' | '購物' | '交通' | '住宿' | '娛樂' | '藥妝' | '便利商店' | '超市' | '其他'; 
+  category: '餐飲' | '購物' | '交通' | '住宿' | '娛樂' | '藥妝' | '便利商店' | '超市' | '其他';
   payerId: string;
-  splitWith: string[];
+  splitWith: { memberId: string; weight?: number; amount?: number }[]; // 👈 改為物件陣列支援權重
   images: string[];
-  items?: { name: string; price: number }[]; 
+  items?: { name: string; price: number }[];
 }
 
 // --- 4. 美食日誌 (Journal) 項目 ---
-export interface JournalItem { 
-  id: string; 
-  date: string; 
-  title: string; 
-  content: string; 
-  images: string[]; 
-  rating: number; 
-  location: string; 
+export interface JournalItem extends SyncMetadata {
+  id: string;
+  date: string;
+  title: string;
+  content: string;
+  images: string[];
+  rating: number;
+  location: string;
 }
 
 // --- 5. 購物清單 (Shopping) 項目 ---
-export interface ShoppingItem { 
-  id: string; 
-  title: string; 
-  price: number; 
-  currency: CurrencyCode; 
-  isBought: boolean; 
-  images: string[]; 
-  note: string; 
-  category: string; 
+export interface ShoppingItem extends SyncMetadata {
+  id: string;
+  title: string;
+  price: number;
+  currency: CurrencyCode;
+  isBought: boolean;
+  images: string[];
+  note: string;
+  category: string;
 }
 
 // --- 6. 旅遊資訊 (Info) 項目 ---
-export interface InfoItem { 
-  id: string; 
-  type: string; 
-  title: string; 
-  content: string; 
-  images: string[]; 
-  url: string; 
+export interface InfoItem extends SyncMetadata {
+  id: string;
+  type: string;
+  title: string;
+  content: string;
+  images: string[];
+  url: string;
 }
 
 // --- 根節點：整趟旅程 (Trip) 定義 ---
-export interface Trip {
+export interface Trip extends SyncMetadata {
   id: string;
   creatorId?: string;
   tripName: string;
@@ -130,13 +136,13 @@ export interface Trip {
   startDate: string;
   endDate: string;
   baseCurrency: CurrencyCode;
-  
+
   // 安全與預算設定
   tripPin: string;
   adminEmail: string;
   members: Member[];
   budget?: number; // 總預算
-  
+
   // 6 大模組資料集合
   items: ScheduleItem[];
   bookings: BookingItem[];
@@ -144,6 +150,10 @@ export interface Trip {
   journals: JournalItem[];
   shoppingList: ShoppingItem[];
   infoItems: InfoItem[];
+
+  // 匯率暫存 (離線使用)
+  lastFetchedRate?: number;
+  lastRateUpdate?: number;
 }
 
 

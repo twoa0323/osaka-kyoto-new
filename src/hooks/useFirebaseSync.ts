@@ -1,67 +1,66 @@
 import { useEffect, useMemo } from 'react';
 import { useTripStore } from '../store/useTripStore';
 import { db } from '../services/firebase';
-import { collection, onSnapshot, query, where } from 'firebase/firestore';
-import { Trip } from '../types';
+import { collection, onSnapshot, query, doc } from 'firebase/firestore';
+import { Trip, ScheduleItem, BookingItem, ExpenseItem, JournalItem, ShoppingItem, InfoItem } from '../types';
 
 export const useFirebaseSync = () => {
   const { trips } = useTripStore();
-  
-  const localTripIdsString = useMemo(() => 
-    trips.map(t => t.id).filter(Boolean).sort().join(','), 
+
+  const tripIds = useMemo(() =>
+    trips.map(t => t.id).filter(Boolean),
     [trips]
   );
 
   useEffect(() => {
-    const tripIds = localTripIdsString.split(',').filter(Boolean);
     if (tripIds.length === 0) return;
 
-    const chunks: string[][] = [];
-    for (let i = 0; i < tripIds.length; i += 10) {
-      chunks.push(tripIds.slice(i, i + 10));
-    }
+    const unsubscribes: (() => void)[] = [];
 
-    const unsubscribes = chunks.map(chunk => {
-      const q = query(collection(db, "trips"), where("id", "in", chunk));
+    tripIds.forEach(tripId => {
+      // 1. 監聽主文件 (Metadata)
+      const unsubMeta = onSnapshot(doc(db, "trips", tripId), (snapshot) => {
+        if (snapshot.metadata.hasPendingWrites || !snapshot.exists()) return;
+        const remoteData = snapshot.data() as Partial<Trip>;
 
-      return onSnapshot(q, (snapshot) => {
-        // ✅ 優化 1：如果是本地端發起的寫入（尚未抵達雲端），先跳過監聽觸發，防止輸入抖動
-        if (snapshot.metadata.hasPendingWrites) return;
+        useTripStore.setState(state => ({
+          trips: state.trips.map(t => {
+            if (t.id === tripId) {
+              const isRemoteNewer = !t.updatedAt || (remoteData.updatedAt && remoteData.updatedAt > t.updatedAt);
+              if (isRemoteNewer) return { ...t, ...remoteData };
+            }
+            return t;
+          })
+        }));
+      });
+      unsubscribes.push(unsubMeta);
 
-        const updatedRemoteTrips: Trip[] = [];
-        snapshot.docs.forEach((doc) => {
-          updatedRemoteTrips.push(doc.data() as Trip);
+      // 2. 監聽子集合 (Sub-collections)
+      const subCollections = [
+        { name: "items", field: "items" },
+        { name: "bookings", field: "bookings" },
+        { name: "expenses", field: "expenses" },
+        { name: "journals", field: "journals" },
+        { name: "shopping", field: "shoppingList" },
+        { name: "info", field: "infoItems" },
+      ];
+
+      subCollections.forEach(sub => {
+        const unsubSub = onSnapshot(collection(db, "trips", tripId, sub.name), (snapshot) => {
+          if (snapshot.metadata.hasPendingWrites) return;
+
+          const items: any[] = [];
+          snapshot.docs.forEach(doc => items.push(doc.data()));
+
+          useTripStore.setState(state => ({
+            trips: state.trips.map(t => t.id === tripId ? { ...t, [sub.field]: items } : t)
+          }));
         });
-
-        if (updatedRemoteTrips.length > 0) {
-          useTripStore.setState(state => {
-             let isAnyChanged = false;
-             const newTrips = state.trips.map(localTrip => {
-                const remoteTrip = updatedRemoteTrips.find(rt => rt.id === localTrip.id);
-                if (!remoteTrip) return localTrip;
-
-                // ✅ 優化 2：進行內容深度比對，只有當雲端與本地真的不同時才更新狀態
-                const isDifferent = JSON.stringify(localTrip) !== JSON.stringify(remoteTrip);
-                if (isDifferent) {
-                  isAnyChanged = true;
-                  return remoteTrip;
-                }
-                return localTrip;
-             });
-
-             if (isAnyChanged) {
-               console.log("偵測到旅伴更新，已同步最新行程資料 🔄");
-               return { trips: newTrips };
-             }
-             return state;
-          });
-        }
-      }, (error) => {
-        console.error("Firebase 同步錯誤:", error);
+        unsubscribes.push(unsubSub);
       });
     });
 
     return () => unsubscribes.forEach(unsub => unsub());
-  }, [localTripIdsString]); 
+  }, [tripIds.join(',')]);
 };
 

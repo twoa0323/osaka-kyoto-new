@@ -7,6 +7,7 @@ import { ScheduleItem } from '../types';
 import { WeatherReportModal, AiImportModal } from './ScheduleModals';
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { motion, AnimatePresence } from 'framer-motion';
+import { LazyImage } from './LazyImage';
 
 const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY || "";
 const GEMINI_MODEL = "gemini-3-flash-preview";
@@ -94,7 +95,7 @@ export const Schedule = ({ externalDateIdx = 0 }: { externalDateIdx?: number }) 
         const dStr = format(dateRange[i], 'yyyy-MM-dd');
         const items = trip.items.filter(it => it.date === dStr).sort((a, b) => b.time.localeCompare(a.time));
         for (const it of items) {
-          const found = CITY_DB.find(c => c.keys.some(k => `${it.title} ${it.location}`.includes(k)));
+          const found = CITY_DB.find(c => c.keys.some(k => `${it.title} ${it.location} `.includes(k)));
           if (found) return found;
         }
       }
@@ -102,7 +103,7 @@ export const Schedule = ({ externalDateIdx = 0 }: { externalDateIdx?: number }) 
         const dStr = format(dateRange[i], 'yyyy-MM-dd');
         const items = trip.items.filter(it => it.date === dStr).sort((a, b) => a.time.localeCompare(b.time));
         for (const it of items) {
-          const found = CITY_DB.find(c => c.keys.some(k => `${it.title} ${it.location}`.includes(k)));
+          const found = CITY_DB.find(c => c.keys.some(k => `${it.title} ${it.location} `.includes(k)));
           if (found) return found;
         }
       }
@@ -111,7 +112,7 @@ export const Schedule = ({ externalDateIdx = 0 }: { externalDateIdx?: number }) 
 
     const tl: { time: string, city: typeof defaultCity }[] = [];
     for (const item of dayItems) {
-      const found = CITY_DB.find(c => c.keys.some(k => `${item.title} ${item.location}`.includes(k)));
+      const found = CITY_DB.find(c => c.keys.some(k => `${item.title} ${item.location} `.includes(k)));
       if (found) {
         if (tl.length === 0 || tl[tl.length - 1].city.name !== found.name) {
           tl.push({ time: item.time, city: found });
@@ -576,12 +577,10 @@ export const Schedule = ({ externalDateIdx = 0 }: { externalDateIdx?: number }) 
               onClick={e => e.stopPropagation()}
             >
               <div className="h-56 bg-gray-200 relative shrink-0 border-b-[4px] border-splat-dark">
-                <img
+                <LazyImage
                   src={detailItem.images?.[0] || `https://image.pollinations.ai/prompt/${encodeURIComponent(detailItem.location + ' ' + detailItem.title + ' bright colorful street style photography')}?width=800&height=600&nologo=true`}
-                  className="w-full h-full object-cover"
+                  containerClassName="w-full h-full"
                   alt="location"
-                  loading="lazy"
-                  decoding="async"
                   onError={(e) => (e.currentTarget.src = "https://images.unsplash.com/photo-1542224566-6e85f2e6772f")}
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
@@ -598,10 +597,19 @@ export const Schedule = ({ externalDateIdx = 0 }: { externalDateIdx?: number }) 
                     <Clock size={16} className="text-splat-pink" /> {detailItem.time}
                   </div>
                   <div className="inline-flex items-center gap-2 text-xs font-black bg-white border-[3px] border-splat-dark px-3 py-2 rounded-lg shadow-sm">
-                    <MapPin size={16} className="text-splat-blue shrink-0" /> <span className="truncate">{detailItem.location}</span>
+                    <MapPin size={16} className="text-splat-orange" /> {detailItem.location}
                   </div>
                 </div>
 
+                <a
+                  href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(detailItem.location)}&travelmode=walking`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="w-full py-4 bg-splat-green text-white border-[3px] border-splat-dark rounded-2xl font-black text-center shadow-splat-solid-sm flex items-center justify-center gap-2 active:translate-y-1 active:shadow-none transition-all"
+                >
+                  <MapPin size={20} strokeWidth={3} />
+                  GO NAVIGATE & AR ➔
+                </a>
                 <div className="card-splat p-4">
                   <p className="text-sm font-bold text-gray-700 whitespace-pre-wrap leading-relaxed">
                     {detailItem.note || "尚無詳細筆記。準備好大鬧一場了嗎！🦑"}
@@ -625,6 +633,7 @@ export const Schedule = ({ externalDateIdx = 0 }: { externalDateIdx?: number }) 
                       {transportAiLoading === detailItem.id ? "魔法規劃中..." : "取得 AI 交通建議"}
                     </button>
                   )}
+                  {navigator.vibrate && transportAiLoading === detailItem.id && <div className="sr-only" onAnimationStart={() => navigator.vibrate(10)}></div>}
                 </div>
 
                 <button onClick={() => window.open(`https://googleusercontent.com/maps.google.com/?q=${encodeURIComponent(detailItem.location)}`, '_blank')} className="btn-splat w-full py-4 bg-splat-blue text-white text-lg flex items-center justify-center gap-2 mt-2">
