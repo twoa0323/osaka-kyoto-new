@@ -40,3 +40,17 @@
 .read-the-docs {
   color: #888;
 }
+
+/* 🚀 讓網頁變身原生 APP 的終極防護罩 */
+body {
+  -webkit-touch-callout: none; /* 禁用 iOS 長按彈出選單 (拷貝/分享) */
+  -webkit-user-select: none;   /* 禁用 iOS Safari 的文字反白 */
+  user-select: none;           /* 禁用所有瀏覽器的文字反白 */
+  -webkit-tap-highlight-color: transparent; /* 移除手機點擊按鈕時出現的閃爍灰框 */
+}
+
+/* ⚠️ 必須讓輸入框例外，否則您會無法點擊輸入文字！ */
+input, textarea {
+  -webkit-user-select: auto !important;
+  user-select: auto !important;
+}
