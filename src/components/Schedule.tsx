@@ -94,18 +94,19 @@ export const Schedule: React.FC<{ externalDateIdx?: number }> = ({ externalDateI
     if (!trip || dateRange.length === 0) return [{ time: '00:00', city: defaultCity }];
 
     const getFallbackCity = () => {
+      const items = trip.items || [];
       for (let i = externalDateIdx - 1; i >= 0; i--) {
         const dStr = format(dateRange[i], 'yyyy-MM-dd');
-        const items = trip.items.filter(it => it.date === dStr).sort((a, b) => b.time.localeCompare(a.time));
-        for (const it of items) {
+        const dayIt = items.filter(it => it.date === dStr).sort((a, b) => b.time.localeCompare(a.time));
+        for (const it of dayIt) {
           const found = CITY_DB.find(c => c.keys.some(k => `${it.title} ${it.location} `.includes(k)));
           if (found) return found;
         }
       }
       for (let i = externalDateIdx + 1; i < dateRange.length; i++) {
         const dStr = format(dateRange[i], 'yyyy-MM-dd');
-        const items = trip.items.filter(it => it.date === dStr).sort((a, b) => a.time.localeCompare(b.time));
-        for (const it of items) {
+        const dayIt = items.filter(it => it.date === dStr).sort((a, b) => a.time.localeCompare(b.time));
+        for (const it of dayIt) {
           const found = CITY_DB.find(c => c.keys.some(k => `${it.title} ${it.location} `.includes(k)));
           if (found) return found;
         }
@@ -271,7 +272,8 @@ export const Schedule: React.FC<{ externalDateIdx?: number }> = ({ externalDateI
     if (!GEMINI_API_KEY || !isOnline) return alert("請先設定 Gemini API Key 或檢查網路連線才能使用魔法唷！✨");
     setTransportAiLoading(currentItem.id);
 
-    const sortedItems = [...trip!.items].filter(i => i.date === currentItem.date).sort((a, b) => a.time.localeCompare(b.time));
+    const items = trip?.items || [];
+    const sortedItems = [...items].filter(i => i.date === currentItem.date).sort((a, b) => a.time.localeCompare(b.time));
     const globalIdx = sortedItems.findIndex(i => i.id === currentItem.id);
     const prevItem = globalIdx > 0 ? sortedItems[globalIdx - 1] : null;
 
@@ -313,22 +315,31 @@ export const Schedule: React.FC<{ externalDateIdx?: number }> = ({ externalDateI
       const res = await model.generateContent(prompt);
       const match = res.response.text().match(/\[[\s\S]*\]/);
       if (match) {
-        JSON.parse(match[0]).forEach((i: any) => addScheduleItem(trip!.id, {
-          ...i,
-          id: `ai-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
-          date: selectedDateStr,
-          images: []
-        }));
-        setIsAiOpen(false);
-        triggerHaptic('light');
+        const items = JSON.parse(match[0]);
+        if (Array.isArray(items)) {
+          items.forEach((i: any) => addScheduleItem(trip!.id, {
+            ...i,
+            id: `ai-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+            date: selectedDateStr,
+            images: i.images || []
+          }));
+          setIsAiOpen(false);
+          triggerHaptic('light');
+        } else {
+          throw new Error("AI returned invalid format");
+        }
       }
-    } catch (e) { alert("AI 解析失敗"); }
+    } catch (e) {
+      console.error(e);
+      alert("AI 解析失敗，請嘗試更具體的描述或檢查 API 設定。");
+    }
     finally { setIsAiLoading(false); }
   };
 
   const onReorder = (newOrder: ScheduleItem[]) => {
+    if (!trip) return;
     // 取得該日期以外的其他行程
-    const otherItems = trip!.items.filter(it => it.date !== selectedDateStr);
+    const otherItems = (trip.items || []).filter(it => it.date !== selectedDateStr);
     // 合併新的順序
     const nextItems = [...otherItems, ...newOrder];
     if (currentTripId) reorderScheduleItems(currentTripId, nextItems);

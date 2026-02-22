@@ -51,7 +51,7 @@ export const Booking = () => {
     const checkCache = async () => {
       if (!trip) return;
       const allUrls = [
-        ...trip.bookings.flatMap(b => [b.qrCode, ...(b.images || [])])
+        ...(trip.bookings || []).flatMap(b => [b.qrCode, ...(b.images || [])])
       ].filter(Boolean) as string[];
 
       const cachedSet = new Set<string>();

@@ -21,30 +21,33 @@ const METHODS = ['現金', '信用卡', '行動支付', 'IC卡', '其他'];
 
 // --- 核心演算法：多人分帳結算 (Debt Simplification) ---
 const calculateSettlements = (expenses: ExpenseItem[], members: Member[], rate: number) => {
-  if (!members || members.length <= 1) return [];
+  const mems = members || [];
+  const exps = expenses || [];
+  if (mems.length <= 1) return [];
 
   // 1. 初始化每個人的淨額 (Net Balance)
   const balances: Record<string, number> = {};
-  members.forEach(m => balances[m.id] = 0);
+  mems.forEach(m => balances[m.id] = 0);
 
   // 2. 計算每筆支出對淨額的影響
-  expenses.forEach(exp => {
+  exps.forEach(exp => {
     // 換算回主幣別 (TWD) 計算
     const amountTwd = exp.currency === 'TWD' ? exp.amount : exp.amount * rate;
 
     // 計算每個人應該分攤的金額
     let shares: Record<string, number> = {};
-    if (!exp.splitWith || exp.splitWith.length === 0) {
+    const splitWith = exp.splitWith || [];
+    if (splitWith.length === 0) {
       // 預設平均分攤
-      const share = amountTwd / members.length;
-      members.forEach(m => { shares[m.id] = share; });
+      const share = amountTwd / mems.length;
+      mems.forEach(m => { shares[m.id] = share; });
     } else {
       // 權重/金額分攤
-      const totalWeight = exp.splitWith.reduce((sum, s) => sum + (s.weight || 0), 0);
-      const fixedAmount = exp.splitWith.reduce((sum, s) => sum + (s.amount || 0), 0);
+      const totalWeight = splitWith.reduce((sum, s) => sum + (s.weight || 0), 0);
+      const fixedAmount = splitWith.reduce((sum, s) => sum + (s.amount || 0), 0);
       const remainingAmount = amountTwd - (fixedAmount * (exp.currency === 'TWD' ? 1 : rate));
 
-      exp.splitWith.forEach(s => {
+      splitWith.forEach(s => {
         let memberShare = (s.amount || 0) * (exp.currency === 'TWD' ? 1 : rate);
         if (totalWeight > 0 && s.weight) {
           memberShare += (remainingAmount * s.weight) / totalWeight;
@@ -54,7 +57,9 @@ const calculateSettlements = (expenses: ExpenseItem[], members: Member[], rate: 
     }
 
     // 付款人增加餘額 (代墊)
-    balances[exp.payerId] = (balances[exp.payerId] || 0) + amountTwd;
+    if (exp.payerId) {
+      balances[exp.payerId] = (balances[exp.payerId] || 0) + amountTwd;
+    }
 
     // 扣除分攤
     Object.keys(shares).forEach(mid => {
@@ -250,7 +255,7 @@ export const Expense = () => {
     label: k, value: v, percent: Math.round((v / (totalTwd || 1)) * 100), color: ['#60A5FA', '#F472B6', '#FBBF24', '#34D399', '#A78BFA'][i % 5]
   })).sort((a, b) => b.value - a.value);
 
-  const grouped = expenses.reduce((acc, curr) => {
+  const grouped = (expenses || []).reduce((acc, curr) => {
     if (!acc[curr.date]) acc[curr.date] = [];
     acc[curr.date].push(curr); return acc;
   }, {} as Record<string, ExpenseItem[]>);

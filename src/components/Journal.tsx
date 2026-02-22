@@ -84,7 +84,7 @@ export const Journal = () => {
       {/* Grid List */}
       <div className="grid grid-cols-2 gap-5 relative">
         <AnimatePresence mode="popLayout">
-          {trip.journals.length === 0 ? (
+          {(!trip.journals || trip.journals.length === 0) ? (
             <motion.div
               initial={{ opacity: 0 }} animate={{ opacity: 1 }}
               className="col-span-2 text-center py-20 bg-white border-[3px] border-dashed border-gray-300 rounded-[40px] text-gray-400 font-black italic shadow-inner"
@@ -92,7 +92,7 @@ export const Journal = () => {
               拍照留念你的美食地圖吧！🍜
             </motion.div>
           ) : (
-            trip.journals.map((item, idx) => (
+            (trip.journals || []).map((item, idx) => (
               <PolaroidCard
                 key={item.id}
                 item={item}

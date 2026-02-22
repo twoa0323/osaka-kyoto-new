@@ -233,13 +233,13 @@ export const useTripStore = create<TripState>()(
       },
       updateScheduleItem: (tid, iid, ni) => {
         set(s => ({
-          trips: s.trips.map(t => t.id === tid ? { ...t, items: t.items.map(x => x.id === iid ? ni : x) } : t)
+          trips: s.trips.map(t => t.id === tid ? { ...t, items: (t.items || []).map(x => x.id === iid ? ni : x) } : t)
         }));
         syncItemToCloud(tid, "items", ni);
       },
       deleteScheduleItem: (tid, iid) => {
         set(s => ({
-          trips: s.trips.map(t => t.id === tid ? { ...t, items: t.items.filter(x => x.id !== iid) } : t)
+          trips: s.trips.map(t => t.id === tid ? { ...t, items: (t.items || []).filter(x => x.id !== iid) } : t)
         }));
         deleteItemFromCloud(tid, "items", iid);
       },
@@ -261,13 +261,13 @@ export const useTripStore = create<TripState>()(
       },
       updateBookingItem: (tid, iid, ni) => {
         set(s => ({
-          trips: s.trips.map(t => t.id === tid ? { ...t, bookings: t.bookings.map(b => b.id === iid ? ni : b) } : t)
+          trips: s.trips.map(t => t.id === tid ? { ...t, bookings: (t.bookings || []).map(b => b.id === iid ? ni : b) } : t)
         }));
         syncItemToCloud(tid, "bookings", ni);
       },
       deleteBookingItem: (tid, iid) => {
         set(s => ({
-          trips: s.trips.map(t => t.id === tid ? { ...t, bookings: t.bookings.filter(b => b.id !== iid) } : t)
+          trips: s.trips.map(t => t.id === tid ? { ...t, bookings: (t.bookings || []).filter(b => b.id !== iid) } : t)
         }));
         deleteItemFromCloud(tid, "bookings", iid);
       },
@@ -281,13 +281,13 @@ export const useTripStore = create<TripState>()(
       },
       updateExpenseItem: (tid, iid, ni) => {
         set(s => ({
-          trips: s.trips.map(t => t.id === tid ? { ...t, expenses: t.expenses.map(e => e.id === iid ? ni : e) } : t)
+          trips: s.trips.map(t => t.id === tid ? { ...t, expenses: (t.expenses || []).map(e => e.id === iid ? ni : e) } : t)
         }));
         syncItemToCloud(tid, "expenses", ni);
       },
       deleteExpenseItem: (tid, iid) => {
         set(s => ({
-          trips: s.trips.map(t => t.id === tid ? { ...t, expenses: t.expenses.filter(e => e.id !== iid) } : t)
+          trips: s.trips.map(t => t.id === tid ? { ...t, expenses: (t.expenses || []).filter(e => e.id !== iid) } : t)
         }));
         deleteItemFromCloud(tid, "expenses", iid);
       },
@@ -326,7 +326,7 @@ export const useTripStore = create<TripState>()(
       },
       deleteShoppingItem: (tid, iid) => {
         set(s => ({
-          trips: s.trips.map(t => t.id === tid ? { ...t, shoppingList: t.shoppingList.filter(x => x.id !== iid) } : t)
+          trips: s.trips.map(t => t.id === tid ? { ...t, shoppingList: (t.shoppingList || []).filter(x => x.id !== iid) } : t)
         }));
         deleteItemFromCloud(tid, "shopping", iid);
       },
@@ -340,7 +340,7 @@ export const useTripStore = create<TripState>()(
       },
       deleteInfoItem: (tid, iid) => {
         set(s => ({
-          trips: s.trips.map(t => t.id === tid ? { ...t, infoItems: t.infoItems.filter(x => x.id !== iid) } : t)
+          trips: s.trips.map(t => t.id === tid ? { ...t, infoItems: (t.infoItems || []).filter(x => x.id !== iid) } : t)
         }));
         deleteItemFromCloud(tid, "info", iid);
       },
