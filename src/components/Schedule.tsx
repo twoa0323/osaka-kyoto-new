@@ -730,7 +730,7 @@ export const Schedule = ({ externalDateIdx = 0 }: { externalDateIdx?: number }) 
       {isEditorOpen && <ScheduleEditor tripId={trip.id} date={selectedDateStr} item={editingItem} onClose={() => setIsEditorOpen(false)} />}
     </div>
   );
-};
+
 
 
 
