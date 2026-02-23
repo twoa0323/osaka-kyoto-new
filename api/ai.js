@@ -1,4 +1,6 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import { streamText } from 'ai';
+import { google } from '@ai-sdk/google';
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || process.env.VITE_GEMINI_API_KEY);
 
@@ -105,14 +107,22 @@ export default async function handler(req, res) {
 
       case 'get-spot-guide':
         prompt = `你是一個專業的日本旅遊導覽人員。請針對景點「${payload.location} ${payload.title}」提供專業的背景介紹與必看亮點。
-        請回傳純 JSON 格式（不要有 Markdown）：
-        {
-          "background": "約 100 字左右的歷史背景或文化介紹",
-          "highlights": ["亮點 1", "亮點 2", "亮點 3"],
-          "suggestedDuration": "建議停留時間"
-        }
+        請直接回傳排版精美的 Markdown 文字，以便直接渲染在畫面上。
+        包含：
+        1. 約 100 字左右的歷史背景或文化介紹
+        2. 必看亮點 (使用條列式)
+        3. 建議停留時間
         語氣請專業且活潑，使用繁體中文。`;
-        break;
+
+        const spotResult = streamText({
+          model: google('gemini-3-flash-preview'),
+          prompt: prompt,
+        });
+
+        // 利用 sendToNodeResponse 或是直接回傳（為了相容 Vercel Serverless Function)
+        // 使用者指定：將該 endpoint 的 Response 改為回傳 result.toDataStreamResponse()
+        // 為了確保原生的 req/res 支持 Web Response，Vercel 現在會處理 handler 中回傳的 Response
+        return spotResult.toDataStreamResponse();
 
       case 'optimize-route':
         prompt = `你是一個專業的行程優化助手。請分析以下行程點的內容與地理位置（位於日本），並重新安排順序以最小化交通移動距離（類似 TSP 優化）。

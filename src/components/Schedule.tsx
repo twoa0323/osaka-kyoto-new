@@ -1,4 +1,6 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import { useQueries } from '@tanstack/react-query';
+import { useCompletion } from 'ai/react';
 import { useTripStore } from '../store/useTripStore';
 import { format, addDays, differenceInDays, parseISO, isValid, isSameDay } from 'date-fns';
 import { MapPin, Plus, Edit3, Trash2, Utensils, Plane, Home, Camera, Sparkles, X, Loader2, Wind, Umbrella, Sunrise, ChevronUp, ChevronDown, Clock, Cloud, CloudRain, Sun, Droplets, AlertTriangle, Wand2, Check, WifiOff, Star, Map as MapIcon } from 'lucide-react';
@@ -173,7 +175,6 @@ export const Schedule: React.FC<{ externalDateIdx?: number }> = ({ externalDateI
   const [detailItem, setDetailItem] = useState<ScheduleItem | undefined>();
   const [isAiOpen, setIsAiOpen] = useState(false);
 
-  const [weatherCache, setWeatherCache] = useState<Record<string, any>>({});
   const [showFullWeather, setShowFullWeather] = useState(false);
   const [isAiLoading, setIsAiLoading] = useState(false);
 
@@ -195,7 +196,7 @@ export const Schedule: React.FC<{ externalDateIdx?: number }> = ({ externalDateI
   }, [trip]);
 
   const selectedDateStr = dateRange.length > 0 ? format(dateRange[externalDateIdx], 'yyyy-MM-dd') : '';
-  const dayItems = useMemo(() => (trip?.items || []).filter(i => i.date === selectedDateStr).sort((a, b) => a.time.localeCompare(b.time)), [trip, selectedDateStr]);
+  const dayItems = useMemo(() => (trip?.items || []).filter(i => i.date === selectedDateStr).sort((a, b) => (a.time || '').localeCompare(b.time || '')), [trip, selectedDateStr]);
 
   const timeline = useMemo(() => {
     const defaultCity = { name: trip?.dest.toUpperCase() || 'CITY', lat: trip?.lat || 0, lng: trip?.lng || 0 };
@@ -205,7 +206,7 @@ export const Schedule: React.FC<{ externalDateIdx?: number }> = ({ externalDateI
       const items = trip.items || [];
       for (let i = externalDateIdx - 1; i >= 0; i--) {
         const dStr = format(dateRange[i], 'yyyy-MM-dd');
-        const dayIt = items.filter(it => it.date === dStr).sort((a, b) => b.time.localeCompare(a.time));
+        const dayIt = items.filter(it => it.date === dStr).sort((a, b) => (b.time || '').localeCompare(a.time || ''));
         for (const it of dayIt) {
           const found = CITY_DB.find(c => c.keys.some(k => `${it.title} ${it.location} `.includes(k)));
           if (found) return found;
@@ -213,7 +214,7 @@ export const Schedule: React.FC<{ externalDateIdx?: number }> = ({ externalDateI
       }
       for (let i = externalDateIdx + 1; i < dateRange.length; i++) {
         const dStr = format(dateRange[i], 'yyyy-MM-dd');
-        const dayIt = items.filter(it => it.date === dStr).sort((a, b) => a.time.localeCompare(b.time));
+        const dayIt = items.filter(it => it.date === dStr).sort((a, b) => (a.time || '').localeCompare(b.time || ''));
         for (const it of dayIt) {
           const found = CITY_DB.find(c => c.keys.some(k => `${it.title} ${it.location} `.includes(k)));
           if (found) return found;
@@ -246,26 +247,27 @@ export const Schedule: React.FC<{ externalDateIdx?: number }> = ({ externalDateI
     return Array.from(map.values());
   }, [timeline]);
 
-  useEffect(() => {
-    let isMounted = true;
-    const fetchWeather = async () => {
-      const newCache = { ...weatherCache };
-      let changed = false;
-      for (const city of uniqueCities) {
-        if (!newCache[city.name]) {
-          try {
-            const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${city.lat}&longitude=${city.lng}&daily=weathercode,temperature_2m_max,temperature_2m_min,precipitation_probability_max,sunrise,sunset,windspeed_10m_max&hourly=temperature_2m,weathercode,precipitation_probability,windspeed_10m&current_weather=true&timezone=auto`);
-            const data = await res.json();
-            newCache[city.name] = data;
-            changed = true;
-          } catch (e) { console.error(e); }
-        }
+  const weatherQueries = useQueries({
+    queries: uniqueCities.map((city) => ({
+      queryKey: ['weather', city.name, city.lat, city.lng],
+      queryFn: async () => {
+        const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${city.lat}&longitude=${city.lng}&daily=weathercode,temperature_2m_max,temperature_2m_min,precipitation_probability_max,sunrise,sunset,windspeed_10m_max&hourly=temperature_2m,weathercode,precipitation_probability,windspeed_10m&current_weather=true&timezone=auto`);
+        if (!res.ok) throw new Error('Weather API error');
+        return res.json();
+      },
+    })),
+  });
+
+  const weatherCache = useMemo(() => {
+    const cache: Record<string, any> = {};
+    uniqueCities.forEach((city, index) => {
+      const query = weatherQueries[index];
+      if (query.isSuccess && query.data) {
+        cache[city.name] = query.data;
       }
-      if (isMounted && changed) setWeatherCache(newCache);
-    };
-    fetchWeather();
-    return () => { isMounted = false; };
-  }, [uniqueCities.map(c => c.name).join(',')]);
+    });
+    return cache;
+  }, [uniqueCities, weatherQueries]);
 
   let todayWeather = { max: '--', min: '--', code: -1, rain: '0', sunrise: '--:--', wind: '0級', cityName: timeline[0]?.city.name || 'CITY' };
   let currentTempStr = '--';
@@ -387,7 +389,7 @@ export const Schedule: React.FC<{ externalDateIdx?: number }> = ({ externalDateI
     setTransportAiLoading(currentItem.id);
 
     const items = trip?.items || [];
-    const sortedItems = [...items].filter(i => i.date === currentItem.date).sort((a, b) => a.time.localeCompare(b.time));
+    const sortedItems = [...items].filter(i => i.date === currentItem.date).sort((a, b) => (a.time || '').localeCompare(b.time || ''));
     const globalIdx = sortedItems.findIndex(i => i.id === currentItem.id);
     const prevItem = globalIdx > 0 ? sortedItems[globalIdx - 1] : null;
 
@@ -551,35 +553,43 @@ export const Schedule: React.FC<{ externalDateIdx?: number }> = ({ externalDateI
     }
   };
 
-  const handleFetchSpotGuide = async (item: ScheduleItem) => {
-    if (!isOnline) return alert("請檢查網路連線");
-    setSpotAiLoading(item.id);
-    try {
-      const res = await fetch('/api/ai', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'get-spot-guide',
-          payload: { title: item.title, location: item.location }
-        })
-      });
-      const data = await res.json();
-      if (data && !data.error) {
-        const guide = {
-          background: data.background,
-          highlights: data.highlights || [],
-          suggestedDuration: data.suggestedDuration
-        };
-        const updatedItem = { ...item, spotGuide: guide };
-        updateScheduleItem(trip!.id, item.id, updatedItem);
-        setDetailItem(updatedItem);
-        triggerHaptic('success');
+  const activeSpotIdRef = React.useRef<string | null>(null);
+
+  const { completion, complete, isLoading: isSpotAiStreaming, setCompletion } = useCompletion({
+    api: '/api/ai',
+    onFinish: (prompt, resultText) => {
+      const spotId = activeSpotIdRef.current;
+      if (trip && spotId) {
+        const item = dayItems.find(i => i.id === spotId);
+        if (item) {
+          const guide = { background: resultText, highlights: [], suggestedDuration: "" };
+          const updatedItem = { ...item, spotGuide: guide };
+          updateScheduleItem(trip.id, item.id, updatedItem);
+          setDetailItem(prev => prev?.id === spotId ? updatedItem : prev);
+        }
       }
-    } catch (e) {
+      activeSpotIdRef.current = null;
+      setSpotAiLoading(null);
+    },
+    onError: () => {
       alert("取得景點導覽失敗。");
-    } finally {
+      activeSpotIdRef.current = null;
       setSpotAiLoading(null);
     }
+  });
+
+  const handleFetchSpotGuide = async (item: ScheduleItem) => {
+    if (!isOnline) return alert("請檢查網路連線");
+    activeSpotIdRef.current = item.id;
+    setSpotAiLoading(item.id);
+    setCompletion("");
+    await complete("", {
+      body: {
+        action: 'get-spot-guide',
+        payload: { title: item.title, location: item.location }
+      }
+    });
+    triggerHaptic('success');
   };
 
   const [viewMode, setViewMode] = useState<'list' | 'map'>('list');
@@ -760,7 +770,9 @@ export const Schedule: React.FC<{ externalDateIdx?: number }> = ({ externalDateI
                 <div className="card-splat p-4 bg-white/50">
                   <h4 className="text-[10px] font-black uppercase mb-2 flex items-center gap-1.5"><Sparkles size={14} /> AI 景點導覽</h4>
                   {detailItem.spotGuide ? (
-                    <div className="text-sm font-bold text-gray-700">{detailItem.spotGuide.background}</div>
+                    <div className="text-sm font-bold text-gray-700 whitespace-pre-wrap leading-relaxed">{detailItem.spotGuide.background}</div>
+                  ) : isSpotAiStreaming && activeSpotIdRef.current === detailItem.id ? (
+                    <div className="text-sm font-bold text-gray-700 whitespace-pre-wrap leading-relaxed">{completion}</div>
                   ) : (
                     <button onClick={() => handleFetchSpotGuide(detailItem)} disabled={!!spotAiLoading} className="w-full py-3 border-2 border-dashed rounded-lg text-xs font-black">
                       {spotAiLoading === detailItem.id ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />} 取得 AI 景點建議

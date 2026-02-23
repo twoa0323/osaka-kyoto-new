@@ -42,6 +42,22 @@ const syncMetadataToCloud = (trip: Trip) => {
   syncTimeouts.set(trip.id + "_meta", timeout);
 };
 
+const tripUpdateTimeouts = new Map<string, any>();
+
+// 雲端同步函式 - Trip 更新時間 Debounce (避免寫入風暴)
+const updateTripTimestamp = (tripId: string, currentUser: string, updatedAt: number) => {
+  if (tripUpdateTimeouts.has(tripId)) clearTimeout(tripUpdateTimeouts.get(tripId));
+  const timeout = setTimeout(async () => {
+    try {
+      await updateDoc(doc(db, "trips", tripId), { updatedAt, lastUpdatedBy: currentUser });
+      tripUpdateTimeouts.delete(tripId);
+    } catch (e) {
+      console.error("Trip Timestamp Update Error:", e);
+    }
+  }, 1000);
+  tripUpdateTimeouts.set(tripId, timeout);
+};
+
 // 雲端同步函式 - 子項目同步 (Granular Sync)
 const syncItemToCloud = async (tripId: string, collectionName: string, item: any) => {
   if (!tripId || !item?.id) return;
@@ -52,12 +68,8 @@ const syncItemToCloud = async (tripId: string, collectionName: string, item: any
 
   try {
     await setDoc(doc(db, "trips", tripId, collectionName, item.id), deepSanitize(itemWithMeta));
-    // Also update the trip's metadata to reflect the last update time
-    const tripRef = doc(db, "trips", tripId);
-    await updateDoc(tripRef, {
-      updatedAt: updatedAt,
-      lastUpdatedBy: currentUser
-    });
+    // Update the trip's metadata to reflect the last update time (Debounced)
+    updateTripTimestamp(tripId, currentUser, updatedAt);
   } catch (e) {
     console.error(`Firebase ${collectionName} Sync Error:`, e);
   }
