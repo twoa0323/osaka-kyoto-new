@@ -15,11 +15,12 @@ import { LazyImage } from './LazyImage';
 export const Journal = () => {
   const { trips, currentTripId, addJournalItem, deleteJournalItem } = useTripStore();
   const trip = trips.find(t => t.id === currentTripId);
-  const isOnline = useNetworkStatus();
-
   const [isAdding, setIsAdding] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [viewingItem, setViewingItem] = useState<JournalItem | null>(null);
+
+  // 修改：將 form 用於新增與編輯，加入 isEditing 狀態
+  const [isEditing, setIsEditing] = useState(false);
   const [form, setForm] = useState<Partial<JournalItem>>({
     title: '', content: '', images: [], rating: 5, location: '',
     date: new Date().toISOString().split('T')[0]
@@ -47,19 +48,37 @@ export const Journal = () => {
     if (!form.title || (form.images?.length === 0)) {
       return alert("標題跟美食美照至少要有一個唷！🦑");
     }
-    const newItem: JournalItem = {
-      id: Date.now().toString(),
-      date: form.date!,
-      title: form.title!,
-      content: form.content || '',
-      images: form.images || [],
-      rating: form.rating || 5,
-      location: form.location || ''
-    };
-    addJournalItem(trip.id, newItem);
-    setIsAdding(false);
+
+    // 判斷是新增還是編輯
+    if (isEditing && viewingItem) {
+      const updatedItem = { ...viewingItem, ...form } as JournalItem;
+      const newJournals = (trip.journals || []).map(j => j.id === viewingItem.id ? updatedItem : j);
+      useTripStore.getState().updateTripData(trip.id, { journals: newJournals });
+      setViewingItem(updatedItem); // 更新詳細視窗的內容
+      setIsAdding(false);
+      setIsEditing(false);
+    } else {
+      const newItem: JournalItem = {
+        id: Date.now().toString(),
+        date: form.date || new Date().toISOString().split('T')[0],
+        title: form.title!,
+        content: form.content || '',
+        images: form.images || [],
+        rating: form.rating || 5,
+        location: form.location || ''
+      };
+      addJournalItem(trip.id, newItem);
+      setIsAdding(false);
+    }
+
     setForm({ title: '', content: '', images: [], rating: 5, location: '' });
     triggerHaptic('success');
+  };
+
+  const openEditor = (item: JournalItem) => {
+    setForm({ ...item });
+    setIsEditing(true);
+    setIsAdding(true);
   };
 
   return (
@@ -74,7 +93,11 @@ export const Journal = () => {
         </div>
         <motion.button
           whileTap={{ scale: 0.9, rotate: 10 }}
-          onClick={() => setIsAdding(true)}
+          onClick={() => {
+            setIsEditing(false);
+            setForm({ title: '', content: '', images: [], rating: 5, location: '', date: new Date().toISOString().split('T')[0] });
+            setIsAdding(true);
+          }}
           className="w-10 h-10 bg-splat-orange text-white rounded-xl border-[3px] border-splat-dark shadow-splat-solid-sm flex items-center justify-center transition-all"
         >
           <Plus size={24} strokeWidth={4} />
@@ -143,14 +166,19 @@ export const Journal = () => {
                   <MapIcon size={18} strokeWidth={3} />
                   OPEN ON GOOGLE MAPS
                 </a>
-
-                <p className="font-serif text-sm text-gray-600 leading-relaxed italic border-l-4 border-gray-100 pl-3">
-                  "{viewingItem.content || '沒寫心得，但這道菜好吃到忘記說話了。'}"
-                </p>
+                
+                {/* end of Location */}
               </div>
-              <button onClick={() => setViewingItem(null)} className="absolute -top-12 right-0 text-white font-black flex items-center gap-1 uppercase tracking-widest text-sm">
-                Close <X size={20} strokeWidth={3} />
-              </button>
+              
+              <div className="absolute -top-12 right-0 flex gap-2">
+                  <button onClick={() => openEditor(viewingItem)} className="w-10 h-10 bg-white text-splat-dark font-black flex items-center justify-center rounded-xl border-[3px] border-splat-dark shadow-splat-solid-sm">
+                    <span className="sr-only">Edit</span>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
+                  </button>
+                  <button onClick={() => setViewingItem(null)} className="h-10 px-3 bg-white text-splat-dark font-black flex items-center gap-1 uppercase tracking-widest text-sm rounded-xl border-[3px] border-splat-dark shadow-splat-solid-sm">
+                    Close <X size={20} strokeWidth={3} />
+                  </button>
+              </div>
             </motion.div>
           </div>
         )}
@@ -159,65 +187,66 @@ export const Journal = () => {
       {/* Adding Modal - 原有邏輯強化 */}
       <AnimatePresence>
         {isAdding && (
-          <motion.div
-            initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
-            transition={{ type: "spring", damping: 25, stiffness: 200 }}
-            className="fixed inset-0 bg-[#F4F5F7] z-[1000] p-6 overflow-y-auto"
-          >
-            <div className="flex justify-between items-center mb-8">
-              <h2 className="text-3xl font-black italic uppercase tracking-tighter">New Memory</h2>
-              <button onClick={() => setIsAdding(false)} className="p-3 bg-white rounded-full border-3 border-splat-dark shadow-splat-solid-sm active:scale-90 transition-transform">
-                <X size={24} strokeWidth={3} />
-              </button>
+    <motion.div
+      initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
+      transition={{ type: "spring", damping: 25, stiffness: 200 }}
+      className="fixed inset-0 bg-[#F4F5F7] z-[2100] p-6 overflow-y-auto"
+    >
+      <div className="flex justify-between items-center mb-8 pt-4">
+        <h2 className="text-3xl font-black italic uppercase tracking-tighter">{isEditing ? "Edit Memory" : "New Memory"}</h2>
+        <button onClick={() => setIsAdding(false)} className="p-3 bg-white rounded-full border-[3px] border-splat-dark shadow-splat-solid-sm active:scale-90 transition-transform">
+          <X size={24} strokeWidth={3} />
+        </button>
+      </div>
+
+      <div className="space-y-8">
+        {/* Image Upload Area */}
+        <div className="flex gap-3 overflow-x-auto py-2 hide-scrollbar">
+          <label className="min-w-[120px] aspect-square bg-white border-4 border-dashed border-gray-300 rounded-3xl flex flex-col items-center justify-center text-gray-400 cursor-pointer active:bg-gray-50 transition-colors relative overflow-hidden">
+            {isUploading && <div className="absolute inset-0 bg-white/80 z-10 flex items-center justify-center"><Loader2 className="animate-spin" /></div>}
+            <Camera size={32} />
+            <span className="text-[10px] font-black mt-2 uppercase tracking-widest">Add Photo</span>
+            <input type="file" multiple accept="image/*" className="hidden" onChange={handleFileChange} />
+          </label>
+          {form.images?.map((img, i) => (
+            <div key={i} className="min-w-[120px] aspect-square rounded-3xl border-[3px] border-splat-dark overflow-hidden relative shadow-md">
+              <img src={img} className="w-full h-full object-cover" />
+              <button onClick={() => setForm({ ...form, images: form.images?.filter((_, idx) => idx !== i) })} className="absolute top-1 right-1 bg-white p-1 rounded-full border-2 border-splat-dark"><X size={12} /></button>
             </div>
+          ))}
+        </div>
 
-            <div className="space-y-8">
-              {/* Image Upload Area */}
-              <div className="flex gap-3 overflow-x-auto py-2 hide-scrollbar">
-                <label className="min-w-[120px] aspect-square bg-white border-4 border-dashed border-gray-300 rounded-3xl flex flex-col items-center justify-center text-gray-400 cursor-pointer active:bg-gray-50 transition-colors relative overflow-hidden">
-                  {isUploading && <div className="absolute inset-0 bg-white/80 z-10 flex items-center justify-center"><Loader2 className="animate-spin" /></div>}
-                  <Camera size={32} />
-                  <span className="text-[10px] font-black mt-2 uppercase tracking-widest">Add Photo</span>
-                  <input type="file" multiple accept="image/*" className="hidden" onChange={handleFileChange} />
-                </label>
-                {form.images?.map((img, i) => (
-                  <div key={i} className="min-w-[120px] aspect-square rounded-3xl border-[3px] border-splat-dark overflow-hidden relative shadow-md">
-                    <img src={img} className="w-full h-full object-cover" />
-                    <button onClick={() => setForm({ ...form, images: form.images?.filter((_, idx) => idx !== i) })} className="absolute top-1 right-1 bg-white p-1 rounded-full border-2 border-splat-dark"><X size={12} /></button>
-                  </div>
-                ))}
-              </div>
+        {/* Form Fields */}
+        <div className="space-y-5">
+          <div className="space-y-1">
+            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">What did you eat?</label>
+            <input placeholder="餐點名稱 (例如：一蘭拉麵)" value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} className="w-full p-4 bg-white border-[3px] border-splat-dark rounded-2xl font-black text-lg outline-none focus:ring-4 focus:ring-splat-orange/10" />
+          </div>
 
-              {/* Form Fields */}
-              <div className="space-y-5">
-                <div className="space-y-1">
-                  <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">What did you eat?</label>
-                  <input placeholder="餐點名稱 (例如：一蘭拉麵)" value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} className="w-full p-4 bg-white border-[3px] border-splat-dark rounded-2xl font-black text-lg outline-none focus:ring-4 focus:ring-splat-orange/10" />
-                </div>
-
-                <div className="flex items-center justify-between p-4 bg-white border-[3px] border-splat-dark rounded-2xl">
-                  <span className="text-xs font-black text-gray-500 uppercase tracking-widest">Rating</span>
-                  <div className="flex gap-1">
-                    {[1, 2, 3, 4, 5].map(v => (
-                      <Star key={v} onClick={() => setForm({ ...form, rating: v })} className={`cursor-pointer transition-all ${v <= (form.rating || 0) ? 'text-splat-yellow fill-splat-yellow scale-110' : 'text-gray-200'}`} size={28} strokeWidth={2.5} />
-                    ))}
-                  </div>
-                </div>
-
-                <div className="relative">
-                  <MapIcon className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
-                  <input placeholder="店家或地點 (可貼地圖)" value={form.location} onChange={e => setForm({ ...form, location: e.target.value })} className="w-full pl-12 pr-4 py-4 bg-white border-[3px] border-splat-dark rounded-2xl font-bold text-sm outline-none" />
-                </div>
-
-                <textarea placeholder="寫下那口美味進入靈魂的瞬間..." value={form.content} onChange={e => setForm({ ...form, content: e.target.value })} className="w-full p-4 bg-white border-[3px] border-splat-dark rounded-2xl font-bold text-sm outline-none h-32 resize-none" />
-              </div>
-
-              <button onClick={handleSave} className="btn-splat w-full py-5 bg-splat-orange text-white text-xl shadow-[6px_6px_0px_#1A1A1A]">
-                收藏這份美味 ➔
-              </button>
+          <div className="flex items-center justify-between p-4 bg-white border-[3px] border-splat-dark rounded-2xl">
+            <span className="text-xs font-black text-gray-500 uppercase tracking-widest">Rating</span>
+            <div className="flex gap-1">
+              {[1, 2, 3, 4, 5].map(v => (
+                <Star key={v} onClick={() => setForm({ ...form, rating: v })} className={`cursor-pointer transition-all ${v <= (form.rating || 0) ? 'text-splat-yellow fill-splat-yellow scale-110' : 'text-gray-200'}`} size={28} strokeWidth={2.5} />
+              ))}
             </div>
-          </motion.div>
-        )}
+          </div>
+
+          <div className="relative">
+            <MapIcon className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+            <input placeholder="店家或地點 (可貼地圖)" value={form.location} onChange={e => setForm({ ...form, location: e.target.value })} className="w-full pl-12 pr-4 py-4 bg-white border-[3px] border-splat-dark rounded-2xl font-bold text-sm outline-none" />
+          </div>
+
+          <textarea placeholder="寫下那口美味進入靈魂的瞬間..." value={form.content} onChange={e => setForm({ ...form, content: e.target.value })} className="w-full p-4 bg-white border-[3px] border-splat-dark rounded-2xl font-bold text-sm outline-none h-32 resize-none" />
+        </div>
+
+        <button onClick={handleSave} className="btn-splat w-full py-5 bg-splat-orange text-white text-xl shadow-[6px_6px_0px_#1A1A1A]">
+          {isEditing ? "儲存修改 ➔" : "收藏這份美味 ➔"}
+        </button>
+      </div>
+    </motion.div>
+  )
+}
       </AnimatePresence>
     </div>
   );
@@ -258,8 +287,11 @@ const PolaroidCard = ({ item, index, onDelete, onClick }: { item: JournalItem, i
       </div>
 
       <button
-        onClick={onDelete}
-        className="absolute bottom-2 right-2 p-1.5 bg-red-50 text-red-500 rounded-lg opacity-0 group-hover:opacity-100 sm:opacity-100 transition-opacity border border-red-100"
+        onClick={(e) => {
+          e.stopPropagation(); // 阻止事件冒泡！
+          onDelete(e);
+        }}
+        className="absolute bottom-2 right-2 p-1.5 bg-red-50 text-red-500 rounded-lg opacity-0 group-hover:opacity-100 sm:opacity-100 transition-opacity border border-red-100 z-20"
       >
         <Trash2 size={12} strokeWidth={3} />
       </button>
