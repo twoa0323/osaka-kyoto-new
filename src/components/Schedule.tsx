@@ -61,6 +61,7 @@ const CITY_DB = [
 
 // --- 輔助組件：地圖路徑視圖 ---
 import { Map, MapMarker, MarkerContent, MapRoute, MapControls } from './ui/map';
+import type * as MapLibreGLType from 'maplibre-gl';
 
 // --- 輔助組件：每個行程項目的渲染（包含自動取圖邏輯） ---
 const ScheduleItemRow: React.FC<{
@@ -153,6 +154,7 @@ const ScheduleItemRow: React.FC<{
 // --- 輔助組件：地圖路徑視圖 ---
 const ScheduleMapView: React.FC<{ items: ScheduleItem[], trip?: Trip }> = ({ items, trip }) => {
   const MAPTILER_KEY = import.meta.env.VITE_MAPTILER_API_KEY;
+  const mapRef = useRef<MapLibreGLType.Map | null>(null);
 
   const points = useMemo(() => {
     return items
@@ -177,9 +179,24 @@ const ScheduleMapView: React.FC<{ items: ScheduleItem[], trip?: Trip }> = ({ ite
     };
   }, [points, trip]);
 
+  // 🪄 自動縮放至包含所有景點 (FitBounds)
+  useEffect(() => {
+    if (!mapRef.current || points.length === 0) return;
+
+    const bounds = new (window as any).MapLibreGL.LngLatBounds();
+    points.forEach(p => bounds.extend(p));
+
+    mapRef.current.fitBounds(bounds, {
+      padding: 80,
+      duration: 1000,
+      maxZoom: 16
+    });
+  }, [points]);
+
   return (
     <div className="relative w-full h-[60vh] rounded-[32px] overflow-hidden border-[4px] border-splat-dark shadow-splat-solid bg-gray-100 mt-4">
       <Map
+        ref={mapRef as any}
         viewport={viewport}
         className="w-full h-full z-10"
         styles={
