@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Sparkles, Loader2, Camera, Compass, CloudRain, Layout, Receipt, BarChart3, Search, Trash2 } from 'lucide-react';
+import { X, Sparkles, Loader2, Camera, Compass, CloudRain, Layout, Receipt, BarChart3, Search, Trash2, Package } from 'lucide-react';
 import { useTripStore } from '../store/useTripStore';
 import { triggerHaptic } from '../utils/haptics';
 import { compressImage, uploadImage } from '../utils/imageUtils';
