@@ -20,6 +20,13 @@ export const LazyImage: React.FC<LazyImageProps> = ({
     const imgRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
+        if (src === "") {
+            setHasError(true);
+            setIsLoaded(true);
+        }
+    }, [src]);
+
+    useEffect(() => {
         const observer = new IntersectionObserver(
             (entries) => {
                 if (entries[0].isIntersecting) {

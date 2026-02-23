@@ -297,7 +297,10 @@ export default async function handler(req, res) {
           const searchResult = await model.generateContent(searchPrompt);
           const responseText = searchResult.response.text();
           const cleanedText = responseText.replace(/```(?:json)?/gi, '').replace(/```/g, '').trim();
-          const searchInfo = JSON.parse(cleanedText.match(/\{[\s\S]*\}/)[0]);
+
+          const match = cleanedText.match(/\{[\s\S]*\}/);
+          if (!match) return res.status(200).json({ imageUrl: "" }); // 找不到 JSON 就放棄圖片，不要崩潰
+          const searchInfo = JSON.parse(match[0]);
 
           let imageUrl = "";
 

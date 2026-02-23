@@ -33,6 +33,7 @@ export const MagicImport = () => {
     const [isProcessing, setIsProcessing] = useState(false);
     const [isEnriching, setIsEnriching] = useState(false);
     const [parsedData, setParsedData] = useState<ParsedResult | null>(null);
+    const [enrichProgress, setEnrichProgress] = useState({ current: 0, total: 0 });
 
     if (!trip) return null;
 
@@ -100,9 +101,8 @@ export const MagicImport = () => {
     const enrichDataWithImages = async (data: ParsedResult) => {
         const fetchImage = async (item: any, category: string) => {
             try {
-                // 加入 500ms 延遲以確保不超過 RPM 限制 (15 RPM)
-                // 15 RPM = 4 秒 1 次，但因為是一次批次匯入，我們只要不重疊發起太多即可
-                await new Promise(resolve => setTimeout(resolve, 500));
+                // 加入 3000ms 延遲以符合 Gemini 免費版 RPM 限制 (15 RPM ≈ 每 4 秒 1 次)
+                await new Promise(resolve => setTimeout(resolve, 3000));
 
                 const res = await fetch('/api/ai', {
                     method: 'POST',
@@ -134,6 +134,14 @@ export const MagicImport = () => {
             { key: 'shopping', label: 'shopping' }
         ];
 
+        const totalToEnrich = categories.reduce((acc, cat) => {
+            const items = (data as any)[cat.key];
+            return acc + (Array.isArray(items) ? items.length : 0);
+        }, 0);
+
+        setEnrichProgress({ current: 0, total: totalToEnrich });
+        let processedCount = 0;
+
         for (const cat of categories) {
             const items = (enriched as any)[cat.key];
             if (items && Array.isArray(items)) {
@@ -141,6 +149,8 @@ export const MagicImport = () => {
                 for (const item of items) {
                     const result = await fetchImage(item, cat.label);
                     enrichedItems.push(result);
+                    processedCount++;
+                    setEnrichProgress({ current: processedCount, total: totalToEnrich });
                 }
                 (enriched as any)[cat.key] = enrichedItems;
             }
@@ -319,7 +329,9 @@ export const MagicImport = () => {
                                         {isProcessing ? (
                                             <>
                                                 <Loader2 className="animate-spin" size={24} strokeWidth={3} />
-                                                {isEnriching ? '拼命抓取對應美照中...' : 'AI 墨跡分析中...'}
+                                                {isEnriching
+                                                    ? `抓取美照中 (${enrichProgress.current} / ${enrichProgress.total})...`
+                                                    : 'AI 墨跡分析中...'}
                                             </>
                                         ) : (
                                             <>

@@ -43,6 +43,7 @@ export const useFirebaseSync = () => {
         { name: "journals", field: "journals" },
         { name: "shopping", field: "shoppingList" },
         { name: "info", field: "infoItems" },
+        { name: "packing", field: "packingList" },
       ];
 
       subCollections.forEach(sub => {
