@@ -171,6 +171,7 @@ export const Schedule: React.FC<{ externalDateIdx?: number }> = ({ externalDateI
   const [isEditMode, setIsEditMode] = useState(false);
   const [editingItem, setEditingItem] = useState<ScheduleItem | undefined>();
   const [detailItem, setDetailItem] = useState<ScheduleItem | undefined>();
+  const [isAiOpen, setIsAiOpen] = useState(false);
 
   const [weatherCache, setWeatherCache] = useState<Record<string, any>>({});
   const [showFullWeather, setShowFullWeather] = useState(false);
@@ -675,7 +676,7 @@ export const Schedule: React.FC<{ externalDateIdx?: number }> = ({ externalDateI
             </motion.button>
             <motion.button whileTap={{ scale: 0.9 }} onClick={() => { setEditingItem(undefined); setIsEditorOpen(true) }} className="w-9 h-9 rounded-xl bg-splat-green text-white flex items-center justify-center border-2 border-splat-dark shadow-splat-solid-sm"><Plus strokeWidth={3} /></motion.button>
             <motion.button whileTap={{ scale: 0.9 }} onClick={() => setIsEditMode(!isEditMode)} className={`w-9 h-9 rounded-xl flex items-center justify-center border-2 border-splat-dark ${isEditMode ? 'bg-splat-pink text-white' : 'bg-white text-splat-dark shadow-splat-solid-sm'}`}><Edit3 size={18} strokeWidth={3} /></motion.button>
-            <motion.button whileTap={{ scale: 0.9 }} onClick={() => openAiAssistant('schedule')} className="w-9 h-9 rounded-xl bg-splat-blue text-white flex items-center justify-center border-2 border-splat-dark shadow-splat-solid-sm"><Sparkles size={18} strokeWidth={3} /></motion.button>
+            <motion.button whileTap={{ scale: 0.9 }} onClick={() => setIsAiOpen(true)} className="w-9 h-9 rounded-xl bg-splat-blue text-white flex items-center justify-center border-2 border-splat-dark shadow-splat-solid-sm"><Sparkles size={18} strokeWidth={3} /></motion.button>
           </div>
         </div>
 
