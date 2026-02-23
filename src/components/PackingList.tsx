@@ -54,7 +54,7 @@ const CATEGORY_COLORS: Record<string, string> = {
     '其他': 'bg-gray-400',
 };
 
-export const PackingList = () => {
+export const PackingList = ({ className = "" }: { className?: string }) => {
     const { trips, currentTripId, addPackingItem, togglePackingItem, deletePackingItem, clearPackingList, updatePackingItem } = useTripStore();
     const trip = trips.find(t => t.id === currentTripId);
     const packingList = trip?.packingList || [];
@@ -95,49 +95,12 @@ export const PackingList = () => {
     };
 
     const handleAiSuggest = async () => {
-        if (!trip || !currentTripId) return;
-        setIsAiLoading(true);
-        triggerHaptic('medium');
-
-        try {
-            const res = await fetch('/api/ai', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    action: 'suggest-packing-list',
-                    payload: {
-                        destination: trip.destination,
-                        startDate: trip.startDate,
-                        endDate: trip.endDate,
-                        style: '旅遊'
-                    }
-                })
-            });
-            const data = await res.json();
-            if (data.packingList) {
-                data.packingList.forEach((item: any) => {
-                    addPackingItem(currentTripId, {
-                        id: `pack-ai-${Date.now()}-${Math.random().toString(36).substring(7)}`,
-                        title: item.title,
-                        category: item.category,
-                        quantity: item.quantity,
-                        isPacked: false,
-                        note: item.note,
-                        updatedAt: Date.now()
-                    });
-                });
-                triggerHaptic('success');
-            }
-        } catch (err) {
-            console.error(err);
-            alert("AI 離線中，請手動添加行李項目 🥲");
-        } finally {
-            setIsAiLoading(false);
-        }
+        // 這裡的功能已遷移至全域 AiAssistant.tsx
+        useTripStore.getState().openAiAssistant('packing');
     };
 
     return (
-        <div className="px-4 space-y-6 animate-fade-in pb-32 text-left">
+        <div className={`space-y-6 ${className}`}>
             {/* --- Packing Progress Header (Splatoon Style) --- */}
             <div className="bg-white border-[3px] border-splat-dark rounded-[32px] p-6 shadow-splat-solid relative overflow-hidden">
                 <div className="relative z-10 flex justify-between items-end mb-4">
@@ -175,10 +138,9 @@ export const PackingList = () => {
                 </button>
                 <button
                     onClick={handleAiSuggest}
-                    disabled={isAiLoading}
-                    className={`shrink-0 flex items-center gap-2 px-5 py-3 bg-white text-splat-blue border-[3px] border-splat-dark rounded-2xl font-black text-sm shadow-splat-solid-sm active:translate-y-0.5 active:shadow-none transition-all ${isAiLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    className={`shrink-0 flex items-center gap-2 px-5 py-3 bg-white text-splat-blue border-[3px] border-splat-dark rounded-2xl font-black text-sm shadow-splat-solid-sm active:translate-y-0.5 active:shadow-none transition-all`}
                 >
-                    {isAiLoading ? <RefreshCcw size={18} className="animate-spin" /> : <Sparkles size={18} />} AI 推薦
+                    <Sparkles size={18} /> AI 推薦
                 </button>
                 <button
                     onClick={() => { if (confirm('⚠️ 清空清單？')) clearPackingList(currentTripId!); }}

@@ -26,6 +26,8 @@ import { OfflineStatus } from './components/OfflineStatus';
 import { MagicImport } from './components/MagicImport';
 import { triggerHaptic } from './utils/haptics';
 import { useHapticShake } from './hooks/useHapticShake';
+import { AiAssistant } from './components/AiAssistant';
+import { Sparkles as SparklesIcon } from 'lucide-react';
 
 // --- 常數設定 ---
 const PRESET_AVATARS = [
@@ -64,7 +66,7 @@ const NavIcon = ({ icon, label, id, active, onClick, color }: any) => {
 // 🚀 唯一的主要 App 元件 (完美合併版)
 // ==========================================
 const App: React.FC = () => {
-  const { trips, currentTripId, switchTrip, activeTab, setActiveTab, updateTripData } = useTripStore();
+  const { trips, currentTripId, switchTrip, activeTab, setActiveTab, updateTripData, isAiModalOpen, openAiAssistant } = useTripStore();
 
   // 狀態管理
   const [menuOpen, setMenuOpen] = useState(false);
@@ -253,7 +255,6 @@ const App: React.FC = () => {
             <div className={activeTab === 'expense' ? 'block' : 'hidden'}><Expense /></div>
             <div className={activeTab === 'food' ? 'block' : 'hidden'}><Journal /></div>
             <div className={activeTab === 'shop' ? 'block' : 'hidden'}><Shopping /></div>
-            <div className={activeTab === 'packing' ? 'block' : 'hidden'}><PackingList /></div>
             <div className={activeTab === 'info' ? 'block' : 'hidden'}><Info /></div>
           </motion.div>
         </AnimatePresence>
@@ -265,7 +266,6 @@ const App: React.FC = () => {
         <NavIcon icon={<Wallet />} label="記帳" id="expense" active={activeTab} onClick={handleTabChange} color="text-splat-yellow" />
         <NavIcon icon={<Utensils />} label="美食" id="food" active={activeTab} onClick={handleTabChange} color="text-splat-orange" />
         <NavIcon icon={<ShoppingBag />} label="購物" id="shop" active={activeTab} onClick={handleTabChange} color="text-splat-green" />
-        <NavIcon icon={<Luggage />} label="打包" id="packing" active={activeTab} onClick={handleTabChange} color="text-splat-purple" />
         <NavIcon icon={<InfoIcon />} label="資訊" id="info" active={activeTab} onClick={handleTabChange} color="text-splat-dark" />
       </nav>
 
@@ -331,6 +331,17 @@ const App: React.FC = () => {
         />
       )}
       <MagicImport />
+      <AiAssistant />
+
+      <motion.button
+        whileHover={{ scale: 1.1, rotate: 5 }}
+        whileTap={{ scale: 0.9, rotate: -5 }}
+        onClick={() => openAiAssistant()}
+        className="fixed right-6 bottom-32 w-14 h-14 bg-splat-blue text-white rounded-2xl border-[4px] border-splat-dark shadow-splat-solid z-[60] flex items-center justify-center transition-transform"
+      >
+        <SparklesIcon size={28} strokeWidth={2.5} />
+        {/* Badge or indicator if needed */}
+      </motion.button>
     </div>
   );
 };

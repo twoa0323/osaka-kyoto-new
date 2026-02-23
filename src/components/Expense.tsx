@@ -209,8 +209,6 @@ export const Expense = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [isUploadingImg, setIsUploadingImg] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
-  const [aiInsight, setAiInsight] = useState<{ summary: string, tips: string[], alertLevel: 'safe' | 'warning' | 'critical' } | null>(null);
-  const [isAiInsightLoading, setIsAiInsightLoading] = useState(false);
   const [showExplodeModal, setShowExplodeModal] = useState(false);
 
   const aiInputRef = useRef<HTMLInputElement>(null);
@@ -318,38 +316,8 @@ export const Expense = () => {
   };
 
   const handleAIAnalyze = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setIsProcessing(true);
-    try {
-      const b64 = await compressImage(file);
-      const res = await fetch('/api/ai', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'analyze-receipt',
-          payload: { imageBase64: b64.split(',')[1] }
-        })
-      });
-      const data = await res.json();
-      const url = await uploadImage(file);
-      const items = data.items || [];
-
-      setForm(prev => ({
-        ...prev, storeName: data.storeName, title: data.title, amount: data.amount,
-        date: data.date, category: data.category, method: data.paymentMethod,
-        currency: data.currency || prev.currency, items: items, images: [url]
-      }));
-
-      if (items.length > 0) {
-        setShowExplodeModal(true);
-        triggerHaptic('success');
-      } else {
-        alert("AI 辨識成功！請確認欄位 ✨");
-      }
-      setInputMode('manual');
-    } catch (err) { alert("AI 辨識失敗，請手動填寫 🥲"); }
-    finally { setIsProcessing(false); }
+    // 這裡的功能已遷移至全域 AiAssistant.tsx
+    // 保留此空函式或直接在 UI 移除調用
   };
 
   const handleExplodeItems = (selectedItemIndices: number[]) => {
@@ -400,37 +368,7 @@ export const Expense = () => {
   };
 
   const handleGetAiInsight = async () => {
-    if (expenses.length === 0) return alert("還沒有任何支出資訊唷！🤑");
-    setIsAiInsightLoading(true);
-    triggerHaptic('medium');
-
-    try {
-      const res = await fetch('/api/ai', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'get-expense-insight',
-          payload: {
-            expenses: expenses.map(e => ({ title: e.title, amount: e.amount, currency: e.currency, category: e.category })),
-            budget: budget,
-            totalSpent: totalTwd,
-            rate: exchangeRate
-          }
-        })
-      });
-      const data = await res.json();
-      if (data && !data.error) {
-        setAiInsight(data);
-        triggerHaptic('success');
-      } else {
-        throw new Error(data.error || "Insight failure");
-      }
-    } catch (err) {
-      console.error(err);
-      alert("AI 離線中或解析失敗，請稍後再試。");
-    } finally {
-      setIsAiInsightLoading(false);
-    }
+    // 這裡的功能已遷移至全域 AiAssistant.tsx
   };
 
   return (
@@ -627,32 +565,16 @@ export const Expense = () => {
                     AI Intelligence 🔮
                   </h3>
                   <button
-                    onClick={handleGetAiInsight}
-                    disabled={isAiInsightLoading}
-                    className={`px-4 py-2 rounded-xl border-[3px] border-splat-dark font-black text-[9px] uppercase tracking-widest flex items-center gap-2 transition-all shadow-splat-solid-sm active:translate-y-0.5 active:shadow-none ${isAiInsightLoading ? 'bg-gray-100 text-gray-400' : 'bg-splat-yellow text-splat-dark'}`}
+                    onClick={() => useTripStore.getState().openAiAssistant('expense')}
+                    className={`px-4 py-2 rounded-xl border-[3px] border-splat-dark font-black text-[9px] uppercase tracking-widest flex items-center gap-2 transition-all shadow-splat-solid-sm active:translate-y-0.5 active:shadow-none bg-splat-yellow text-splat-dark`}
                   >
-                    {isAiInsightLoading ? <Loader2 className="animate-spin" size={12} /> : <Sparkles size={12} />}
-                    {isAiInsightLoading ? 'Analysing...' : 'Smart Advice'}
+                    <Sparkles size={12} />
+                    Smart Advice
                   </button>
                 </div>
 
                 <AnimatePresence>
-                  {aiInsight && (
-                    <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} className="bg-white border-[3px] border-splat-dark rounded-[24px] overflow-hidden shadow-splat-solid-sm">
-                      <div className={`h-2 w-full ${aiInsight.alertLevel === 'critical' ? 'bg-splat-pink' : aiInsight.alertLevel === 'warning' ? 'bg-splat-orange' : 'bg-splat-green'}`} />
-                      <div className="p-5 space-y-4 text-left">
-                        <p className="font-black text-sm text-splat-dark leading-snug">{aiInsight.summary}</p>
-                        <div className="space-y-2">
-                          {aiInsight.tips.map((tip, idx) => (
-                            <div key={idx} className="flex gap-2 items-start bg-gray-50 p-2 rounded-lg border border-gray-100">
-                              <Sparkles size={12} className="shrink-0 text-splat-yellow mt-0.5" />
-                              <p className="text-[11px] font-bold text-gray-600 leading-snug">{tip}</p>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    </motion.div>
-                  )}
+                  {/* AI Insight content will be shown in the global AI Assistant */}
                 </AnimatePresence>
               </div>
             </div>
@@ -672,13 +594,13 @@ export const Expense = () => {
 
           {(inputMode === 'scan' || inputMode === 'import') && (
             <div className="border-[3px] border-dashed border-splat-dark rounded-[24px] p-10 text-center space-y-4 bg-gray-50 relative">
-              {isProcessing ? (
-                <div className="flex flex-col items-center justify-center z-50 py-4 text-splat-blue">
-                  <Loader2 className="animate-spin mb-2" size={40} strokeWidth={3} />
-                  <span className="text-sm font-black animate-pulse tracking-widest uppercase">AI ANALYZING...</span>
-                </div>
-              ) : <><p className="text-splat-dark font-black text-[10px] uppercase tracking-widest bg-white inline-block px-3 py-1 border-2 border-splat-dark rounded-md -rotate-1 mb-2">Receipt Processor</p><button onClick={() => aiInputRef.current?.click()} className="btn-splat w-full py-4 bg-splat-yellow text-splat-dark uppercase text-sm">Select receipt ➔</button>
-                <input ref={aiInputRef} type="file" accept="image/*" capture={inputMode === 'scan' ? "environment" : undefined} className="hidden" onChange={handleAIAnalyze} /></>}
+              <p className="text-splat-dark font-black text-[10px] uppercase tracking-widest bg-white inline-block px-3 py-1 border-2 border-splat-dark rounded-md -rotate-1 mb-2">Receipt Processor</p>
+              <button
+                onClick={() => useTripStore.getState().openAiAssistant('expense')}
+                className="btn-splat w-full py-4 bg-splat-yellow text-splat-dark uppercase text-sm"
+              >
+                Open AI Scanner ✨
+              </button>
             </div>
           )}
 

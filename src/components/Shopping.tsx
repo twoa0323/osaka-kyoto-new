@@ -71,39 +71,8 @@ export const Shopping = () => {
   };
 
   const handleAiPriceCheck = async (item: ShoppingItem) => {
-    if (!item.title) return;
-    updateShoppingItem(trip.id, item.id, { aiPriceInfo: { ...item.aiPriceInfo, advice: '研究中...', lastChecked: Date.now(), currentMarketPrice: 0 } });
-
-    try {
-      const res = await fetch('/api/ai', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'research-product-price',
-          payload: {
-            title: item.title,
-            category: item.category,
-            currency: item.currency
-          }
-        })
-      });
-      const data = await res.json();
-      if (data && !data.error) {
-        // 判斷是否為超值價格 (低於用戶目標價，或 AI 認定為 Good Deal)
-        const isBetterDeal = item.targetPrice && data.currentMarketPrice <= item.targetPrice;
-        updateShoppingItem(trip.id, item.id, {
-          aiPriceInfo: {
-            ...data,
-            lastChecked: Date.now(),
-            lowPriceAlert: isBetterDeal || data.isGoodDeal
-          }
-        });
-        if (isBetterDeal) triggerHaptic('success');
-      }
-    } catch (err) {
-      console.error(err);
-      updateShoppingItem(trip.id, item.id, { aiPriceInfo: undefined });
-    }
+    // 這裡的功能已遷移至全域 AiAssistant.tsx
+    useTripStore.getState().openAiAssistant('shopping');
   };
 
   return (
@@ -241,7 +210,6 @@ export const Shopping = () => {
 // --- 清單項目組件 (核心刷子特效) ---
 const ShoppingRow = ({ item, onToggle, onPriceCheck, onDelete }: { item: ShoppingItem, onToggle: () => void, onPriceCheck: () => void, onDelete: () => void }) => {
   const cat = CATEGORIES[item.category as keyof typeof CATEGORIES] || CATEGORIES.general;
-  const isResearching = item.aiPriceInfo?.advice === '研究中...';
 
   return (
     <motion.div
@@ -326,11 +294,10 @@ const ShoppingRow = ({ item, onToggle, onPriceCheck, onDelete }: { item: Shoppin
       {!item.isBought && (
         <motion.button
           whileTap={{ scale: 0.9, rotate: 10 }}
-          disabled={isResearching}
           onClick={(e) => { e.stopPropagation(); onPriceCheck(); }}
-          className={`w-10 h-10 rounded-xl border-[2.5px] border-splat-dark shadow-splat-solid-sm flex items-center justify-center transition-all ${isResearching ? 'bg-gray-100' : 'bg-splat-yellow'}`}
+          className={`w-10 h-10 rounded-xl border-[2.5px] border-splat-dark shadow-splat-solid-sm flex items-center justify-center transition-all bg-splat-yellow`}
         >
-          {isResearching ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={18} strokeWidth={3} />}
+          <Sparkles size={18} strokeWidth={3} />
         </motion.button>
       )}
 

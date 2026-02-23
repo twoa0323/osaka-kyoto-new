@@ -4,7 +4,7 @@ import { format, addDays, differenceInDays, parseISO, isValid, isSameDay } from 
 import { MapPin, Plus, Edit3, Trash2, Utensils, Plane, Home, Camera, Sparkles, X, Loader2, Wind, Umbrella, Sunrise, ChevronUp, ChevronDown, Clock, Cloud, CloudRain, Sun, Droplets, AlertTriangle, Wand2, Check, WifiOff, Star, Map as MapIcon } from 'lucide-react';
 import { ScheduleEditor } from './ScheduleEditor';
 import { ScheduleItem, Trip } from '../types';
-import { WeatherReportModal, AiAssistantModal } from './ScheduleModals';
+import { WeatherReportModal } from './ScheduleModals';
 import { motion, AnimatePresence, Reorder } from 'framer-motion';
 import { LazyImage } from './LazyImage';
 import { useNetworkStatus } from '../hooks/useNetworkStatus';
@@ -163,7 +163,7 @@ const ScheduleMapView: React.FC<{ items: ScheduleItem[], trip?: Trip }> = ({ ite
 export const Schedule: React.FC<{ externalDateIdx?: number }> = ({ externalDateIdx = 0 }) => {
   const {
     trips, currentTripId, deleteScheduleItem, addScheduleItem, reorderScheduleItems, updateScheduleItem,
-    addBookingItem, addJournalItem, addShoppingItem, addInfoItem
+    addBookingItem, addJournalItem, addShoppingItem, addInfoItem, openAiAssistant
   } = useTripStore();
   const trip = trips.find(t => t.id === currentTripId);
   const isOnline = useNetworkStatus();
@@ -174,13 +174,10 @@ export const Schedule: React.FC<{ externalDateIdx?: number }> = ({ externalDateI
 
   const [weatherCache, setWeatherCache] = useState<Record<string, any>>({});
   const [showFullWeather, setShowFullWeather] = useState(false);
-  const [isAiOpen, setIsAiOpen] = useState(false);
   const [isAiLoading, setIsAiLoading] = useState(false);
 
   const [gapAiLoading, setGapAiLoading] = useState<string | null>(null);
   const [transportAiLoading, setTransportAiLoading] = useState<string | null>(null);
-  const [dailyBriefing, setDailyBriefing] = useState<string>("");
-  const [isBriefingLoading, setIsBriefingLoading] = useState(false);
 
   // 📍 Phase 5: 天氣巫師狀態
   const [isWizardLoading, setIsWizardLoading] = useState(false);
@@ -320,32 +317,6 @@ export const Schedule: React.FC<{ externalDateIdx?: number }> = ({ externalDateI
       }
     }
   }
-
-  // 📍 智慧戰報生成邏輯
-  const fetchBriefing = async () => {
-    if (dayItems.length === 0 || !isOnline) return;
-    setIsBriefingLoading(true);
-    try {
-      const res = await fetch('/api/ai', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'suggest-briefing',
-          payload: {
-            text: `你是一個旅遊導師。地點:${todayWeather.cityName}，天氣:${weatherInfo.t}。當天行程: ${dayItems.map(i => i.title).join(', ')}。請給予一段 40 字內幽默的斯普拉遁風格建議，必須包含一個🦑 Emoji。`,
-            isBriefing: true
-          }
-        })
-      });
-      const data = await res.json();
-      setDailyBriefing(data.text || "");
-    } catch (e) { console.error(e); }
-    finally { setIsBriefingLoading(false); }
-  };
-
-  useEffect(() => {
-    fetchBriefing();
-  }, [selectedDateStr, dayItems.length, isOnline]);
 
   const timeToMins = (t: string) => {
     if (!t) return 0;
@@ -674,9 +645,7 @@ export const Schedule: React.FC<{ externalDateIdx?: number }> = ({ externalDateI
               <div className="text-3xl font-black flex items-center gap-2 drop-shadow-sm">
                 {weatherInfo.t} <span className="text-4xl">{weatherInfo.e}</span>
               </div>
-              <div className="bg-black/20 backdrop-blur-md rounded-xl p-2.5 mt-2 border border-white/10 min-h-[70px] flex items-center w-full max-w-[180px]">
-                {isBriefingLoading ? <Loader2 size={16} className="animate-spin opacity-50 mx-auto" /> : <p className="text-[10px] font-bold leading-relaxed text-blue-50">{dailyBriefing || "戰況不明，快去塗地吧！🦑"}</p>}
-              </div>
+              <div className="mt-2" />
             </div>
             <div className="text-right mt-1 z-10">
               <div className="text-5xl font-black drop-shadow-md">{currentTempStr}°</div>
@@ -706,7 +675,7 @@ export const Schedule: React.FC<{ externalDateIdx?: number }> = ({ externalDateI
             </motion.button>
             <motion.button whileTap={{ scale: 0.9 }} onClick={() => { setEditingItem(undefined); setIsEditorOpen(true) }} className="w-9 h-9 rounded-xl bg-splat-green text-white flex items-center justify-center border-2 border-splat-dark shadow-splat-solid-sm"><Plus strokeWidth={3} /></motion.button>
             <motion.button whileTap={{ scale: 0.9 }} onClick={() => setIsEditMode(!isEditMode)} className={`w-9 h-9 rounded-xl flex items-center justify-center border-2 border-splat-dark ${isEditMode ? 'bg-splat-pink text-white' : 'bg-white text-splat-dark shadow-splat-solid-sm'}`}><Edit3 size={18} strokeWidth={3} /></motion.button>
-            <motion.button whileTap={{ scale: 0.9 }} onClick={() => setIsAiOpen(true)} className="w-9 h-9 rounded-xl bg-splat-blue text-white flex items-center justify-center border-2 border-splat-dark shadow-splat-solid-sm"><Sparkles size={18} strokeWidth={3} /></motion.button>
+            <motion.button whileTap={{ scale: 0.9 }} onClick={() => openAiAssistant('schedule')} className="w-9 h-9 rounded-xl bg-splat-blue text-white flex items-center justify-center border-2 border-splat-dark shadow-splat-solid-sm"><Sparkles size={18} strokeWidth={3} /></motion.button>
           </div>
         </div>
 

@@ -78,12 +78,15 @@ interface TripState {
   currentTripId: string | null;
   activeTab: string;
   exchangeRate: number;
-
+  isAiModalOpen: boolean;
+  aiContext: string;
 
   // 全域狀態設定
   setTrips: (trips: Trip[]) => void;
   setActiveTab: (tab: string) => void;
   setExchangeRate: (rate: number) => void;
+  setAiModalOpen: (open: boolean) => void;
+  openAiAssistant: (context?: string) => void;
 
   // 行程 (Trip) 操作
   addTrip: (trip: Trip) => void;
@@ -145,6 +148,8 @@ export const useTripStore = create<TripState>()(
       currentTripId: null,
       activeTab: 'schedule',
       exchangeRate: 1,
+      isAiModalOpen: false,
+      aiContext: 'schedule',
 
       uiSettings: {
         showSplash: true,
@@ -158,6 +163,8 @@ export const useTripStore = create<TripState>()(
       setTrips: (trips) => set({ trips }),
       setActiveTab: (tab) => set({ activeTab: tab }),
       setExchangeRate: (rate) => set({ exchangeRate: rate }),
+      setAiModalOpen: (open) => set({ isAiModalOpen: open }),
+      openAiAssistant: (context) => set({ isAiModalOpen: true, aiContext: context || get().activeTab }),
 
       addTrip: (trip) => {
         const newTrip = { ...trip, creatorId: auth.currentUser?.uid || 'unknown' };
