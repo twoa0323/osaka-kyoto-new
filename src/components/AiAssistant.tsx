@@ -15,31 +15,63 @@ export const AiAssistant: React.FC = () => {
 
     const [loadingAction, setLoadingAction] = useState<string | null>(null);
     const [aiText, setAiText] = useState('');
+    const [aiImages, setAiImages] = useState<string[]>([]);
+    const [isUploadingImage, setIsUploadingImage] = useState(false);
     const aiInputRef = useRef<HTMLInputElement>(null);
 
     if (!isAiModalOpen || !trip) return null;
 
     // --- AI 動作實作 ---
 
-    // 1. 行程解析
+    // 1. 行程/多元解析
     const handleAnalyzeTrip = async () => {
-        if (!aiText.trim()) return;
+        if (!aiText.trim() && aiImages.length === 0) return;
         setLoadingAction('analyze');
         try {
+            const payload: any = { text: aiText };
+            if (aiImages.length > 0) payload.images = aiImages.map(img => img.split(',')[1]); // 提取 base64
+
             const res = await fetch('/api/ai', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ action: 'universal-magic-import', payload: { text: aiText } })
+                body: JSON.stringify({ action: 'universal-magic-import', payload })
             });
             const data = await res.json();
+
+            let hasImported = false;
             if (data.schedules) {
                 data.schedules.forEach((s: any) => addScheduleItem(trip.id, { ...s, id: Date.now().toString() + Math.random() }));
+                hasImported = true;
+            }
+            if (data.expenses) {
+                data.expenses.forEach((e: any) => addExpenseItem(trip.id, { ...e, id: Date.now().toString() + Math.random() }));
+                hasImported = true;
+            }
+            if (data.shopping) {
+                // ... 也可以將購物清單匯入
+            }
+
+            if (hasImported) {
                 triggerHaptic('success');
                 setAiModalOpen(false);
                 setAiText('');
+                setAiImages([]);
+            } else {
+                alert("未解析到任何有效行程或支出 🥲");
             }
         } catch (e) { alert("解析失敗 🥲"); }
         finally { setLoadingAction(null); }
+    };
+
+    const handleAiImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        setIsUploadingImage(true);
+        try {
+            const b64 = await compressImage(file);
+            setAiImages(prev => [...prev, b64]);
+        } catch (err) { alert("圖片載入失敗"); }
+        finally { setIsUploadingImage(false); }
     };
 
     // 2. 路線優化 (簡化版邏輯，呼叫 API)
@@ -229,17 +261,38 @@ export const AiAssistant: React.FC = () => {
                         {currentContext === 'schedule' && (
                             <motion.div key="sched" initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -10 }} className="space-y-4">
                                 <div className="bg-gray-50 border-[3px] border-splat-dark rounded-2xl p-4">
-                                    <p className="text-[10px] font-black text-gray-400 uppercase mb-3 tracking-widest pl-1">Magic Import 行程導入</p>
+                                    <div className="flex justify-between items-center mb-3 pr-1">
+                                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest pl-1">Magic Import 多模態導入</p>
+                                        <label className="flex items-center gap-1 text-[10px] font-black text-splat-blue cursor-pointer bg-splat-blue/10 px-2 py-1 rounded-lg hover:bg-splat-blue/20 transition-colors">
+                                            {isUploadingImage ? <Loader2 size={12} className="animate-spin" /> : <Camera size={12} strokeWidth={3} />}
+                                            <span>附加截圖</span>
+                                            <input type="file" accept="image/*" className="hidden" onChange={handleAiImageUpload} />
+                                        </label>
+                                    </div>
+
+                                    {aiImages.length > 0 && (
+                                        <div className="flex gap-2 mb-3 overflow-x-auto hide-scrollbar">
+                                            {aiImages.map((img, idx) => (
+                                                <div key={idx} className="relative w-16 h-16 shrink-0 rounded-xl border-2 border-splat-dark overflow-hidden shadow-sm">
+                                                    <img src={img} alt="preview" className="w-full h-full object-cover" />
+                                                    <button onClick={() => setAiImages(prev => prev.filter((_, i) => i !== idx))} className="absolute top-0 right-0 bg-white/80 p-0.5 backdrop-blur-sm rounded-bl-lg">
+                                                        <X size={12} strokeWidth={3} className="text-splat-dark" />
+                                                    </button>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+
                                     <textarea
-                                        placeholder="貼上你的行程備忘錄（例如：10:00 抵達關西機場...）"
-                                        className="w-full h-28 bg-white border-[2px] border-gray-300 rounded-xl p-3 font-bold text-splat-dark outline-none focus:border-splat-blue resize-none shadow-inner text-sm"
+                                        placeholder={aiImages.length > 0 ? "請描述圖片內容或附加更多行程細節..." : "貼上你的行程備忘錄或上傳飯店截圖..."}
+                                        className="w-full h-24 bg-white border-[2px] border-gray-300 rounded-xl p-3 font-bold text-splat-dark outline-none focus:border-splat-blue resize-none shadow-inner text-sm"
                                         value={aiText}
                                         onChange={e => setAiText(e.target.value)}
                                     />
                                     <button
                                         onClick={handleAnalyzeTrip}
-                                        disabled={loadingAction === 'analyze' || !aiText.trim()}
-                                        className="btn-splat w-full py-3 mt-3 bg-splat-yellow text-splat-dark text-sm flex items-center justify-center gap-2"
+                                        disabled={loadingAction === 'analyze' || (!aiText.trim() && aiImages.length === 0)}
+                                        className="btn-splat w-full py-3 mt-3 bg-splat-yellow text-splat-dark text-sm flex items-center justify-center gap-2 disabled:opacity-50 disabled:active:translate-y-0"
                                     >
                                         {loadingAction === 'analyze' ? <Loader2 className="animate-spin" size={18} /> : "開始魔法解析 ➔"}
                                     </button>

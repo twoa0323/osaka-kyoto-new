@@ -127,6 +127,8 @@ export interface ShoppingItem extends SyncMetadata {
     advice: string;
     lowPriceAlert?: boolean;
   };
+  location?: string;      // 👈 新增：購買地點 (例如：心齋橋)
+  storeName?: string;     // 👈 新增：店家名稱 (例如：Bic Camera)
 }
 
 // --- 6. 旅遊資訊 (Info) 項目 ---

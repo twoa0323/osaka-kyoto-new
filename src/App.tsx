@@ -65,7 +65,7 @@ const NavIcon = ({ icon, label, id, active, onClick, color }: any) => {
 // 🚀 唯一的主要 App 元件 (完美合併版)
 // ==========================================
 const App: React.FC = () => {
-  const { trips, currentTripId, switchTrip, activeTab, setActiveTab, updateTripData, isAiModalOpen, openAiAssistant } = useTripStore();
+  const { trips, currentTripId, switchTrip, activeTab, setActiveTab, updateTripData, isAiModalOpen, openAiAssistant, uiSettings, setUISettings } = useTripStore();
 
   // 狀態管理
   const [menuOpen, setMenuOpen] = useState(false);
@@ -84,8 +84,7 @@ const App: React.FC = () => {
   const [isSplatting, setIsSplatting] = useState(false);
   const [splatColor, setSplatColor] = useState('#FFC000');
 
-  // 使用本地 state 管理 UI 設定，避免 useTripStore 尚未定義報測 (實際上這裡用 tripStore 的 UI 設定也可以，但此處維持原樣)
-  const [uiSettings, setUISettingsLocal] = useState({ showSplash: true, enableHaptics: true, showBudgetAlert: false });
+  // 移除本地 state，改用 Zustand uiSettings
   useHapticShake();
 
   useFirebaseSync();
@@ -160,16 +159,7 @@ const App: React.FC = () => {
                 </div>
               </div>
 
-              {/* ▼ 隱藏版 AI 魔法按鈕 ▼ */}
-              <motion.button
-                whileHover={{ scale: 1.1 }}
-                whileTap={{ scale: 0.9 }}
-                onClick={() => openAiAssistant()}
-                className="absolute right-16 top-0 w-8 h-8 rounded-full bg-black/5 flex items-center justify-center border-none text-black/20 hover:text-splat-blue transition-colors z-[120]"
-              >
-                <SparklesIcon size={16} strokeWidth={3} />
-              </motion.button>
-              {/* ▲ 隱藏版 AI 魔法按鈕 ▲ */}
+              {/* ▲ 隱藏版 AI 魔法按鈕 (已移動至底部導覽列) ▲ */}
 
               {menuOpen && (
                 <motion.div
@@ -276,6 +266,17 @@ const App: React.FC = () => {
         <NavIcon icon={<Utensils />} label="美食" id="food" active={activeTab} onClick={handleTabChange} color="text-splat-orange" />
         <NavIcon icon={<ShoppingBag />} label="購物" id="shop" active={activeTab} onClick={handleTabChange} color="text-splat-green" />
         <NavIcon icon={<InfoIcon />} label="資訊" id="info" active={activeTab} onClick={handleTabChange} color="text-splat-dark" />
+        <div className="w-[2px] h-8 bg-gray-200 mx-1 rounded-full" />
+        <motion.button
+          whileTap={{ scale: 0.9 }}
+          onClick={() => openAiAssistant()}
+          className="flex flex-col items-center justify-center min-w-[48px] px-1 text-splat-yellow relative group"
+        >
+          <div className="p-2 bg-splat-dark text-splat-yellow rounded-xl border-[3px] border-splat-dark group-hover:-translate-y-1 transition-transform shadow-sm">
+            <SparklesIcon size={20} strokeWidth={3} />
+          </div>
+          <span className="text-[9px] font-black uppercase mt-1">AI 助手</span>
+        </motion.button>
       </nav>
 
       {lockedTripId && (
@@ -308,10 +309,25 @@ const App: React.FC = () => {
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowSettings(false)} className="absolute inset-0 bg-splat-dark/80 backdrop-blur-sm" />
             <motion.div initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.9, y: 20 }} className="bg-white w-full max-w-sm rounded-[32px] border-[4px] border-splat-dark shadow-splat-solid p-8 relative z-10">
               <h2 className="text-2xl font-black italic uppercase mb-8 flex items-center gap-2"><SettingsIcon /> UI SETTINGS</h2>
-              <div className="space-y-6">
-                <SettingToggle label="潑墨轉場特效" desc="切換分頁時的噴漆動畫" enabled={uiSettings.showSplash} onChange={(v: boolean) => setUISettingsLocal(prev => ({ ...prev, showSplash: v }))} />
-                <SettingToggle label="觸覺回饋 (Haptic)" desc="按鈕點擊時的輕微震動" enabled={uiSettings.enableHaptics} onChange={(v: boolean) => setUISettingsLocal(prev => ({ ...prev, enableHaptics: v }))} />
-                <SettingToggle label="智慧預算警報" desc="支出超過預算 80% 時顯示提示" enabled={uiSettings.showBudgetAlert} onChange={(v: boolean) => setUISettingsLocal(prev => ({ ...prev, showBudgetAlert: v }))} />
+              <SettingToggle label="潑墨轉場特效" desc="切換分頁時的噴漆動畫" enabled={uiSettings.showSplash} onChange={(v: boolean) => setUISettings({ showSplash: v })} />
+              <SettingToggle label="觸覺回饋 (Haptic)" desc="按鈕點擊時的輕微震動" enabled={uiSettings.enableHaptics} onChange={(v: boolean) => setUISettings({ enableHaptics: v })} />
+              <SettingToggle label="智慧預算警報" desc="支出超過預算 80% 時顯示提示" enabled={uiSettings.showBudgetAlert} onChange={(v: boolean) => setUISettings({ showBudgetAlert: v })} />
+
+              <div className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl border-2 border-dashed border-gray-300">
+                <div className="flex-1 pr-4">
+                  <h4 className="font-black text-splat-dark text-sm uppercase">Base Currency 預設幣別</h4>
+                  <p className="text-[10px] font-bold text-gray-400 mt-1">影響全域匯率轉換基礎</p>
+                </div>
+                <select
+                  value={currentTrip.baseCurrency || 'JPY'}
+                  onChange={e => updateTripData(currentTrip.id, { baseCurrency: e.target.value as any })}
+                  className="p-2 border-[3px] border-splat-dark bg-white rounded-xl font-black outline-none"
+                >
+                  <option value="JPY">JPY ¥</option>
+                  <option value="TWD">TWD $</option>
+                  <option value="USD">USD $</option>
+                  <option value="KRW">KRW ₩</option>
+                </select>
               </div>
               <button onClick={() => setShowSettings(false)} className="btn-splat w-full py-4 mt-10 bg-splat-dark text-white uppercase">Confirm ➔</button>
             </motion.div>

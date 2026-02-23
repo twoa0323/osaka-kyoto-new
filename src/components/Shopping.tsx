@@ -23,10 +23,11 @@ export const Shopping = () => {
   const trip = trips.find(t => t.id === currentTripId);
 
   const [isAdding, setIsAdding] = useState(false);
+  const [editingItemId, setEditingItemId] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [form, setForm] = useState<Partial<ShoppingItem>>({
     title: '', price: 0, targetPrice: 0, currency: trip?.baseCurrency || 'JPY',
-    isBought: false, images: [], category: 'general', note: ''
+    isBought: false, images: [], category: 'general', note: '', location: '', storeName: ''
   });
 
   if (!trip) return null;
@@ -54,20 +55,39 @@ export const Shopping = () => {
 
   const handleSave = () => {
     if (!form.title) return alert("要買什麼呢？別空手而回唷！🎒");
-    const newItem: ShoppingItem = {
-      id: Date.now().toString(),
-      title: form.title!,
-      price: Number(form.price) || 0,
-      targetPrice: Number(form.targetPrice) || 0,
-      currency: form.currency as any,
-      isBought: false,
-      images: form.images || [],
-      category: form.category as any,
-      note: form.note || ''
-    };
-    addShoppingItem(trip.id, newItem);
+    if (editingItemId) {
+      updateShoppingItem(trip.id, editingItemId, form);
+    } else {
+      const newItem: ShoppingItem = {
+        id: Date.now().toString(),
+        title: form.title!,
+        price: Number(form.price) || 0,
+        targetPrice: Number(form.targetPrice) || 0,
+        currency: form.currency as any,
+        isBought: false,
+        images: form.images || [],
+        category: form.category as any,
+        note: form.note || '',
+        location: form.location || '',
+        storeName: form.storeName || ''
+      };
+      addShoppingItem(trip.id, newItem);
+    }
+
     setIsAdding(false);
-    setForm({ title: '', price: 0, targetPrice: 0, currency: trip.baseCurrency, isBought: false, images: [], category: 'general' });
+    setEditingItemId(null);
+    setForm({ title: '', price: 0, targetPrice: 0, currency: trip.baseCurrency, isBought: false, images: [], category: 'general', note: '', location: '', storeName: '' });
+  };
+
+  const openEditor = (item?: ShoppingItem) => {
+    if (item) {
+      setForm({ ...item });
+      setEditingItemId(item.id);
+    } else {
+      setForm({ title: '', price: 0, targetPrice: 0, currency: trip.baseCurrency, isBought: false, images: [], category: 'general', note: '', location: '', storeName: '' });
+      setEditingItemId(null);
+    }
+    setIsAdding(true);
   };
 
   const handleAiPriceCheck = async (item: ShoppingItem) => {
@@ -105,7 +125,7 @@ export const Shopping = () => {
         </h3>
         <motion.button
           whileTap={{ scale: 0.9 }}
-          onClick={() => setIsAdding(true)}
+          onClick={() => openEditor()}
           className="btn-splat bg-splat-green text-white px-4 py-2 flex items-center gap-2 text-sm"
         >
           <Plus size={18} strokeWidth={4} /> 新增
@@ -128,6 +148,7 @@ export const Shopping = () => {
                   toggleShoppingItem(trip.id, item.id);
                   if (!item.isBought && navigator.vibrate) navigator.vibrate(20);
                 }}
+                onClick={() => openEditor(item)}
                 onPriceCheck={() => handleAiPriceCheck(item)}
                 onDelete={() => { if (confirm('確定刪除？')) deleteShoppingItem(trip.id, item.id); }}
               />
@@ -151,8 +172,13 @@ export const Shopping = () => {
               className="bg-white w-full max-w-md rounded-t-[40px] sm:rounded-[40px] border-[4px] border-splat-dark p-8 relative z-10 max-h-[90vh] overflow-y-auto shadow-2xl"
             >
               <div className="flex justify-between items-center mb-8">
-                <h2 className="text-2xl font-black italic uppercase tracking-tighter">Add to list</h2>
-                <button onClick={() => setIsAdding(false)} className="p-2 bg-gray-100 rounded-full border-2 border-splat-dark"><X size={20} strokeWidth={3} /></button>
+                <h2 className="text-2xl font-black italic uppercase tracking-tighter">{editingItemId ? 'Edit Item' : 'Add to list'}</h2>
+                <div className="flex items-center gap-2">
+                  {editingItemId && (
+                    <button onClick={() => { if (confirm('確定刪除這個項目？')) { deleteShoppingItem(trip.id, editingItemId); setIsAdding(false); setEditingItemId(null); } }} className="p-2 text-red-500 bg-red-50 rounded-full border-2 border-red-200"><Trash2 size={20} strokeWidth={3} /></button>
+                  )}
+                  <button onClick={() => setIsAdding(false)} className="p-2 bg-gray-100 rounded-full border-2 border-splat-dark"><X size={20} strokeWidth={3} /></button>
+                </div>
               </div>
 
               <div className="space-y-6">
@@ -167,8 +193,19 @@ export const Shopping = () => {
                     <input type="number" placeholder="0" value={form.price || ''} onChange={e => setForm({ ...form, price: Number(e.target.value) })} className="w-full p-4 bg-gray-50 border-[3px] border-splat-dark rounded-2xl font-black outline-none focus:bg-white" />
                   </div>
                   <div className="space-y-1">
-                    <label className="text-[10px] font-black text-splat-pink uppercase tracking-widest ml-1 animate-pulse">Target Price 🎯</label>
+                    <label className="text-[10px] font-black text-splat-pink uppercase tracking-widest ml-1">{form.targetPrice ? 'Target Price 🎯' : 'Target Price (Optional)'}</label>
                     <input type="number" placeholder="0" value={form.targetPrice || ''} onChange={e => setForm({ ...form, targetPrice: Number(e.target.value) })} className="w-full p-4 bg-splat-pink/5 border-[3px] border-splat-pink rounded-2xl font-black outline-none focus:bg-white text-splat-pink placeholder:text-splat-pink/30" />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Store Name (店家)</label>
+                    <input placeholder="例如：Bic Camera" value={form.storeName || ''} onChange={e => setForm({ ...form, storeName: e.target.value })} className="w-full p-4 bg-gray-50 border-[3px] border-splat-dark rounded-2xl font-black outline-none focus:bg-white text-sm" />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">Location (地區)</label>
+                    <input placeholder="例如：心齋橋" value={form.location || ''} onChange={e => setForm({ ...form, location: e.target.value })} className="w-full p-4 bg-gray-50 border-[3px] border-splat-dark rounded-2xl font-black outline-none focus:bg-white text-sm" />
                   </div>
                 </div>
 
@@ -208,7 +245,7 @@ export const Shopping = () => {
 };
 
 // --- 清單項目組件 (核心刷子特效) ---
-const ShoppingRow = ({ item, onToggle, onPriceCheck, onDelete }: { item: ShoppingItem, onToggle: () => void, onPriceCheck: () => void, onDelete: () => void }) => {
+const ShoppingRow = ({ item, onToggle, onClick, onPriceCheck, onDelete }: { item: ShoppingItem, onToggle: () => void, onClick: () => void, onPriceCheck: () => void, onDelete: () => void }) => {
   const cat = CATEGORIES[item.category as keyof typeof CATEGORIES] || CATEGORIES.general;
 
   return (
@@ -229,7 +266,7 @@ const ShoppingRow = ({ item, onToggle, onPriceCheck, onDelete }: { item: Shoppin
         {item.isBought && <Check size={24} strokeWidth={4} />}
       </motion.button>
 
-      <div className="flex-1 min-w-0 relative z-10 cursor-pointer" onClick={onToggle}>
+      <div className="flex-1 min-w-0 relative z-10 cursor-pointer" onClick={onClick}>
         <div className="flex items-center gap-2 mb-1">
           <span className={`text-[8px] font-black px-1.5 py-0.5 rounded-md border-2 border-splat-dark text-white ${cat.color} shadow-sm`}>
             {cat.label}
