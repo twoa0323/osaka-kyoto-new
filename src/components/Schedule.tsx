@@ -6,7 +6,7 @@ import { format, addDays, differenceInDays, parseISO, isValid, isSameDay } from 
 import { MapPin, Plus, Edit3, Trash2, Utensils, Plane, Home, Camera, Sparkles, X, Loader2, Wind, Umbrella, Sunrise, ChevronUp, ChevronDown, Clock, Cloud, CloudRain, Sun, Droplets, AlertTriangle, Wand2, Check, WifiOff, Star, Map as MapIcon } from 'lucide-react';
 import { ScheduleEditor } from './ScheduleEditor';
 import { ScheduleItem, Trip } from '../types';
-import { WeatherReportModal } from './ScheduleModals';
+import { WeatherReportModal, AiAssistantModal } from './ScheduleModals';
 import { motion, AnimatePresence, Reorder } from 'framer-motion';
 import { LazyImage } from './LazyImage';
 import { useNetworkStatus } from '../hooks/useNetworkStatus';
