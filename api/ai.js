@@ -314,7 +314,7 @@ export default async function handler(req, res) {
 
           let imageUrl = "";
 
-          if (searchInfo.isFamous) {
+          if (searchInfo.isFamous && searchInfo.wikiQuery) {
             // 2a. 嘗試從維基百科抓取 (先嘗試日文再嘗試英文)
             const wikiApis = [
               `https://ja.wikipedia.org/w/api.php?action=query&titles=${encodeURIComponent(searchInfo.wikiQuery)}&prop=pageimages&format=json&pithumbsize=1000&formatversion=2`,
@@ -331,13 +331,11 @@ export default async function handler(req, res) {
             }
           }
 
-          if (!imageUrl) {
-            // 2b. 退而求其次使用 Unsplash (使用遺留的 Source API 或關鍵字規則)
-            // 注意：Source Unsplash 是比較穩定的關鍵字跳轉方式
-            imageUrl = `https://images.unsplash.com/photo-1?q=80&w=1000&auto=format&fit=crop&sig=${Math.random()}&keywords=${encodeURIComponent(searchInfo.genericQuery)}`;
-            // 實際上 Unsplash Source API 已停用但可用此方式模擬一個漂亮占位圖或直接跳轉
-            // 這裡改用 Pixabay 或其他公開的動態關鍵字圖片源
-            imageUrl = `https://loremflickr.com/1080/720/${encodeURIComponent(searchInfo.genericQuery)}`;
+          if (!imageUrl && searchInfo.genericQuery) {
+            // 2b. 直接使用 Unsplash 的替代方案（例如 Pollinations AI 或 Unsplash Source）
+            // 注意：我們改用 Pollinations，確保不需 API Key 且保證回傳高品質圖片
+            const keyword = category === 'food' ? `delicious ${searchInfo.genericQuery} food` : `beautiful ${searchInfo.genericQuery} landscape japan`;
+            imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(keyword)}?width=800&height=600&nologo=true`;
           }
 
           return res.status(200).json({ imageUrl });

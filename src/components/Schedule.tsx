@@ -1,6 +1,5 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { useQueries } from '@tanstack/react-query';
-import { useCompletion } from '@ai-sdk/react';
 import { useTripStore } from '../store/useTripStore';
 import { format, addDays, differenceInDays, parseISO, isValid, isSameDay } from 'date-fns';
 import { MapPin, Plus, Edit3, Trash2, Utensils, Plane, Home, Camera, Sparkles, X, Loader2, Wind, Umbrella, Sunrise, ChevronUp, ChevronDown, Clock, Cloud, CloudRain, Sun, Droplets, AlertTriangle, Wand2, Check, WifiOff, Star, Map as MapIcon } from 'lucide-react';
@@ -552,42 +551,36 @@ export const Schedule: React.FC<{ externalDateIdx?: number }> = ({ externalDateI
   };
 
   const activeSpotIdRef = React.useRef<string | null>(null);
-
-  const { completion, complete, isLoading: isSpotAiStreaming, setCompletion } = useCompletion({
-    api: '/api/ai',
-    onFinish: (prompt, resultText) => {
-      const spotId = activeSpotIdRef.current;
-      if (trip && spotId) {
-        const item = dayItems.find(i => i.id === spotId);
-        if (item) {
-          const guide = { background: resultText, highlights: [], suggestedDuration: "" };
-          const updatedItem = { ...item, spotGuide: guide };
-          updateScheduleItem(trip.id, item.id, updatedItem);
-          setDetailItem(prev => prev?.id === spotId ? updatedItem : prev);
-        }
-      }
-      activeSpotIdRef.current = null;
-      setSpotAiLoading(null);
-    },
-    onError: () => {
-      alert("取得景點導覽失敗。");
-      activeSpotIdRef.current = null;
-      setSpotAiLoading(null);
-    }
-  });
+  const [completion, setCompletion] = useState<string>("");
 
   const handleFetchSpotGuide = async (item: ScheduleItem) => {
     if (!isOnline) return alert("請檢查網路連線");
     activeSpotIdRef.current = item.id;
     setSpotAiLoading(item.id);
     setCompletion("");
-    await complete("", {
-      body: {
-        action: 'get-spot-guide',
-        payload: { title: item.title, location: item.location }
-      }
-    });
-    triggerHaptic('success');
+    try {
+      const res = await fetch('/api/ai', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'get-spot-guide',
+          payload: { title: item.title, location: item.location }
+        })
+      });
+      const data = await res.json();
+      const resultText = data.text || "無法取得導覽資訊，可能該地點並無相關介紹。";
+      setCompletion(resultText);
+      const guide = { background: resultText, highlights: [], suggestedDuration: "" };
+      const updatedItem = { ...item, spotGuide: guide };
+      updateScheduleItem(trip.id, item.id, updatedItem);
+      setDetailItem(prev => prev?.id === item.id ? updatedItem : prev);
+      triggerHaptic('success');
+    } catch (err) {
+      alert("取得景點導覽失敗。");
+    } finally {
+      activeSpotIdRef.current = null;
+      setSpotAiLoading(null);
+    }
   };
 
   const [viewMode, setViewMode] = useState<'list' | 'map'>('list');
@@ -707,42 +700,70 @@ export const Schedule: React.FC<{ externalDateIdx?: number }> = ({ externalDateI
                       gapMins = currentStartTimeMins - prevEndTimeMins;
                       if (gapMins < 0) warningMsg = "時間重疊囉！⏳";
                       else if (gapMins > 0 && gapMins < 30 && prevItem.location !== item.location) warningMsg = "行程有點趕！🏃";
-                    }
+                      // 加入自動取圖邏輯
+                      useEffect(() => {
+                        if (!item.images || item.images.length === 0) {
+                          // 避免重複請求，可以使用一個局部的 loading 狀態，或是交由 store 處理
+                          // 這裡使用簡單的一次性 fetch
+                          const fetchImage = async () => {
+                            try {
+                              const res = await fetch('/api/ai', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                  action: 'get-image-for-item',
+                                  payload: { title: item.title, location: item.location, category: item.category }
+                                })
+                              });
+                              const data = await res.json();
+                              if (data.imageUrl) {
+                                updateScheduleItem(trip.id, item.id, { ...item, images: [data.imageUrl] });
+                              }
+                            } catch (err) {
+                              console.error("Failed to fetch image for item:", item.title);
+                            }
+                          };
 
-                    return (
-                      <Reorder.Item key={item.id} value={item} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, scale: 0.9 }} dragListener={isEditMode} className="relative pl-6">
-                        <div className={`absolute left-[7px] top-6 bottom-[-24px] w-1 border-r-[3px] border-dashed border-splat-dark opacity-20 ${idx === dayItems.length - 1 ? 'hidden' : ''}`} />
-                        <div className={`absolute left-0 top-[18px] w-4 h-4 rounded-full border-[3px] border-splat-dark z-10 ${catStyle.bg}`} />
-                        <div className="flex gap-3 mb-6 relative group">
-                          <div className="w-16 shrink-0 flex flex-col items-center mt-3 z-10">
-                            <motion.button onClick={() => updateScheduleItem(trip.id, item.id, { ...item, isCompleted: !item.isCompleted })} className={`rounded-xl py-2 w-full text-center border-[3px] border-splat-dark -rotate-3 transition-colors ${item.isCompleted ? 'bg-gray-300 text-gray-500' : 'bg-white shadow-splat-solid-sm'}`}>
-                              <span className="font-black text-[15px]">{item.time}</span>
-                            </motion.button>
-                          </div>
-                          <div className="flex-1 min-w-0 flex flex-col gap-2">
-                            {warningMsg && <div className="bg-white border-2 border-splat-dark px-3 py-1.5 rounded-lg text-[10px] font-black flex items-center gap-1.5 shadow-sm overflow-hidden"><AlertTriangle size={14} className="text-splat-orange" /> {warningMsg}</div>}
-                            <motion.div onClick={() => isEditMode ? (setEditingItem(item), setIsEditorOpen(true)) : setDetailItem(item)} className={`card-splat p-0 overflow-hidden cursor-pointer bg-white border-[3px] border-splat-dark rounded-[24px] shadow-splat-solid relative ${item.isCompleted ? 'opacity-60 grayscale' : ''} ${isEditMode ? 'pr-12' : ''}`}>
-                              <div className={`h-7 w-full ${catStyle.bg} border-b-[3px] border-splat-dark flex items-center px-3 justify-between`}>
-                                <span className={`text-[10px] font-black uppercase tracking-widest ${catStyle.text}`}>{catStyle.label}</span>
-                              </div>
-                              <div className="p-4 flex justify-between items-center bg-white relative">
-                                <div className="flex-1 min-w-0 pr-2">
-                                  <h4 className="font-black text-xl uppercase truncate">{item.title}</h4>
-                                  <p className="text-xs font-bold text-gray-500 truncate"><MapPin size={14} /> {item.location}</p>
+                          // 加入些微延遲，避免畫面一載入就炸掉百個 request
+                          const timeoutId = setTimeout(fetchImage, 500 + Math.random() * 2000);
+                          return () => clearTimeout(timeoutId);
+                        }
+                      }, [item.id, item.images, item.title, item.location, item.category, trip.id, updateScheduleItem]);
+
+                      return (
+                        <Reorder.Item key={item.id} value={item} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, scale: 0.9 }} dragListener={isEditMode} className="relative pl-6">
+                          <div className={`absolute left-[7px] top-6 bottom-[-24px] w-1 border-r-[3px] border-dashed border-splat-dark opacity-20 ${idx === dayItems.length - 1 ? 'hidden' : ''}`} />
+                          <div className={`absolute left-0 top-[18px] w-4 h-4 rounded-full border-[3px] border-splat-dark z-10 ${catStyle.bg}`} />
+                          <div className="flex gap-3 mb-6 relative group">
+                            <div className="w-16 shrink-0 flex flex-col items-center mt-3 z-10">
+                              <motion.button onClick={() => updateScheduleItem(trip.id, item.id, { ...item, isCompleted: !item.isCompleted })} className={`rounded-xl py-2 w-full text-center border-[3px] border-splat-dark -rotate-3 transition-colors ${item.isCompleted ? 'bg-gray-300 text-gray-500' : 'bg-white shadow-splat-solid-sm'}`}>
+                                <span className="font-black text-[15px]">{item.time}</span>
+                              </motion.button>
+                            </div>
+                            <div className="flex-1 min-w-0 flex flex-col gap-2">
+                              {warningMsg && <div className="bg-white border-2 border-splat-dark px-3 py-1.5 rounded-lg text-[10px] font-black flex items-center gap-1.5 shadow-sm overflow-hidden"><AlertTriangle size={14} className="text-splat-orange" /> {warningMsg}</div>}
+                              <motion.div onClick={() => isEditMode ? (setEditingItem(item), setIsEditorOpen(true)) : setDetailItem(item)} className={`card-splat p-0 overflow-hidden cursor-pointer bg-white border-[3px] border-splat-dark rounded-[24px] shadow-splat-solid relative ${item.isCompleted ? 'opacity-60 grayscale' : ''} ${isEditMode ? 'pr-12' : ''}`}>
+                                <div className={`h-7 w-full ${catStyle.bg} border-b-[3px] border-splat-dark flex items-center px-3 justify-between`}>
+                                  <span className={`text-[10px] font-black uppercase tracking-widest ${catStyle.text}`}>{catStyle.label}</span>
                                 </div>
-                                {isEditMode && (
-                                  <div className="absolute right-0 top-0 bottom-0 w-12 bg-gray-50 border-l-[3px] border-splat-dark flex flex-col z-30">
-                                    <button onClick={(e) => { e.stopPropagation(); setEditingItem(item); setIsEditorOpen(true); }} className="flex-1 flex items-center justify-center border-b-[3px] border-splat-dark"><Edit3 size={16} /></button>
-                                    <button onClick={(e) => { e.stopPropagation(); if (confirm('確定刪除？')) deleteScheduleItem(trip.id, item.id); }} className="flex-1 flex items-center justify-center text-red-500"><Trash2 size={16} /></button>
+                                <div className="p-4 flex justify-between items-center bg-white relative">
+                                  <div className="flex-1 min-w-0 pr-2">
+                                    <h4 className="font-black text-xl uppercase truncate">{item.title}</h4>
+                                    <p className="text-xs font-bold text-gray-500 truncate"><MapPin size={14} /> {item.location}</p>
                                   </div>
-                                )}
-                              </div>
-                            </motion.div>
+                                  {isEditMode && (
+                                    <div className="absolute right-0 top-0 bottom-0 w-12 bg-gray-50 border-l-[3px] border-splat-dark flex flex-col z-30">
+                                      <button onClick={(e) => { e.stopPropagation(); setEditingItem(item); setIsEditorOpen(true); }} className="flex-1 flex items-center justify-center border-b-[3px] border-splat-dark"><Edit3 size={16} /></button>
+                                      <button onClick={(e) => { e.stopPropagation(); if (confirm('確定刪除？')) deleteScheduleItem(trip.id, item.id); }} className="flex-1 flex items-center justify-center text-red-500"><Trash2 size={16} /></button>
+                                    </div>
+                                  )}
+                                </div>
+                              </motion.div>
+                            </div>
                           </div>
-                        </div>
-                      </Reorder.Item>
-                    );
-                  })
+                        </Reorder.Item>
+                      );
+                    })
                 )}
               </AnimatePresence>
             </Reorder.Group>
@@ -759,7 +780,7 @@ export const Schedule: React.FC<{ externalDateIdx?: number }> = ({ externalDateI
           <div className="fixed inset-0 bg-splat-dark/60 backdrop-blur-md z-[600] p-4 flex items-center justify-center" onClick={() => setDetailItem(undefined)}>
             <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }} exit={{ scale: 0.9 }} className="bg-white w-full max-w-sm rounded-[32px] border-[4px] border-splat-dark shadow-splat-solid flex flex-col max-h-[85vh] overflow-hidden" onClick={e => e.stopPropagation()}>
               <div className="h-56 bg-gray-200 relative shrink-0 border-b-[4px] border-splat-dark">
-                <LazyImage src={detailItem.images?.[0] || `https://image.pollinations.ai/prompt/${encodeURIComponent(detailItem.location + ' ' + detailItem.title)}?width=800&height=600&nologo=true`} containerClassName="w-full h-full" alt="location" />
+                <LazyImage src={detailItem.images?.[0] || ''} containerClassName="w-full h-full" alt="location" />
                 <button onClick={() => setDetailItem(undefined)} className="absolute top-4 right-4 bg-white border-[3px] border-splat-dark p-2 rounded-full"><X size={20} /></button>
               </div>
               <div className="p-6 space-y-5 bg-[#F4F5F7] overflow-y-auto">
@@ -768,8 +789,8 @@ export const Schedule: React.FC<{ externalDateIdx?: number }> = ({ externalDateI
                   <h4 className="text-[10px] font-black uppercase mb-2 flex items-center gap-1.5"><Sparkles size={14} /> AI 景點導覽</h4>
                   {detailItem.spotGuide ? (
                     <div className="text-sm font-bold text-gray-700 whitespace-pre-wrap leading-relaxed">{detailItem.spotGuide.background}</div>
-                  ) : isSpotAiStreaming && activeSpotIdRef.current === detailItem.id ? (
-                    <div className="text-sm font-bold text-gray-700 whitespace-pre-wrap leading-relaxed">{completion}</div>
+                  ) : spotAiLoading === detailItem.id && completion ? (
+                    <div className="text-sm font-bold text-gray-700 whitespace-pre-wrap leading-relaxed animate-pulse">{completion}</div>
                   ) : (
                     <button onClick={() => handleFetchSpotGuide(detailItem)} disabled={!!spotAiLoading} className="w-full py-3 border-2 border-dashed rounded-lg text-xs font-black">
                       {spotAiLoading === detailItem.id ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />} 取得 AI 景點建議
@@ -789,53 +810,6 @@ export const Schedule: React.FC<{ externalDateIdx?: number }> = ({ externalDateI
                 <button onClick={() => window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(detailItem.location)}`, '_blank')} className="btn-splat w-full py-4 bg-splat-blue text-white flex items-center justify-center gap-2">
                   <MapPin size={20} /> 開啟導航
                 </button>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
-
-      <AnimatePresence>
-        {/* 📍 天氣巫師建議彈窗 */}
-        {showWizardModal && weatherAdvice && (
-          <div className="fixed inset-0 bg-splat-dark/60 backdrop-blur-md z-[1000] p-6 flex items-center justify-center" onClick={() => setShowWizardModal(false)}>
-            <motion.div
-              initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.9, y: 20 }}
-              className="bg-white w-full max-w-sm rounded-[32px] border-[4px] border-splat-dark shadow-splat-solid-lg p-6 overflow-hidden relative"
-              onClick={e => e.stopPropagation()}
-            >
-              <div className="flex justify-between items-center mb-6">
-                <h3 className="text-2xl font-black italic text-splat-pink uppercase tracking-tighter">Weather Wizard</h3>
-                <button onClick={() => setShowWizardModal(false)} className="p-1 bg-gray-100 rounded-full border-2 border-splat-dark"><X size={20} /></button>
-              </div>
-
-              <div className="bg-splat-pink/5 border-2 border-dotted border-splat-pink p-4 rounded-2xl mb-6">
-                <p className="text-sm font-black text-splat-dark leading-relaxed">{weatherAdvice.reason}</p>
-              </div>
-
-              <div className="space-y-4 max-h-[40vh] overflow-y-auto pr-2 custom-scrollbar">
-                {weatherAdvice.recommendations.map((rec, i) => {
-                  const original = dayItems.find(it => it.id === rec.originalId);
-                  return (
-                    <div key={i} className="bg-gray-50 border-[3px] border-splat-dark rounded-2xl p-4 relative overflow-hidden">
-                      <div className="flex justify-between items-start mb-2">
-                        <div>
-                          <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Replacement Suggestion</p>
-                          <h4 className="font-black text-lg text-splat-dark leading-tight">{rec.newTitle}</h4>
-                        </div>
-                        <span className="bg-splat-green text-white text-[9px] font-black px-1.5 py-0.5 rounded border-2 border-splat-dark uppercase">Indoor</span>
-                      </div>
-                      <p className="text-[10px] font-bold text-gray-500 mb-3 truncate">替代: {original?.title || '原本行程'}</p>
-                      <p className="text-[11px] font-bold text-gray-600 mb-4 line-clamp-2">{rec.newNote}</p>
-                      <button
-                        onClick={() => handleSwapItem(rec.originalId, rec)}
-                        className="w-full py-3 bg-splat-blue text-white border-[3px] border-splat-dark rounded-xl font-black text-xs shadow-splat-solid-sm active:translate-y-0.5 active:shadow-none transition-all flex items-center justify-center gap-2"
-                      >
-                        替換原有行程 <Check size={14} strokeWidth={4} />
-                      </button>
-                    </div>
-                  );
-                })}
               </div>
             </motion.div>
           </div>
