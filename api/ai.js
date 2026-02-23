@@ -226,8 +226,14 @@ export default async function handler(req, res) {
 
             const result = await model.generateContent(parts);
             const responseText = result.response.text();
-            const jsonMatch = responseText.match(/[\{\[]([\s\S]*)[\}\]]/);
-            return res.status(200).json(jsonMatch ? JSON.parse(jsonMatch[0]) : {});
+            try {
+              const cleanedText = responseText.replace(/```(?:json)?/gi, '').replace(/```/g, '').trim();
+              const jsonMatch = cleanedText.match(/[\{\[]([\s\S]*)[\}\]]/);
+              return res.status(200).json(jsonMatch ? JSON.parse(jsonMatch[0]) : {});
+            } catch (err) {
+              console.error("Universal Import JSON Parse Error:", err, responseText);
+              return res.status(500).json({ error: "Import Failed: Bad JSON format", details: err.message });
+            }
           } catch (err) {
             console.error("Universal Import Error:", err);
             return res.status(500).json({ error: "Import Failed", details: err.message });
@@ -252,8 +258,14 @@ export default async function handler(req, res) {
           try {
             const result = await model.generateContent(prompt);
             const responseText = result.response.text();
-            const jsonMatch = responseText.match(/[\{\[]([\s\S]*)[\}\]]/);
-            return res.status(200).json(jsonMatch ? JSON.parse(jsonMatch[0]) : {});
+            try {
+              const cleanedText = responseText.replace(/```(?:json)?/gi, '').replace(/```/g, '').trim();
+              const jsonMatch = cleanedText.match(/[\{\[]([\s\S]*)[\}\]]/);
+              return res.status(200).json(jsonMatch ? JSON.parse(jsonMatch[0]) : {});
+            } catch (err) {
+              console.error("Get Spot Details JSON Parse Error:", err, responseText);
+              return res.status(500).json({ error: "Search Failed: Bad JSON format", details: err.message });
+            }
           } catch (err) {
             console.error("Get Spot Details Error:", err);
             return res.status(500).json({ error: "Search Failed" });
@@ -277,7 +289,9 @@ export default async function handler(req, res) {
                     請回傳 JSON: {"isFamous": true, "wikiQuery": "...", "genericQuery": "..."}`;
 
           const searchResult = await model.generateContent(searchPrompt);
-          const searchInfo = JSON.parse(searchResult.response.text().match(/\{.*\}/)[0]);
+          const responseText = searchResult.response.text();
+          const cleanedText = responseText.replace(/```(?:json)?/gi, '').replace(/```/g, '').trim();
+          const searchInfo = JSON.parse(cleanedText.match(/\{[\s\S]*\}/)[0]);
 
           let imageUrl = "";
 
@@ -389,11 +403,17 @@ export default async function handler(req, res) {
     }
 
     // 如果是解析類（JSON），嘗試提取 JSON
-    const jsonMatch = responseText.match(/[\{\[]([\s\S]*)[\}\]]/);
-    if (jsonMatch) {
-      res.status(200).json(JSON.parse(jsonMatch[0]));
-    } else {
-      res.status(200).json({ text: responseText });
+    try {
+      const cleanedText = responseText.replace(/```(?:json)?/gi, '').replace(/```/g, '').trim();
+      const jsonMatch = cleanedText.match(/[\{\[]([\s\S]*)[\}\]]/);
+      if (jsonMatch) {
+        res.status(200).json(JSON.parse(jsonMatch[0]));
+      } else {
+        res.status(200).json({ text: responseText });
+      }
+    } catch (parseError) {
+      console.error("JSON Parse Error in Generalized Handler:", parseError, responseText);
+      res.status(200).json({ text: responseText }); // Fallback to raw text
     }
 
   } catch (error) {

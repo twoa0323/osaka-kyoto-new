@@ -330,7 +330,7 @@ export const Schedule: React.FC<{ externalDateIdx?: number }> = ({ externalDateI
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          action: 'batch-parse',
+          action: 'suggest-briefing',
           payload: {
             text: `你是一個旅遊導師。地點:${todayWeather.cityName}，天氣:${weatherInfo.t}。當天行程: ${dayItems.map(i => i.title).join(', ')}。請給予一段 40 字內幽默的斯普拉遁風格建議，必須包含一個🦑 Emoji。`,
             isBriefing: true
