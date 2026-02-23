@@ -14,13 +14,16 @@
     "@google/generative-ai": "^0.24.1",
     "@tanstack/react-query": "^5.90.21",
     "ai": "^6.0.97",
+    "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
     "firebase": "^12.9.0",
     "framer-motion": "^12.34.3",
     "lucide-react": "^0.344.0",
+    "maplibre-gl": "^5.19.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-image-file-resizer": "^0.4.8",
+    "tailwind-merge": "^2.6.1",
     "zustand": "^5.0.11"
   },
   "devDependencies": {

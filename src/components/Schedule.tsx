@@ -60,106 +60,74 @@ const CITY_DB = [
 ];
 
 // --- 輔助組件：地圖路徑視圖 ---
+import { Map, MapMarker, MarkerContent, MapRoute, MapControls } from './ui/map';
+
+// --- 輔助組件：地圖路徑視圖 ---
 const ScheduleMapView: React.FC<{ items: ScheduleItem[], trip?: Trip }> = ({ items, trip }) => {
-  const mapContainerRef = React.useRef<HTMLDivElement>(null);
-  const mapInstanceRef = React.useRef<any>(null);
+  const points = useMemo(() => {
+    return items
+      .filter(item => item.lat && item.lng)
+      .map(item => [item.lng, item.lat] as [number, number]);
+  }, [items]);
 
-  useEffect(() => {
-    if (!mapContainerRef.current) return;
-
-    // 動態載入 Leaflet (如果尚未載入)
-    const loadLeaflet = async () => {
-      if (!(window as any).L) {
-        const link = document.createElement('link');
-        link.rel = 'stylesheet';
-        link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
-        document.head.appendChild(link);
-
-        const script = document.createElement('script');
-        script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
-        document.head.appendChild(script);
-
-        await new Promise(resolve => script.onload = resolve);
-      }
-
-      const L = (window as any).L;
-      if (!mapInstanceRef.current) {
-        // 初始化地圖，中心點為第一站或是旅程預設地
-        const center: [number, number] = items[0]?.lat && items[0]?.lng
-          ? [items[0].lat, items[0].lng]
-          : [trip?.lat || 34.6937, trip?.lng || 135.5023]; // Default to Osaka
-
-        mapInstanceRef.current = L.map(mapContainerRef.current, {
-          zoomControl: false,
-          attributionControl: false
-        }).setView(center, 13);
-
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-          maxZoom: 19,
-        }).addTo(mapInstanceRef.current);
-      }
-
-      const map = mapInstanceRef.current;
-      // 清除舊的 Marker
-      map.eachLayer((layer: any) => { if (!!layer.toGeoJSON) map.removeLayer(layer); });
-
-      const points: [number, number][] = [];
-      items.forEach((item, idx) => {
-        if (item.lat && item.lng) {
-          const pos: [number, number] = [item.lat, item.lng];
-          points.push(pos);
-
-          // 自訂標記 (斯普拉遁感)
-          const icon = L.divIcon({
-            className: 'custom-div-icon',
-            html: `
-              <div class="flex flex-col items-center">
-                <div class="w-8 h-8 bg-splat-blue border-2 border-white rounded-full flex items-center justify-center text-white font-black shadow-lg text-xs">
-                  ${idx + 1}
-                </div>
-                <div class="bg-white border-2 border-splat-dark px-2 py-0.5 rounded-md text-[10px] font-black mt-1 shadow-sm whitespace-nowrap">
-                  ${item.title}
-                </div>
-              </div>
-            `,
-            iconSize: [40, 40],
-            iconAnchor: [20, 20]
-          });
-
-          L.marker(pos, { icon }).addTo(map);
-        }
-      });
-
-      if (points.length > 1) {
-        // 繪製路徑
-        L.polyline(points, {
-          color: '#5BA4E5',
-          weight: 5,
-          opacity: 0.8,
-          dashArray: '10, 10',
-          lineJoin: 'round'
-        }).addTo(map);
-
-        // 自動縮放置適合範圍
-        map.fitBounds(L.latLngBounds(points), { padding: [50, 50] });
-      } else if (points.length === 1) {
-        map.setView(points[0], 15);
-      }
+  const viewport = useMemo(() => {
+    if (points.length > 0) {
+      return {
+        center: points[0],
+        zoom: points.length === 1 ? 15 : 12,
+        bearing: 0,
+        pitch: 0
+      };
+    }
+    return {
+      center: [trip?.lng || 135.5023, trip?.lat || 34.6937] as [number, number],
+      zoom: 12,
+      bearing: 0,
+      pitch: 0
     };
-
-    loadLeaflet();
-  }, [items, trip]);
+  }, [points, trip]);
 
   return (
     <div className="relative w-full h-[60vh] rounded-[32px] overflow-hidden border-[4px] border-splat-dark shadow-splat-solid bg-gray-100 mt-4">
-      <div ref={mapContainerRef} className="w-full h-full z-10" />
-      <div className="absolute top-4 left-4 z-20 bg-white/90 backdrop-blur px-3 py-1.5 rounded-full border-2 border-splat-dark font-black text-[10px] flex items-center gap-2 shadow-sm">
+      <Map
+        viewport={viewport}
+        className="w-full h-full z-10"
+      >
+        <MapRoute
+          coordinates={points}
+          color="#5BA4E5"
+          width={5}
+          dashArray={[2, 2]}
+        />
+
+        {items.map((item, idx) => (
+          item.lat && item.lng && (
+            <MapMarker key={item.id} longitude={item.lng} latitude={item.lat}>
+              <MarkerContent>
+                <div className="flex flex-col items-center">
+                  <div className="w-8 h-8 bg-splat-blue border-2 border-white rounded-full flex items-center justify-center text-white font-black shadow-lg text-xs">
+                    {idx + 1}
+                  </div>
+                  <div className="bg-white border-2 border-splat-dark px-2 py-0.5 rounded-md text-[10px] font-black mt-1 shadow-sm whitespace-nowrap">
+                    {item.title}
+                  </div>
+                </div>
+              </MarkerContent>
+            </MapMarker>
+          )
+        ))}
+
+        <MapControls showZoom showLocate position="bottom-right" />
+      </Map>
+
+      <div className="absolute top-4 left-4 z-20 bg-white/90 backdrop-blur px-3 py-1.5 rounded-full border-2 border-splat-dark font-black text-[10px] flex items-center gap-2 shadow-sm pointer-events-none">
         <MapIcon size={12} className="text-splat-blue" />
         {items.length} SPOTS ON ROUTE
       </div>
     </div>
   );
 };
+
 
 export const Schedule: React.FC<{ externalDateIdx?: number }> = ({ externalDateIdx = 0 }) => {
   const {
