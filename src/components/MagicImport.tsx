@@ -100,6 +100,10 @@ export const MagicImport = () => {
     const enrichDataWithImages = async (data: ParsedResult) => {
         const fetchImage = async (item: any, category: string) => {
             try {
+                // 加入 500ms 延遲以確保不超過 RPM 限制 (15 RPM)
+                // 15 RPM = 4 秒 1 次，但因為是一次批次匯入，我們只要不重疊發起太多即可
+                await new Promise(resolve => setTimeout(resolve, 500));
+
                 const res = await fetch('/api/ai', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -121,12 +125,26 @@ export const MagicImport = () => {
 
         const enriched = { ...data };
 
-        // 批次並行處理，提升效率
-        if (enriched.expenses) enriched.expenses = await Promise.all(enriched.expenses.map(i => fetchImage(i, 'expense')));
-        if (enriched.bookings) enriched.bookings = await Promise.all(enriched.bookings.map(i => fetchImage(i, 'booking')));
-        if (enriched.schedules) enriched.schedules = await Promise.all(enriched.schedules.map(i => fetchImage(i, 'schedule')));
-        if (enriched.journals) enriched.journals = await Promise.all(enriched.journals.map(i => fetchImage(i, 'journal')));
-        if (enriched.shopping) enriched.shopping = await Promise.all(enriched.shopping.map(i => fetchImage(i, 'shopping')));
+        // 改為循序循環執行，解決並行過多導致 429 的問題
+        const categories = [
+            { key: 'expenses', label: 'expense' },
+            { key: 'bookings', label: 'booking' },
+            { key: 'schedules', label: 'schedule' },
+            { key: 'journals', label: 'journal' },
+            { key: 'shopping', label: 'shopping' }
+        ];
+
+        for (const cat of categories) {
+            const items = (enriched as any)[cat.key];
+            if (items && Array.isArray(items)) {
+                const enrichedItems = [];
+                for (const item of items) {
+                    const result = await fetchImage(item, cat.label);
+                    enrichedItems.push(result);
+                }
+                (enriched as any)[cat.key] = enrichedItems;
+            }
+        }
 
         return enriched;
     };

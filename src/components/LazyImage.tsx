@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Loader2 } from 'lucide-react';
+import { Loader2, ImageOff } from 'lucide-react';
 
 interface LazyImageProps extends React.ImgHTMLAttributes<HTMLImageElement> {
     placeholderSrc?: string;
@@ -15,6 +15,7 @@ export const LazyImage: React.FC<LazyImageProps> = ({
     ...props
 }) => {
     const [isLoaded, setIsLoaded] = useState(false);
+    const [hasError, setHasError] = useState(false);
     const [isInView, setIsInView] = useState(false);
     const imgRef = useRef<HTMLDivElement>(null);
 
@@ -41,19 +42,34 @@ export const LazyImage: React.FC<LazyImageProps> = ({
             ref={imgRef}
             className={`relative overflow-hidden bg-gray-100 ${containerClassName}`}
         >
-            {!isLoaded && (
+            {(!isLoaded && !hasError) && (
                 <div className="absolute inset-0 flex items-center justify-center">
                     <Loader2 className="animate-spin text-gray-300" size={24} />
                 </div>
             )}
-            {isInView && (
+            {hasError && (
+                <div className="absolute inset-0 flex flex-col items-center justify-center bg-gray-50 text-gray-300 p-4 text-center">
+                    <ImageOff size={24} className="mb-2" />
+                    <span className="text-[10px] font-black uppercase tracking-widest leading-tight">Image Unavailable</span>
+                </div>
+            )}
+            {(isInView && src) ? (
                 <img
                     src={src}
                     alt={alt}
-                    onLoad={() => setIsLoaded(true)}
-                    className={`w-full h-full object-cover transition-opacity duration-700 ease-out ${isLoaded ? 'opacity-100' : 'opacity-0'} ${className}`}
+                    onLoad={() => {
+                        setIsLoaded(true);
+                        setHasError(false);
+                    }}
+                    onError={() => {
+                        setHasError(true);
+                        setIsLoaded(true); // Stop loader
+                    }}
+                    className={`w-full h-full object-cover transition-opacity duration-700 ease-out ${isLoaded && !hasError ? 'opacity-100' : 'opacity-0'} ${className}`}
                     {...props}
                 />
+            ) : (
+                <div className="w-full h-full" />
             )}
         </div>
     );

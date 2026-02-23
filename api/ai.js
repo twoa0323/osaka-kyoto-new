@@ -227,8 +227,12 @@ export default async function handler(req, res) {
             const result = await model.generateContent(parts);
             const responseText = result.response.text();
             try {
-              const cleanedText = responseText.replace(/```(?:json)?/gi, '').replace(/```/g, '').trim();
-              const jsonMatch = cleanedText.match(/[\{\[]([\s\S]*)[\}\]]/);
+              // 優先尋找 Markdown JSON 代碼塊
+              const codeBlockMatch = responseText.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+              let jsonToParse = codeBlockMatch ? codeBlockMatch[1] : responseText;
+
+              // 尋找 JSON 邊界
+              const jsonMatch = jsonToParse.match(/[\{\[]([\s\S]*)[\}\]]/);
               return res.status(200).json(jsonMatch ? JSON.parse(jsonMatch[0]) : {});
             } catch (err) {
               console.error("Universal Import JSON Parse Error:", err, responseText);
@@ -259,8 +263,10 @@ export default async function handler(req, res) {
             const result = await model.generateContent(prompt);
             const responseText = result.response.text();
             try {
-              const cleanedText = responseText.replace(/```(?:json)?/gi, '').replace(/```/g, '').trim();
-              const jsonMatch = cleanedText.match(/[\{\[]([\s\S]*)[\}\]]/);
+              const codeBlockMatch = responseText.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+              let jsonToParse = codeBlockMatch ? codeBlockMatch[1] : responseText;
+
+              const jsonMatch = jsonToParse.match(/[\{\[]([\s\S]*)[\}\]]/);
               return res.status(200).json(jsonMatch ? JSON.parse(jsonMatch[0]) : {});
             } catch (err) {
               console.error("Get Spot Details JSON Parse Error:", err, responseText);
@@ -404,8 +410,10 @@ export default async function handler(req, res) {
 
     // 如果是解析類（JSON），嘗試提取 JSON
     try {
-      const cleanedText = responseText.replace(/```(?:json)?/gi, '').replace(/```/g, '').trim();
-      const jsonMatch = cleanedText.match(/[\{\[]([\s\S]*)[\}\]]/);
+      const codeBlockMatch = responseText.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+      let jsonToParse = codeBlockMatch ? codeBlockMatch[1] : responseText;
+
+      const jsonMatch = jsonToParse.match(/[\{\[]([\s\S]*)[\}\]]/);
       if (jsonMatch) {
         res.status(200).json(JSON.parse(jsonMatch[0]));
       } else {
