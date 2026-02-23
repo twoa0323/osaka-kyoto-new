@@ -42,14 +42,29 @@ export const Info = () => {
         <Globe className="text-splat-pink group-hover:rotate-12 transition-transform" size={40} strokeWidth={2} />
       </a>
 
-      {/* --- Packing List Integration --- */}
-      <section className="space-y-4">
-        <div className="flex items-center gap-2 pl-2">
-          <Luggage className="text-splat-blue" size={20} strokeWidth={3} />
-          <h3 className="font-black text-splat-dark text-lg uppercase italic tracking-tighter">Packing List 打包清單</h3>
+      {/* --- Packing List Integration (Collapsible) --- */}
+      <div className={`bg-white border-[3px] border-splat-dark rounded-[24px] overflow-hidden transition-all duration-300 ${expandedId === 'packing-list' ? 'shadow-[8px_8px_0px_#1A1A1A] -translate-y-1' : 'shadow-splat-solid-sm'}`}>
+        <div
+          className="p-5 flex justify-between items-center cursor-pointer select-none hover:bg-gray-50 active:bg-gray-100 transition-colors"
+          onClick={() => setExpandedId(prev => prev === 'packing-list' ? null : 'packing-list')}
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-splat-yellow border-2 border-splat-dark rounded-xl flex items-center justify-center text-splat-dark shadow-sm shrink-0">
+              <Luggage size={20} strokeWidth={2.5} />
+            </div>
+            <h3 className="font-black text-splat-dark text-lg uppercase italic tracking-tighter">Packing List</h3>
+          </div>
+          <ChevronDown size={24} strokeWidth={3} className={`text-splat-dark shrink-0 transition-transform duration-300 ${expandedId === 'packing-list' ? 'rotate-180' : ''}`} />
         </div>
-        <PackingList className="p-0" />
-      </section>
+
+        {expandedId === 'packing-list' && (
+          <div className="p-3 pt-0 border-t-2 border-dashed border-gray-200 bg-[#F4F5F7] animate-in slide-in-from-top-2 fade-in">
+            <div className="mt-2 bg-white rounded-xl shadow-sm border-2 border-splat-dark overflow-hidden">
+              <PackingList className="p-0 border-none shadow-none" />
+            </div>
+          </div>
+        )}
+      </div>
 
       <div className="bg-red-50 border-[4px] border-splat-dark rounded-[24px] shadow-splat-solid p-6 space-y-4">
         <h3 className="flex items-center gap-2 font-black text-red-600 text-xl uppercase italic bg-white inline-block px-3 py-1 border-2 border-splat-dark rounded-lg -rotate-1"><ShieldAlert size={20} strokeWidth={3} /> SOS 救援</h3>
