@@ -51,7 +51,27 @@ export const BookingEditor: React.FC<Props> = ({ tripId, type, item, onClose }) 
         })
       });
 
-      const data = await res.json();
+      if (!res.ok) throw new Error("AI 解析失敗");
+      const reader = res.body?.getReader();
+      const decoder = new TextDecoder();
+      let fullText = "";
+      if (reader) {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          const chunk = decoder.decode(value, { stream: true });
+          const lines = chunk.split('\n');
+          for (const line of lines) {
+            if (line.startsWith('0:')) {
+              fullText += JSON.parse(line.substring(2));
+            }
+          }
+        }
+      }
+
+      const jsonMatch = fullText.match(/\{[\s\S]*\}/);
+      const data = jsonMatch ? JSON.parse(jsonMatch[0]) : null;
+
       if (data && !data.error) {
         if (type === 'flight') {
           setForm(prev => ({
@@ -91,7 +111,7 @@ export const BookingEditor: React.FC<Props> = ({ tripId, type, item, onClose }) 
         }
         alert("✨ AI 解析成功！已為您自動填入資訊。");
       } else {
-        throw new Error(data.error || "AI 解析失敗");
+        throw new Error("AI 解析失敗");
       }
     } catch (e) {
       console.error(e);

@@ -36,19 +36,40 @@ export const AiAssistant: React.FC = () => {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ action: 'universal-magic-import', payload })
             });
-            const data = await res.json();
+
+            if (!res.ok) throw new Error("解析失敗");
+            const reader = res.body?.getReader();
+            const decoder = new TextDecoder();
+            let fullText = "";
+            let jsonResult = null;
+
+            if (reader) {
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+                    const chunk = decoder.decode(value, { stream: true });
+                    const lines = chunk.split('\n');
+                    for (const line of lines) {
+                        if (line.startsWith('0:')) {
+                            const content = JSON.parse(line.substring(2));
+                            fullText += content;
+                        }
+                    }
+                }
+            }
+
+            // 嘗試從累積的文字中提取 JSON
+            const jsonMatch = fullText.match(/\{[\s\S]*\}/);
+            if (jsonMatch) jsonResult = JSON.parse(jsonMatch[0]);
 
             let hasImported = false;
-            if (data.schedules) {
-                data.schedules.forEach((s: any) => addScheduleItem(trip.id, { ...s, id: Date.now().toString() + Math.random() }));
+            if (jsonResult?.schedules) {
+                jsonResult.schedules.forEach((s: any) => addScheduleItem(trip.id, { ...s, id: Date.now().toString() + Math.random() }));
                 hasImported = true;
             }
-            if (data.expenses) {
-                data.expenses.forEach((e: any) => addExpenseItem(trip.id, { ...e, id: Date.now().toString() + Math.random() }));
+            if (jsonResult?.expenses) {
+                jsonResult.expenses.forEach((e: any) => addExpenseItem(trip.id, { ...e, id: Date.now().toString() + Math.random() }));
                 hasImported = true;
-            }
-            if (data.shopping) {
-                // ... 也可以將購物清單匯入
             }
 
             if (hasImported) {

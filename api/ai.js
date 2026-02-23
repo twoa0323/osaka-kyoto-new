@@ -14,6 +14,17 @@ export default async function handler(req, res) {
     let prompt = "";
     let inlineData = null;
 
+    // 封裝 JSON 回傳邏輯，將其轉為 DataStream 協定回傳 (相容 TextDecoder)
+    const streamJsonResponse = async (data) => {
+      const { createDataStreamResponse } = await import('ai');
+      return createDataStreamResponse({
+        execute: async (dataStream) => {
+          dataStream.writeMessageAnnotation({ type: 'json_full', content: data });
+          dataStream.writeChunk(`0:${JSON.stringify(JSON.stringify(data))}\n`); // 模擬串流格式
+        }
+      });
+    };
+
     switch (action) {
       case 'analyze-receipt':
         prompt = `你是一個專業收據分析助手。請精確分析這張圖片，特別注意每一項商品的明細與對應價格，並回傳純 JSON 格式資料（不要有 Markdown 標記）：
@@ -408,35 +419,21 @@ export default async function handler(req, res) {
         return res.status(400).json({ error: "Invalid action" });
     }
 
-    const result = inlineData
-      ? await model.generateContent([prompt, { inlineData }])
-      : await model.generateContent(prompt);
+    // 執行生成 (統一使用 streamText 以利前端讀取)
+    const result = streamText({
+      model: google('gemini-1.5-flash'), // 升級至穩定版
+      prompt: prompt,
+      ...(inlineData ? { messages: [{ role: 'user', content: [{ type: 'text', text: prompt }, { type: 'image', image: inlineData.data, mimeType: inlineData.mimeType }] }] } : {})
+    });
 
-    const responseText = result.response.text();
-
-    // 如果是建議類（純文字），直接回傳
-    if (action === 'suggest-transport' || action === 'suggest-briefing') {
-      return res.status(200).json({ text: responseText.trim() });
-    }
-
-    // 如果是解析類（JSON），嘗試提取 JSON
-    try {
-      const codeBlockMatch = responseText.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
-      let jsonToParse = codeBlockMatch ? codeBlockMatch[1] : responseText;
-
-      const jsonMatch = jsonToParse.match(/[\{\[]([\s\S]*)[\}\]]/);
-      if (jsonMatch) {
-        res.status(200).json(JSON.parse(jsonMatch[0]));
-      } else {
-        res.status(200).json({ text: responseText });
-      }
-    } catch (parseError) {
-      console.error("JSON Parse Error in Generalized Handler:", parseError, responseText);
-      res.status(200).json({ text: responseText }); // Fallback to raw text
-    }
+    return result.toDataStreamResponse();
 
   } catch (error) {
     console.error("AI Proxy Error:", error);
-    res.status(500).json({ error: "AI 服務異常", details: error.message });
+    // 錯誤也包裝成串流，防止前端 TextDecoder 崩潰
+    return new Response(`3: ${JSON.stringify(error.message)}\n`, {
+      status: 500,
+      headers: { 'Content-Type': 'text/plain; charset=utf-8' }
+    });
   }
 }
