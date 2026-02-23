@@ -62,6 +62,94 @@ const CITY_DB = [
 // --- 輔助組件：地圖路徑視圖 ---
 import { Map, MapMarker, MarkerContent, MapRoute, MapControls } from './ui/map';
 
+// --- 輔助組件：每個行程項目的渲染（包含自動取圖邏輯） ---
+const ScheduleItemRow: React.FC<{
+  item: ScheduleItem,
+  idx: number,
+  isEditMode: boolean,
+  dayItems: ScheduleItem[],
+  tripId: string,
+  updateScheduleItem: any,
+  deleteScheduleItem: any,
+  setEditingItem: any,
+  setIsEditorOpen: any,
+  setDetailItem: any,
+  timeToMins: (t: string) => number
+}> = ({ item, idx, isEditMode, dayItems, tripId, updateScheduleItem, deleteScheduleItem, setEditingItem, setIsEditorOpen, setDetailItem, timeToMins }) => {
+  const catStyle = CATEGORY_STYLE[item.category as keyof typeof CATEGORY_STYLE] || CATEGORY_STYLE.sightseeing;
+  const prevItem = idx > 0 ? dayItems[idx - 1] : null;
+  let warningMsg = null;
+  let gapMins = 0;
+
+  if (prevItem) {
+    const prevEndTimeMins = prevItem.endTime ? timeToMins(prevItem.endTime) : timeToMins(prevItem.time);
+    const currentStartTimeMins = timeToMins(item.time);
+    gapMins = currentStartTimeMins - prevEndTimeMins;
+    if (gapMins < 0) warningMsg = "時間重疊囉！⏳";
+    else if (gapMins > 0 && gapMins < 30 && prevItem.location !== item.location) warningMsg = "行程有點趕！🏃";
+  }
+
+  // 💡 自動取圖邏輯：放在組件層級符合 Hook 規範
+  useEffect(() => {
+    if (!item.images || item.images.length === 0) {
+      const fetchImage = async () => {
+        try {
+          const res = await fetch('/api/ai', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              action: 'get-image-for-item',
+              payload: { title: item.title, location: item.location, category: item.category }
+            })
+          });
+          const data = await res.json();
+          if (data.imageUrl) {
+            updateScheduleItem(tripId, item.id, { ...item, images: [data.imageUrl] });
+          }
+        } catch (err) {
+          console.error("Failed to fetch image for item:", item.title);
+        }
+      };
+      const timeoutId = setTimeout(fetchImage, 500 + Math.random() * 2000);
+      return () => clearTimeout(timeoutId);
+    }
+  }, [item.id, item.images, item.title, item.location, item.category, tripId, updateScheduleItem]);
+
+  return (
+    <Reorder.Item key={item.id} value={item} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, scale: 0.9 }} dragListener={isEditMode} className="relative pl-6">
+      <div className={`absolute left-[7px] top-6 bottom-[-24px] w-1 border-r-[3px] border-dashed border-splat-dark opacity-20 ${idx === dayItems.length - 1 ? 'hidden' : ''}`} />
+      <div className={`absolute left-0 top-[18px] w-4 h-4 rounded-full border-[3px] border-splat-dark z-10 ${catStyle.bg}`} />
+      <div className="flex gap-3 mb-6 relative group">
+        <div className="w-16 shrink-0 flex flex-col items-center mt-3 z-10">
+          <motion.button onClick={() => updateScheduleItem(tripId, item.id, { ...item, isCompleted: !item.isCompleted })} className={`rounded-xl py-2 w-full text-center border-[3px] border-splat-dark -rotate-3 transition-colors ${item.isCompleted ? 'bg-gray-300 text-gray-500' : 'bg-white shadow-splat-solid-sm'}`}>
+            <span className="font-black text-[15px]">{item.time}</span>
+          </motion.button>
+        </div>
+        <div className="flex-1 min-w-0 flex flex-col gap-2">
+          {warningMsg && <div className="bg-white border-2 border-splat-dark px-3 py-1.5 rounded-lg text-[10px] font-black flex items-center gap-1.5 shadow-sm overflow-hidden"><AlertTriangle size={14} className="text-splat-orange" /> {warningMsg}</div>}
+          <motion.div onClick={() => isEditMode ? (setEditingItem(item), setIsEditorOpen(true)) : setDetailItem(item)} className={`card-splat p-0 overflow-hidden cursor-pointer bg-white border-[3px] border-splat-dark rounded-[24px] shadow-splat-solid relative ${item.isCompleted ? 'opacity-60 grayscale' : ''} ${isEditMode ? 'pr-12' : ''}`}>
+            <div className={`h-7 w-full ${catStyle.bg} border-b-[3px] border-splat-dark flex items-center px-3 justify-between`}>
+              <span className={`text-[10px] font-black uppercase tracking-widest ${catStyle.text}`}>{catStyle.label}</span>
+            </div>
+            <div className="p-4 flex justify-between items-center bg-white relative">
+              <div className="flex-1 min-w-0 pr-2">
+                <h4 className="font-black text-xl uppercase truncate">{item.title}</h4>
+                <p className="text-xs font-bold text-gray-500 truncate"><MapPin size={14} /> {item.location}</p>
+              </div>
+              {isEditMode && (
+                <div className="absolute right-0 top-0 bottom-0 w-12 bg-gray-50 border-l-[3px] border-splat-dark flex flex-col z-30">
+                  <button onClick={(e) => { e.stopPropagation(); setEditingItem(item); setIsEditorOpen(true); }} className="flex-1 flex items-center justify-center border-b-[3px] border-splat-dark"><Edit3 size={16} /></button>
+                  <button onClick={(e) => { e.stopPropagation(); if (confirm('確定刪除？')) deleteScheduleItem(tripId, item.id); }} className="flex-1 flex items-center justify-center text-red-500"><Trash2 size={16} /></button>
+                </div>
+              )}
+            </div>
+          </motion.div>
+        </div>
+      </div>
+    </Reorder.Item>
+  );
+};
+
 // --- 輔助組件：地圖路徑視圖 ---
 const ScheduleMapView: React.FC<{ items: ScheduleItem[], trip?: Trip }> = ({ items, trip }) => {
   const points = useMemo(() => {
@@ -655,83 +743,22 @@ export const Schedule: React.FC<{ externalDateIdx?: number }> = ({ externalDateI
                 {dayItems.length === 0 ? (
                   <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center py-20 bg-white border-[3px] border-dashed border-gray-300 rounded-[40px] text-gray-400 font-black italic">今天還沒有計畫，來點冒險吧！🗺️</motion.div>
                 ) : (
-                  dayItems.map((item, idx) => {
-                    const catStyle = CATEGORY_STYLE[item.category as keyof typeof CATEGORY_STYLE] || CATEGORY_STYLE.sightseeing;
-                    const Icon = ICON_MAP[item.category as keyof typeof ICON_MAP] || Camera;
-                    const prevItem = idx > 0 ? dayItems[idx - 1] : null;
-                    let warningMsg = null;
-                    let gapMins = 0;
-
-                    if (prevItem) {
-                      const prevEndTimeMins = prevItem.endTime ? timeToMins(prevItem.endTime) : timeToMins(prevItem.time);
-                      const currentStartTimeMins = timeToMins(item.time);
-                      gapMins = currentStartTimeMins - prevEndTimeMins;
-                      if (gapMins < 0) warningMsg = "時間重疊囉！⏳";
-                      else if (gapMins > 0 && gapMins < 30 && prevItem.location !== item.location) warningMsg = "行程有點趕！🏃";
-                      // 加入自動取圖邏輯
-                      useEffect(() => {
-                        if (!item.images || item.images.length === 0) {
-                          // 避免重複請求，可以使用一個局部的 loading 狀態，或是交由 store 處理
-                          // 這裡使用簡單的一次性 fetch
-                          const fetchImage = async () => {
-                            try {
-                              const res = await fetch('/api/ai', {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({
-                                  action: 'get-image-for-item',
-                                  payload: { title: item.title, location: item.location, category: item.category }
-                                })
-                              });
-                              const data = await res.json();
-                              if (data.imageUrl) {
-                                updateScheduleItem(trip.id, item.id, { ...item, images: [data.imageUrl] });
-                              }
-                            } catch (err) {
-                              console.error("Failed to fetch image for item:", item.title);
-                            }
-                          };
-
-                          // 加入些微延遲，避免畫面一載入就炸掉百個 request
-                          const timeoutId = setTimeout(fetchImage, 500 + Math.random() * 2000);
-                          return () => clearTimeout(timeoutId);
-                        }
-                      }, [item.id, item.images, item.title, item.location, item.category, trip.id, updateScheduleItem]);
-
-                      return (
-                        <Reorder.Item key={item.id} value={item} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, scale: 0.9 }} dragListener={isEditMode} className="relative pl-6">
-                          <div className={`absolute left-[7px] top-6 bottom-[-24px] w-1 border-r-[3px] border-dashed border-splat-dark opacity-20 ${idx === dayItems.length - 1 ? 'hidden' : ''}`} />
-                          <div className={`absolute left-0 top-[18px] w-4 h-4 rounded-full border-[3px] border-splat-dark z-10 ${catStyle.bg}`} />
-                          <div className="flex gap-3 mb-6 relative group">
-                            <div className="w-16 shrink-0 flex flex-col items-center mt-3 z-10">
-                              <motion.button onClick={() => updateScheduleItem(trip.id, item.id, { ...item, isCompleted: !item.isCompleted })} className={`rounded-xl py-2 w-full text-center border-[3px] border-splat-dark -rotate-3 transition-colors ${item.isCompleted ? 'bg-gray-300 text-gray-500' : 'bg-white shadow-splat-solid-sm'}`}>
-                                <span className="font-black text-[15px]">{item.time}</span>
-                              </motion.button>
-                            </div>
-                            <div className="flex-1 min-w-0 flex flex-col gap-2">
-                              {warningMsg && <div className="bg-white border-2 border-splat-dark px-3 py-1.5 rounded-lg text-[10px] font-black flex items-center gap-1.5 shadow-sm overflow-hidden"><AlertTriangle size={14} className="text-splat-orange" /> {warningMsg}</div>}
-                              <motion.div onClick={() => isEditMode ? (setEditingItem(item), setIsEditorOpen(true)) : setDetailItem(item)} className={`card-splat p-0 overflow-hidden cursor-pointer bg-white border-[3px] border-splat-dark rounded-[24px] shadow-splat-solid relative ${item.isCompleted ? 'opacity-60 grayscale' : ''} ${isEditMode ? 'pr-12' : ''}`}>
-                                <div className={`h-7 w-full ${catStyle.bg} border-b-[3px] border-splat-dark flex items-center px-3 justify-between`}>
-                                  <span className={`text-[10px] font-black uppercase tracking-widest ${catStyle.text}`}>{catStyle.label}</span>
-                                </div>
-                                <div className="p-4 flex justify-between items-center bg-white relative">
-                                  <div className="flex-1 min-w-0 pr-2">
-                                    <h4 className="font-black text-xl uppercase truncate">{item.title}</h4>
-                                    <p className="text-xs font-bold text-gray-500 truncate"><MapPin size={14} /> {item.location}</p>
-                                  </div>
-                                  {isEditMode && (
-                                    <div className="absolute right-0 top-0 bottom-0 w-12 bg-gray-50 border-l-[3px] border-splat-dark flex flex-col z-30">
-                                      <button onClick={(e) => { e.stopPropagation(); setEditingItem(item); setIsEditorOpen(true); }} className="flex-1 flex items-center justify-center border-b-[3px] border-splat-dark"><Edit3 size={16} /></button>
-                                      <button onClick={(e) => { e.stopPropagation(); if (confirm('確定刪除？')) deleteScheduleItem(trip.id, item.id); }} className="flex-1 flex items-center justify-center text-red-500"><Trash2 size={16} /></button>
-                                    </div>
-                                  )}
-                                </div>
-                              </motion.div>
-                            </div>
-                          </div>
-                        </Reorder.Item>
-                      );
-                    })
+                  dayItems.map((item, idx) => (
+                    <ScheduleItemRow
+                      key={item.id}
+                      item={item}
+                      idx={idx}
+                      isEditMode={isEditMode}
+                      dayItems={dayItems}
+                      tripId={trip.id}
+                      updateScheduleItem={updateScheduleItem}
+                      deleteScheduleItem={deleteScheduleItem}
+                      setEditingItem={setEditingItem}
+                      setIsEditorOpen={setIsEditorOpen}
+                      setDetailItem={setDetailItem}
+                      timeToMins={timeToMins}
+                    />
+                  ))
                 )}
               </AnimatePresence>
             </Reorder.Group>
