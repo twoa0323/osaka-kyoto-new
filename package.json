@@ -1,5 +1,5 @@
+```json
 {
-  "name": "kyoto-osaka-planner",
   "private": true,
   "version": "1.0.0",
   "type": "module",
@@ -37,3 +37,4 @@
     "vite-plugin-pwa": "^1.2.0"
   }
 }
+```

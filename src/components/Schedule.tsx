@@ -152,6 +152,8 @@ const ScheduleItemRow: React.FC<{
 
 // --- 輔助組件：地圖路徑視圖 ---
 const ScheduleMapView: React.FC<{ items: ScheduleItem[], trip?: Trip }> = ({ items, trip }) => {
+  const MAPTILER_KEY = import.meta.env.VITE_MAPTILER_API_KEY;
+
   const points = useMemo(() => {
     return items
       .filter(item => item.lat && item.lng)
@@ -180,6 +182,14 @@ const ScheduleMapView: React.FC<{ items: ScheduleItem[], trip?: Trip }> = ({ ite
       <Map
         viewport={viewport}
         className="w-full h-full z-10"
+        styles={
+          MAPTILER_KEY
+            ? {
+              light: `https://api.maptiler.com/maps/streets-v2/style.json?key=${MAPTILER_KEY}`,
+              dark: `https://api.maptiler.com/maps/streets-v2-dark/style.json?key=${MAPTILER_KEY}`
+            }
+            : undefined
+        }
       >
         <MapRoute
           coordinates={points}
