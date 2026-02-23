@@ -296,9 +296,9 @@ export const Schedule: React.FC<{ externalDateIdx?: number }> = ({ externalDateI
   }, [dayItems, trip, externalDateIdx, dateRange]);
 
   const uniqueCities = useMemo(() => {
-    const map = new Map();
-    timeline.forEach(t => map.set(t.city.name, t.city));
-    return Array.from(map.values());
+    const cityMap = new globalThis.Map<string, any>();
+    timeline.forEach(t => cityMap.set(t.city.name, t.city));
+    return Array.from(cityMap.values());
   }, [timeline]);
 
   const weatherQueries = useQueries({
@@ -614,6 +614,7 @@ export const Schedule: React.FC<{ externalDateIdx?: number }> = ({ externalDateI
     activeSpotIdRef.current = item.id;
     setSpotAiLoading(item.id);
     setCompletion("");
+
     try {
       const res = await fetch('/api/ai', {
         method: 'POST',
@@ -623,21 +624,53 @@ export const Schedule: React.FC<{ externalDateIdx?: number }> = ({ externalDateI
           payload: { title: item.title, location: item.location }
         })
       });
-      const data = await res.json();
-      const resultText = data.text || "無法取得導覽資訊，可能該地點並無相關介紹。";
-      setCompletion(resultText);
-      const guide = { background: resultText, highlights: [], suggestedDuration: "" };
+
+      if (!res.ok) throw new Error("串流請求失敗");
+      if (!res.body) throw new Error("回應內容為空");
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let fullText = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        const chunk = decoder.decode(value, { stream: true });
+        // Vercel Data Stream 格式通常是 "0:\"text\"" 或 "0:\"text\"\n"
+        // 這裡做一個簡單的手動解析，提取引號內的內容
+        const lines = chunk.split('\n');
+        for (const line of lines) {
+          if (line.startsWith('0:')) {
+            try {
+              // 提取 0:"..." 之後的內容並解析 JSON 字串
+              const content = JSON.parse(line.substring(2));
+              fullText += content;
+              setCompletion(fullText);
+            } catch (e) {
+              // 如果解析失敗，嘗試直接累加（可能是半個 chunk）
+              console.warn("Chunk parse error:", line);
+            }
+          }
+        }
+      }
+
+      const guide = { background: fullText, highlights: [], suggestedDuration: "" };
       const updatedItem = { ...item, spotGuide: guide };
-      updateScheduleItem(trip.id, item.id, updatedItem);
+      if (trip) {
+        updateScheduleItem(trip.id, item.id, updatedItem);
+      }
       setDetailItem(prev => prev?.id === item.id ? updatedItem : prev);
       triggerHaptic('success');
     } catch (err) {
-      alert("取得景點導覽失敗。");
+      console.error("Spot Guide Stream Error:", err);
+      alert("取得景點導覽失敗，請稍後再試。");
     } finally {
       activeSpotIdRef.current = null;
       setSpotAiLoading(null);
     }
   };
+
 
   const [viewMode, setViewMode] = useState<'list' | 'map'>('list');
   const [isOptimizing, setIsOptimizing] = useState(false);
