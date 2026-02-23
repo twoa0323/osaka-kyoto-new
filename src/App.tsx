@@ -23,7 +23,6 @@ import { SettingToggle, InkSplat } from './components/Common';
 import { MemberManagement, ProfileEditor, PersonalSetup } from './components/MemberModals';
 import { Member } from './types';
 import { OfflineStatus } from './components/OfflineStatus';
-import { MagicImport } from './components/MagicImport';
 import { triggerHaptic } from './utils/haptics';
 import { useHapticShake } from './hooks/useHapticShake';
 import { AiAssistant } from './components/AiAssistant';
@@ -156,11 +155,21 @@ const App: React.FC = () => {
                 <h1 className="text-2xl font-black tracking-tight drop-shadow-md truncate max-w-[200px]">
                   {currentTrip.tripName || currentTrip.dest}
                 </h1>
-                <ChevronDown size={24} className={`stroke-[3px] transition-transform shrink-0 ${menuOpen ? 'rotate-180' : ''}`} />
                 <div className="ml-2">
                   <OfflineStatus />
                 </div>
               </div>
+
+              {/* ▼ 隱藏版 AI 魔法按鈕 ▼ */}
+              <motion.button
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.9 }}
+                onClick={() => openAiAssistant()}
+                className="absolute right-16 top-0 w-8 h-8 rounded-full bg-black/5 flex items-center justify-center border-none text-black/20 hover:text-splat-blue transition-colors z-[120]"
+              >
+                <SparklesIcon size={16} strokeWidth={3} />
+              </motion.button>
+              {/* ▲ 隱藏版 AI 魔法按鈕 ▲ */}
 
               {menuOpen && (
                 <motion.div
@@ -330,18 +339,7 @@ const App: React.FC = () => {
           }}
         />
       )}
-      <MagicImport />
       <AiAssistant />
-
-      <motion.button
-        whileHover={{ scale: 1.1, rotate: 5 }}
-        whileTap={{ scale: 0.9, rotate: -5 }}
-        onClick={() => openAiAssistant()}
-        className="fixed right-6 bottom-32 w-14 h-14 bg-splat-blue text-white rounded-2xl border-[4px] border-splat-dark shadow-splat-solid z-[60] flex items-center justify-center transition-transform"
-      >
-        <SparklesIcon size={28} strokeWidth={2.5} />
-        {/* Badge or indicator if needed */}
-      </motion.button>
     </div>
   );
 };

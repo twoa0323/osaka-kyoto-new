@@ -6,7 +6,7 @@ import { format, addDays, differenceInDays, parseISO, isValid, isSameDay } from 
 import { MapPin, Plus, Edit3, Trash2, Utensils, Plane, Home, Camera, Sparkles, X, Loader2, Wind, Umbrella, Sunrise, ChevronUp, ChevronDown, Clock, Cloud, CloudRain, Sun, Droplets, AlertTriangle, Wand2, Check, WifiOff, Star, Map as MapIcon } from 'lucide-react';
 import { ScheduleEditor } from './ScheduleEditor';
 import { ScheduleItem, Trip } from '../types';
-import { WeatherReportModal, AiAssistantModal } from './ScheduleModals';
+import { WeatherReportModal } from './ScheduleModals';
 import { motion, AnimatePresence, Reorder } from 'framer-motion';
 import { LazyImage } from './LazyImage';
 import { useNetworkStatus } from '../hooks/useNetworkStatus';
@@ -173,7 +173,6 @@ export const Schedule: React.FC<{ externalDateIdx?: number }> = ({ externalDateI
   const [isEditMode, setIsEditMode] = useState(false);
   const [editingItem, setEditingItem] = useState<ScheduleItem | undefined>();
   const [detailItem, setDetailItem] = useState<ScheduleItem | undefined>();
-  const [isAiOpen, setIsAiOpen] = useState(false);
 
   const [showFullWeather, setShowFullWeather] = useState(false);
   const [isAiLoading, setIsAiLoading] = useState(false);
@@ -482,7 +481,6 @@ export const Schedule: React.FC<{ externalDateIdx?: number }> = ({ externalDateI
             images: []
           }));
         }
-        setIsAiOpen(false);
         triggerHaptic('success');
         alert("✨ 智慧分析完成！已將資訊自動分類。");
       }
@@ -686,7 +684,6 @@ export const Schedule: React.FC<{ externalDateIdx?: number }> = ({ externalDateI
             </motion.button>
             <motion.button whileTap={{ scale: 0.9 }} onClick={() => { setEditingItem(undefined); setIsEditorOpen(true) }} className="w-9 h-9 rounded-xl bg-splat-green text-white flex items-center justify-center border-2 border-splat-dark shadow-splat-solid-sm"><Plus strokeWidth={3} /></motion.button>
             <motion.button whileTap={{ scale: 0.9 }} onClick={() => setIsEditMode(!isEditMode)} className={`w-9 h-9 rounded-xl flex items-center justify-center border-2 border-splat-dark ${isEditMode ? 'bg-splat-pink text-white' : 'bg-white text-splat-dark shadow-splat-solid-sm'}`}><Edit3 size={18} strokeWidth={3} /></motion.button>
-            <motion.button whileTap={{ scale: 0.9 }} onClick={() => setIsAiOpen(true)} className="w-9 h-9 rounded-xl bg-splat-blue text-white flex items-center justify-center border-2 border-splat-dark shadow-splat-solid-sm"><Sparkles size={18} strokeWidth={3} /></motion.button>
           </div>
         </div>
 
@@ -799,23 +796,7 @@ export const Schedule: React.FC<{ externalDateIdx?: number }> = ({ externalDateI
       </AnimatePresence>
 
       <AnimatePresence>
-        {isAiOpen && (
-          <AiAssistantModal
-            onClose={() => setIsAiOpen(false)}
-            isAiLoading={isAiLoading}
-            onAnalyze={handleAiAnalyze}
-            onOptimize={handleOptimizeRoute}
-            isOptimizing={isOptimizing}
-            canOptimize={dayItems.length > 2}
-            onWeather={handleWeatherMagic}
-            isWizardLoading={isWizardLoading}
-            onFillGaps={handleAutoFillGaps}
-          />
-        )}
-      </AnimatePresence>
-
-      {/* 📍 天氣巫師建議彈窗 */}
-      <AnimatePresence>
+        {/* 📍 天氣巫師建議彈窗 */}
         {showWizardModal && weatherAdvice && (
           <div className="fixed inset-0 bg-splat-dark/60 backdrop-blur-md z-[1000] p-6 flex items-center justify-center" onClick={() => setShowWizardModal(false)}>
             <motion.div
