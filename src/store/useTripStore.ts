@@ -126,6 +126,7 @@ interface TripState {
 
   // 4. 美食日誌 (Journal)
   addJournalItem: (tid: string, item: JournalItem) => void;
+  updateJournalItem: (tid: string, iid: string, ni: JournalItem) => void;
   deleteJournalItem: (tid: string, iid: string) => void;
 
   // 5. 購物清單 (Shopping)
@@ -136,6 +137,7 @@ interface TripState {
 
   // 6. 旅遊資訊 (Info)
   addInfoItem: (tid: string, item: InfoItem) => void;
+  updateInfoItem: (tid: string, iid: string, ni: InfoItem) => void;
   deleteInfoItem: (tid: string, iid: string) => void;
 
   // 7. 行李清單 (Packing)
@@ -328,6 +330,12 @@ export const useTripStore = create<TripState>()(
         }));
         syncItemToCloud(tid, "journals", i);
       },
+      updateJournalItem: (tid, iid, ni) => {
+        set(s => ({
+          trips: s.trips.map(t => t.id === tid ? { ...t, journals: (t.journals || []).map(j => j.id === iid ? ni : j) } : t)
+        }));
+        syncItemToCloud(tid, "journals", ni);
+      },
       deleteJournalItem: (tid, iid) => {
         set(s => ({
           trips: s.trips.map(t => t.id === tid ? { ...t, journals: t.journals.filter(j => j.id !== iid) } : t)
@@ -377,6 +385,12 @@ export const useTripStore = create<TripState>()(
           trips: s.trips.map(t => t.id === tid ? { ...t, infoItems: [i, ...(t.infoItems || [])] } : t)
         }));
         syncItemToCloud(tid, "info", i);
+      },
+      updateInfoItem: (tid, iid, ni) => {
+        set(s => ({
+          trips: s.trips.map(t => t.id === tid ? { ...t, infoItems: (t.infoItems || []).map(x => x.id === iid ? ni : x) } : t)
+        }));
+        syncItemToCloud(tid, "info", ni);
       },
       deleteInfoItem: (tid, iid) => {
         set(s => ({

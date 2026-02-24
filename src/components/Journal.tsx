@@ -13,7 +13,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { LazyImage } from './LazyImage';
 
 export const Journal = () => {
-  const { trips, currentTripId, addJournalItem, deleteJournalItem } = useTripStore();
+  const { trips, currentTripId, addJournalItem, updateJournalItem, deleteJournalItem } = useTripStore();
   const trip = trips.find(t => t.id === currentTripId);
   const [isAdding, setIsAdding] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
@@ -122,6 +122,8 @@ export const Journal = () => {
                 index={idx}
                 onDelete={(e) => { e.stopPropagation(); if (confirm('確定要刪除這段美味回憶嗎？')) deleteJournalItem(trip.id, item.id); }}
                 onClick={() => setViewingItem(item)}
+                tripId={trip.id}
+                updateJournalItem={updateJournalItem}
               />
             ))
           )}
@@ -253,9 +255,35 @@ export const Journal = () => {
 };
 
 // --- 拍立得卡片子組件 ---
-const PolaroidCard = ({ item, index, onDelete, onClick }: { item: JournalItem, index: number, onDelete: (e: any) => void, onClick: () => void }) => {
+const PolaroidCard = ({ item, index, onDelete, onClick, tripId, updateJournalItem }: { item: JournalItem, index: number, onDelete: (e: any) => void, onClick: () => void, tripId: string, updateJournalItem: any }) => {
   // 隨機傾斜角度，讓介面看起來更像亂放在桌上的照片
   const rotation = useMemo(() => (index % 2 === 0 ? -2 : 2) + (Math.random() * 2 - 1), [index]);
+
+  // 💡 自動取圖邏輯
+  React.useEffect(() => {
+    if (!item.images || item.images.length === 0) {
+      const fetchImage = async () => {
+        try {
+          const res = await fetch('/api/ai', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              action: 'get-image-for-item',
+              payload: { title: item.title, location: item.location, category: 'food' }
+            })
+          });
+          const data = await res.json();
+          if (data.imageUrl) {
+            updateJournalItem(tripId, item.id, { ...item, images: [data.imageUrl] });
+          }
+        } catch (err) {
+          console.error("Failed to fetch image for food item:", item.title);
+        }
+      };
+      const timeoutId = setTimeout(fetchImage, 500 + Math.random() * 2000);
+      return () => clearTimeout(timeoutId);
+    }
+  }, [item.id, item.images, item.title, item.location, tripId, updateJournalItem]);
 
   return (
     <motion.div

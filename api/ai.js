@@ -6,22 +6,25 @@ const apiKey = process.env.GEMINI_API_KEY || process.env.VITE_GEMINI_API_KEY;
 const google = createGoogleGenerativeAI({ apiKey });
 const model = google('gemini-3-flash-preview');
 
-// 🌐 Wikipedia 圖片獲取助手
+// 🌐 Wikipedia 圖片獲取助手 (支援多語言 fallback)
 async function fetchWikipediaImage(query) {
   if (!query) return null;
-  try {
-    // 優先搜尋中文維基，若無則可考慮英文，但目前先鎖定 zh
-    const searchUrl = `https://zh.wikipedia.org/w/api.php?action=query&format=json&prop=pageimages&titles=${encodeURIComponent(query)}&pithumbsize=1000&origin=*`;
-    const res = await fetch(searchUrl);
-    const data = await res.json();
-    const pages = data.query?.pages;
-    if (!pages) return null;
-    const pageId = Object.keys(pages)[0];
-    if (pageId !== "-1" && pages[pageId].thumbnail) {
-      return pages[pageId].thumbnail.source;
+  const langs = ['ja', 'zh', 'en']; // 日本景點 ja 優先
+
+  for (const lang of langs) {
+    try {
+      const searchUrl = `https://${lang}.wikipedia.org/w/api.php?action=query&format=json&prop=pageimages&titles=${encodeURIComponent(query)}&pithumbsize=1000&origin=*`;
+      const res = await fetch(searchUrl);
+      const data = await res.json();
+      const pages = data.query?.pages;
+      if (!pages) continue;
+      const pageId = Object.keys(pages)[0];
+      if (pageId !== "-1" && pages[pageId].thumbnail) {
+        return pages[pageId].thumbnail.source;
+      }
+    } catch (e) {
+      console.warn(`Wikipedia Fetch Error (${lang}) for:`, query, e);
     }
-  } catch (e) {
-    console.warn("Wikipedia Fetch Error for:", query, e);
   }
   return null;
 }
@@ -174,7 +177,7 @@ export default async function handler(req, res) {
           }),
           prompt: `分析旅遊項目：「${payload.title} ${payload.location || ''}」。
             1. 它是否是一個具備維基百科條目的著名景點、地標或連鎖品牌？
-            2. 如果是，請提供最精確的維基百科搜尋標題（wikiQuery）。
+            2. 如果是，請提供該地點最精確的維基百科搜尋標題（優先提供日文原名，因為我們正在日本旅行，ja.wikipedia.org 覆蓋率最高）。
             3. 如果不是，請提供一個通用的英文關鍵字以便搜尋圖片（genericQuery）。`
         });
 
