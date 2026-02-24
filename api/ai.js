@@ -17,7 +17,7 @@ export default async function handler(req, res) {
 
   try {
     const { action, payload } = req.body;
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    const model = genAI.getGenerativeModel({ model: "gemini-3-flash-preview" });
 
     // ==========================================
     // 類型 1：需要「打字機串流」輸出的功能 (景點導覽)
@@ -26,7 +26,7 @@ export default async function handler(req, res) {
       const prompt = `你是一個專業的日本旅遊導覽人員。請針對景點「${payload.location} ${payload.title}」提供專業的背景介紹與必看亮點。請直接回傳排版精美的 Markdown 文字，建議包含：1. 歷史背景介紹 2. 必看亮點 (條列式) 3. 建議停留時間。語氣專業活潑，使用繁體中文。`;
 
       const spotResult = streamText({
-        model: googleProvider('gemini-1.5-flash'), // 👈 改用 googleProvider
+        model: googleProvider('gemini-3-flash-preview'), // 👈 改用 googleProvider
         prompt: prompt,
       });
       // ✅ 使用 Node.js 專用的 pipe 方法回傳串流，完美相容
