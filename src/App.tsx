@@ -248,13 +248,14 @@ const App: React.FC = () => {
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -10 }}
             transition={{ duration: 0.2 }}
+            className="h-full"
           >
-            <div className={activeTab === 'schedule' ? 'block' : 'hidden'}><Schedule externalDateIdx={selectedDateIdx} /></div>
-            <div className={activeTab === 'booking' ? 'block' : 'hidden'}><Booking /></div>
-            <div className={activeTab === 'expense' ? 'block' : 'hidden'}><Expense /></div>
-            <div className={activeTab === 'food' ? 'block' : 'hidden'}><Journal /></div>
-            <div className={activeTab === 'shop' ? 'block' : 'hidden'}><Shopping /></div>
-            <div className={activeTab === 'info' ? 'block' : 'hidden'}><Info /></div>
+            {activeTab === 'schedule' && <Schedule externalDateIdx={selectedDateIdx} />}
+            {activeTab === 'booking' && <Booking />}
+            {activeTab === 'expense' && <Expense />}
+            {activeTab === 'food' && <Journal />}
+            {activeTab === 'shop' && <Shopping />}
+            {activeTab === 'info' && <Info />}
           </motion.div>
         </AnimatePresence>
       </main>

@@ -194,56 +194,92 @@ const ScheduleMapView: React.FC<{ items: ScheduleItem[], trip?: Trip, setDetailI
     });
   }, [points]);
 
+  const handleCardClick = (item: ScheduleItem) => {
+    if (item.lat && item.lng && mapRef.current) {
+      mapRef.current.flyTo({
+        center: [item.lng, item.lat],
+        zoom: 15,
+        duration: 1200,
+        essential: true
+      });
+      triggerHaptic('medium');
+    }
+  };
+
   return (
-    <div className="relative w-full h-[60vh] rounded-[32px] overflow-hidden border-[4px] border-splat-dark shadow-splat-solid bg-gray-100 mt-4">
-      <Map
-        ref={mapRef as any}
-        viewport={viewport}
-        className="w-full h-full z-10"
-        styles={
-          MAPTILER_KEY
-            ? {
-              light: `https://api.maptiler.com/maps/streets-v2/style.json?key=${MAPTILER_KEY}`,
-              dark: `https://api.maptiler.com/maps/streets-v2-dark/style.json?key=${MAPTILER_KEY}`
-            }
-            : undefined
-        }
-      >
-        <MapRoute
-          coordinates={points}
-          color="#5BA4E5"
-          width={5}
-          dashArray={[2, 2]}
-        />
+    <div className="flex flex-col h-full gap-4">
+      <div className="flex-1 relative rounded-[32px] overflow-hidden border-[4px] border-splat-dark shadow-splat-solid bg-gray-100">
+        <Map
+          ref={mapRef as any}
+          viewport={viewport}
+          className="w-full h-full z-10"
+          styles={
+            MAPTILER_KEY
+              ? {
+                light: `https://api.maptiler.com/maps/streets-v2/style.json?key=${MAPTILER_KEY}`,
+                dark: `https://api.maptiler.com/maps/streets-v2-dark/style.json?key=${MAPTILER_KEY}`
+              }
+              : undefined
+          }
+        >
+          <MapRoute
+            coordinates={points}
+            color="#5BA4E5"
+            width={5}
+            dashArray={[2, 2]}
+          />
 
-        {items.map((item, idx) => (
-          item.lat && item.lng && (
-            <MapMarker
+          {items.map((item, idx) => (
+            item.lat && item.lng && (
+              <MapMarker
+                key={item.id}
+                longitude={item.lng}
+                latitude={item.lat}
+                onClick={() => {
+                  handleCardClick(item);
+                  setTimeout(() => setDetailItem?.(item), 1300);
+                }}
+              >
+                <MarkerContent>
+                  <div className="flex flex-col items-center">
+                    <div className="w-8 h-8 bg-splat-blue border-2 border-white rounded-full flex items-center justify-center text-white font-black shadow-lg text-xs hover:bg-splat-pink transition-colors">
+                      {idx + 1}
+                    </div>
+                  </div>
+                </MarkerContent>
+              </MapMarker>
+            )
+          ))}
+
+          <MapControls showZoom showLocate position="bottom-right" />
+        </Map>
+
+        <div className="absolute top-4 left-4 z-20 bg-white/90 backdrop-blur px-3 py-1.5 rounded-full border-2 border-splat-dark font-black text-[10px] flex items-center gap-2 shadow-sm pointer-events-none">
+          <MapIcon size={12} className="text-splat-blue" />
+          {items.length} SPOTS
+        </div>
+      </div>
+
+      {/* 🎠 Snap Carousel */}
+      <div className="flex overflow-x-auto gap-4 px-1 py-1 hide-scrollbar snap-x snap-mandatory h-28 shrink-0">
+        {items.map((item, idx) => {
+          const catStyle = CATEGORY_STYLE[item.category as keyof typeof CATEGORY_STYLE] || CATEGORY_STYLE.sightseeing;
+          return (
+            <motion.div
               key={item.id}
-              longitude={item.lng}
-              latitude={item.lat}
-              onClick={() => setDetailItem?.(item)}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => handleCardClick(item)}
+              className="snap-center shrink-0 w-44 bg-white border-[3px] border-splat-dark rounded-[20px] shadow-splat-solid-sm overflow-hidden flex"
             >
-              <MarkerContent>
-                <div className="flex flex-col items-center">
-                  <div className="w-8 h-8 bg-splat-blue border-2 border-white rounded-full flex items-center justify-center text-white font-black shadow-lg text-xs hover:bg-splat-pink transition-colors">
-                    {idx + 1}
-                  </div>
-                  <div className="bg-white border-2 border-splat-dark px-2 py-0.5 rounded-md text-[10px] font-black mt-1 shadow-sm whitespace-nowrap">
-                    {item.title}
-                  </div>
-                </div>
-              </MarkerContent>
-            </MapMarker>
-          )
-        ))}
-
-        <MapControls showZoom showLocate position="bottom-right" />
-      </Map>
-
-      <div className="absolute top-4 left-4 z-20 bg-white/90 backdrop-blur px-3 py-1.5 rounded-full border-2 border-splat-dark font-black text-[10px] flex items-center gap-2 shadow-sm pointer-events-none">
-        <MapIcon size={12} className="text-splat-blue" />
-        {items.length} SPOTS ON ROUTE
+              <div className={`w-1.5 ${catStyle.bg} h-full border-r-2 border-splat-dark`} />
+              <div className="flex-1 p-2.5 flex flex-col justify-between overflow-hidden">
+                <div className="text-[14px] font-black uppercase italic text-splat-blue leading-none mb-1">{item.time}</div>
+                <div className="text-[13px] font-black truncate">{item.title}</div>
+                <div className="text-[9px] font-bold text-gray-400 truncate uppercase mt-0.5">{item.location}</div>
+              </div>
+            </motion.div>
+          );
+        })}
       </div>
     </div>
   );
@@ -675,15 +711,20 @@ export const Schedule: React.FC<{ externalDateIdx?: number }> = ({ externalDateI
 
         buffer += decoder.decode(value, { stream: true });
 
-        const lines = buffer.split('\n');
-        // 最後一個可能是完整的也可能是不完整的，保留到下一次
-        buffer = lines.pop() || "";
+        // 🔄 具備 Buffer 的強健行解析器
+        let boundary = buffer.lastIndexOf('\n');
+        if (boundary === -1) continue;
 
+        const completeData = buffer.substring(0, boundary);
+        buffer = buffer.substring(boundary + 1);
+
+        const lines = completeData.split('\n');
         for (const line of lines) {
           const trimmedLine = line.trim();
           if (!trimmedLine || !trimmedLine.startsWith('0:')) continue;
 
           try {
+            // 嘗試標準解法
             const rawContent = trimmedLine.substring(2);
             const content = JSON.parse(rawContent);
             if (typeof content === 'string') {
@@ -691,24 +732,31 @@ export const Schedule: React.FC<{ externalDateIdx?: number }> = ({ externalDateI
               setCompletion(fullText);
             }
           } catch (e) {
-            // 解析 JSON 失敗時的備用方案：直接嘗試提取引號內容
+            // 備用方案：使用 Regex 提取被引號包圍的內容 (防止轉義字元導致 JSON.parse 失敗)
             const match = trimmedLine.match(/^0:"(.*)"$/);
             if (match) {
-              fullText += match[1];
+              // 處理基本的轉義字元
+              const unescaped = match[1].replace(/\\n/g, '\n').replace(/\\"/g, '"').replace(/\\\\/g, '\\');
+              fullText += unescaped;
               setCompletion(fullText);
             }
           }
         }
       }
 
-      // 處理最後殘留的 buffer
+      // 處理最後殘留且可能完整的最後一行
       if (buffer.trim().startsWith('0:')) {
         try {
           const content = JSON.parse(buffer.trim().substring(2));
           if (typeof content === 'string') {
             fullText += content;
           }
-        } catch (e) { }
+        } catch (e) {
+          const match = buffer.trim().match(/^0:"(.*)"$/);
+          if (match) {
+            fullText += match[1].replace(/\\n/g, '\n').replace(/\\"/g, '"').replace(/\\\\/g, '\\');
+          }
+        }
       }
 
       const guide = { background: fullText, highlights: [], suggestedDuration: "" };
@@ -844,7 +892,9 @@ export const Schedule: React.FC<{ externalDateIdx?: number }> = ({ externalDateI
             </Reorder.Group>
           </div>
         ) : (
-          <ScheduleMapView items={dayItems} trip={trip!} setDetailItem={setDetailItem} />
+          <div className="relative h-[65vh] mt-4 flex flex-col gap-4">
+            <ScheduleMapView items={dayItems} trip={trip!} setDetailItem={setDetailItem} />
+          </div>
         )}
       </div>
 

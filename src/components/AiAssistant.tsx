@@ -24,6 +24,7 @@ export const AiAssistant: React.FC = () => {
         data: any;
         tempImageUrl: string;
         selectedPayerId: string;
+        itemAssignments: Record<number, string[]>; // idx -> memberIds
     } | null>(null);
 
     if (!isAiModalOpen || !trip) return null;
@@ -111,7 +112,8 @@ export const AiAssistant: React.FC = () => {
             setReceiptPreview({
                 data,
                 tempImageUrl: url,
-                selectedPayerId: trip.members?.[0]?.id || 'Admin'
+                selectedPayerId: trip.members?.[0]?.id || 'Admin',
+                itemAssignments: {} // 預設空，由使用者點選
             });
             triggerHaptic('success');
         } catch (err) {
@@ -125,7 +127,12 @@ export const AiAssistant: React.FC = () => {
 
     const handleSaveReceipt = () => {
         if (!receiptPreview) return;
-        const { data, tempImageUrl, selectedPayerId } = receiptPreview;
+        const { data, tempImageUrl, selectedPayerId, itemAssignments } = receiptPreview;
+
+        // 計算每個人的分帳金額 (基礎版，未來可擴充為更精確的 logic)
+        // 目前先存入 splitWith 以便 ExpenseExplorer 讀取
+        const allAssignments = Object.values(itemAssignments).flat();
+        const uniqueAssignees = Array.from(new Set(allAssignments));
 
         const newItem = {
             id: Date.now().toString(),
@@ -138,8 +145,12 @@ export const AiAssistant: React.FC = () => {
             images: [tempImageUrl],
             storeName: data.storeName || '',
             payerId: selectedPayerId,
-            splitWith: [],
-            isTaxFree: data.isTaxFree
+            splitWith: uniqueAssignees.length > 0 ? uniqueAssignees : [],
+            isTaxFree: data.isTaxFree,
+            aiItems: data.items?.map((it: any, idx: number) => ({
+                ...it,
+                assignedTo: itemAssignments[idx] || []
+            }))
         };
 
         addExpenseItem(trip.id, newItem as any);
@@ -536,20 +547,52 @@ export const AiAssistant: React.FC = () => {
 
                                     {/* 明細 (如果有) */}
                                     {receiptPreview.data.items && receiptPreview.data.items.length > 0 && (
-                                        <div className="space-y-2">
-                                            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">Details 明細</p>
-                                            <div className="bg-white border-2 border-gray-100 rounded-2xl divide-y-2 divide-gray-50 overflow-hidden text-[10px]">
-                                                {receiptPreview.data.items.slice(0, 5).map((it: any, idx: number) => (
-                                                    <div key={idx} className="flex justify-between items-center p-3">
-                                                        <span className="font-bold text-gray-600 truncate max-w-[70%]">{it.name}</span>
-                                                        <span className="font-black text-splat-dark">{receiptPreview.data.currency} {it.price.toLocaleString()}</span>
+                                        <div className="space-y-3">
+                                            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">Assign Items 品項與分帳成員</p>
+                                            <div className="space-y-2">
+                                                {receiptPreview.data.items.map((it: any, idx: number) => (
+                                                    <div key={idx} className="bg-white border-2 border-splat-dark rounded-2xl p-3 shadow-splat-solid-xs">
+                                                        <div className="flex justify-between items-center mb-2">
+                                                            <span className="font-bold text-xs text-gray-700 truncate max-w-[70%]">{it.name}</span>
+                                                            <span className="font-black text-xs text-splat-dark">{receiptPreview.data.currency} {it.price.toLocaleString()}</span>
+                                                        </div>
+                                                        <div className="flex flex-wrap gap-1.5 pt-2 border-t border-dashed border-gray-100">
+                                                            {(trip.members || []).map(m => {
+                                                                const isAssigned = (receiptPreview.itemAssignments[idx] || []).includes(m.id);
+                                                                return (
+                                                                    <button
+                                                                        key={m.id}
+                                                                        onClick={() => {
+                                                                            const current = receiptPreview.itemAssignments[idx] || [];
+                                                                            const updated = isAssigned ? current.filter(id => id !== m.id) : [...current, m.id];
+                                                                            setReceiptPreview({
+                                                                                ...receiptPreview,
+                                                                                itemAssignments: { ...receiptPreview.itemAssignments, [idx]: updated }
+                                                                            });
+                                                                            triggerHaptic('light');
+                                                                        }}
+                                                                        className={`w-7 h-7 rounded-full flex items-center justify-center text-xs border-2 transition-all ${isAssigned ? 'bg-splat-yellow border-splat-dark text-white' : 'bg-gray-100 border-gray-200 grayscale contrast-50 opacity-40'}`}
+                                                                        title={m.name}
+                                                                    >
+                                                                        {m.avatar}
+                                                                    </button>
+                                                                );
+                                                            })}
+                                                            <button
+                                                                onClick={() => {
+                                                                    const allMemberIds = (trip.members || []).map(m => m.id);
+                                                                    setReceiptPreview({
+                                                                        ...receiptPreview,
+                                                                        itemAssignments: { ...receiptPreview.itemAssignments, [idx]: allMemberIds }
+                                                                    });
+                                                                }}
+                                                                className="text-[8px] font-black uppercase text-splat-blue bg-splat-blue/5 border border-splat-blue/20 px-2 rounded-full"
+                                                            >
+                                                                Split All
+                                                            </button>
+                                                        </div>
                                                     </div>
                                                 ))}
-                                                {receiptPreview.data.items.length > 5 && (
-                                                    <div className="p-2 text-center text-[9px] font-black text-gray-400 bg-gray-50 uppercase">
-                                                        + {receiptPreview.data.items.length - 5} more items
-                                                    </div>
-                                                )}
                                             </div>
                                         </div>
                                     )}

@@ -3,6 +3,7 @@ import { useTripStore } from '../store/useTripStore';
 import { X, Camera, Globe, QrCode, Loader2, Trash2, Plane, ChevronDown, Sparkles } from 'lucide-react';
 import { BookingItem } from '../types';
 import { uploadImage, compressImage } from '../utils/imageUtils';
+import { BottomSheet } from './ui/BottomSheet';
 // 移除前端受限 API Key
 // const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY || "";
 
@@ -175,20 +176,15 @@ export const BookingEditor: React.FC<Props> = ({ tripId, type, item, onClose }) 
   };
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[400] flex items-end sm:items-center justify-center p-4">
-      <div className="bg-ac-bg w-full max-w-md rounded-t-[40px] sm:rounded-[40px] shadow-2xl overflow-hidden animate-in slide-in-from-bottom-10 max-h-[90vh] flex flex-col text-left">
-
-        <div className="p-6 flex justify-between items-center border-b-4 border-ac-border sticky top-0 bg-ac-bg z-10">
-          <h2 className="text-xl font-black text-ac-brown italic">🖋️ 編輯資訊</h2>
-          <div className="flex items-center gap-2">
-            {item && (
-              <button onClick={() => { if (confirm('確定要刪除嗎？')) { deleteBookingItem(tripId, item.id); onClose(); } }} className="p-2 bg-red-50 text-red-500 rounded-full active:scale-90"><Trash2 size={18} /></button>
-            )}
-            <button onClick={onClose} className="p-2 bg-white rounded-full shadow-sm border border-ac-border"><X size={20} /></button>
+    <BottomSheet isOpen={true} onClose={onClose} title="🖋️ 編輯資訊">
+      <div className="space-y-6">
+        {item && (
+          <div className="flex justify-end -mb-4">
+            <button onClick={() => { if (confirm('確定要刪除嗎？')) { deleteBookingItem(tripId, item.id); onClose(); } }} className="p-2 bg-red-50 text-red-500 rounded-full active:scale-90"><Trash2 size={18} /></button>
           </div>
-        </div>
+        )}
 
-        <div className="flex-1 overflow-y-auto p-6 space-y-6">
+        <div className="space-y-6">
 
           {/* 📍 新增：超有質感的 AI 截圖解析按鈕 */}
           <div className="relative">
@@ -381,7 +377,7 @@ export const BookingEditor: React.FC<Props> = ({ tripId, type, item, onClose }) 
           </button>
         </div>
       </div>
-    </div>
+    </BottomSheet>
   );
 };
 

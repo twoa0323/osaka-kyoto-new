@@ -19,7 +19,7 @@ const CATEGORIES = {
 };
 
 export const Shopping = () => {
-  const { trips, currentTripId, addShoppingItem, updateShoppingItem, toggleShoppingItem, deleteShoppingItem } = useTripStore();
+  const { trips, currentTripId, addShoppingItem, updateShoppingItem, toggleShoppingItem, deleteShoppingItem, exchangeRate } = useTripStore();
   const trip = trips.find(t => t.id === currentTripId);
 
   const [isAdding, setIsAdding] = useState(false);
@@ -271,13 +271,25 @@ const ShoppingRow = ({ item, onToggle, onClick, onPriceCheck, onDelete }: { item
           <span className={`text-[8px] font-black px-1.5 py-0.5 rounded-md border-2 border-splat-dark text-white ${cat.color} shadow-sm`}>
             {cat.label}
           </span>
-          <span className="text-[10px] font-black text-gray-400 font-mono">
-            {item.currency} {item.price?.toLocaleString()}
-          </span>
-          {item.targetPrice ? (
-            <span className="text-[9px] font-black text-splat-pink uppercase tracking-tighter">
-              🎯 Target: {item.targetPrice.toLocaleString()}
+          <div className="flex flex-col">
+            <span className="text-[10px] font-black text-splat-dark font-mono leading-none">
+              {item.currency} {item.price?.toLocaleString()}
             </span>
+            {item.currency === 'JPY' && (
+              <span className="text-[8px] font-bold text-gray-400 mt-0.5">
+                ≈ TWD {Math.round(item.price * exchangeRate).toLocaleString()}
+              </span>
+            )}
+          </div>
+          {item.targetPrice ? (
+            <div className="flex flex-col border-l-2 border-dotted border-gray-200 pl-2">
+              <span className="text-[9px] font-black text-splat-pink uppercase tracking-tighter leading-none">
+                🎯 Target
+              </span>
+              <span className="text-[8px] font-bold text-splat-pink/60">
+                {item.currency} {item.targetPrice.toLocaleString()}
+              </span>
+            </div>
           ) : null}
         </div>
 
@@ -311,7 +323,16 @@ const ShoppingRow = ({ item, onToggle, onClick, onPriceCheck, onDelete }: { item
           {item.aiPriceInfo && !item.isBought && (
             <motion.div initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} className={`mt-2 p-2 rounded-xl border-2 border-dotted flex flex-col gap-1 ${item.aiPriceInfo.lowPriceAlert ? 'bg-splat-pink/5 border-splat-pink' : 'bg-gray-50 border-gray-200'}`}>
               <div className="flex justify-between items-center">
-                <span className="text-[9px] font-black text-gray-400 uppercase">AI Market Report</span>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[9px] font-black text-gray-400 uppercase">AI Market Report</span>
+                  {item.aiPriceInfo.dealRating && (
+                    <span className={`text-[8px] font-black px-1.5 rounded-full border border-current ${item.aiPriceInfo.dealRating === 'good' ? 'bg-splat-green/10 text-splat-green' :
+                      item.aiPriceInfo.dealRating === 'bad' ? 'bg-splat-pink/10 text-splat-pink' : 'bg-splat-blue/10 text-splat-blue'
+                      }`}>
+                      {item.aiPriceInfo.dealRating.toUpperCase()}
+                    </span>
+                  )}
+                </div>
                 {item.aiPriceInfo.lowPriceAlert && (
                   <span className="text-[8px] font-black bg-splat-pink text-white px-1 rounded animate-pulse">GREAT DEAL! 💸</span>
                 )}

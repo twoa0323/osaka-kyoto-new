@@ -3,6 +3,7 @@ import { useTripStore } from '../store/useTripStore';
 import { X, Search, Camera, Trash2, Loader2 } from 'lucide-react';
 import { ScheduleItem } from '../types';
 import { uploadImage } from '../utils/imageUtils';
+import { BottomSheet } from './ui/BottomSheet';
 
 interface Props { tripId: string; date: string; item?: ScheduleItem; onClose: () => void; }
 
@@ -46,17 +47,15 @@ export const ScheduleEditor: React.FC<Props> = ({ tripId, date, item, onClose })
   };
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[1000] flex items-end sm:items-center justify-center p-4">
-      <div className="bg-ac-bg w-full max-w-md rounded-t-[40px] sm:rounded-[40px] shadow-2xl overflow-hidden animate-in slide-in-from-bottom-10 max-h-[90vh] overflow-y-auto text-left">
-        <div className="p-6 flex justify-between items-center border-b-4 border-ac-border sticky top-0 bg-ac-bg z-10">
-          <h2 className="text-xl font-black italic">{item ? '✍️ 編輯行程' : '📔 手寫計畫'}</h2>
-          <div className="flex gap-2">
-            {item && <button onClick={() => { if (confirm('確定刪除？')) { deleteScheduleItem(tripId, item.id); onClose(); } }} className="p-2 bg-red-50 text-red-500 rounded-full active:scale-90"><Trash2 size={20} /></button>}
-            <button onClick={onClose} className="p-2 bg-white rounded-full shadow-zakka active:scale-90"><X size={20} /></button>
+    <BottomSheet isOpen={true} onClose={onClose} title={item ? '✍️ 編輯行程' : '📔 手寫計畫'}>
+      <div className="space-y-5">
+        {item && (
+          <div className="flex justify-end -mb-4">
+            <button onClick={() => { if (confirm('確定刪除？')) { deleteScheduleItem(tripId, item.id); onClose(); } }} className="p-2 bg-red-50 text-red-500 rounded-full active:scale-90"><Trash2 size={20} /></button>
           </div>
-        </div>
+        )}
 
-        <div className="p-6 space-y-5">
+        <div className="space-y-5">
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1"><label className="text-[10px] font-black opacity-40 uppercase tracking-widest">Start Time</label>
               <input type="time" className="w-full p-4 bg-white border-2 border-ac-border rounded-2xl font-black text-ac-brown outline-none" value={form.time} onChange={e => setForm({ ...form, time: e.target.value })} /></div>
@@ -102,7 +101,7 @@ export const ScheduleEditor: React.FC<Props> = ({ tripId, date, item, onClose })
           <button onClick={handleSave} className="btn-zakka w-full py-5 text-xl mt-4">儲存計畫 ➔</button>
         </div>
       </div>
-    </div>
+    </BottomSheet>
   );
 };
 

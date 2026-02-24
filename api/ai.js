@@ -85,6 +85,7 @@ export default async function handler(req, res) {
               9. confidence: 評估你對此張收據辨識結果的整體信心。
               
               - 特別注意：日本旅遊場景中，藥妝店與百貨常有免稅與含稅兩種價格，請以「最終實付處 (Total)」為準。
+              - 品項識別：請盡可能列出收據上的單一品項名稱與單價，這將用於後續的精確分帳。
               - 確保金額不包含千分位逗號。`
             },
             { role: 'user', content: [{ type: 'image', image: payload.imageBase64, mimeType: 'image/jpeg' }] }
@@ -246,10 +247,13 @@ export default async function handler(req, res) {
             currentMarketPrice: z.number(),
             currency: z.string(),
             isGoodDeal: z.boolean(),
+            dealRating: z.enum(['good', 'bad', 'normal']).describe('划算程度評估'),
             priceHistoryInsight: z.string(),
+            advice: z.string().describe('簡短的 AI 建議'),
             recommendation: z.string()
           }),
-          prompt: `研究商品「${payload.title}」在類別「${payload.category}」下的市場行情。幣別：${payload.currency}。提供詳細的價格分析與購買建議。`
+          prompt: `研究商品「${payload.title}」在類別「${payload.category}」下的市場行情。幣別：${payload.currency}。目標預期價為 ${payload.targetPrice || '未設定'}。
+            請根據當前市場價格與目標價的差異，給出 dealRating (good/bad/normal) 並提供簡短活潑的建議 (advice)。`
         });
         finalObject = priceResult.object;
         break;

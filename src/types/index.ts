@@ -127,6 +127,7 @@ export interface ShoppingItem extends SyncMetadata {
     lastChecked: number;
     advice: string;
     lowPriceAlert?: boolean;
+    dealRating?: 'good' | 'bad' | 'normal'; // 👈 新增：划算程度評分
   };
   location?: string;      // 👈 新增：購買地點 (例如：心齋橋)
   storeName?: string;     // 👈 新增：店家名稱 (例如：Bic Camera)
