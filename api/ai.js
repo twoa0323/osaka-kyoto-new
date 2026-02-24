@@ -126,7 +126,11 @@ export default async function handler(req, res) {
     }
 
   } catch (error) {
-    console.error("AI Error:", error);
-    res.status(500).json({ error: "AI 服務異常", details: error.message });
+    console.error("Vercel Function Error:", error); // 這行會出現在 Vercel 的 Logs 頁面
+    res.status(500).json({
+      error: "AI 服務異常",
+      message: error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
   }
 }
