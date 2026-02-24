@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { useQueries } from '@tanstack/react-query';
 import { useTripStore } from '../store/useTripStore';
 import { format, addDays, differenceInDays, parseISO, isValid, isSameDay } from 'date-fns';
@@ -59,8 +59,8 @@ const CITY_DB = [
   { keys: ['福岡', 'Fukuoka', '博多', '天神'], name: 'FUKUOKA', lat: 33.5902, lng: 130.4017 },
 ];
 
-// --- 輔助組件：地圖路徑視圖 ---
 import { Map, MapMarker, MarkerContent, MapRoute, MapControls } from './ui/map';
+import MapLibreGL from 'maplibre-gl';
 import type * as MapLibreGLType from 'maplibre-gl';
 
 // --- 輔助組件：每個行程項目的渲染（包含自動取圖邏輯） ---
@@ -153,7 +153,7 @@ const ScheduleItemRow: React.FC<{
 
 // --- 輔助組件：地圖路徑視圖 ---
 const ScheduleMapView: React.FC<{ items: ScheduleItem[], trip?: Trip }> = ({ items, trip }) => {
-  const MAPTILER_KEY = import.meta.env.VITE_MAPTILER_API_KEY;
+  const MAPTILER_KEY = (import.meta as any).env.VITE_MAPTILER_API_KEY;
   const mapRef = useRef<MapLibreGLType.Map | null>(null);
 
   const points = useMemo(() => {
@@ -183,7 +183,7 @@ const ScheduleMapView: React.FC<{ items: ScheduleItem[], trip?: Trip }> = ({ ite
   useEffect(() => {
     if (!mapRef.current || points.length === 0) return;
 
-    const bounds = new (window as any).MapLibreGL.LngLatBounds();
+    const bounds = new MapLibreGL.LngLatBounds();
     points.forEach(p => bounds.extend(p));
 
     mapRef.current.fitBounds(bounds, {
@@ -658,24 +658,23 @@ export const Schedule: React.FC<{ externalDateIdx?: number }> = ({ externalDateI
       const reader = res.body.getReader();
       const decoder = new TextDecoder();
       let fullText = "";
+      let buffer = "";
 
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
 
-        const chunk = decoder.decode(value, { stream: true });
-        // Vercel Data Stream 格式通常是 "0:\"text\"" 或 "0:\"text\"\n"
-        // 這裡做一個簡單的手動解析，提取引號內的內容
-        const lines = chunk.split('\n');
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || ""; // 保留最後一個可能不完整的行
+
         for (const line of lines) {
           if (line.startsWith('0:')) {
             try {
-              // 提取 0:"..." 之後的內容並解析 JSON 字串
               const content = JSON.parse(line.substring(2));
               fullText += content;
               setCompletion(fullText);
             } catch (e) {
-              // 如果解析失敗，嘗試直接累加（可能是半個 chunk）
               console.warn("Chunk parse error:", line);
             }
           }

@@ -254,14 +254,15 @@ export default async function handler(req, res) {
 
               // 尋找 JSON 邊界
               const jsonMatch = jsonToParse.match(/[\{\[]([\s\S]*)[\}\]]/);
-              return res.status(200).json(jsonMatch ? JSON.parse(jsonMatch[0]) : {});
+              const finalData = jsonMatch ? JSON.parse(jsonMatch[0]) : {};
+              return streamJsonResponse(finalData);
             } catch (err) {
               console.error("Universal Import JSON Parse Error:", err, responseText);
-              return res.status(500).json({ error: "Import Failed: Bad JSON format", details: err.message });
+              return streamJsonResponse({ error: "Import Failed: Bad JSON format", details: err.message });
             }
           } catch (err) {
             console.error("Universal Import Error:", err);
-            return res.status(500).json({ error: "Import Failed", details: err.message });
+            return streamJsonResponse({ error: "Import Failed", details: err.message });
           }
         }
 
@@ -288,14 +289,14 @@ export default async function handler(req, res) {
               let jsonToParse = codeBlockMatch ? codeBlockMatch[1] : responseText;
 
               const jsonMatch = jsonToParse.match(/[\{\[]([\s\S]*)[\}\]]/);
-              return res.status(200).json(jsonMatch ? JSON.parse(jsonMatch[0]) : {});
+              return streamJsonResponse(jsonMatch ? JSON.parse(jsonMatch[0]) : {});
             } catch (err) {
               console.error("Get Spot Details JSON Parse Error:", err, responseText);
-              return res.status(500).json({ error: "Search Failed: Bad JSON format", details: err.message });
+              return streamJsonResponse({ error: "Search Failed: Bad JSON format" });
             }
           } catch (err) {
             console.error("Get Spot Details Error:", err);
-            return res.status(500).json({ error: "Search Failed" });
+            return streamJsonResponse({ error: "Search Failed" });
           }
         }
 
@@ -349,11 +350,11 @@ export default async function handler(req, res) {
             imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(keyword)}?width=800&height=600&nologo=true`;
           }
 
-          return res.status(200).json({ imageUrl });
+          return streamJsonResponse({ imageUrl });
 
         } catch (err) {
           console.error("Image Fetch Error:", err);
-          return res.status(200).json({ imageUrl: "" });
+          return streamJsonResponse({ imageUrl: "" });
         }
 
       case 'suggest-packing-list':
