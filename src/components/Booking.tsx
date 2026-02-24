@@ -205,13 +205,13 @@ export const Booking = () => {
 
                 {detailItem.location && (
                   <a
-                    href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(detailItem.location)}&travelmode=walking`}
+                    href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(detailItem.location)}`}
                     target="_blank"
                     rel="noreferrer"
                     className="w-full py-4 bg-splat-green text-white border-[3px] border-splat-dark rounded-2xl font-black text-center shadow-splat-solid-sm flex items-center justify-center gap-2 active:translate-y-1 active:shadow-none transition-all"
                   >
                     <MapPin size={18} strokeWidth={3} />
-                    導航至預訂地點
+                    開啟地圖導航
                   </a>
                 )}
 

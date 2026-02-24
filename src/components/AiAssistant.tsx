@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Sparkles, Loader2, Camera, Compass, CloudRain, Layout, Receipt, BarChart3, Search, Trash2, Package } from 'lucide-react';
+import { X, Sparkles, Loader2, Camera, Compass, CloudRain, Layout, Receipt, BarChart3, Search, Trash2, Package, Check, AlertTriangle, User, Tag } from 'lucide-react';
 import { useTripStore } from '../store/useTripStore';
 import { triggerHaptic } from '../utils/haptics';
 import { compressImage, uploadImage } from '../utils/imageUtils';
@@ -18,6 +18,13 @@ export const AiAssistant: React.FC = () => {
     const [aiImages, setAiImages] = useState<string[]>([]);
     const [isUploadingImage, setIsUploadingImage] = useState(false);
     const aiInputRef = useRef<HTMLInputElement>(null);
+
+    // --- 預覽狀態 ---
+    const [receiptPreview, setReceiptPreview] = useState<{
+        data: any;
+        tempImageUrl: string;
+        selectedPayerId: string;
+    } | null>(null);
 
     if (!isAiModalOpen || !trip) return null;
 
@@ -85,7 +92,7 @@ export const AiAssistant: React.FC = () => {
         setTimeout(() => { setLoadingAction(null); setAiModalOpen(false); triggerHaptic('success'); }, 1500);
     };
 
-    // 3. 收據掃描
+    // 3. 收據掃描 (重構為預覽審核模式)
     const handleReceiptScan = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
@@ -100,23 +107,44 @@ export const AiAssistant: React.FC = () => {
             const data = await res.json();
             const url = await uploadImage(file);
 
-            const newItem = {
-                id: Date.now().toString(),
-                date: data.date || new Date().toISOString().split('T')[0],
-                title: data.title || data.storeName || 'AI 辨識支出',
-                amount: data.amount || 0,
-                currency: data.currency || trip.baseCurrency || 'JPY',
-                category: data.category || '其他',
-                method: data.paymentMethod || '現金',
-                images: [url],
-                storeName: data.storeName || '',
-                payerId: trip.members?.[0]?.id || 'Admin'
-            };
-            addExpenseItem(trip.id, newItem as any);
+            // 進入預覽模式，不直接存檔
+            setReceiptPreview({
+                data,
+                tempImageUrl: url,
+                selectedPayerId: trip.members?.[0]?.id || 'Admin'
+            });
             triggerHaptic('success');
-            setAiModalOpen(false);
-        } catch (err) { alert("辨識失敗 🥲"); }
-        finally { setLoadingAction(null); }
+        } catch (err) {
+            console.error("Receipt Scan Error:", err);
+            alert("收據辨識失敗 🥲");
+        } finally {
+            setLoadingAction(null);
+            if (e.target) e.target.value = ''; // 清除 input 以便下次選擇
+        }
+    };
+
+    const handleSaveReceipt = () => {
+        if (!receiptPreview) return;
+        const { data, tempImageUrl, selectedPayerId } = receiptPreview;
+
+        const newItem = {
+            id: Date.now().toString(),
+            date: data.date || new Date().toISOString().split('T')[0],
+            title: data.title || data.storeName || 'AI 辨識支出',
+            amount: data.amount || 0,
+            currency: data.currency || trip.baseCurrency || 'JPY',
+            category: data.category || '飲食',
+            method: data.paymentMethod || '現金',
+            images: [tempImageUrl],
+            storeName: data.storeName || '',
+            payerId: selectedPayerId,
+            isTaxFree: data.isTaxFree
+        };
+
+        addExpenseItem(trip.id, newItem as any);
+        triggerHaptic('success');
+        setReceiptPreview(null);
+        setAiModalOpen(false);
     };
 
     // 4. 預算分析
@@ -195,18 +223,30 @@ export const AiAssistant: React.FC = () => {
             });
             const data = await res.json();
             if (data.packingList) {
+                const existingTitles = new Set(trip.packingList?.map(p => p.title.toLowerCase()) || []);
+                let importedCount = 0;
+
                 data.packingList.forEach((item: any) => {
-                    addPackingItem(trip.id, {
-                        id: `pack-ai-${Date.now()}-${Math.random().toString(36).substring(7)}`,
-                        title: item.title,
-                        category: item.category,
-                        quantity: item.quantity,
-                        isPacked: false,
-                        note: item.note,
-                        updatedAt: Date.now()
-                    });
+                    if (!existingTitles.has(item.title.toLowerCase())) {
+                        addPackingItem(trip.id, {
+                            id: `pack-ai-${Date.now()}-${Math.random().toString(36).substring(7)}`,
+                            title: item.title,
+                            category: item.category,
+                            quantity: item.quantity,
+                            isPacked: false,
+                            note: item.note,
+                            updatedAt: Date.now()
+                        });
+                        importedCount++;
+                    }
                 });
-                triggerHaptic('success');
+
+                if (importedCount === 0) {
+                    alert("行李清單中已存在所有建議項目！🦑");
+                } else {
+                    triggerHaptic('success');
+                    alert(`成功匯入 ${importedCount} 項新行李！✨`);
+                }
                 setAiModalOpen(false);
             }
         } catch (err) { alert("建議失敗 🥲"); }
@@ -402,6 +442,132 @@ export const AiAssistant: React.FC = () => {
                                             </div>
                                         ))}
                                     </div>
+                                </div>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
+
+                    {/* 收據預覽審核模式 (Overlay) */}
+                    <AnimatePresence>
+                        {receiptPreview && (
+                            <motion.div
+                                initial={{ opacity: 0, y: 50, scale: 0.9 }}
+                                animate={{ opacity: 1, y: 0, scale: 1 }}
+                                exit={{ opacity: 0, y: 50, scale: 0.9 }}
+                                className="absolute inset-0 bg-white z-[30] p-6 flex flex-col"
+                            >
+                                <div className="flex justify-between items-center mb-6">
+                                    <h4 className="text-xl font-black italic uppercase text-splat-dark">Review Receipt</h4>
+                                    <button onClick={() => setReceiptPreview(null)} className="p-2 bg-gray-100 rounded-full hover:bg-gray-200 transition-colors">
+                                        <X size={20} className="text-gray-500" />
+                                    </button>
+                                </div>
+
+                                <div className="flex-1 overflow-y-auto hide-scrollbar space-y-6">
+                                    {/* 收據照片預覽 */}
+                                    <div className="relative h-40 rounded-3xl overflow-hidden border-[3px] border-splat-dark shadow-splat-solid-sm rotate-[1deg]">
+                                        <img src={receiptPreview.tempImageUrl} alt="receipt" className="w-full h-full object-cover" />
+                                        {receiptPreview.data.isTaxFree && (
+                                            <div className="absolute top-2 right-2 bg-splat-yellow text-splat-dark px-3 py-1 rounded-full font-black text-[10px] border-2 border-splat-dark shadow-sm flex items-center gap-1 animate-bounce">
+                                                <Tag size={10} strokeWidth={3} /> 免稅 TAX-FREE
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* 辨識結果卡片 */}
+                                    <div className="card-splat p-5 space-y-4">
+                                        <div className="flex justify-between items-start">
+                                            <div>
+                                                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Store / Shop Type</p>
+                                                <h5 className="text-lg font-black text-splat-dark uppercase leading-tight">{receiptPreview.data.storeName}</h5>
+                                                <span className="inline-block bg-splat-blue/10 text-splat-blue text-[9px] font-black px-2 py-0.5 rounded uppercase mt-1">
+                                                    {receiptPreview.data.shopType || '店家'}
+                                                </span>
+                                            </div>
+                                            <div className="text-right">
+                                                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Total Amount</p>
+                                                <p className="text-2xl font-black text-splat-dark">
+                                                    <span className="text-xs mr-1">{receiptPreview.data.currency}</span>
+                                                    {receiptPreview.data.amount.toLocaleString()}
+                                                </p>
+                                            </div>
+                                        </div>
+
+                                        {/* 信心值警告 */}
+                                        {receiptPreview.data.confidence < 0.6 && (
+                                            <div className="bg-splat-orange/10 border-2 border-splat-orange p-3 rounded-2xl flex items-start gap-3">
+                                                <AlertTriangle size={20} className="text-splat-orange shrink-0" />
+                                                <div>
+                                                    <p className="text-[11px] font-black text-splat-orange uppercase uppercase italic">Low Confidence Alert</p>
+                                                    <p className="text-[10px] font-bold text-gray-600">辨識信心值較低 ({Math.round(receiptPreview.data.confidence * 100)}%)，請仔細確認金額與日期。</p>
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div className="bg-gray-50 p-3 rounded-xl border-2 border-gray-100">
+                                                <p className="text-[9px] font-black text-gray-400 uppercase mb-1">Category</p>
+                                                <p className="text-xs font-black text-splat-dark uppercase italic">{receiptPreview.data.category}</p>
+                                            </div>
+                                            <div className="bg-gray-50 p-3 rounded-xl border-2 border-gray-100">
+                                                <p className="text-[9px] font-black text-gray-400 uppercase mb-1">Date</p>
+                                                <p className="text-xs font-black text-splat-dark">{receiptPreview.data.date}</p>
+                                            </div>
+                                        </div>
+
+                                        {/* 付款人選擇 */}
+                                        <div className="space-y-2">
+                                            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Select Payer 付款人</p>
+                                            <div className="flex gap-2 overflow-x-auto hide-scrollbar pb-1">
+                                                {(trip.members || [{ id: 'Admin', name: 'Admin', avatar: '🦑' }]).map(m => (
+                                                    <button
+                                                        key={m.id}
+                                                        onClick={() => setReceiptPreview({ ...receiptPreview, selectedPayerId: m.id })}
+                                                        className={`shrink-0 flex items-center gap-2 px-3 py-2 rounded-xl border-2 transition-all ${receiptPreview.selectedPayerId === m.id ? 'bg-splat-dark text-white border-splat-dark shadow-md' : 'bg-white text-gray-500 border-gray-200'}`}
+                                                    >
+                                                        <span className="text-sm">{m.avatar || '🦑'}</span>
+                                                        <span className="text-[10px] font-black uppercase">{m.name}</span>
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* 明細 (如果有) */}
+                                    {receiptPreview.data.items && receiptPreview.data.items.length > 0 && (
+                                        <div className="space-y-2">
+                                            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">Details 明細</p>
+                                            <div className="bg-white border-2 border-gray-100 rounded-2xl divide-y-2 divide-gray-50 overflow-hidden text-[10px]">
+                                                {receiptPreview.data.items.slice(0, 5).map((it: any, idx: number) => (
+                                                    <div key={idx} className="flex justify-between items-center p-3">
+                                                        <span className="font-bold text-gray-600 truncate max-w-[70%]">{it.name}</span>
+                                                        <span className="font-black text-splat-dark">{receiptPreview.data.currency} {it.price.toLocaleString()}</span>
+                                                    </div>
+                                                ))}
+                                                {receiptPreview.data.items.length > 5 && (
+                                                    <div className="p-2 text-center text-[9px] font-black text-gray-400 bg-gray-50 uppercase">
+                                                        + {receiptPreview.data.items.length - 5} more items
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+
+                                <div className="mt-6 pt-4 border-t-2 border-gray-100 flex gap-3">
+                                    <button
+                                        onClick={() => setReceiptPreview(null)}
+                                        className="flex-1 py-4 px-4 bg-gray-100 text-gray-500 rounded-2xl font-black text-sm uppercase transition-all active:scale-95"
+                                    >
+                                        Discard
+                                    </button>
+                                    <button
+                                        onClick={handleSaveReceipt}
+                                        className="flex-[2] py-4 px-4 bg-splat-pink text-white rounded-2xl font-black text-sm uppercase shadow-splat-solid-sm flex items-center justify-center gap-2 active:translate-y-1 active:shadow-none transition-all"
+                                    >
+                                        <Check size={20} strokeWidth={3} />
+                                        Confirm & Save
+                                    </button>
                                 </div>
                             </motion.div>
                         )}

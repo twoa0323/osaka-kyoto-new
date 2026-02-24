@@ -59,26 +59,32 @@ export default async function handler(req, res) {
           model,
           schema: z.object({
             storeName: z.string(),
+            shopType: z.string().describe('店家類型，如：便利商店, 藥妝店, 餐廳, 百貨, 交通'),
             title: z.string(),
             date: z.string(),
             amount: z.number(),
             currency: z.string().default('JPY'),
             category: z.string().default('其他'),
             paymentMethod: z.string().default('現金'),
+            isTaxFree: z.boolean().describe('是否為免稅交易 (Tax-Free)'),
+            confidence: z.number().describe('辨識結果的信心評分 (0.0 - 1.0)'),
             items: z.array(z.object({ name: z.string(), price: z.number() })).optional()
           }),
           messages: [
             {
               role: 'system',
-              content: `你是一個世界級的收據分析助手。請精準提取以下資訊：
-              1. storeName: 商店或品牌名稱（如：一蘭、FamilyMart）。
-              2. title: 簡短的消費主題（如：拉麵、雜貨購物）。
-              3. date: 消費日期 (YYYY-MM-DD)。
-              4. amount: 總金額（純數字）。
-              5. currency: 幣別代碼（預設 JPY，若看到 NT$ 或 $ 且非日本場景請推論）。
-              6. category: 分類（飲食, 交通, 購物, 娛樂, 住宿, 其他）。
-              7. paymentMethod: 支付方式（現金, 信用卡, Suica, Paypay 等）。
-              - 如果文字模糊，請根據上下文進行最合理的財務推論。
+              content: `你是一個世界級的日本旅遊收據分析助手。請精準提取以下資訊：
+              1. storeName: 商店名稱。
+              2. shopType: 根據店家特徵判斷類型。
+              3. title: 簡短消費主題。
+              4. date: 消費日期 (YYYY-MM-DD)。
+              5. amount: 總金額 (Total)。
+              6. currency: 幣別（預設 JPY）。
+              7. category: 分類（飲食, 交通, 購物, 娛樂, 住宿, 其他）。請根據 shopType 進行精準分類。
+              8. isTaxFree: 偵測是否有 "Tax-Free"、"免稅" 標記或 0% 稅率。
+              9. confidence: 評估你對此張收據辨識結果的整體信心。
+              
+              - 特別注意：日本旅遊場景中，藥妝店與百貨常有免稅與含稅兩種價格，請以「最終實付處 (Total)」為準。
               - 確保金額不包含千分位逗號。`
             },
             { role: 'user', content: [{ type: 'image', image: payload.imageBase64, mimeType: 'image/jpeg' }] }
@@ -230,6 +236,7 @@ export default async function handler(req, res) {
         });
         finalObject = transResult.object;
         break;
+
 
       case 'optimize-route':
         const optimizeResult = await generateObject({

@@ -668,37 +668,47 @@ export const Schedule: React.FC<{ externalDateIdx?: number }> = ({ externalDateI
       let fullText = "";
       let buffer = "";
 
+      // 🔄 具備 Buffer 的強健行解析器
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
 
         buffer += decoder.decode(value, { stream: true });
 
-        // 依照換行符號切割，保留最後一個可能不完整的片段在 buffer 中
-        let newlineIndex;
-        while ((newlineIndex = buffer.indexOf('\n')) >= 0) {
-          const line = buffer.slice(0, newlineIndex).trim();
-          buffer = buffer.slice(newlineIndex + 1);
+        const lines = buffer.split('\n');
+        // 最後一個可能是完整的也可能是不完整的，保留到下一次
+        buffer = lines.pop() || "";
 
-          if (line.startsWith('0:')) {
-            try {
-              const content = JSON.parse(line.substring(2));
-              if (content) {
-                fullText += content;
-                setCompletion(fullText);
-              }
-            } catch (e) {
-              // 有時內容可能不是標準 JSON 字串（如特殊字元處理），嘗試直接提取
-              const raw = line.substring(2);
-              if (raw.startsWith('"') && raw.endsWith('"')) {
-                fullText += raw.slice(1, -1);
-              } else {
-                fullText += raw;
-              }
+        for (const line of lines) {
+          const trimmedLine = line.trim();
+          if (!trimmedLine || !trimmedLine.startsWith('0:')) continue;
+
+          try {
+            const rawContent = trimmedLine.substring(2);
+            const content = JSON.parse(rawContent);
+            if (typeof content === 'string') {
+              fullText += content;
+              setCompletion(fullText);
+            }
+          } catch (e) {
+            // 解析 JSON 失敗時的備用方案：直接嘗試提取引號內容
+            const match = trimmedLine.match(/^0:"(.*)"$/);
+            if (match) {
+              fullText += match[1];
               setCompletion(fullText);
             }
           }
         }
+      }
+
+      // 處理最後殘留的 buffer
+      if (buffer.trim().startsWith('0:')) {
+        try {
+          const content = JSON.parse(buffer.trim().substring(2));
+          if (typeof content === 'string') {
+            fullText += content;
+          }
+        } catch (e) { }
       }
 
       const guide = { background: fullText, highlights: [], suggestedDuration: "" };
@@ -789,15 +799,6 @@ export const Schedule: React.FC<{ externalDateIdx?: number }> = ({ externalDateI
               <div className="text-[11px] font-black text-white/90 mt-1 tracking-widest">{todayWeather.min}° / {todayWeather.max}°</div>
             </div>
           </div>
-          <div className="flex gap-2 mt-6 z-10">
-            {[{ icon: Umbrella, val: todayWeather.rain + '%', label: '降雨機率' }, { icon: Wind, val: todayWeather.wind, label: '風力' }, { icon: Sunrise, val: todayWeather.sunrise, label: '日出' }].map((item, i) => (
-              <div key={i} className="flex-1 bg-white/20 rounded-xl p-3 flex flex-col items-center justify-center border-[2px] border-white/10">
-                <item.icon size={18} className="mb-1.5 opacity-80" />
-                <div className="text-lg font-black">{item.val}</div>
-                <div className="text-[9px] font-bold opacity-80">{item.label}</div>
-              </div>
-            ))}
-          </div>
         </motion.div>
 
         {/* 🪄 降雨超能力移至 AI Menu 中統一觸發 */}
@@ -829,7 +830,7 @@ export const Schedule: React.FC<{ externalDateIdx?: number }> = ({ externalDateI
                       idx={idx}
                       isEditMode={isEditMode}
                       dayItems={dayItems}
-                      tripId={trip.id}
+                      tripId={trip!.id}
                       updateScheduleItem={updateScheduleItem}
                       deleteScheduleItem={deleteScheduleItem}
                       setEditingItem={setEditingItem}
@@ -843,7 +844,7 @@ export const Schedule: React.FC<{ externalDateIdx?: number }> = ({ externalDateI
             </Reorder.Group>
           </div>
         ) : (
-          <ScheduleMapView items={dayItems} trip={trip} setDetailItem={setDetailItem} />
+          <ScheduleMapView items={dayItems} trip={trip!} setDetailItem={setDetailItem} />
         )}
       </div>
 
@@ -890,7 +891,7 @@ export const Schedule: React.FC<{ externalDateIdx?: number }> = ({ externalDateI
         )}
       </AnimatePresence>
 
-      {isEditorOpen && <ScheduleEditor tripId={trip.id} date={selectedDateStr} item={editingItem} onClose={() => setIsEditorOpen(false)} />}
+      {isEditorOpen && <ScheduleEditor tripId={trip!.id} date={selectedDateStr} item={editingItem} onClose={() => setIsEditorOpen(false)} />}
     </div>
   );
 };
