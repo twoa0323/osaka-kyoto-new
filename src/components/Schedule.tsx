@@ -60,7 +60,7 @@ const CITY_DB = [
 ];
 
 import { Map, MapMarker, MarkerContent, MapRoute, MapControls } from './ui/map';
-import MapLibreGL from 'maplibre-gl';
+import MapLibreGL, { LngLatBounds } from 'maplibre-gl';
 import type * as MapLibreGLType from 'maplibre-gl';
 
 // --- 輔助組件：每個行程項目的渲染（包含自動取圖邏輯） ---
@@ -152,7 +152,7 @@ const ScheduleItemRow: React.FC<{
 };
 
 // --- 輔助組件：地圖路徑視圖 ---
-const ScheduleMapView: React.FC<{ items: ScheduleItem[], trip?: Trip }> = ({ items, trip }) => {
+const ScheduleMapView: React.FC<{ items: ScheduleItem[], trip?: Trip, setDetailItem: any }> = ({ items, trip, setDetailItem }) => {
   const MAPTILER_KEY = (import.meta as any).env.VITE_MAPTILER_API_KEY;
   const mapRef = useRef<MapLibreGLType.Map | null>(null);
 
@@ -217,10 +217,15 @@ const ScheduleMapView: React.FC<{ items: ScheduleItem[], trip?: Trip }> = ({ ite
 
         {items.map((item, idx) => (
           item.lat && item.lng && (
-            <MapMarker key={item.id} longitude={item.lng} latitude={item.lat}>
+            <MapMarker
+              key={item.id}
+              longitude={item.lng}
+              latitude={item.lat}
+              onClick={() => setDetailItem?.(item)}
+            >
               <MarkerContent>
                 <div className="flex flex-col items-center">
-                  <div className="w-8 h-8 bg-splat-blue border-2 border-white rounded-full flex items-center justify-center text-white font-black shadow-lg text-xs">
+                  <div className="w-8 h-8 bg-splat-blue border-2 border-white rounded-full flex items-center justify-center text-white font-black shadow-lg text-xs hover:bg-splat-pink transition-colors">
                     {idx + 1}
                   </div>
                   <div className="bg-white border-2 border-splat-dark px-2 py-0.5 rounded-md text-[10px] font-black mt-1 shadow-sm whitespace-nowrap">
@@ -823,7 +828,7 @@ export const Schedule: React.FC<{ externalDateIdx?: number }> = ({ externalDateI
             </Reorder.Group>
           </div>
         ) : (
-          <ScheduleMapView items={dayItems} trip={trip} />
+          <ScheduleMapView items={dayItems} trip={trip} setDetailItem={setDetailItem} />
         )}
       </div>
 

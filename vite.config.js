@@ -18,12 +18,12 @@ export default defineConfig({
         orientation: 'portrait',
         icons: [
           {
-            src: 'https://cdn-icons-png.flaticon.com/512/3125/3125848.png', // 暫時使用網路圖示，正式版請換成本地圖檔
+            src: '/icon-192.png',
             sizes: '192x192',
             type: 'image/png'
           },
           {
-            src: 'https://cdn-icons-png.flaticon.com/512/3125/3125848.png',
+            src: '/icon-512.png',
             sizes: '512x512',
             type: 'image/png'
           }

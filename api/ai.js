@@ -344,10 +344,8 @@ export default async function handler(req, res) {
           }
 
           if (!imageUrl && searchInfo.genericQuery) {
-            // 2b. 直接使用 Unsplash 的替代方案（例如 Pollinations AI 或 Unsplash Source）
-            // 注意：我們改用 Pollinations，確保不需 API Key 且保證回傳高品質圖片
-            const keyword = category === 'food' ? `delicious ${searchInfo.genericQuery} food` : `beautiful ${searchInfo.genericQuery} landscape japan`;
-            imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(keyword)}?width=800&height=600&nologo=true`;
+            // 2b. 使用靜態佔位圖替代不穩定的 Pollinations
+            imageUrl = `https://placehold.co/800x600/328383/F7F4EB?text=${encodeURIComponent(searchInfo.genericQuery)}`;
           }
 
           return streamJsonResponse({ imageUrl });
@@ -427,7 +425,9 @@ export default async function handler(req, res) {
       ...(inlineData ? { messages: [{ role: 'user', content: [{ type: 'text', text: prompt }, { type: 'image', image: inlineData.data, mimeType: inlineData.mimeType }] }] } : {})
     });
 
-    return result.toDataStreamResponse();
+    // ✅ 修正：使用 pipeDataStreamToResponse 來對接 Node.js 的 res 串流
+    result.pipeDataStreamToResponse(res);
+    return;
 
   } catch (error) {
     console.error("AI Proxy Error:", error);
