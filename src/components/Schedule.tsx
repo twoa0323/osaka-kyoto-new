@@ -24,17 +24,17 @@ const CATEGORY_STYLE = {
 };
 
 const getWeatherDesc = (code: number) => {
-  if (code === undefined || code === -1) return { t: '等待載入', e: '☁️' };
-  if (code === 0) return { t: '晴朗無雲', e: '☀️' };
-  if (code === 1) return { t: '大致晴朗', e: '🌤️' };
-  if (code === 2) return { t: '多雲時晴', e: '⛅' };
-  if (code === 3) return { t: '陰天多雲', e: '☁️' };
-  if ([45, 48].includes(code)) return { t: '霧氣瀰漫', e: '🌫️' };
-  if ([51, 53, 55, 56, 57].includes(code)) return { t: '毛毛細雨', e: '🌦️' };
-  if ([61, 63, 65, 66, 67, 80, 81, 82].includes(code)) return { t: '陣雨綿綿', e: '🌧️' };
-  if ([71, 73, 75, 77, 85, 86].includes(code)) return { t: '降雪紛飛', e: '🌨️' };
-  if ([95, 96, 99].includes(code)) return { t: '雷雨交加', e: '⛈️' };
-  return { t: '晴朗無雲', e: '☀️' };
+  if (code === undefined || code === -1) return { t: '等待載入', e: '☁️', color: 'bg-[#F4F5F7]', splat: '#F4F5F7' };
+  if (code === 0) return { t: '晴朗無雲', e: '☀️', color: 'bg-[#FFCC00]', splat: '#FFCC00' }; // 更鮮豔的噴漆黃
+  if (code === 1) return { t: '大致晴朗', e: '🌤️', color: 'bg-[#FFD93D]', splat: '#FFD93D' };
+  if (code === 2) return { t: '多雲時晴', e: '⛅', color: 'bg-[#87CEEB]', splat: '#87CEEB' };
+  if (code === 3) return { t: '陰天多雲', e: '☁️', color: 'bg-[#94A3B8]', splat: '#94A3B8' };
+  if ([45, 48].includes(code)) return { t: '霧氣瀰漫', e: '🌫️', color: 'bg-[#94A3B8]', splat: '#94A3B8' };
+  if ([51, 53, 55, 56, 57].includes(code)) return { t: '毛毛細雨', e: '🌦️', color: 'bg-[#60A5FA]', splat: '#60A5FA' };
+  if ([61, 63, 65, 66, 67, 80, 81, 82].includes(code)) return { t: '陣雨綿綿', e: '🌧️', color: 'bg-[#2932CF]', splat: '#2932CF' }; // 噴漆藍
+  if ([71, 73, 75, 77, 85, 86].includes(code)) return { t: '降雪紛飛', e: '🌨️', color: 'bg-[#E2E8F0]', splat: '#E2E8F0' };
+  if ([95, 96, 99].includes(code)) return { t: '雷雨交加', e: '⛈️', color: 'bg-[#8B5CF6]', splat: '#8B5CF6' };
+  return { t: '晴朗無雲', e: '☀️', color: 'bg-[#FFCC00]', splat: '#FFCC00' };
 };
 
 const getWindLevel = (speed: number) => {
@@ -830,32 +830,32 @@ export const Schedule: React.FC<{ externalDateIdx?: number }> = ({ externalDateI
           initial={{ y: 20, opacity: 0, scale: 0.95 }}
           animate={{ y: 0, opacity: 1, scale: 1 }}
           whileTap={{ scale: 0.98 }}
-          className="bg-white text-splat-dark rounded-[32px] border-[3px] border-splat-dark flex flex-col cursor-pointer shadow-splat-solid relative overflow-hidden p-5"
+          className={`${weatherInfo.color || 'bg-white'} text-splat-dark rounded-[32px] border-[3px] border-splat-dark flex flex-col cursor-pointer shadow-splat-solid relative overflow-hidden p-5 transition-colors duration-500`}
         >
           <div className="flex justify-between items-start z-10">
             <div>
-              <div className="flex items-center gap-1 text-gray-500 font-black text-[11px] uppercase tracking-widest mb-2">
-                <MapPin size={12} /> {todayWeather.cityName} CITY
+              <div className="flex items-center gap-1 text-splat-dark/60 font-black text-[11px] uppercase tracking-widest mb-2 whitespace-nowrap">
+                <MapPin size={12} /> <span className="inline-block shrink-0">{todayWeather.cityName} CITY</span>
               </div>
-              <div className="text-3xl font-black flex items-center gap-2">
-                {weatherInfo.t} <span className="text-4xl">{weatherInfo.e}</span>
+              <div className="text-2xl sm:text-3xl font-black flex items-center gap-2 whitespace-nowrap">
+                <span className="shrink-0">{weatherInfo.t}</span> <span className="text-3xl sm:text-4xl shrink-0">{weatherInfo.e}</span>
               </div>
               <div className="flex gap-4 mt-2">
-                <div className="flex items-center gap-1 text-[10px] font-black text-splat-blue">
+                <div className="flex items-center gap-1 text-[10px] font-black text-splat-dark/70">
                   <CloudRain size={14} /> {todayWeather.rain}%
                 </div>
-                <div className="flex items-center gap-1 text-[10px] font-black text-splat-pink">
+                <div className="flex items-center gap-1 text-[10px] font-black text-splat-dark/70">
                   <Droplets size={14} /> {todayWeather.wind}
                 </div>
               </div>
             </div>
             <div className="text-right mt-1 z-10">
-              <div className="text-5xl font-black">{currentTempStr}°</div>
-              <div className="text-[11px] font-black text-gray-400 mt-1 tracking-widest">{todayWeather.min}° / {todayWeather.max}°</div>
+              <div className="text-5xl font-black drop-shadow-sm">{currentTempStr}°</div>
+              <div className="text-[11px] font-black text-splat-dark/40 mt-1 tracking-widest">{todayWeather.min}° / {todayWeather.max}°</div>
             </div>
           </div>
           {/* 加入背景潑墨點綴 */}
-          <div className="absolute -bottom-4 -right-4 w-24 h-24 bg-splat-blue/5 rounded-full blur-2xl" />
+          <div className="absolute -bottom-4 -right-4 w-32 h-32 bg-black/5 rounded-full blur-3xl" />
         </motion.div>
 
         {/* 🪄 降雨超能力移至 AI Menu 中統一觸發 */}
