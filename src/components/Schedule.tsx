@@ -183,7 +183,7 @@ const ScheduleMapView: React.FC<{ items: ScheduleItem[], trip?: Trip, setDetailI
   useEffect(() => {
     if (!mapRef.current || points.length === 0) return;
 
-    const bounds = new MapLibreGL.LngLatBounds();
+    const bounds = new LngLatBounds();
     points.forEach(p => bounds.extend(p));
 
     mapRef.current.fitBounds(bounds, {

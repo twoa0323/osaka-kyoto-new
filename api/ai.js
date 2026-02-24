@@ -2,6 +2,8 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 import { streamText } from 'ai';
 import { google } from '@ai-sdk/google';
 
+export const config = { runtime: 'edge' };
+
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || process.env.VITE_GEMINI_API_KEY);
 
 export default async function handler(req, res) {
@@ -425,9 +427,7 @@ export default async function handler(req, res) {
       ...(inlineData ? { messages: [{ role: 'user', content: [{ type: 'text', text: prompt }, { type: 'image', image: inlineData.data, mimeType: inlineData.mimeType }] }] } : {})
     });
 
-    // ✅ 修正：使用 pipeDataStreamToResponse 來對接 Node.js 的 res 串流
-    result.pipeDataStreamToResponse(res);
-    return;
+    return result.toDataStreamResponse();
 
   } catch (error) {
     console.error("AI Proxy Error:", error);
