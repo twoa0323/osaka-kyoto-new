@@ -141,6 +141,23 @@ export const BookingEditor: React.FC<Props> = ({ tripId, type, item, onClose }) 
     }
   };
 
+  // 🌙 自動計算住宿天數邏輯
+  React.useEffect(() => {
+    if (type === 'hotel' && form.date && form.endDate) {
+      try {
+        const start = new Date(form.date);
+        const end = new Date(form.endDate);
+        const diffTime = end.getTime() - start.getTime();
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        if (diffDays > 0 && diffDays !== form.nights) {
+          setForm(prev => ({ ...prev, nights: diffDays }));
+        }
+      } catch (e) {
+        console.warn("Date calculation error", e);
+      }
+    }
+  }, [form.date, form.endDate, type, form.nights]);
+
   const handleSave = () => {
     if (type !== 'flight' && !form.title) return alert("請輸入名稱唷！");
     if (type === 'flight' && !form.flightNo) return alert("請輸入航班號碼！");

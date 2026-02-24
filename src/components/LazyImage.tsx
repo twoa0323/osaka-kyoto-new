@@ -20,7 +20,7 @@ export const LazyImage: React.FC<LazyImageProps> = ({
     const imgRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
-        if (src === "") {
+        if (!src) {
             setHasError(true);
             setIsLoaded(true);
         }

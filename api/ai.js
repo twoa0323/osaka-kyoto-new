@@ -64,7 +64,19 @@ export default async function handler(req, res) {
             items: z.array(z.object({ name: z.string(), price: z.number() })).optional()
           }),
           messages: [
-            { role: 'system', content: '你是一個專業收據分析助手。請從收據圖片中提取精確的財務數據。' },
+            {
+              role: 'system',
+              content: `你是一個世界級的收據分析助手。請精準提取以下資訊：
+              1. storeName: 商店或品牌名稱（如：一蘭、FamilyMart）。
+              2. title: 簡短的消費主題（如：拉麵、雜貨購物）。
+              3. date: 消費日期 (YYYY-MM-DD)。
+              4. amount: 總金額（純數字）。
+              5. currency: 幣別代碼（預設 JPY，若看到 NT$ 或 $ 且非日本場景請推論）。
+              6. category: 分類（飲食, 交通, 購物, 娛樂, 住宿, 其他）。
+              7. paymentMethod: 支付方式（現金, 信用卡, Suica, Paypay 等）。
+              - 如果文字模糊，請根據上下文進行最合理的財務推論。
+              - 確保金額不包含千分位逗號。`
+            },
             { role: 'user', content: [{ type: 'image', image: payload.imageBase64, mimeType: 'image/jpeg' }] }
           ]
         });
@@ -93,10 +105,12 @@ export default async function handler(req, res) {
           }),
           messages: [
             {
-              role: 'system', content: `你是一個頂尖的旅遊數據分析師。請分析提供的圖片或文字，並將其智能歸類為行程、支出、訂房或日誌等結構化數據。
-              - 如果日期模糊，請結合旅程範圍：${payload.startDate || '未提供'} 至 ${payload.endDate || '未提供'}。
-              - 目前輸入的參考日期為：${payload.date || '今日'}。
-              - 確保支出金額與幣別準確（預設 JPY）。`
+              role: 'system', content: `你是一個頂尖的旅遊數據分析師，具備 OCR 與圖像理解能力。請分析提供的圖片或文字，並將其智能歸類。
+              - 費用提取：務必精確識別總金額 (Amount) 與幣別 (Currency)，優先從收據底部找 Total。
+              - 日期合併：如果日期模糊，請結合旅程範圍：${payload.startDate || '未提供'} 至 ${payload.endDate || '未提供'}。
+              - 智能補完：如果缺乏類別，請根據店家名稱推斷最合適的分類。
+              - 目前參考日期為：${payload.date || '今日'}。
+              - 輸出格式必須完全符合 Schema。`
             },
             { role: 'user', content: magicContent }
           ]
