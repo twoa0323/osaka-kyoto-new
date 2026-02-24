@@ -139,6 +139,33 @@ export default async function handler(req, res) {
         finalObject = packingResult.object;
         break;
 
+      case 'parse-screenshot':
+        const { type, imageBase64 } = payload;
+        const parsePrompt = type === 'flight'
+          ? `這是一張機票或登機證截圖。請提取關鍵資訊。包含：航空公司(airline)、航班號(flightNo)、日期(date:YYYY-MM-DD)、出發機場(depIata)、抵達機場(arrIata)、出發時間(depTime)、抵達時間(arrTime)、出發城市(depCity)、抵達城市(arrCity)、航程時間(duration)、行李限額(baggage)、座位(seat)、機型(aircraft)。若無則留空。`
+          : `這是一張${type === 'hotel' ? '飯店' : '景點/憑證'}的預訂截圖。請提取：標題/名稱(title)、地點/地址(location)、開始日期(date: YYYY-MM-DD)、結束日期(endDate: YYYY-MM-DD)、入住晚數(nights)、憑證編號(confirmationNo)、房型(roomType)、聯絡電話(contactPhone)、入場時間(entryTime)、票種(ticketType)、兌換地點(exchangeLocation)。若無則留空。`;
+
+        const parseResult = await generateObject({
+          model,
+          schema: type === 'flight' ? z.object({
+            airline: z.string().optional(), flightNo: z.string().optional(), date: z.string().optional(),
+            depIata: z.string().optional(), arrIata: z.string().optional(), depTime: z.string().optional(),
+            arrTime: z.string().optional(), depCity: z.string().optional(), arrCity: z.string().optional(),
+            duration: z.string().optional(), baggage: z.string().optional(), seat: z.string().optional(), aircraft: z.string().optional()
+          }) : z.object({
+            title: z.string().optional(), location: z.string().optional(), date: z.string().optional(),
+            endDate: z.string().optional(), nights: z.number().optional(), confirmationNo: z.string().optional(),
+            roomType: z.string().optional(), contactPhone: z.string().optional(), entryTime: z.string().optional(),
+            ticketType: z.string().optional(), exchangeLocation: z.string().optional()
+          }),
+          messages: [
+            { role: 'system', content: `你是一個專業的日本旅遊文件分析師。請精準解析圖片內容，輸出必須嚴格符合給定的 JSON Schema，不要包含引號或格式說明。` },
+            { role: 'user', content: [{ type: 'image', image: imageBase64, mimeType: 'image/jpeg' }, { type: 'text', text: parsePrompt }] }
+          ]
+        });
+        finalObject = parseResult.object;
+        break;
+
       case 'suggest-weather-fallback':
         const weatherResult = await generateObject({
           model,

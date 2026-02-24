@@ -96,6 +96,7 @@ export interface ExpenseItem extends SyncMetadata {
   splitWith: { memberId: string; weight?: number; amount?: number }[]; // 👈 改為物件陣列支援權重
   images: string[];
   items?: { name: string; price: number }[];
+  isTaxFree?: boolean; // 👈 新增：是否免稅
 }
 
 // --- 4. 美食日誌 (Journal) 項目 ---

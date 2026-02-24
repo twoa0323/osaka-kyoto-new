@@ -138,6 +138,7 @@ export const AiAssistant: React.FC = () => {
             images: [tempImageUrl],
             storeName: data.storeName || '',
             payerId: selectedPayerId,
+            splitWith: [],
             isTaxFree: data.isTaxFree
         };
 
