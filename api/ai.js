@@ -45,6 +45,7 @@ export default async function handler(req, res) {
     // 1. 串流功能：景點導覽 (具備打字機效果)
     if (action === 'get-spot-guide') {
       const prompt = `你是一個專業的日本旅遊導覽人員。請針對景點「${payload.location} ${payload.title}」提供專業的背景介紹與必看亮點。請直接回傳排版精美的 Markdown 文字，建議包含：1. 歷史背景介紹 2. 必看亮點 (條列式) 3. 建議停留時間。語氣專業活潑，使用繁體中文。`;
+      console.log("[AI Stream Prompt]:", prompt);
       const result = streamText({ model, prompt });
       return result.pipeDataStreamToResponse(res);
     }

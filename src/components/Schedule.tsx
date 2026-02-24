@@ -498,6 +498,8 @@ export const Schedule: React.FC<{ externalDateIdx?: number }> = ({ externalDateI
       const data = await res.json();
       const text = data.text || "";
 
+      if (!text) throw new Error("AI 未能產出建議文字");
+
       updateScheduleItem(trip!.id, currentItem.id, { ...currentItem, transportSuggestion: text });
       setDetailItem(prev => prev ? { ...prev, transportSuggestion: text } : undefined);
       triggerHaptic('light');
@@ -681,10 +683,19 @@ export const Schedule: React.FC<{ externalDateIdx?: number }> = ({ externalDateI
           if (line.startsWith('0:')) {
             try {
               const content = JSON.parse(line.substring(2));
-              fullText += content;
-              setCompletion(fullText);
+              if (content) {
+                fullText += content;
+                setCompletion(fullText);
+              }
             } catch (e) {
-              console.warn("Stream parsing error on line:", line, e);
+              // 有時內容可能不是標準 JSON 字串（如特殊字元處理），嘗試直接提取
+              const raw = line.substring(2);
+              if (raw.startsWith('"') && raw.endsWith('"')) {
+                fullText += raw.slice(1, -1);
+              } else {
+                fullText += raw;
+              }
+              setCompletion(fullText);
             }
           }
         }
