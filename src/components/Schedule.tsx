@@ -670,17 +670,20 @@ export const Schedule: React.FC<{ externalDateIdx?: number }> = ({ externalDateI
         if (done) break;
 
         buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split('\n');
-        buffer = lines.pop() || ""; // 保留最後一個可能不完整的行
 
-        for (const line of lines) {
+        // 依照換行符號切割，保留最後一個可能不完整的片段在 buffer 中
+        let newlineIndex;
+        while ((newlineIndex = buffer.indexOf('\n')) >= 0) {
+          const line = buffer.slice(0, newlineIndex).trim();
+          buffer = buffer.slice(newlineIndex + 1);
+
           if (line.startsWith('0:')) {
             try {
               const content = JSON.parse(line.substring(2));
               fullText += content;
               setCompletion(fullText);
             } catch (e) {
-              console.warn("Chunk parse error:", line);
+              console.warn("Stream parsing error on line:", line, e);
             }
           }
         }
