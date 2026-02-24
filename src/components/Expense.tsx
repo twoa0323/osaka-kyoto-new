@@ -32,24 +32,33 @@ const calculateSettlements = (expenses: ExpenseItem[], members: Member[], rate: 
 
   // 2. 計算每筆支出對淨額的影響
   exps.forEach(exp => {
+    if (!exp || exp.amount === undefined) return;
+
     // 換算回主幣別 (TWD) 計算
-    const amountTwd = exp.currency === 'TWD' ? exp.amount : exp.amount * rate;
+    const amountTwd = exp.currency === 'TWD' ? (exp.amount || 0) : (exp.amount || 0) * (rate || 1);
 
     // 計算每個人應該分攤的金額
     let shares: Record<string, number> = {};
     const splitWith = exp.splitWith || [];
+
     if (splitWith.length === 0) {
       // 預設平均分攤
-      const share = amountTwd / mems.length;
+      const activeMembers = mems.length || 1;
+      const share = amountTwd / activeMembers;
       mems.forEach(m => { shares[m.id] = share; });
     } else {
       // 權重/金額分攤
       const totalWeight = splitWith.reduce((sum, s) => sum + (s.weight || 0), 0);
-      const fixedAmount = splitWith.reduce((sum, s) => sum + (s.amount || 0), 0);
-      const remainingAmount = amountTwd - (fixedAmount * (exp.currency === 'TWD' ? 1 : rate));
+      const fixedAmountTwd = splitWith.reduce((sum, s) => {
+        const itemAmount = s.amount || 0;
+        return sum + (exp.currency === 'TWD' ? itemAmount : itemAmount * (rate || 1));
+      }, 0);
+
+      const remainingAmount = amountTwd - fixedAmountTwd;
 
       splitWith.forEach(s => {
-        let memberShare = (s.amount || 0) * (exp.currency === 'TWD' ? 1 : rate);
+        if (!s.memberId) return;
+        let memberShare = (s.amount || 0) * (exp.currency === 'TWD' ? 1 : (rate || 1));
         if (totalWeight > 0 && s.weight) {
           memberShare += (remainingAmount * s.weight) / totalWeight;
         }
@@ -58,13 +67,15 @@ const calculateSettlements = (expenses: ExpenseItem[], members: Member[], rate: 
     }
 
     // 付款人增加餘額 (代墊)
-    if (exp.payerId) {
-      balances[exp.payerId] = (balances[exp.payerId] || 0) + amountTwd;
+    if (exp.payerId && balances[exp.payerId] !== undefined) {
+      balances[exp.payerId] += amountTwd;
     }
 
     // 扣除分攤
     Object.keys(shares).forEach(mid => {
-      balances[mid] -= shares[mid];
+      if (balances[mid] !== undefined) {
+        balances[mid] -= shares[mid];
+      }
     });
   });
 

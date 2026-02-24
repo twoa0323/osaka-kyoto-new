@@ -248,6 +248,7 @@ export const useTripStore = create<TripState>()(
       },
 
       updateTripData: (tid, payload) => {
+        if (!tid || !payload) return;
         set(s => ({
           trips: s.trips.map(t => t.id === tid ? { ...t, ...payload } : t)
         }));
@@ -257,6 +258,7 @@ export const useTripStore = create<TripState>()(
 
       // --- 1. Schedule ---
       addScheduleItem: (tid, i) => {
+        if (!tid || !i) return;
         set(s => ({
           trips: s.trips.map(t => t.id === tid ? { ...t, items: [...(t.items || []), i] } : t)
         }));
@@ -285,6 +287,7 @@ export const useTripStore = create<TripState>()(
 
       // --- 2. Booking ---
       addBookingItem: (tid, i) => {
+        if (!tid || !i) return;
         set(s => ({
           trips: s.trips.map(t => t.id === tid ? { ...t, bookings: [...(t.bookings || []), i] } : t)
         }));
@@ -305,6 +308,7 @@ export const useTripStore = create<TripState>()(
 
       // --- 3. Expense ---
       addExpenseItem: (tid, i) => {
+        if (!tid || !i) return;
         set(s => ({
           trips: s.trips.map(t => t.id === tid ? { ...t, expenses: [...(t.expenses || []), i] } : t)
         }));

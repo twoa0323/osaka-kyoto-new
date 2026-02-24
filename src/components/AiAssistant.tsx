@@ -479,7 +479,7 @@ export const AiAssistant: React.FC = () => {
                                     {/* 收據照片預覽 */}
                                     <div className="relative h-40 rounded-3xl overflow-hidden border-[3px] border-splat-dark shadow-splat-solid-sm rotate-[1deg]">
                                         <img src={receiptPreview.tempImageUrl} alt="receipt" className="w-full h-full object-cover" />
-                                        {receiptPreview.data.isTaxFree && (
+                                        {receiptPreview.data?.isTaxFree && (
                                             <div className="absolute top-2 right-2 bg-splat-yellow text-splat-dark px-3 py-1 rounded-full font-black text-[10px] border-2 border-splat-dark shadow-sm flex items-center gap-1 animate-bounce">
                                                 <Tag size={10} strokeWidth={3} /> 免稅 TAX-FREE
                                             </div>
@@ -491,27 +491,27 @@ export const AiAssistant: React.FC = () => {
                                         <div className="flex justify-between items-start">
                                             <div>
                                                 <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Store / Shop Type</p>
-                                                <h5 className="text-lg font-black text-splat-dark uppercase leading-tight">{receiptPreview.data.storeName}</h5>
+                                                <h5 className="text-lg font-black text-splat-dark uppercase leading-tight">{receiptPreview.data?.storeName || '未知商店'}</h5>
                                                 <span className="inline-block bg-splat-blue/10 text-splat-blue text-[9px] font-black px-2 py-0.5 rounded uppercase mt-1">
-                                                    {receiptPreview.data.shopType || '店家'}
+                                                    {receiptPreview.data?.shopType || '店家'}
                                                 </span>
                                             </div>
                                             <div className="text-right">
                                                 <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Total Amount</p>
                                                 <p className="text-2xl font-black text-splat-dark">
-                                                    <span className="text-xs mr-1">{receiptPreview.data.currency}</span>
-                                                    {receiptPreview.data.amount.toLocaleString()}
+                                                    <span className="text-xs mr-1">{receiptPreview.data?.currency || 'JPY'}</span>
+                                                    {(receiptPreview.data?.amount || 0).toLocaleString()}
                                                 </p>
                                             </div>
                                         </div>
 
                                         {/* 信心值警告 */}
-                                        {receiptPreview.data.confidence < 0.6 && (
+                                        {receiptPreview.data?.confidence !== undefined && receiptPreview.data.confidence < 0.6 && (
                                             <div className="bg-splat-orange/10 border-2 border-splat-orange p-3 rounded-2xl flex items-start gap-3">
                                                 <AlertTriangle size={20} className="text-splat-orange shrink-0" />
                                                 <div>
                                                     <p className="text-[11px] font-black text-splat-orange uppercase uppercase italic">Low Confidence Alert</p>
-                                                    <p className="text-[10px] font-bold text-gray-600">辨識信心值較低 ({Math.round(receiptPreview.data.confidence * 100)}%)，請仔細確認金額與日期。</p>
+                                                    <p className="text-[10px] font-bold text-gray-600">辨識信心值較低 ({Math.round((receiptPreview.data.confidence || 0) * 100)}%)，請仔細確認金額與日期。</p>
                                                 </div>
                                             </div>
                                         )}
@@ -519,11 +519,11 @@ export const AiAssistant: React.FC = () => {
                                         <div className="grid grid-cols-2 gap-4">
                                             <div className="bg-gray-50 p-3 rounded-xl border-2 border-gray-100">
                                                 <p className="text-[9px] font-black text-gray-400 uppercase mb-1">Category</p>
-                                                <p className="text-xs font-black text-splat-dark uppercase italic">{receiptPreview.data.category}</p>
+                                                <p className="text-xs font-black text-splat-dark uppercase italic">{receiptPreview.data?.category || '其他'}</p>
                                             </div>
                                             <div className="bg-gray-50 p-3 rounded-xl border-2 border-gray-100">
                                                 <p className="text-[9px] font-black text-gray-400 uppercase mb-1">Date</p>
-                                                <p className="text-xs font-black text-splat-dark">{receiptPreview.data.date}</p>
+                                                <p className="text-xs font-black text-splat-dark">{receiptPreview.data?.date || new Date().toISOString().split('T')[0]}</p>
                                             </div>
                                         </div>
 
@@ -553,8 +553,8 @@ export const AiAssistant: React.FC = () => {
                                                 {receiptPreview.data.items.map((it: any, idx: number) => (
                                                     <div key={idx} className="bg-white border-2 border-splat-dark rounded-2xl p-3 shadow-splat-solid-xs">
                                                         <div className="flex justify-between items-center mb-2">
-                                                            <span className="font-bold text-xs text-gray-700 truncate max-w-[70%]">{it.name}</span>
-                                                            <span className="font-black text-xs text-splat-dark">{receiptPreview.data.currency} {it.price.toLocaleString()}</span>
+                                                            <span className="font-bold text-xs text-gray-700 truncate max-w-[70%]">{it.name || '項目'}</span>
+                                                            <span className="font-black text-xs text-splat-dark">{receiptPreview.data?.currency || 'JPY'} {(it.price || 0).toLocaleString()}</span>
                                                         </div>
                                                         <div className="flex flex-wrap gap-1.5 pt-2 border-t border-dashed border-gray-100">
                                                             {(trip.members || []).map(m => {
