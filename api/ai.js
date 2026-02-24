@@ -17,12 +17,13 @@ export default async function handler(req, res) {
     let inlineData = null;
 
     // 封裝 JSON 回傳邏輯，將其轉為 DataStream 協定回傳 (相容 TextDecoder)
-    const streamJsonResponse = async (data) => {
-      const { createDataStreamResponse } = await import('ai');
-      return createDataStreamResponse({
-        execute: async (dataStream) => {
-          dataStream.writeMessageAnnotation({ type: 'json_full', content: data });
-          dataStream.writeChunk(`0:${JSON.stringify(JSON.stringify(data))}\n`); // 模擬串流格式
+    const streamJsonResponse = (data) => {
+      const jsonString = JSON.stringify(data);
+      const chunk = `0:${JSON.stringify(jsonString)}\n`;
+      return new Response(chunk, {
+        headers: {
+          'Content-Type': 'text/plain; charset=utf-8',
+          'x-vercel-ai-data-stream': 'v1'
         }
       });
     };

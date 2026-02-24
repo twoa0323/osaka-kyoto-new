@@ -63,6 +63,51 @@ import { Map, MapMarker, MarkerContent, MapRoute, MapControls } from './ui/map';
 import MapLibreGL, { LngLatBounds } from 'maplibre-gl';
 import type * as MapLibreGLType from 'maplibre-gl';
 
+// --- AI 解析輔助函數 ---
+export const readAiStreamAsJson = async (res: Response) => {
+  const reader = res.body?.getReader();
+  const decoder = new TextDecoder();
+  let fullText = "";
+  let buffer = "";
+  if (reader) {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      let newlineIndex;
+      while ((newlineIndex = buffer.indexOf('\n')) >= 0) {
+        const line = buffer.slice(0, newlineIndex).trim();
+        buffer = buffer.slice(newlineIndex + 1);
+        if (line.startsWith('0:')) {
+          try {
+            fullText += JSON.parse(line.substring(2));
+          } catch (e) { }
+        }
+      }
+    }
+  }
+  let textToParse = fullText;
+  const match = fullText.match(/```(?:json)?\n?([\s\S]*?)```/);
+  if (match) {
+    textToParse = match[1];
+  }
+  const firstBrace = textToParse.indexOf('{');
+  const lastBrace = textToParse.lastIndexOf('}');
+  if (firstBrace !== -1 && lastBrace !== -1) {
+    return JSON.parse(textToParse.substring(firstBrace, lastBrace + 1));
+  }
+  const firstBracket = textToParse.indexOf('[');
+  const lastBracket = textToParse.lastIndexOf(']');
+  if (firstBracket !== -1 && lastBracket !== -1) {
+    return JSON.parse(textToParse.substring(firstBracket, lastBracket + 1));
+  }
+  try {
+    return JSON.parse(textToParse);
+  } catch (e) {
+    return { text: textToParse }; // Fallback to raw text for simpler text APIs
+  }
+};
+
 // --- 輔助組件：每個行程項目的渲染（包含自動取圖邏輯） ---
 const ScheduleItemRow: React.FC<{
   item: ScheduleItem,
@@ -103,7 +148,7 @@ const ScheduleItemRow: React.FC<{
               payload: { title: item.title, location: item.location, category: item.category }
             })
           });
-          const data = await res.json();
+          const data = await readAiStreamAsJson(res);
           if (data.imageUrl) {
             updateScheduleItem(tripId, item.id, { ...item, images: [data.imageUrl] });
           }
@@ -433,7 +478,7 @@ export const Schedule: React.FC<{ externalDateIdx?: number }> = ({ externalDateI
           payload: { prevItem, nextItem, preferences: prefs }
         })
       });
-      const data = await res.json();
+      const data = await readAiStreamAsJson(res);
       if (data && !data.error) {
         addScheduleItem(trip!.id, {
           ...data,
@@ -494,7 +539,7 @@ export const Schedule: React.FC<{ externalDateIdx?: number }> = ({ externalDateI
           }
         })
       });
-      const data = await res.json();
+      const data = await readAiStreamAsJson(res);
       const text = data.text || "";
 
       updateScheduleItem(trip!.id, currentItem.id, { ...currentItem, transportSuggestion: text });
@@ -524,7 +569,7 @@ export const Schedule: React.FC<{ externalDateIdx?: number }> = ({ externalDateI
           }
         })
       });
-      const data = await res.json();
+      const data = await readAiStreamAsJson(res);
       if (data && !data.error) {
         if (Array.isArray(data.schedule)) {
           data.schedule.forEach((i: any) => addScheduleItem(trip!.id, {
@@ -598,7 +643,7 @@ export const Schedule: React.FC<{ externalDateIdx?: number }> = ({ externalDateI
           }
         })
       });
-      const data = await res.json();
+      const data = await readAiStreamAsJson(res);
       if (data && !data.error) {
         setWeatherAdvice(data);
         setShowWizardModal(true);

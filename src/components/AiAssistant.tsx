@@ -24,6 +24,46 @@ export const AiAssistant: React.FC = () => {
     // --- AI 動作實作 ---
 
     // 1. 行程/多元解析
+    const readAiStreamAsJson = async (res: Response) => {
+        const reader = res.body?.getReader();
+        const decoder = new TextDecoder();
+        let fullText = "";
+        let buffer = "";
+        if (reader) {
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+                buffer += decoder.decode(value, { stream: true });
+                let newlineIndex;
+                while ((newlineIndex = buffer.indexOf('\n')) >= 0) {
+                    const line = buffer.slice(0, newlineIndex).trim();
+                    buffer = buffer.slice(newlineIndex + 1);
+                    if (line.startsWith('0:')) {
+                        try {
+                            fullText += JSON.parse(line.substring(2));
+                        } catch (e) { }
+                    }
+                }
+            }
+        }
+        let textToParse = fullText;
+        const match = fullText.match(/```(?:json)?\n?([\s\S]*?)```/);
+        if (match) {
+            textToParse = match[1];
+        }
+        const firstBrace = textToParse.indexOf('{');
+        const lastBrace = textToParse.lastIndexOf('}');
+        if (firstBrace !== -1 && lastBrace !== -1) {
+            return JSON.parse(textToParse.substring(firstBrace, lastBrace + 1));
+        }
+        const firstBracket = textToParse.indexOf('[');
+        const lastBracket = textToParse.lastIndexOf(']');
+        if (firstBracket !== -1 && lastBracket !== -1) {
+            return JSON.parse(textToParse.substring(firstBracket, lastBracket + 1));
+        }
+        return JSON.parse(textToParse);
+    };
+
     const handleAnalyzeTrip = async () => {
         if (!aiText.trim() && aiImages.length === 0) return;
         setLoadingAction('analyze');
@@ -38,38 +78,7 @@ export const AiAssistant: React.FC = () => {
             });
 
             if (!res.ok) throw new Error("解析失敗");
-            const reader = res.body?.getReader();
-            const decoder = new TextDecoder();
-            let fullText = "";
-            let jsonResult = null;
-            let buffer = "";
-
-            if (reader) {
-                while (true) {
-                    const { done, value } = await reader.read();
-                    if (done) break;
-                    buffer += decoder.decode(value, { stream: true });
-
-                    let newlineIndex;
-                    while ((newlineIndex = buffer.indexOf('\n')) >= 0) {
-                        const line = buffer.slice(0, newlineIndex).trim();
-                        buffer = buffer.slice(newlineIndex + 1);
-
-                        if (line.startsWith('0:')) {
-                            try {
-                                const content = JSON.parse(line.substring(2));
-                                fullText += content;
-                            } catch (e) {
-                                console.warn("Stream parsing error on line:", line, e);
-                            }
-                        }
-                    }
-                }
-            }
-
-            // 嘗試從累積的文字中提取 JSON
-            const jsonMatch = fullText.match(/\{[\s\S]*\}/);
-            if (jsonMatch) jsonResult = JSON.parse(jsonMatch[0]);
+            const jsonResult = await readAiStreamAsJson(res);
 
             let hasImported = false;
             if (jsonResult?.schedules) {
@@ -123,7 +132,7 @@ export const AiAssistant: React.FC = () => {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ action: 'analyze-receipt', payload: { imageBase64: b64.split(',')[1] } })
             });
-            const data = await res.json();
+            const data = await readAiStreamAsJson(res);
             const url = await uploadImage(file);
 
             const newItem = {
@@ -161,7 +170,7 @@ export const AiAssistant: React.FC = () => {
                     }
                 })
             });
-            const data = await res.json();
+            const data = await readAiStreamAsJson(res);
             if (data.insight) {
                 alert(`AI 建議：\n${data.insight}`);
             }
@@ -185,7 +194,7 @@ export const AiAssistant: React.FC = () => {
                     }
                 })
             });
-            const data = await res.json();
+            const data = await readAiStreamAsJson(res);
             if (data && !data.error) {
                 const isBetterDeal = item.targetPrice && data.currentMarketPrice <= item.targetPrice;
                 useTripStore.getState().updateShoppingItem(trip.id, item.id, {
@@ -219,7 +228,7 @@ export const AiAssistant: React.FC = () => {
                     }
                 })
             });
-            const data = await res.json();
+            const data = await readAiStreamAsJson(res);
             if (data.packingList) {
                 data.packingList.forEach((item: any) => {
                     addPackingItem(trip.id, {
