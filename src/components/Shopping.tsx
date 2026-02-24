@@ -246,6 +246,7 @@ export const Shopping = () => {
 
 // --- 清單項目組件 (核心刷子特效) ---
 const ShoppingRow = ({ item, onToggle, onClick, onPriceCheck, onDelete }: { item: ShoppingItem, onToggle: () => void, onClick: () => void, onPriceCheck: () => void, onDelete: () => void }) => {
+  const { exchangeRate } = useTripStore();
   const cat = CATEGORIES[item.category as keyof typeof CATEGORIES] || CATEGORIES.general;
 
   return (

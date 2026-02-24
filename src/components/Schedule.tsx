@@ -830,23 +830,32 @@ export const Schedule: React.FC<{ externalDateIdx?: number }> = ({ externalDateI
           initial={{ y: 20, opacity: 0, scale: 0.95 }}
           animate={{ y: 0, opacity: 1, scale: 1 }}
           whileTap={{ scale: 0.98 }}
-          className="bg-[#5BA4E5] text-white rounded-[32px] border-[3px] border-splat-dark flex flex-col cursor-pointer shadow-splat-solid relative overflow-hidden p-5"
+          className="bg-white text-splat-dark rounded-[32px] border-[3px] border-splat-dark flex flex-col cursor-pointer shadow-splat-solid relative overflow-hidden p-5"
         >
           <div className="flex justify-between items-start z-10">
             <div>
-              <div className="flex items-center gap-1 text-white/90 font-black text-[11px] uppercase tracking-widest mb-2">
+              <div className="flex items-center gap-1 text-gray-500 font-black text-[11px] uppercase tracking-widest mb-2">
                 <MapPin size={12} /> {todayWeather.cityName} CITY
               </div>
-              <div className="text-3xl font-black flex items-center gap-2 drop-shadow-sm">
+              <div className="text-3xl font-black flex items-center gap-2">
                 {weatherInfo.t} <span className="text-4xl">{weatherInfo.e}</span>
               </div>
-              <div className="mt-2" />
+              <div className="flex gap-4 mt-2">
+                <div className="flex items-center gap-1 text-[10px] font-black text-splat-blue">
+                  <CloudRain size={14} /> {todayWeather.rain}%
+                </div>
+                <div className="flex items-center gap-1 text-[10px] font-black text-splat-pink">
+                  <Droplets size={14} /> {todayWeather.wind}
+                </div>
+              </div>
             </div>
             <div className="text-right mt-1 z-10">
-              <div className="text-5xl font-black drop-shadow-md">{currentTempStr}°</div>
-              <div className="text-[11px] font-black text-white/90 mt-1 tracking-widest">{todayWeather.min}° / {todayWeather.max}°</div>
+              <div className="text-5xl font-black">{currentTempStr}°</div>
+              <div className="text-[11px] font-black text-gray-400 mt-1 tracking-widest">{todayWeather.min}° / {todayWeather.max}°</div>
             </div>
           </div>
+          {/* 加入背景潑墨點綴 */}
+          <div className="absolute -bottom-4 -right-4 w-24 h-24 bg-splat-blue/5 rounded-full blur-2xl" />
         </motion.div>
 
         {/* 🪄 降雨超能力移至 AI Menu 中統一觸發 */}
