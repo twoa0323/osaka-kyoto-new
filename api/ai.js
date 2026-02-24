@@ -32,6 +32,12 @@ export default async function handler(req, res) {
 
   try {
     const { action, payload } = req.body;
+    console.log(`[AI Action]: ${action}`, payload ? Object.keys(payload) : 'no payload');
+
+    if (!apiKey) {
+      console.error("Critical: GEMINI_API_KEY is missing!");
+      return res.status(500).json({ error: "系統配置錯誤：缺少 API 金鑰" });
+    }
 
     // 1. 串流功能：景點導覽 (具備打字機效果)
     if (action === 'get-spot-guide') {
@@ -67,6 +73,7 @@ export default async function handler(req, res) {
 
       case 'universal-magic-import':
       case 'batch-screenshot-parse':
+      case 'batch-parse':
         const { images, text: inputText } = payload;
         const magicContent = [];
         if (images && images.length > 0) {
@@ -197,13 +204,25 @@ export default async function handler(req, res) {
         break;
 
       case 'get-transport-suggestion':
+      case 'suggest-transport':
         const transResult = await generateObject({
           model,
           schema: z.object({ text: z.string() }),
-          prompt: `建議從「${payload.prevItem?.location || '起點'}」到「${payload.nextItem?.location}」的交通方式。請考慮效率與日本常用的交通工具。`
+          prompt: `建議從「${payload.prevLocation || payload.prevTitle || '起點'}」到「${payload.currentLocation || payload.currentTitle}」的交通方式（如：地鐵、走路、計程車）。請考慮效率與日本常用的交通工具。`
         });
         finalObject = transResult.object;
         break;
+
+      case 'optimize-route':
+        const optimizeResult = await generateObject({
+          model,
+          schema: z.object({
+            optimizedIds: z.array(z.string())
+          }),
+          prompt: `請優化以下日本旅遊行程的順序，使其路線最順暢（考慮地理位置）。回傳一個包含 ID 的陣列，順序為優化後的順序。行程數據：${JSON.stringify(payload.items)}`
+        });
+        // 前端期待直接回傳陣列
+        return res.status(200).json(optimizeResult.object.optimizedIds);
 
       default:
         return res.status(400).json({ error: "Invalid action" });
