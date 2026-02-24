@@ -52,34 +52,7 @@ export const BookingEditor: React.FC<Props> = ({ tripId, type, item, onClose }) 
       });
 
       if (!res.ok) throw new Error("AI 解析失敗");
-      const reader = res.body?.getReader();
-      const decoder = new TextDecoder();
-      let fullText = "";
-      let buffer = "";
-      if (reader) {
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          buffer += decoder.decode(value, { stream: true });
-
-          let newlineIndex;
-          while ((newlineIndex = buffer.indexOf('\n')) >= 0) {
-            const line = buffer.slice(0, newlineIndex).trim();
-            buffer = buffer.slice(newlineIndex + 1);
-
-            if (line.startsWith('0:')) {
-              try {
-                fullText += JSON.parse(line.substring(2));
-              } catch (e) {
-                console.warn("Stream parsing error on line:", line, e);
-              }
-            }
-          }
-        }
-      }
-
-      const jsonMatch = fullText.match(/\{[\s\S]*\}/);
-      const data = jsonMatch ? JSON.parse(jsonMatch[0]) : null;
+      const data = await res.json();
 
       if (data && !data.error) {
         if (type === 'flight') {
