@@ -1,9 +1,14 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { streamText } from 'ai';
-import { google } from '@ai-sdk/google';
+import { createGoogleGenerativeAI } from '@ai-sdk/google'; // 👈 新增此行
 
-// ❌ 絕對不能加 runtime: 'edge'，否則 req.body 和 res.status 會失效
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || process.env.VITE_GEMINI_API_KEY);
+// 取得金鑰
+const apiKey = process.env.GEMINI_API_KEY || process.env.VITE_GEMINI_API_KEY;
+
+const genAI = new GoogleGenerativeAI(apiKey);
+
+// 👈 明確初始化 Google SDK 提供者
+const googleProvider = createGoogleGenerativeAI({ apiKey });
 
 export default async function handler(req, res) {
   // 支援 CORS (如果需要的話)
@@ -21,7 +26,7 @@ export default async function handler(req, res) {
       const prompt = `你是一個專業的日本旅遊導覽人員。請針對景點「${payload.location} ${payload.title}」提供專業的背景介紹與必看亮點。請直接回傳排版精美的 Markdown 文字，建議包含：1. 歷史背景介紹 2. 必看亮點 (條列式) 3. 建議停留時間。語氣專業活潑，使用繁體中文。`;
 
       const spotResult = streamText({
-        model: google('gemini-1.5-flash'),
+        model: googleProvider('gemini-1.5-flash'), // 👈 改用 googleProvider
         prompt: prompt,
       });
       // ✅ 使用 Node.js 專用的 pipe 方法回傳串流，完美相容
