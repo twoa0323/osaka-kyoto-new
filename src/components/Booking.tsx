@@ -6,13 +6,15 @@ import {
 } from 'lucide-react';
 import { cacheAsset, isAssetCached } from '../utils/offlineCache';
 import { downloadIcs } from '../utils/icsGenerator';
-import { formatDistanceToNow, parseISO, isPast, isToday } from 'date-fns';
+import { formatDistanceToNow, parseISO, isPast, isToday, differenceInMinutes } from 'date-fns';
 import { zhTW } from 'date-fns/locale';
 import { BookingItem } from '../types';
 import { BookingEditor } from './BookingEditor';
 import { motion, AnimatePresence } from 'framer-motion';
 import { LazyImage } from './LazyImage';
 import { triggerHaptic } from '../utils/haptics';
+import { SwipeableItem, InkSplat } from './Common';
+import { Copy, Check } from 'lucide-react';
 
 // --- 航空公司主題配色優化 ---
 const AIRLINE_THEMES: Record<string, any> = {
@@ -42,7 +44,14 @@ const getCountdown = (dateStr: string, timeStr?: string) => {
   try {
     const target = parseISO(timeStr ? `${dateStr}T${timeStr}` : dateStr);
     if (isPast(target) && !isToday(target)) return { text: '已結束', color: 'bg-gray-400' };
-    if (isToday(target)) return { text: '今天', color: 'bg-splat-orange animate-pulse' };
+
+    const diffMins = differenceInMinutes(target, new Date());
+    if (isToday(target)) {
+      if (diffMins > 0 && diffMins <= 60) {
+        return { text: `${diffMins} 分鐘後`, color: 'bg-[#F03C69] animate-[pulse_0.8s_infinite] shadow-[0_0_15px_#F03C69]' };
+      }
+      return { text: '今天', color: 'bg-splat-orange animate-pulse' };
+    }
 
     const dist = formatDistanceToNow(target, { locale: zhTW, addSuffix: true });
     return { text: dist.replace('約 ', '').replace('內', ''), color: 'bg-splat-blue' };
@@ -61,6 +70,7 @@ export const Booking = () => {
 
   // 新增：QR Code 全螢幕亮點狀態
   const [focusedQr, setFocusedQr] = useState<string | null>(null);
+  const [splatColor, setSplatColor] = useState<string | null>(null);
   const [cachedUrls, setCachedUrls] = useState<Set<string>>(new Set());
 
   // 初始化時檢查已快取的項目
@@ -141,30 +151,17 @@ export const Booking = () => {
               </div>
             ) : (
               bookings.map(item => (
-                <div key={item.id} className="relative overflow-hidden rounded-[2.5rem]">
-                  {/* Swipe Delete Background */}
-                  <div className="absolute inset-0 bg-red-500 flex justify-end items-center pr-6 rounded-[2.5rem]">
-                    <Trash2 size={24} className="text-white animate-pulse" strokeWidth={3} />
-                  </div>
-
-                  <motion.div
-                    drag="x"
-                    dragConstraints={{ right: 0, left: -80 }}
-                    onDragEnd={(_, info: any) => {
-                      if (info.offset.x < -50) {
-                        triggerHaptic('medium');
-                        deleteBookingItem(trip.id, item.id);
-                        showToast("已刪除預訂 🗑️", "success");
-                      }
-                    }}
-                    className="relative z-10 bg-transparent"
-                  >
-                    {item.type === 'flight' && <FlightCard item={item} onEdit={(e: any) => { e.stopPropagation(); setEditingItem(item); setIsEditorOpen(true); }} onViewDetails={() => setDetailItem(item)} onQrClick={setFocusedQr} />}
-                    {item.type === 'hotel' && <HotelCard item={item} onEdit={(e: any) => { e.stopPropagation(); setEditingItem(item); setIsEditorOpen(true); }} onViewDetails={() => setDetailItem(item)} onQrClick={setFocusedQr} />}
-                    {item.type === 'spot' && <SpotCard item={item} onEdit={(e: any) => { e.stopPropagation(); setEditingItem(item); setIsEditorOpen(true); }} onViewDetails={() => setDetailItem(item)} onQrClick={setFocusedQr} />}
-                    {item.type === 'voucher' && <VoucherCard item={item} onEdit={(e: any) => { e.stopPropagation(); setEditingItem(item); setIsEditorOpen(true); }} onViewDetails={() => setDetailItem(item)} onQrClick={setFocusedQr} />}
-                  </motion.div>
-                </div>
+                <SwipeableItem
+                  key={item.id}
+                  id={item.id}
+                  onDelete={() => deleteBookingItem(trip.id, item.id)}
+                  className="rounded-[2.5rem]"
+                >
+                  {item.type === 'flight' && <FlightCard item={item} onEdit={(e: any) => { e.stopPropagation(); setEditingItem(item); setIsEditorOpen(true); }} onViewDetails={() => setDetailItem(item)} onQrClick={setFocusedQr} onCopy={(color: string) => { setSplatColor(color); setTimeout(() => setSplatColor(null), 1000); triggerHaptic('success'); }} />}
+                  {item.type === 'hotel' && <HotelCard item={item} onEdit={(e: any) => { e.stopPropagation(); setEditingItem(item); setIsEditorOpen(true); }} onViewDetails={() => setDetailItem(item)} onQrClick={setFocusedQr} onCopy={(color: string) => { setSplatColor(color); setTimeout(() => setSplatColor(null), 1000); triggerHaptic('success'); }} />}
+                  {item.type === 'spot' && <SpotCard item={item} onEdit={(e: any) => { e.stopPropagation(); setEditingItem(item); setIsEditorOpen(true); }} onViewDetails={() => setDetailItem(item)} onQrClick={setFocusedQr} onCopy={(color: string) => { setSplatColor(color); setTimeout(() => setSplatColor(null), 1000); triggerHaptic('success'); }} />}
+                  {item.type === 'voucher' && <VoucherCard item={item} onEdit={(e: any) => { e.stopPropagation(); setEditingItem(item); setIsEditorOpen(true); }} onViewDetails={() => setDetailItem(item)} onQrClick={setFocusedQr} onCopy={(color: string) => { setSplatColor(color); setTimeout(() => setSplatColor(null), 1000); triggerHaptic('success'); }} />}
+                </SwipeableItem>
               ))
             )}
           </motion.div>
@@ -268,7 +265,44 @@ export const Booking = () => {
         )}
       </AnimatePresence>
 
+      {/* 5. InkSplat Feedback */}
+      <AnimatePresence>
+        {splatColor && (
+          <div className="fixed inset-0 z-[3000] flex items-center justify-center pointer-events-none">
+            <InkSplat color={splatColor} />
+            <motion.div
+              initial={{ scale: 0, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0, opacity: 0 }}
+              className="bg-white border-[4px] border-splat-dark px-6 py-2 rounded-2xl shadow-splat-solid transform -rotate-3"
+            >
+              <span className="text-2xl font-black text-splat-dark italic">COPIED! 🦑</span>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
       {isEditorOpen && <BookingEditor tripId={trip.id} type={activeSubTab} item={editingItem} onClose={() => setIsEditorOpen(false)} />}
+    </div>
+  );
+};
+
+// --- 通用一鍵複製組件 ---
+const CopyableField = ({ label, value, onCopy }: any) => {
+  return (
+    <div
+      className="group cursor-copy active:scale-95 transition-all flex flex-col items-start gap-1"
+      onClick={(e) => {
+        e.stopPropagation();
+        navigator.clipboard.writeText(value);
+        onCopy();
+      }}
+    >
+      <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest">{label}</span>
+      <div className="flex items-center gap-1.5">
+        <span className="font-black text-splat-dark text-sm tracking-tight">{value || '---'}</span>
+        <Copy size={12} className="text-gray-300 group-hover:text-splat-blue transition-colors" />
+      </div>
     </div>
   );
 };
@@ -309,11 +343,11 @@ const FlightCard = ({ item, onEdit, onViewDetails, onQrClick }: any) => {
         </button>
       </div>
 
-      {/* 倒數計時標籤 */}
+      {/* 倒數計時標籤 (微型斜向徽章) */}
       {(() => {
         const cd = getCountdown(item.date, item.depTime);
         return cd && (
-          <div className={`absolute top-4 left-4 z-40 px-3 py-1 rounded-full border-2 border-splat-dark text-[9px] font-black text-white shadow-sm -rotate-3 ${cd.color}`}>
+          <div className={`absolute top-2 left-2 z-50 px-2.5 py-0.5 rounded-lg border-2 border-splat-dark text-[8px] font-black text-white shadow-splat-solid-sm -rotate-6 ${cd.color}`}>
             {cd.text}
           </div>
         );
@@ -406,7 +440,7 @@ const FlightCard = ({ item, onEdit, onViewDetails, onQrClick }: any) => {
   );
 };
 
-const HotelCard = ({ item, onEdit, onViewDetails, onQrClick }: any) => {
+const HotelCard = ({ item, onEdit, onViewDetails, onQrClick, onCopy }: any) => {
   const [showActions, setShowActions] = useState(false);
   const handleCardClick = () => { if (!showActions) { setShowActions(true); setTimeout(() => setShowActions(false), 3000); } else { onViewDetails(); setShowActions(false); } };
 
@@ -420,7 +454,7 @@ const HotelCard = ({ item, onEdit, onViewDetails, onQrClick }: any) => {
       {(() => {
         const cd = getCountdown(item.date);
         return cd && (
-          <div className={`absolute top-4 left-4 z-20 px-3 py-1 rounded-full border-2 border-splat-dark text-[9px] font-black text-white shadow-sm -rotate-2 ${cd.color}`}>
+          <div className={`absolute top-2 left-2 z-30 px-2.5 py-0.5 rounded-lg border-2 border-splat-dark text-[8px] font-black text-white shadow-splat-solid-sm -rotate-3 ${cd.color}`}>
             {cd.text}
           </div>
         );
@@ -428,49 +462,82 @@ const HotelCard = ({ item, onEdit, onViewDetails, onQrClick }: any) => {
 
       <div className="h-32 bg-gray-200 relative border-b-[3px] border-splat-dark">
         {item.images?.[0] ? (<LazyImage src={item.images[0]} containerClassName="w-full h-full" />) : (<div className="w-full h-full flex items-center justify-center bg-splat-pink/10"><Home size={40} className="text-splat-pink/40" /></div>)}
-        <div className="absolute top-3 left-3 bg-white border-2 border-splat-dark px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest text-splat-dark shadow-[2px_2px_0px_#1A1A1A]">HOTEL</div>
-      </div>
+        <div className="absolute top-3 right-3 bg-white border-2 border-splat-dark px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest text-splat-dark shadow-[2px_2px_0px_#1A1A1A]">HOTEL</div>
 
-      <div className="p-5 flex items-center relative">
-        <div className="absolute top-0 bottom-0 right-[88px] w-0 border-l-[2.5px] border-dashed border-gray-200" />
-        <div className="flex-1 pr-6 space-y-4">
-          <h3 className="font-black text-xl text-splat-dark leading-tight pr-4 font-['Barlow']">{item.title}</h3>
-          <div className="flex gap-2 font-['Barlow']">
-            <div className="flex-1 bg-gray-50 border-2 border-dashed border-gray-300 rounded-xl p-2 text-center">
-              <div className="text-[8px] font-black text-gray-400 uppercase tracking-widest mb-0.5">Check-in</div>
-              <div className="font-black text-sm text-splat-dark tabular-nums">{item.date}</div>
-            </div>
-            <div className="flex-1 bg-gray-50 border-2 border-dashed border-gray-300 rounded-xl p-2 text-center">
-              <div className="text-[8px] font-black text-gray-400 uppercase tracking-widest mb-0.5">Check-out</div>
-              <div className="font-black text-sm text-splat-dark tabular-nums">{item.endDate || '-'}</div>
-            </div>
+        {/* Check-in Time Overlay */}
+        <div className="absolute bottom-0 left-0 right-0 bg-splat-dark/60 backdrop-blur-md px-4 py-2 flex justify-between items-center text-white border-t-2 border-white/20">
+          <div className="flex flex-col">
+            <span className="text-[8px] font-black uppercase tracking-[0.2em] opacity-80">Check-in</span>
+            <span className="text-lg font-black tracking-tight">{item.checkInTime || '15:00'}</span>
           </div>
-          <div className="flex items-start gap-1.5 text-xs font-bold text-gray-600 bg-gray-50 p-2 rounded-xl border-2 border-gray-100">
-            <MapPin size={14} className="shrink-0 text-splat-pink mt-0.5" />
-            <span className="leading-snug truncate">{item.location || '地址待確認'}</span>
+          <div className="h-6 w-[2px] bg-white/30 rounded-full" />
+          <div className="flex flex-col items-end">
+            <span className="text-[8px] font-black uppercase tracking-[0.2em] opacity-80">Check-out</span>
+            <span className="text-lg font-black tracking-tight">{item.checkOutTime || '11:00'}</span>
           </div>
         </div>
-        <div className="w-[80px] flex flex-col items-center justify-center shrink-0 pl-2 z-10 gap-3">
-          {item.qrCode ? (
+      </div>
+
+      <div className="p-5 space-y-4">
+        <div className="flex justify-between items-start gap-3">
+          <div className="flex-1 min-w-0">
+            <h3 className="font-black text-xl text-splat-dark leading-tight font-['Barlow'] truncate">{item.title}</h3>
+            <div className="flex items-center gap-1.5 mt-1">
+              <MapPin size={12} className="text-splat-pink shrink-0" />
+              <span className="text-[11px] font-bold text-gray-500 truncate">{item.location || '地址待確認'}</span>
+            </div>
+          </div>
+          <div className="bg-splat-pink/10 text-splat-pink border-2 border-splat-pink px-2.5 py-1 rounded-xl text-[10px] font-black tabular-nums shrink-0">
+            {item.nights || 1} NIGHTS
+          </div>
+        </div>
+
+        <div className="flex justify-between items-end">
+          <CopyableField label="CONFIRMATION NO." value={item.confirmationNo} onCopy={() => onCopy('#F03C69')} />
+          {item.qrCode && (
             <motion.div whileHover={{ scale: 1.1 }} onClick={(e) => { e.stopPropagation(); onQrClick(item.qrCode!); }} className="cursor-zoom-in bg-white p-1 border-2 border-gray-100 rounded-xl shadow-inner relative group">
               <LazyImage src={item.qrCode} containerClassName="w-14 h-14" alt="QR" />
               <div className="absolute inset-0 bg-splat-blue/10 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded-xl"><Plus size={16} className="text-splat-blue" strokeWidth={4} /></div>
             </motion.div>
-          ) : (
-            <div className="text-center shrink-0 bg-gray-50 rounded-xl px-2 py-3 border-2 border-gray-200">
-              <div className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">Nights</div>
-              <div className="font-black text-splat-dark text-lg leading-none tabular-nums">{item.nights || 1}</div>
-            </div>
           )}
         </div>
+
+        {/* Action Buttons Row */}
+        <div className="grid grid-cols-3 gap-3 pt-2">
+          <button
+            onClick={(e) => { e.stopPropagation(); window.location.href = `tel:${item.contactPhone}`; triggerHaptic('medium'); }}
+            disabled={!item.contactPhone}
+            className={`flex flex-col items-center justify-center p-3 rounded-2xl border-[3px] border-splat-dark shadow-splat-solid-sm active:translate-y-0.5 transition-all ${item.contactPhone ? 'bg-splat-blue text-white' : 'bg-gray-100 text-gray-400 opacity-50'}`}
+          >
+            <Phone size={20} strokeWidth={3} />
+            <span className="text-[8px] font-black mt-1 uppercase tracking-widest">CALL</span>
+          </button>
+          <a
+            href={item.mapUrl || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(item.location)}`}
+            target="_blank" rel="noreferrer"
+            onClick={(e) => { e.stopPropagation(); triggerHaptic('medium'); }}
+            className="flex flex-col items-center justify-center p-3 rounded-2xl border-[3px] border-splat-dark shadow-splat-solid-sm bg-splat-green text-white active:translate-y-0.5 transition-all"
+          >
+            <MapPin size={20} strokeWidth={3} />
+            <span className="text-[8px] font-black mt-1 uppercase tracking-widest">MAP</span>
+          </a>
+          <button
+            onClick={(e) => { e.stopPropagation(); downloadIcs(item); triggerHaptic('medium'); }}
+            className="flex flex-col items-center justify-center p-3 rounded-2xl border-[3px] border-splat-dark shadow-splat-solid-sm bg-splat-yellow text-splat-dark active:translate-y-0.5 transition-all"
+          >
+            <Calendar size={20} strokeWidth={3} />
+            <span className="text-[8px] font-black mt-1 uppercase tracking-widest">CAL</span>
+          </button>
+        </div>
       </div>
+
       <div className="absolute top-[128px] -left-3 w-6 h-6 bg-[#F4F5F7] rounded-full border-[3px] border-splat-dark z-10 shadow-inner" />
       <div className="absolute top-[128px] -right-3 w-6 h-6 bg-[#F4F5F7] rounded-full border-[3px] border-splat-dark z-10 shadow-inner" />
     </motion.div>
   );
 };
 
-const SpotCard = ({ item, onEdit, onViewDetails, onQrClick }: any) => {
+const SpotCard = ({ item, onEdit, onViewDetails, onQrClick, onCopy }: any) => {
   const [showActions, setShowActions] = useState(false);
   const handleCardClick = () => { if (!showActions) { setShowActions(true); setTimeout(() => setShowActions(false), 3000); } else { onViewDetails(); setShowActions(false); } };
 
@@ -484,35 +551,45 @@ const SpotCard = ({ item, onEdit, onViewDetails, onQrClick }: any) => {
       {(() => {
         const cd = getCountdown(item.date, item.entryTime);
         return cd && (
-          <div className={`absolute top-4 left-4 z-20 px-3 py-1 rounded-full border-2 border-splat-dark text-[9px] font-black text-white shadow-sm -rotate-2 ${cd.color}`}>
+          <div className={`absolute top-2 left-2 z-30 px-2.5 py-0.5 rounded-lg border-2 border-splat-dark text-[8px] font-black text-white shadow-splat-solid-sm -rotate-3 ${cd.color}`}>
             {cd.text}
           </div>
         );
       })()}
 
-      <div className="p-5 border-b-[3px] border-dashed border-gray-300 relative bg-[#FFFAF0]">
-        <div className="flex justify-between items-start mb-3">
+      <div className="p-5 relative bg-[#FFFAF0] border-b-[3px] border-dashed border-gray-300">
+        <div className="flex justify-between items-start mb-2">
           <div className="bg-splat-yellow border-2 border-splat-dark px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest text-splat-dark shadow-sm">🎫 SPOT TICKET</div>
         </div>
         <h3 className="font-black text-xl text-splat-dark leading-tight pr-4 truncate font-['Barlow']">{item.title}</h3>
       </div>
 
       <div className="p-5 bg-white flex items-center relative">
+        {/* Perforation line */}
         <div className="absolute top-0 bottom-0 right-[88px] w-0 border-l-[2.5px] border-dashed border-gray-200" />
-        <div className="flex-1 grid grid-cols-2 gap-y-3 gap-x-2 pr-6 font-['Barlow']">
-          <div>
-            <div className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-0.5">Date</div>
-            <div className="font-black text-sm text-splat-dark tabular-nums">{item.date}</div>
+
+        <div className="flex-1 space-y-4 pr-6">
+          <div className="grid grid-cols-2 gap-3 font-['Barlow']">
+            <div>
+              <div className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-0.5">Date</div>
+              <div className="font-black text-sm text-splat-dark tabular-nums">{item.date}</div>
+            </div>
+            <div>
+              <div className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-0.5">Entry</div>
+              <div className="font-black text-sm text-splat-pink tabular-nums">{item.entryTime || 'ALL DAY'}</div>
+            </div>
           </div>
-          <div>
-            <div className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-0.5">Entry Time</div>
-            <div className="font-black text-sm text-splat-pink tabular-nums">{item.entryTime || '不限時間'}</div>
-          </div>
-          <div className="col-span-2 mt-1">
-            <div className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-0.5">Location</div>
-            <div className="font-bold text-xs text-splat-dark truncate">{item.location || '---'}</div>
-          </div>
+
+          {item.meetingPoint && (
+            <div className="bg-splat-blue/5 border-2 border-splat-blue/20 rounded-xl p-2.5">
+              <div className="text-[8px] font-black text-splat-blue uppercase tracking-widest mb-0.5">Meeting Point</div>
+              <div className="font-bold text-[11px] text-splat-dark leading-snug truncate">{item.meetingPoint}</div>
+            </div>
+          )}
+
+          <CopyableField label="CONFIRMATION NO." value={item.confirmationNo} onCopy={() => onCopy('#2932CF')} />
         </div>
+
         <div className="w-[80px] flex items-center justify-center shrink-0 pl-2 z-10 bg-white">
           {item.qrCode ? (
             <motion.div whileHover={{ scale: 1.1 }} onClick={(e) => { e.stopPropagation(); onQrClick(item.qrCode!); }} className="cursor-zoom-in bg-white p-1.5 border-2 border-gray-100 rounded-xl shadow-inner relative group">
@@ -527,13 +604,14 @@ const SpotCard = ({ item, onEdit, onViewDetails, onQrClick }: any) => {
           )}
         </div>
       </div>
-      <div className="absolute top-[80px] -left-3 w-6 h-6 bg-[#F4F5F7] rounded-full border-[3px] border-splat-dark z-10 shadow-inner" />
-      <div className="absolute top-[80px] -right-3 w-6 h-6 bg-[#F4F5F7] rounded-full border-[3px] border-splat-dark z-10 shadow-inner" />
+
+      <div className="absolute top-[88px] -left-3 w-6 h-6 bg-[#F4F5F7] rounded-full border-[3px] border-splat-dark z-10 shadow-inner" />
+      <div className="absolute top-[88px] -right-3 w-6 h-6 bg-[#F4F5F7] rounded-full border-[3px] border-splat-dark z-10 shadow-inner" />
     </motion.div>
   );
 };
 
-const VoucherCard = ({ item, onEdit, onViewDetails, onQrClick }: any) => {
+const VoucherCard = ({ item, onEdit, onViewDetails, onQrClick, onCopy }: any) => {
   const [showActions, setShowActions] = useState(false);
   const handleCardClick = () => { if (!showActions) { setShowActions(true); setTimeout(() => setShowActions(false), 3000); } else { onViewDetails(); setShowActions(false); } };
 
@@ -547,7 +625,7 @@ const VoucherCard = ({ item, onEdit, onViewDetails, onQrClick }: any) => {
       {(() => {
         const cd = getCountdown(item.date);
         return cd && (
-          <div className={`absolute top-4 left-4 z-30 px-3 py-1 rounded-full border-2 border-splat-dark text-[9px] font-black text-white shadow-sm -rotate-2 ${cd.color}`}>
+          <div className={`absolute top-2 left-2 z-40 px-2.5 py-0.5 rounded-lg border-2 border-splat-dark text-[8px] font-black text-white shadow-splat-solid-sm -rotate-3 ${cd.color}`}>
             {cd.text}
           </div>
         );
@@ -561,27 +639,36 @@ const VoucherCard = ({ item, onEdit, onViewDetails, onQrClick }: any) => {
         <div className="absolute top-0 bottom-0 right-[88px] w-0 border-l-[2.5px] border-dashed border-gray-200" />
         <div className="flex-1 pr-6 space-y-3 font-['Barlow']">
           <h3 className="font-black text-[17px] text-splat-dark leading-tight pr-2">{item.title}</h3>
-          <div className="flex gap-3 text-sm bg-gray-50 p-2 rounded-xl border-2 border-gray-100">
-            <div className="flex-1">
-              <div className="text-[8px] font-black text-gray-400 uppercase tracking-widest mb-0.5">Valid Date</div>
-              <div className="font-black text-splat-dark text-xs tabular-nums">{item.date}</div>
+
+          <div className="space-y-2">
+            <div className="flex gap-2 text-[10px] bg-gray-50 p-2 rounded-xl border-2 border-gray-100">
+              <div className="flex-1">
+                <div className="text-[7px] font-black text-gray-400 uppercase tracking-widest mb-0.5">Valid Date</div>
+                <div className="font-black text-splat-dark tabular-nums">{item.date}</div>
+              </div>
+              {item.endDate && (
+                <>
+                  <div className="w-[1.5px] bg-gray-200 my-0.5 rounded-full"></div>
+                  <div className="flex-1">
+                    <div className="text-[7px] font-black text-gray-400 uppercase tracking-widest mb-0.5">End Date</div>
+                    <div className="font-black text-splat-dark tabular-nums">{item.endDate}</div>
+                  </div>
+                </>
+              )}
             </div>
-            {item.endDate && (
-              <>
-                <div className="w-[2px] bg-gray-200 my-1 rounded-full"></div>
-                <div className="flex-1">
-                  <div className="text-[8px] font-black text-gray-400 uppercase tracking-widest mb-0.5">End Date</div>
-                  <div className="font-black text-splat-dark text-xs tabular-nums">{item.endDate}</div>
+
+            {item.exchangeLocation && (
+              <div className="bg-orange-50 border-2 border-orange-200/60 rounded-xl p-2.5">
+                <div className="flex justify-between items-center mb-1">
+                  <div className="text-[8px] font-black text-[#FF8A00] uppercase tracking-widest flex items-center gap-1.5"><MapPin size={10} /> Exchange</div>
+                  {item.exchangeHours && <span className="text-[7px] font-black bg-white px-1.5 py-0.5 rounded border border-orange-200 text-[#FF8A00]">{item.exchangeHours}</span>}
                 </div>
-              </>
+                <div className="font-black text-[11px] text-splat-dark leading-snug truncate">{item.exchangeLocation}</div>
+              </div>
             )}
+
+            <CopyableField label="VOUCHER CODE" value={item.confirmationNo} onCopy={() => onCopy('#FF8A00')} />
           </div>
-          {item.exchangeLocation && (
-            <div className="bg-orange-50 border-2 border-orange-200/60 rounded-xl p-2.5">
-              <div className="text-[8px] font-black text-[#FF8A00] uppercase tracking-widest mb-0.5 flex items-center gap-1.5"><MapPin size={10} /> Exchange</div>
-              <div className="font-black text-[11px] text-splat-dark leading-snug truncate">{item.exchangeLocation}</div>
-            </div>
-          )}
         </div>
         <div className="w-[80px] flex items-center justify-center shrink-0 pl-2 z-10 bg-white">
           {item.qrCode ? (

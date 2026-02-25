@@ -9,6 +9,7 @@ import { uploadImage } from '../utils/imageUtils';
 import { ShoppingItem } from '../types';
 import { triggerHaptic } from '../utils/haptics';
 import { motion, AnimatePresence } from 'framer-motion';
+import { SwipeableItem } from './Common';
 
 const CATEGORIES = {
   'must-buy': { label: '🔥 必買', color: 'bg-splat-pink', splat: '#F03C69' },
@@ -255,59 +256,28 @@ const ShoppingRow = ({ item, onToggle, onClick, onPriceCheck, onDelete }: { item
   const cat = CATEGORIES[item.category as keyof typeof CATEGORIES] || CATEGORIES.general;
   const isGoodDeal = item.aiPriceInfo?.dealRating === 'good' || item.aiPriceInfo?.lowPriceAlert;
 
-  const [hasTriggeredHaptic, setHasTriggeredHaptic] = useState(false);
-
   return (
-    <div className="relative overflow-hidden rounded-3xl group select-none touch-pan-y">
-      {/* 底部 刪除按鈕層 (Swipe-to-Reveal) */}
-      <div className="absolute inset-y-0 right-0 w-[100px] bg-red-500 flex justify-end items-center pr-8 rounded-3xl">
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            triggerHaptic('medium');
-            onDelete();
-          }}
-          className="p-3 text-white active:scale-90 transition-transform"
-        >
-          <Trash2 size={24} strokeWidth={3} />
-        </button>
-      </div>
-
-      <motion.div
-        drag="x"
-        dragConstraints={{ right: 0, left: -100 }}
-        dragElastic={0.1}
-        onDrag={(e, info) => {
-          if (info.offset.x <= -80 && !hasTriggeredHaptic) {
-            triggerHaptic('light');
-            setHasTriggeredHaptic(true);
-          } else if (info.offset.x > -80 && hasTriggeredHaptic) {
-            setHasTriggeredHaptic(false);
-          }
-        }}
-        onDragEnd={(_, info) => {
-          if (info.offset.x > -40) {
-            setHasTriggeredHaptic(false);
-          }
-        }}
-        initial={{ opacity: 0, x: -10 }}
-        animate={{ opacity: 1, x: 0 }}
-        exit={{ opacity: 0, scale: 0.95 }}
-        transition={{ type: "spring", bounce: 0.2, duration: 0.4 }}
-        className={`relative z-10 bg-white border-[3px] border-splat-dark rounded-3xl p-4 flex items-center gap-4 transition-all cursor-grab active:cursor-grabbing ${item.isBought ? 'bg-gray-100' : 'shadow-splat-solid-sm'
+    <SwipeableItem
+      id={item.id}
+      onDelete={onDelete}
+      className="rounded-3xl"
+    >
+      <div
+        className={`relative z-10 bg-white border-[3px] border-splat-dark rounded-3xl p-4 flex items-center gap-4 transition-all ${item.isBought ? 'bg-gray-100' : 'shadow-splat-solid-sm'
           } ${isGoodDeal ? 'bg-splat-pink/5 border-splat-pink ring-4 ring-splat-pink/30 animate-pulse-subtle' : ''
           }`}
+        onClick={onClick}
       >
         {/* 1. 勾選按鈕 (iOS 震盪感) */}
         <motion.button
           whileTap={{ scale: 0.8 }}
-          onClick={onToggle}
+          onClick={(e) => { e.stopPropagation(); onToggle(); }}
           className={`w-10 h-10 rounded-full border-[3px] border-splat-dark flex items-center justify-center transition-colors relative z-10 shrink-0 ${item.isBought ? 'bg-splat-green text-white' : 'bg-white shadow-inner'}`}
         >
           {item.isBought && <Check size={24} strokeWidth={4} />}
         </motion.button>
 
-        <div className="flex-1 min-w-0 relative z-10 cursor-pointer" onClick={onClick}>
+        <div className="flex-1 min-w-0 relative z-10">
           <div className="flex items-center gap-2 mb-1">
             <span className={`text-[8px] font-black px-1.5 py-0.5 rounded-md border-2 border-splat-dark text-white ${cat.color} shadow-sm`}>
               {cat.label}
@@ -406,8 +376,8 @@ const ShoppingRow = ({ item, onToggle, onClick, onPriceCheck, onDelete }: { item
             <img src={item.images[0]} className="w-full h-full object-cover" alt="item" />
           </div>
         )}
-      </motion.div>
-    </div>
+      </div>
+    </SwipeableItem>
   );
 };
 

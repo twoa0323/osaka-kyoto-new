@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { useTripStore } from '../store/useTripStore';
-import { X, Camera, Globe, QrCode, Loader2, Trash2, Plane, ChevronDown, Sparkles } from 'lucide-react';
+import { X, Camera, Globe, QrCode, Loader2, Trash2, Plane, ChevronDown, Sparkles, MapPin } from 'lucide-react';
 import { BookingItem } from '../types';
 import { uploadImage, compressImage } from '../utils/imageUtils';
 import { BottomSheet } from './ui/BottomSheet';
@@ -70,7 +70,13 @@ export const BookingEditor: React.FC<Props> = ({ tripId, type, item, onClose }) 
             arrCity: data.arrCity || prev.arrCity,
             baggage: data.baggage || prev.baggage,
             seat: data.seat || prev.seat,
-            aircraft: data.aircraft || prev.aircraft
+            aircraft: data.aircraft || prev.aircraft,
+            pnr: data.pnr || prev.pnr,
+            eTicketNo: data.eTicketNo || prev.eTicketNo,
+            terminal: data.terminal || prev.terminal,
+            gate: data.gate || prev.gate,
+            boardingTime: data.boardingTime || prev.boardingTime,
+            baggageAllowance: data.baggageAllowance || prev.baggageAllowance
           }));
           if (data.duration) {
             const durMatch = data.duration.match(/(\d+)h\s*(\d+)m/i);
@@ -89,7 +95,11 @@ export const BookingEditor: React.FC<Props> = ({ tripId, type, item, onClose }) 
             contactPhone: data.contactPhone || prev.contactPhone,
             entryTime: data.entryTime || prev.entryTime,
             ticketType: data.ticketType || prev.ticketType,
-            exchangeLocation: data.exchangeLocation || prev.exchangeLocation
+            exchangeLocation: data.exchangeLocation || prev.exchangeLocation,
+            checkInTime: data.checkInTime || prev.checkInTime,
+            lastEntryTime: data.lastEntryTime || prev.lastEntryTime,
+            meetingPoint: data.meetingPoint || prev.meetingPoint,
+            exchangeHours: data.exchangeHours || prev.exchangeHours
           }));
         }
         showToast("✨ AI 解析成功！已為您自動填入資訊。", "success");
@@ -125,7 +135,10 @@ export const BookingEditor: React.FC<Props> = ({ tripId, type, item, onClose }) 
     depCity: '', arrCity: '',
     depTime: '09:00', arrTime: '13:00',
     duration: '', baggage: '', aircraft: '', seat: '',
-    qrCode: '', website: '', nights: 1
+    qrCode: '', website: '', nights: 1,
+    checkInTime: '15:00', mapUrl: '',
+    lastEntryTime: '', meetingPoint: '', exchangeHours: '09:00 - 18:00',
+    pnr: '', eTicketNo: '', terminal: '', gate: '', boardingTime: '', baggageAllowance: ''
   });
 
   const handlePhoto = async (e: React.ChangeEvent<HTMLInputElement>, field: 'images' | 'qrCode') => {
@@ -280,13 +293,65 @@ export const BookingEditor: React.FC<Props> = ({ tripId, type, item, onClose }) 
                   <input placeholder="14F" className="w-full h-12 bg-white border-2 border-ac-border rounded-xl font-bold text-xs text-center uppercase outline-none" value={form.seat} onChange={e => setForm({ ...form, seat: e.target.value })} />
                 </div>
               </div>
+
+              {/* ✈️ 機票專用進階欄位 */}
+              <div className="bg-ac-green/5 p-4 rounded-3xl border-2 border-ac-green/20 space-y-4">
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <label className="text-[9px] font-black text-ac-green uppercase ml-1 tracking-widest">PNR / 訂位代碼</label>
+                    <input placeholder="6位大寫字母" className="w-full h-12 px-3 bg-white border-2 border-ac-green/30 rounded-xl font-black text-ac-green text-sm outline-none focus:border-ac-green" value={form.pnr || ''} onChange={e => setForm({ ...form, pnr: e.target.value.toUpperCase() })} />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-[9px] font-black text-ac-green uppercase ml-1 tracking-widest">登機時間</label>
+                    <input type="time" className="w-full h-12 px-3 bg-white border-2 border-ac-green/30 rounded-xl font-black text-ac-green text-sm outline-none focus:border-ac-green" value={form.boardingTime || ''} onChange={e => setForm({ ...form, boardingTime: e.target.value })} />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <label className="text-[9px] font-black text-ac-brown/40 uppercase ml-1 tracking-widest">航廈 (Terminal)</label>
+                    <input placeholder="如: T1" className="w-full h-12 px-3 bg-white border-2 border-ac-border rounded-xl font-bold text-sm outline-none" value={form.terminal || ''} onChange={e => setForm({ ...form, terminal: e.target.value })} />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-[9px] font-black text-ac-brown/40 uppercase ml-1 tracking-widest">登機門 (Gate)</label>
+                    <input placeholder="如: 52" className="w-full h-12 px-3 bg-white border-2 border-ac-border rounded-xl font-bold text-sm outline-none" value={form.gate || ''} onChange={e => setForm({ ...form, gate: e.target.value })} />
+                  </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-[9px] font-black text-ac-brown/40 uppercase ml-1 tracking-widest">行李額度詳情</label>
+                  <input placeholder="如: 23kg x 2" className="w-full h-12 px-4 bg-white border-2 border-ac-border rounded-xl font-bold text-sm outline-none" value={form.baggageAllowance || ''} onChange={e => setForm({ ...form, baggageAllowance: e.target.value })} />
+                </div>
+              </div>
             </div>
           ) : (
             <div className="space-y-4">
               <div className="space-y-1.5"><label className="text-[10px] font-black text-ac-brown/40 uppercase ml-1 tracking-widest">標題名稱</label>
                 <input className="w-full h-14 px-4 bg-white border-2 border-ac-border rounded-2xl font-bold text-ac-brown outline-none focus:border-ac-green" value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} placeholder="例如：東橫INN" /></div>
-              <div className="space-y-1.5"><label className="text-[10px] font-black text-ac-brown/40 uppercase ml-1 tracking-widest">地址 / 位置</label>
-                <input placeholder="輸入具體地址" className="w-full h-14 px-4 bg-white border-2 border-ac-border rounded-2xl font-bold outline-none focus:border-ac-green" value={form.location} onChange={e => setForm({ ...form, location: e.target.value })} /></div>
+
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-black text-ac-brown/40 uppercase ml-1 tracking-widest">地址 / 位置</label>
+                <div className="relative">
+                  <input placeholder="輸入具體地址" className="w-full h-14 px-4 pr-12 bg-white border-2 border-ac-border rounded-2xl font-bold outline-none focus:border-ac-green" value={form.location} onChange={e => setForm({ ...form, location: e.target.value })} />
+                  <button
+                    onClick={() => {
+                      if (!form.location) return showToast("請先輸入地址唷！", "info");
+                      const url = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(form.location)}`;
+                      setForm({ ...form, mapUrl: url });
+                      showToast("已產生 Google Maps 連結！", "success");
+                    }}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 p-2 text-ac-green hover:bg-ac-green/10 rounded-xl transition-colors"
+                    title="產生導航連結"
+                  >
+                    <MapPin size={20} />
+                  </button>
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-black text-ac-brown/40 uppercase ml-1 tracking-widest">Google Maps 連結 (選填)</label>
+                <input placeholder="https://maps.google.com/..." className="w-full h-14 px-4 bg-white border-2 border-ac-border rounded-2xl font-bold outline-none text-sm focus:border-ac-green" value={form.mapUrl || ''} onChange={e => setForm({ ...form, mapUrl: e.target.value })} />
+              </div>
               {type === 'hotel' && (
                 <div className="space-y-4 animate-in slide-in-from-bottom-2">
                   <div className="bg-white p-5 rounded-[2.5rem] border-2 border-ac-border space-y-5 shadow-sm">
@@ -300,9 +365,15 @@ export const BookingEditor: React.FC<Props> = ({ tripId, type, item, onClose }) 
                       <div className="space-y-1.5"><label className="text-[10px] font-black text-ac-brown/40 uppercase tracking-widest ml-1">Room Type</label><input placeholder="房型 (如：雙人房)" value={form.roomType || ''} onChange={e => setForm({ ...form, roomType: e.target.value })} className="w-full h-12 px-3 bg-[#F5F6F8] border border-ac-border/30 rounded-xl font-black text-sm outline-none focus:border-ac-green focus:bg-white transition-colors" /></div>
                       <div className="space-y-1.5"><label className="text-[10px] font-black text-ac-brown/40 uppercase tracking-widest ml-1">Conf. No.</label><input placeholder="訂單編號" value={form.confirmationNo} onChange={e => setForm({ ...form, confirmationNo: e.target.value })} className="w-full h-12 px-3 bg-[#F5F6F8] border border-ac-border/30 rounded-xl font-black text-sm text-ac-green outline-none focus:border-ac-green focus:bg-white transition-colors" /></div>
                     </div>
-                    <div className="space-y-1.5">
-                      <label className="text-[10px] font-black text-ac-brown/40 uppercase tracking-widest ml-1">Contact Phone</label>
-                      <input placeholder="連絡電話" value={form.contactPhone || ''} onChange={e => setForm({ ...form, contactPhone: e.target.value })} className="w-full h-12 px-3 bg-[#F5F6F8] border border-ac-border/30 rounded-xl font-black text-sm outline-none focus:border-ac-green focus:bg-white transition-colors" />
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-1.5">
+                        <label className="text-[10px] font-black text-ac-brown/40 uppercase tracking-widest ml-1">Contact Phone</label>
+                        <input placeholder="連絡電話" value={form.contactPhone || ''} onChange={e => setForm({ ...form, contactPhone: e.target.value })} className="w-full h-12 px-3 bg-[#F5F6F8] border border-ac-border/30 rounded-xl font-black text-sm outline-none focus:border-ac-green focus:bg-white transition-colors" />
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="text-[10px] font-black text-ac-brown/40 uppercase tracking-widest ml-1">Check-in Time</label>
+                        <input type="time" value={form.checkInTime || '15:00'} onChange={e => setForm({ ...form, checkInTime: e.target.value })} className="w-full h-12 px-3 bg-[#F5F6F8] border border-ac-border/30 rounded-xl font-black text-sm outline-none focus:border-ac-green focus:bg-white transition-colors" />
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -318,13 +389,25 @@ export const BookingEditor: React.FC<Props> = ({ tripId, type, item, onClose }) 
 
                   {type === 'spot' && (
                     <div className="grid grid-cols-2 gap-3">
-                      <div className="space-y-1.5"><label className="text-[10px] font-black text-ac-brown/40 uppercase tracking-widest ml-1">入場/場次時間</label><input type="time" value={form.entryTime || ''} onChange={e => setForm({ ...form, entryTime: e.target.value })} className="w-full h-12 px-3 bg-[#F5F6F8] border border-ac-border/30 rounded-xl font-black text-sm outline-none focus:border-ac-green focus:bg-white" /></div>
-                      <div className="space-y-1.5"><label className="text-[10px] font-black text-ac-brown/40 uppercase tracking-widest ml-1">票種人數</label><input placeholder="如: 成人票x2" value={form.ticketType || ''} onChange={e => setForm({ ...form, ticketType: e.target.value })} className="w-full h-12 px-3 bg-[#F5F6F8] border border-ac-border/30 rounded-xl font-black text-sm outline-none focus:border-ac-green focus:bg-white" /></div>
+                      <div className="space-y-1.5"><label className="text-[10px] font-black text-ac-brown/40 uppercase tracking-widest ml-1">出發/入場時間</label><input type="time" value={form.entryTime || ''} onChange={e => setForm({ ...form, entryTime: e.target.value })} className="w-full h-12 px-3 bg-[#F5F6F8] border border-ac-border/30 rounded-xl font-black text-sm outline-none focus:border-ac-green focus:bg-white" /></div>
+                      <div className="space-y-1.5"><label className="text-[10px] font-black text-ac-brown/40 uppercase tracking-widest ml-1">最後入場時間</label><input type="time" value={form.lastEntryTime || ''} onChange={e => setForm({ ...form, lastEntryTime: e.target.value })} className="w-full h-12 px-3 bg-[#F5F6F8] border border-ac-border/30 rounded-xl font-black text-sm outline-none focus:border-ac-green focus:bg-white" /></div>
                     </div>
                   )}
 
+                  <div className="space-y-1.5"><label className="text-[10px] font-black text-ac-brown/40 uppercase tracking-widest ml-1">票種人數</label><input placeholder="如: 成人票x2" value={form.ticketType || ''} onChange={e => setForm({ ...form, ticketType: e.target.value })} className="w-full h-14 px-4 bg-[#F5F6F8] border border-ac-border/30 rounded-xl font-black text-sm outline-none focus:border-ac-green focus:bg-white" /></div>
+
                   {type === 'voucher' && (
-                    <div className="space-y-1.5"><label className="text-[10px] font-black text-ac-brown/40 uppercase tracking-widest ml-1">兌換/領取地點</label><input placeholder="如: 關西機場 JR 綠色窗口" value={form.exchangeLocation || ''} onChange={e => setForm({ ...form, exchangeLocation: e.target.value })} className="w-full h-12 px-3 bg-[#F5F6F8] border border-ac-border/30 rounded-xl font-black text-sm text-[#FF8A00] outline-none focus:border-ac-green focus:bg-white" /></div>
+                    <div className="space-y-4">
+                      <div className="space-y-1.5"><label className="text-[10px] font-black text-ac-brown/40 uppercase tracking-widest ml-1">兌換/領取地點</label><input placeholder="如: 關西機場 JR 綠色窗口" value={form.exchangeLocation || ''} onChange={e => setForm({ ...form, exchangeLocation: e.target.value })} className="w-full h-12 px-3 bg-[#F5F6F8] border border-ac-border/30 rounded-xl font-black text-sm text-[#FF8A00] outline-none focus:border-ac-green focus:bg-white" /></div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-1.5"><label className="text-[10px] font-black text-ac-brown/40 uppercase tracking-widest ml-1">集合地點</label><input placeholder="如: 門口噴水池" value={form.meetingPoint || ''} onChange={e => setForm({ ...form, meetingPoint: e.target.value })} className="w-full h-12 px-3 bg-[#F5F6F8] border border-ac-border/30 rounded-xl font-black text-sm outline-none focus:border-ac-green focus:bg-white" /></div>
+                        <div className="space-y-1.5"><label className="text-[10px] font-black text-ac-brown/40 uppercase tracking-widest ml-1">營業/兌換時間</label><input placeholder="09:00 - 18:00" value={form.exchangeHours || ''} onChange={e => setForm({ ...form, exchangeHours: e.target.value })} className="w-full h-12 px-3 bg-[#F5F6F8] border border-ac-border/30 rounded-xl font-black text-sm outline-none focus:border-ac-green focus:bg-white" /></div>
+                      </div>
+                    </div>
+                  )}
+
+                  {type === 'spot' && !form.meetingPoint && (
+                    <div className="space-y-1.5"><label className="text-[10px] font-black text-ac-brown/40 uppercase tracking-widest ml-1">集合地點 (選填)</label><input placeholder="如: 門口噴水池" value={form.meetingPoint || ''} onChange={e => setForm({ ...form, meetingPoint: e.target.value })} className="w-full h-12 px-3 bg-[#F5F6F8] border border-ac-border/30 rounded-xl font-black text-sm outline-none focus:border-ac-green focus:bg-white" /></div>
                   )}
 
                   {type === 'spot' && (

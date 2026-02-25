@@ -11,6 +11,7 @@ import { triggerHaptic } from '../utils/haptics';
 import { compressImage, uploadImage } from '../utils/imageUtils';
 import { format, parseISO, differenceInDays } from 'date-fns';
 import { motion, AnimatePresence } from 'framer-motion';
+import { SwipeableItem } from './Common';
 
 // --- 常數配置 ---
 const CURRENCY_SYMBOLS: Record<string, string> = {
@@ -796,22 +797,13 @@ export const Expense = () => {
                 {grouped[date].map(e => {
                   const sym = CURRENCY_SYMBOLS[e.currency] || e.currency;
                   return (
-                    <div key={e.id} className="relative overflow-hidden rounded-[20px]">
-                      {/* Swipe Delete Background */}
-                      <div className="absolute inset-0 bg-red-500 flex justify-end items-center pr-6 rounded-[20px]">
-                        <Trash2 size={24} className="text-white animate-pulse" strokeWidth={3} />
-                      </div>
-
-                      <motion.div
-                        drag="x"
-                        dragConstraints={{ right: 0, left: -80 }}
-                        onDragEnd={(_, info) => {
-                          if (info.offset.x < -50) {
-                            triggerHaptic('medium');
-                            deleteExpenseItem(trip.id, e.id);
-                            showToast("已刪除支出 🗑️", "success");
-                          }
-                        }}
+                    <SwipeableItem
+                      key={e.id}
+                      id={e.id}
+                      onDelete={() => deleteExpenseItem(trip.id, e.id)}
+                      className="rounded-[20px]"
+                    >
+                      <div
                         onClick={() => setDetailItem(e)}
                         className="relative z-10 bg-white border-[3px] border-splat-dark rounded-[20px] shadow-splat-solid p-4 flex justify-between items-center group active:translate-y-1 active:shadow-none transition-all cursor-pointer"
                       >
@@ -826,8 +818,8 @@ export const Expense = () => {
                           </div>
                           <ChevronRight className="text-gray-300" size={18} />
                         </div>
-                      </motion.div>
-                    </div>
+                      </div>
+                    </SwipeableItem>
                   );
                 })}
               </div>
@@ -876,7 +868,7 @@ export const Expense = () => {
 
               <div className="flex gap-4">
                 <button onClick={() => { setForm(detailItem); setEditingId(detailItem.id); setDetailItem(null); setActiveTab('record'); }} className="flex-1 py-4 bg-white border-[3px] border-splat-dark rounded-2xl font-black text-splat-dark flex items-center justify-center gap-2 active:translate-y-1 shadow-splat-solid-sm uppercase tracking-widest"><Edit3 size={18} strokeWidth={3} /> Edit</button>
-                <button onClick={() => { deleteExpenseItem(trip.id, detailItem.id); setDetailItem(null); triggerHaptic('warning'); showToast("已刪除支出", "success"); }} className="flex-1 py-4 bg-white border-[3px] border-splat-dark rounded-2xl font-black text-splat-pink flex items-center justify-center gap-2 active:translate-y-1 shadow-splat-solid-sm uppercase tracking-widest"><Trash2 size={18} strokeWidth={3} /> Delete</button>
+                <button onClick={() => { deleteExpenseItem(trip.id, detailItem.id); setDetailItem(null); triggerHaptic('warning'); }} className="flex-1 py-4 bg-white border-[3px] border-splat-dark rounded-2xl font-black text-splat-pink flex items-center justify-center gap-2 active:translate-y-1 shadow-splat-solid-sm uppercase tracking-widest"><Trash2 size={18} strokeWidth={3} /> Delete</button>
               </div>
             </div>
           </div>

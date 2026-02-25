@@ -1,6 +1,8 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { ToggleLeft, ToggleRight } from 'lucide-react';
+import { ToggleLeft, ToggleRight, Trash2 } from 'lucide-react';
+import { triggerHaptic } from '../utils/haptics';
+import { useAnimate } from 'framer-motion';
 
 interface SettingToggleProps {
     label: string;
@@ -41,3 +43,74 @@ export const InkSplat: React.FC<{ color: string }> = ({ color }) => (
         }}
     />
 );
+
+interface SwipeableItemProps {
+    id: string;
+    children: React.ReactNode;
+    onDelete: () => void;
+    className?: string;
+    disabled?: boolean;
+}
+
+export const SwipeableItem: React.FC<SwipeableItemProps> = ({ id, children, onDelete, className = "", disabled = false }) => {
+    const [scope, animate] = useAnimate();
+    const [isRevealed, setIsRevealed] = React.useState(false);
+    const [hasTriggeredHaptic, setHasTriggeredHaptic] = React.useState(false);
+
+    const handleDragEnd = (_: any, info: any) => {
+        if (disabled) return;
+        // 使用 info.offset.x 或 info.point.x 的相對位移
+        // 為了更精確，我們檢查最終的 x 位置
+        if (info.offset.x < -40 || info.velocity.x < -500) {
+            // 鎖定在 -80px
+            animate(scope.current, { x: -80 }, { type: "spring", bounce: 0.2, duration: 0.4 });
+            setIsRevealed(true);
+        } else {
+            // 彈回 0
+            animate(scope.current, { x: 0 }, { type: "spring", bounce: 0.2, duration: 0.4 });
+            setIsRevealed(false);
+            setHasTriggeredHaptic(false);
+        }
+    };
+
+    return (
+        <div className={`relative overflow-hidden rounded-[24px] ${className} select-none touch-pan-y`}>
+            {/* 底層: 紅色刪除區域 */}
+            <div className="absolute inset-y-0 right-0 w-[100px] bg-red-500 flex justify-end items-center pr-8 z-0">
+                <button
+                    onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        triggerHaptic('medium');
+                        onDelete();
+                    }}
+                    className="p-3 text-white active:scale-90 transition-transform relative z-50"
+                >
+                    <Trash2 size={24} strokeWidth={3} />
+                </button>
+            </div>
+
+            {/* 頂層: 內容區域 */}
+            <motion.div
+                ref={scope}
+                drag={disabled ? false : "x"}
+                dragConstraints={{ right: 0, left: -100 }}
+                dragElastic={0.05}
+                onDrag={(_, info) => {
+                    if (disabled) return;
+                    if (info.offset.x <= -80 && !hasTriggeredHaptic) {
+                        triggerHaptic('light');
+                        setHasTriggeredHaptic(true);
+                    } else if (info.offset.x > -80 && hasTriggeredHaptic) {
+                        setHasTriggeredHaptic(false);
+                    }
+                }}
+                onDragEnd={handleDragEnd}
+                whileTap={{ cursor: disabled ? 'default' : 'grabbing' }}
+                className="relative z-10"
+            >
+                {children}
+            </motion.div>
+        </div>
+    );
+};

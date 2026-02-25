@@ -23,6 +23,7 @@ import {
 import { useTripStore } from '../store/useTripStore';
 import { PackingItem } from '../types';
 import { triggerHaptic } from '../utils/haptics';
+import { SwipeableItem } from './Common';
 
 const CATEGORY_ICONS: Record<string, any> = {
     'Clothing': Shirt,
@@ -179,26 +180,13 @@ export const PackingList = ({ className = "" }: { className?: string }) => {
                         const colorClass = CATEGORY_COLORS[item.category] || 'bg-gray-400';
 
                         return (
-                            <div key={item.id} className="relative overflow-hidden rounded-[24px]">
-                                {/* Swipe Delete Background */}
-                                <div className="absolute inset-0 bg-red-500 flex justify-end items-center pr-6 rounded-[24px]">
-                                    <Trash2 size={24} className="text-white animate-pulse" strokeWidth={3} />
-                                </div>
-
-                                <motion.div
-                                    layout
-                                    drag="x"
-                                    dragConstraints={{ right: 0, left: -80 }}
-                                    onDragEnd={(_, info) => {
-                                        if (info.offset.x < -50) {
-                                            triggerHaptic('medium');
-                                            deletePackingItem(currentTripId!, item.id);
-                                            showToast("已移除項目 🗑️", "success");
-                                        }
-                                    }}
-                                    initial={{ opacity: 0, scale: 0.9 }}
-                                    animate={{ opacity: 1, scale: 1 }}
-                                    exit={{ opacity: 0, scale: 0.9 }}
+                            <SwipeableItem
+                                key={item.id}
+                                id={item.id}
+                                onDelete={() => deletePackingItem(currentTripId!, item.id)}
+                                className="rounded-[24px]"
+                            >
+                                <div
                                     onClick={() => {
                                         togglePackingItem(currentTripId!, item.id);
                                         triggerHaptic(item.isPacked ? 'light' : 'success');
@@ -222,8 +210,8 @@ export const PackingList = ({ className = "" }: { className?: string }) => {
                                             {item.isPacked && <CheckCircle2 size={14} strokeWidth={4} />}
                                         </div>
                                     </div>
-                                </motion.div>
-                            </div>
+                                </div>
+                            </SwipeableItem>
                         );
                     })}
                 </AnimatePresence>

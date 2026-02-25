@@ -68,17 +68,28 @@ export interface BookingItem extends SyncMetadata {
   baggage?: string;
   aircraft?: string;
   seat?: string;
+  pnr?: string;           // 👈 新增：訂位代碼
+  eTicketNo?: string;     // 👈 新增：電子票號
+  terminal?: string;      // 👈 新增：航廈資訊
+  gate?: string;          // 👈 新增：登機門
+  boardingTime?: string;  // 👈 新增：登機時間
+  baggageAllowance?: string; // 👈 新增：行李額度詳情
 
   // 住宿專用欄位
   price?: number;
   nights?: number;
   roomType?: string;      // 👈 新增：房型
   contactPhone?: string;  // 👈 新增：飯店電話
+  checkInTime?: string;   // 👈 新增：入住時間
+  mapUrl?: string;        // 👈 新增：地圖連結
 
   // 景點/憑證專用欄位
   entryTime?: string;       // 👈 新增：指定入場時間 (景點)
-  ticketType?: string;      // 👈 新增：票券種類 (例如：成人票x2)
+  lastEntryTime?: string;   // 👈 新增：最後入場時間 (景點)
+  ticketType?: string;      // 👈 新測：票券種類 (例如：成人票x2)
+  meetingPoint?: string;    // 👈 新增：集合地點
   exchangeLocation?: string;// 👈 新增：實體票兌換地點 (憑證)
+  exchangeHours?: string;   // 👈 新增：兌換處營業時間
 }
 
 // --- 3. 記帳 (Expense) 項目 ---

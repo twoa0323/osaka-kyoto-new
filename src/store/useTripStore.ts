@@ -337,10 +337,14 @@ export const useTripStore = create<TripState>()(
         syncItemToCloud(tid, "bookings", ni);
       },
       deleteBookingItem: (tid, iid) => {
+        const item = (get().trips.find(t => t.id === tid)?.bookings || []).find(it => it.id === iid);
+        if (item) set({ lastDeletedItem: { type: 'booking', tripId: tid, item } });
+
         set(s => ({
           trips: s.trips.map(t => t.id === tid ? { ...t, bookings: (t.bookings || []).filter(b => b.id !== iid) } : t)
         }));
         deleteItemFromCloud(tid, "bookings", iid);
+        get().showToast("已刪除預訂項目", "info", { label: "復原", onClick: () => get().undoDelete() });
       },
 
       // --- 3. Expense ---
@@ -358,10 +362,14 @@ export const useTripStore = create<TripState>()(
         syncItemToCloud(tid, "expenses", ni);
       },
       deleteExpenseItem: (tid, iid) => {
+        const item = (get().trips.find(t => t.id === tid)?.expenses || []).find(it => it.id === iid);
+        if (item) set({ lastDeletedItem: { type: 'expense', tripId: tid, item } });
+
         set(s => ({
           trips: s.trips.map(t => t.id === tid ? { ...t, expenses: (t.expenses || []).filter(e => e.id !== iid) } : t)
         }));
         deleteItemFromCloud(tid, "expenses", iid);
+        get().showToast("已刪除支出項目", "info", { label: "復原", onClick: () => get().undoDelete() });
       },
 
       // --- 4. Journal ---
@@ -378,10 +386,14 @@ export const useTripStore = create<TripState>()(
         syncItemToCloud(tid, "journals", ni);
       },
       deleteJournalItem: (tid, iid) => {
+        const item = (get().trips.find(t => t.id === tid)?.journals || []).find(it => it.id === iid);
+        if (item) set({ lastDeletedItem: { type: 'journal', tripId: tid, item } });
+
         set(s => ({
           trips: s.trips.map(t => t.id === tid ? { ...t, journals: t.journals.filter(j => j.id !== iid) } : t)
         }));
         deleteItemFromCloud(tid, "journals", iid);
+        get().showToast("已刪除日誌項目", "info", { label: "復原", onClick: () => get().undoDelete() });
       },
 
       // --- 5. Shopping ---
@@ -439,10 +451,14 @@ export const useTripStore = create<TripState>()(
         syncItemToCloud(tid, "info", ni);
       },
       deleteInfoItem: (tid, iid) => {
+        const item = (get().trips.find(t => t.id === tid)?.infoItems || []).find(it => it.id === iid);
+        if (item) set({ lastDeletedItem: { type: 'info', tripId: tid, item } });
+
         set(s => ({
           trips: s.trips.map(t => t.id === tid ? { ...t, infoItems: (t.infoItems || []).filter(x => x.id !== iid) } : t)
         }));
         deleteItemFromCloud(tid, "info", iid);
+        get().showToast("已刪除資訊項目", "info", { label: "復原", onClick: () => get().undoDelete() });
       },
 
       // --- 7. Packing ---
@@ -475,10 +491,14 @@ export const useTripStore = create<TripState>()(
         if (item) syncItemToCloud(tid, "packing", item);
       },
       deletePackingItem: (tid, iid) => {
+        const item = (get().trips.find(t => t.id === tid)?.packingList || []).find(it => it.id === iid);
+        if (item) set({ lastDeletedItem: { type: 'packing', tripId: tid, item } });
+
         set(s => ({
           trips: s.trips.map(t => t.id === tid ? { ...t, packingList: (t.packingList || []).filter(x => x.id !== iid) } : t)
         }));
         deleteItemFromCloud(tid, "packing", iid);
+        get().showToast("已刪除行李項目", "info", { label: "復原", onClick: () => get().undoDelete() });
       },
       clearPackingList: (tid) => {
         const trip = get().trips.find(t => t.id === tid);

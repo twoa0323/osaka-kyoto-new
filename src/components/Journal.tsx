@@ -11,6 +11,7 @@ import { uploadImage } from '../utils/imageUtils';
 import { JournalItem } from '../types';
 import { motion, AnimatePresence } from 'framer-motion';
 import { LazyImage } from './LazyImage';
+import { SwipeableItem } from './Common';
 
 export const Journal = () => {
   const { trips, currentTripId, addJournalItem, updateJournalItem, deleteJournalItem, showToast } = useTripStore();
@@ -115,17 +116,34 @@ export const Journal = () => {
               拍照留念你的美食地圖吧！🍜
             </motion.div>
           ) : (
-            (trip.journals || []).map((item, idx) => (
-              <PolaroidCard
-                key={item.id}
-                item={item}
-                index={idx}
-                onDelete={(e) => { e.stopPropagation(); deleteJournalItem(trip.id, item.id); showToast("已刪除回憶", "success"); }}
-                onClick={() => setViewingItem(item)}
-                tripId={trip.id}
-                updateJournalItem={updateJournalItem}
-              />
-            ))
+            (trip.journals || []).map((item, idx) => {
+              const rotation = (idx % 2 === 0 ? -2 : 2) + ((idx * 7) % 3 - 1); // 穩定的隨機旋轉
+              return (
+                <motion.div
+                  key={item.id}
+                  layout
+                  layoutId={`card-${item.id}`}
+                  initial={{ scale: 0.8, opacity: 0, rotate: 0 }}
+                  animate={{ scale: 1, opacity: 1, rotate: rotation }}
+                  exit={{ scale: 0.5, opacity: 0 }}
+                  whileHover={{ rotate: 0, scale: 1.05, zIndex: 10 }}
+                >
+                  <SwipeableItem
+                    id={item.id}
+                    onDelete={() => deleteJournalItem(trip.id, item.id)}
+                    className="rounded-xl shadow-splat-solid-sm"
+                  >
+                    <PolaroidCard
+                      item={item}
+                      index={idx}
+                      onClick={() => setViewingItem(item)}
+                      tripId={trip.id}
+                      updateJournalItem={updateJournalItem}
+                    />
+                  </SwipeableItem>
+                </motion.div>
+              );
+            })
           )}
         </AnimatePresence>
       </div>
@@ -255,10 +273,7 @@ export const Journal = () => {
 };
 
 // --- 拍立得卡片子組件 ---
-const PolaroidCard = ({ item, index, onDelete, onClick, tripId, updateJournalItem }: { item: JournalItem, index: number, onDelete: (e: any) => void, onClick: () => void, tripId: string, updateJournalItem: any }) => {
-  // 隨機傾斜角度，讓介面看起來更像亂放在桌上的照片
-  const rotation = useMemo(() => (index % 2 === 0 ? -2 : 2) + (Math.random() * 2 - 1), [index]);
-
+const PolaroidCard = ({ item, onClick, tripId, updateJournalItem }: { item: JournalItem, index: number, onClick: () => void, tripId: string, updateJournalItem: any }) => {
   // 💡 自動取圖邏輯
   React.useEffect(() => {
     if (!item.images || item.images.length === 0) {
@@ -286,18 +301,11 @@ const PolaroidCard = ({ item, index, onDelete, onClick, tripId, updateJournalIte
   }, [item.id, item.images, item.title, item.location, tripId, updateJournalItem]);
 
   return (
-    <motion.div
-      layout
-      layoutId={`card-${item.id}`}
-      initial={{ scale: 0.8, opacity: 0, rotate: 0 }}
-      animate={{ scale: 1, opacity: 1, rotate: rotation }}
-      exit={{ scale: 0.5, opacity: 0 }}
-      whileHover={{ rotate: 0, scale: 1.05, zIndex: 10 }}
-      whileTap={{ scale: 0.95 }}
+    <div
       onClick={onClick}
-      className="bg-white p-3 pb-6 border-[3px] border-splat-dark shadow-splat-solid-sm cursor-pointer relative"
+      className="bg-white p-3 pb-6 border-[3px] border-splat-dark cursor-pointer relative select-none"
     >
-      <div className="aspect-square bg-gray-50 border-2 border-splat-dark mb-3 overflow-hidden relative">
+      <div className="aspect-square bg-gray-50 border-2 border-splat-dark mb-3 overflow-hidden relative pointer-events-none">
         <LazyImage src={item.images?.[0] || ""} containerClassName="w-full h-full" alt="food" />
         {item.images.length > 1 && (
           <div className="absolute top-2 right-2 bg-splat-dark text-white text-[8px] px-1.5 py-0.5 rounded-md font-black">
@@ -305,7 +313,7 @@ const PolaroidCard = ({ item, index, onDelete, onClick, tripId, updateJournalIte
           </div>
         )}
       </div>
-      <div className="space-y-1">
+      <div className="space-y-1 pointer-events-none">
         <h4 className="font-black text-sm text-splat-dark truncate pr-4">{item.title}</h4>
         <div className="flex gap-0.5">
           {Array.from({ length: 5 }).map((_, i) => (
@@ -313,17 +321,7 @@ const PolaroidCard = ({ item, index, onDelete, onClick, tripId, updateJournalIte
           ))}
         </div>
       </div>
-
-      <button
-        onClick={(e) => {
-          e.stopPropagation(); // 阻止事件冒泡！
-          onDelete(e);
-        }}
-        className="absolute bottom-2 right-2 p-1.5 bg-red-50 text-red-500 rounded-lg opacity-0 group-hover:opacity-100 sm:opacity-100 transition-opacity border border-red-100 z-20"
-      >
-        <Trash2 size={12} strokeWidth={3} />
-      </button>
-    </motion.div>
+    </div>
   );
 };
 

@@ -6,6 +6,7 @@ import { InfoItem } from '../types';
 import { PackingList } from './PackingList';
 import { motion } from 'framer-motion';
 import { triggerHaptic } from '../utils/haptics';
+import { SwipeableItem } from './Common';
 
 export const Info = () => {
   const { trips, currentTripId, addInfoItem, deleteInfoItem, showToast } = useTripStore();
@@ -78,22 +79,13 @@ export const Info = () => {
 
       <div className="space-y-4">
         {(trip.infoItems || []).map(item => (
-          <div key={item.id} className="relative overflow-hidden rounded-[24px]">
-            {/* Swipe Delete Background */}
-            <div className="absolute inset-0 bg-red-500 flex justify-end items-center pr-6 rounded-[24px]">
-              <Trash2 size={24} className="text-white animate-pulse" strokeWidth={3} />
-            </div>
-
-            <motion.div
-              drag="x"
-              dragConstraints={{ right: 0, left: -80 }}
-              onDragEnd={(_, info: any) => {
-                if (info.offset.x < -50) {
-                  triggerHaptic('medium');
-                  deleteInfoItem(trip.id, item.id);
-                  showToast("已刪除資訊 🗑️", "success");
-                }
-              }}
+          <SwipeableItem
+            key={item.id}
+            id={item.id}
+            onDelete={() => deleteInfoItem(trip.id, item.id)}
+            className="rounded-[24px]"
+          >
+            <div
               className={`relative z-10 bg-white border-[3px] border-splat-dark rounded-[24px] overflow-hidden transition-all duration-300 ${expandedId === item.id ? 'shadow-[8px_8px_0px_#1A1A1A] -translate-y-1' : 'shadow-splat-solid-sm'}`}
             >
               {/* 標題列 (點擊展開/收合) */}
@@ -136,8 +128,8 @@ export const Info = () => {
                   )}
                 </div>
               )}
-            </motion.div>
-          </div>
+            </div>
+          </SwipeableItem>
         ))}
 
         {(trip.infoItems || []).length === 0 && (

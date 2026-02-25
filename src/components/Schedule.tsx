@@ -8,6 +8,7 @@ import { ScheduleItem, Trip } from '../types';
 import { WeatherReportModal, TransportAiModal } from './ScheduleModals';
 import { motion, AnimatePresence, Reorder } from 'framer-motion';
 import { LazyImage } from './LazyImage';
+import { SwipeableItem } from './Common';
 import { useNetworkStatus } from '../hooks/useNetworkStatus';
 import { triggerHaptic } from '../utils/haptics';
 
@@ -126,42 +127,15 @@ const ScheduleItemRow: React.FC<{
       <div className={`absolute left-[7px] top-6 bottom-[-24px] w-1 border-r-[3px] border-dashed border-splat-dark opacity-20 ${idx === dayItems.length - 1 ? 'hidden' : ''}`} />
       <div className={`absolute left-0 top-[18px] w-4 h-4 rounded-full border-[3px] border-splat-dark z-10 ${catStyle.bg}`} />
 
-      <div className="flex gap-3 mb-6 relative overflow-hidden rounded-[24px]">
-        {/* Swipe Delete Background (Reveal) */}
-        <div className="absolute inset-y-0 right-0 w-[100px] bg-red-500 flex justify-end items-center pr-8 rounded-[24px]">
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              triggerHaptic('medium');
-              deleteScheduleItem(tripId, item.id);
-            }}
-            className="p-3 text-white active:scale-90 transition-transform"
-          >
-            <Trash2 size={24} strokeWidth={3} />
-          </button>
-        </div>
-
-        <motion.div
-          drag={isEditMode ? false : "x"}
-          dragConstraints={{ right: 0, left: -100 }}
-          dragElastic={0.1}
-          onDrag={(e, info) => {
-            if (info.offset.x <= -80 && !hasTriggeredHaptic) {
-              triggerHaptic('light');
-              setHasTriggeredHaptic(true);
-            } else if (info.offset.x > -80 && hasTriggeredHaptic) {
-              setHasTriggeredHaptic(false);
-            }
-          }}
-          onDragEnd={(_, info) => {
-            if (info.offset.x > -40) {
-              setHasTriggeredHaptic(false);
-            }
-          }}
-          className="flex-1 flex gap-3 relative z-10 bg-[#F4F5F7] active:cursor-grabbing cursor-grab"
-        >
+      <SwipeableItem
+        id={item.id}
+        onDelete={() => deleteScheduleItem(tripId, item.id)}
+        disabled={isEditMode}
+        className="rounded-[24px]"
+      >
+        <div className="flex-1 flex gap-3 relative z-10 bg-[#F4F5F7] cursor-pointer">
           <div className="w-16 shrink-0 flex flex-col items-center mt-3 z-10">
-            <motion.button onClick={() => updateScheduleItem(tripId, item.id, { ...item, isCompleted: !item.isCompleted })} className={`rounded-xl py-2 w-full text-center border-[3px] border-splat-dark -rotate-3 transition-colors ${item.isCompleted ? 'bg-gray-300 text-gray-500' : 'bg-white shadow-splat-solid-sm'}`}>
+            <motion.button onClick={(e) => { e.stopPropagation(); updateScheduleItem(tripId, item.id, { ...item, isCompleted: !item.isCompleted }); }} className={`rounded-xl py-2 w-full text-center border-[3px] border-splat-dark -rotate-3 transition-colors ${item.isCompleted ? 'bg-gray-300 text-gray-500' : 'bg-white shadow-splat-solid-sm'}`}>
               <span className="font-black text-[15px]">{item.time}</span>
             </motion.button>
           </div>
@@ -196,8 +170,8 @@ const ScheduleItemRow: React.FC<{
               </div>
             </motion.div>
           </div>
-        </motion.div>
-      </div>
+        </div>
+      </SwipeableItem>
     </Reorder.Item>
   );
 };
