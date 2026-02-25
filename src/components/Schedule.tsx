@@ -130,26 +130,17 @@ const ScheduleItemRow: React.FC<{
         </div>
         <div className="flex-1 min-w-0 flex flex-col gap-2">
           {warningMsg && <div className="bg-white border-2 border-splat-dark px-3 py-1.5 rounded-lg text-[10px] font-black flex items-center gap-1.5 shadow-sm overflow-hidden"><AlertTriangle size={14} className="text-splat-orange" /> {warningMsg}</div>}
-          <motion.div onClick={() => isEditMode ? (setEditingItem(item), setIsEditorOpen(true)) : setDetailItem(item)} className={`card-splat p-0 overflow-hidden cursor-pointer bg-white border-[3px] border-splat-dark rounded-[24px] shadow-splat-solid relative ${item.isCompleted ? 'bg-splat-green/10 ring-4 ring-splat-green/20 overflow-hidden' : ''} ${isEditMode ? 'pr-12' : ''}`}>
+          <motion.div onClick={() => isEditMode ? (setEditingItem(item), setIsEditorOpen(true)) : setDetailItem(item)} className={`card-splat p-0 overflow-hidden cursor-pointer bg-white border-[3px] border-splat-dark rounded-[24px] shadow-splat-solid relative ${item.isCompleted ? 'bg-gray-100 ring-4 ring-gray-200 overflow-hidden' : ''} ${isEditMode ? 'pr-12' : ''}`}>
             {item.isCompleted && (
               <>
-                <div className="absolute inset-0 z-20 pointer-events-none flex items-center justify-center">
-                  <motion.div
-                    initial={{ scale: 2, opacity: 0, rotate: -20 }}
-                    animate={{ scale: 1, opacity: 0.8, rotate: -15 }}
-                    className="border-[6px] border-splat-green text-splat-green font-black text-3xl px-6 py-2 rounded-2xl uppercase tracking-tighter mix-blend-multiply"
-                    style={{ fontFamily: 'system-ui' }}
-                  >
-                    MISSION CLEAR
-                  </motion.div>
-                </div>
-                {/* 增加斜槓效果：模仿蓋章後的斜劃線 */}
-                <div className="absolute inset-0 z-10 pointer-events-none opacity-40">
-                  <div className="absolute top-1/2 left-[-10%] w-[120%] h-[15px] bg-splat-green -translate-y-1/2 -rotate-[25deg] origin-center skew-x-12" />
+                {/* 增加斜槓效果：簡潔且專業的完成感 */}
+                <div className="absolute inset-0 z-10 pointer-events-none opacity-20">
+                  <div className="absolute top-1/2 left-[-10%] w-[120%] h-[12px] bg-gray-400 -translate-y-1/2 -rotate-[25deg] origin-center skew-x-12" />
+                  <div className="absolute top-1/2 left-[-10%] w-[120%] h-[2px] bg-gray-400 translate-y-6 -rotate-[25deg] origin-center" />
                 </div>
               </>
             )}
-            <div className={`h-7 w-full ${item.isCompleted ? 'bg-splat-green opacity-40' : catStyle.bg} border-b-[3px] border-splat-dark flex items-center px-3 justify-between`}>
+            <div className={`h-7 w-full ${item.isCompleted ? 'bg-gray-400 opacity-60' : catStyle.bg} border-b-[3px] border-splat-dark flex items-center px-3 justify-between`}>
               <span className={`text-[10px] font-black uppercase tracking-widest ${item.isCompleted ? 'text-white' : catStyle.text}`}>
                 {item.isCompleted ? 'COMPLETED' : catStyle.label}
               </span>

@@ -322,7 +322,7 @@ const FlightCard = ({ item, onEdit, onViewDetails, onQrClick }: any) => {
 
         <div className="grid grid-cols-3 gap-0 mb-4 items-center">
           <div className="flex flex-col items-center">
-            <span className="text-[19px] font-bold text-gray-400 tracking-tight uppercase mb-0">{item.depIata || 'TPE'}</span>
+            <span className="text-[24px] font-black text-gray-400 tracking-tight uppercase mb-0">{item.depIata || 'TPE'}</span>
             <span className="text-[44px] leading-tight font-bold text-[#1A1A1A] tracking-tighter tabular-nums">{item.depTime || '--:--'}</span>
             <div className="mt-1.5 bg-[#447A5A] text-white px-3.5 py-0.5 rounded-full text-[10px] font-bold tracking-widest whitespace-nowrap shadow-sm">
               {item.depCity || '出發地'}
@@ -330,17 +330,17 @@ const FlightCard = ({ item, onEdit, onViewDetails, onQrClick }: any) => {
           </div>
 
           <div className="flex flex-col items-center justify-center px-1">
-            <span className="text-[10px] font-bold text-gray-500 mb-1 tabular-nums">{formatDurationDisplay(item.duration)}</span>
+            <span className="text-[12px] font-black text-gray-500 mb-1 tabular-nums">{formatDurationDisplay(item.duration)}</span>
             <div className="w-full flex items-center text-splat-blue">
               <div className="h-[2px] flex-1 bg-gray-100 border-dashed border-t-[2.5px]"></div>
               <Plane size={16} className="mx-1.5 fill-current rotate-45 shrink-0" />
               <div className="h-[2px] flex-1 bg-gray-100 border-dashed border-t-[2.5px]"></div>
             </div>
-            <span className="text-[10px] font-bold text-gray-300 mt-1.5 tracking-wide">{item.date?.replace(/-/g, '/')}</span>
+            <span className="text-[13px] font-black text-gray-400 mt-1.5 tracking-wide">{item.date?.replace(/-/g, '/')}</span>
           </div>
 
           <div className="flex flex-col items-center">
-            <span className="text-[19px] font-bold text-gray-400 tracking-tight uppercase mb-0">{item.arrIata || 'KIX'}</span>
+            <span className="text-[24px] font-black text-gray-400 tracking-tight uppercase mb-0">{item.arrIata || 'KIX'}</span>
             <span className="text-[44px] leading-tight font-bold text-[#1A1A1A] tracking-tighter tabular-nums">{item.arrTime || '--:--'}</span>
             <div className="mt-1.5 bg-[#B3936E] text-white px-3.5 py-0.5 rounded-full text-[10px] font-bold tracking-widest whitespace-nowrap shadow-sm">
               {item.arrCity || '目的地'}
