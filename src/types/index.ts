@@ -119,6 +119,11 @@ export interface JournalItem extends SyncMetadata {
   images: string[];
   rating: number;
   location: string;
+  cost?: number;          // 👈 新增：花費金額
+  currency?: CurrencyCode;// 👈 新增：幣別
+  dishes?: string[];      // 👈 新增：推薦菜色清單
+  tags?: string[];        // 👈 新增：美食標籤
+  externalLink?: string;  // 👈 新增：店家 Google Maps 等外部連結
 }
 
 // --- 5. 購物清單 (Shopping) 項目 ---

@@ -6,9 +6,10 @@ interface BottomSheetProps {
     onClose: () => void;
     children: React.ReactNode;
     title?: string;
+    className?: string;
 }
 
-export const BottomSheet: React.FC<BottomSheetProps> = ({ isOpen, onClose, children, title }) => {
+export const BottomSheet: React.FC<BottomSheetProps> = ({ isOpen, onClose, children, title, className }) => {
     return (
         <AnimatePresence>
             {isOpen && (

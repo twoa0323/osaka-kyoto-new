@@ -255,6 +255,30 @@ export default async function handler(req, res) {
         finalObject = { ...metaResult.object, imageUrl };
         break;
 
+      case 'refine-food-review':
+        const refineFoodResult = await generateObject({
+          model,
+          schema: z.object({
+            refinedContent: z.string(),
+            tags: z.array(z.string())
+          }),
+          prompt: `請將使用者吃完「${payload.title} (${payload.location || '未知地點'})」後的簡短心得：「${payload.content || '很好吃'}」
+            改寫為生動活潑的旅遊雜誌或 IG 探店風格美食評論，內容約 50~100 字，充滿表情符號與幽默感。同時推薦 2~3 個 Hashtag (tags)。`
+        });
+        finalObject = refineFoodResult.object;
+        break;
+
+      case 'recommend-dishes':
+        const dishResult = await generateObject({
+          model,
+          schema: z.object({
+            dishes: z.array(z.string())
+          }),
+          prompt: `針對日本美食餐廳/小吃「${payload.title}」位於「${payload.location || '日本'}」，請列出 3 到 5 道必點菜色或人氣商品。如果是一般便利商店，就列出日本超商必買清單。`
+        });
+        finalObject = dishResult.object;
+        break;
+
       case 'analyze-budget':
         const budgetResult = await generateObject({
           model,
