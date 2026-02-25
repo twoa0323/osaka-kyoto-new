@@ -161,6 +161,13 @@ export interface InfoItem extends SyncMetadata {
   content: string;
   images: string[];
   url: string;
+  category?: 'SOS' | 'Network' | 'Language' | 'Packing' | 'Culture' | 'Other'; // 👈 新增：分類
+  priority?: boolean;    // 👈 新增：是否置頂
+  quickActions?: {       // 👈 新增：快速行動選項
+    type: 'dial' | 'copy_gps' | 'link' | 'ai_translate' | 'ai_taboos';
+    value: string;
+    label: string;
+  }[];
 }
 
 // --- 7. 行李清單 (Packing) 項目 ---

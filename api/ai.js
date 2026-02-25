@@ -338,6 +338,29 @@ export default async function handler(req, res) {
         // 前端期待直接回傳陣列
         return res.status(200).json(optimizeResult.object.optimizedIds);
 
+      case 'translate-phrase':
+        const tlResult = await generateObject({
+          model,
+          schema: z.object({
+            japanese: z.string().describe('日文翻譯'),
+            romaji: z.string().describe('羅馬拼音')
+          }),
+          prompt: `請身為一個專業的日文翻譯員，將以下情境/句子翻譯為最道地、適合給日本店員或路人看的日文，並附上羅馬拼音。要翻譯的句子：「${payload.phrase}」`
+        });
+        finalObject = tlResult.object;
+        break;
+
+      case 'cultural-taboos':
+        const tabooResult = await generateObject({
+          model,
+          schema: z.object({
+            taboos: z.array(z.string()).describe('3條具體的禁忌或禮儀提醒')
+          }),
+          prompt: `使用者即將前往日本「${payload.dest || '日本'}」。請以幽默、斯普拉遁口吻 (活潑、帶點遊戲感)，給出當地 3 條具體的文化禁忌或禮儀提醒 (例如：不要邊走邊吃、和服拍照禁忌等)。不要超過3條。`
+        });
+        finalObject = tabooResult.object;
+        break;
+
       default:
         return res.status(400).json({ error: "Invalid action" });
     }

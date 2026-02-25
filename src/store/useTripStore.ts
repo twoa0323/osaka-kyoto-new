@@ -141,7 +141,7 @@ interface TripState {
 
   // 6. 旅遊資訊 (Info)
   addInfoItem: (tid: string, item: InfoItem) => void;
-  updateInfoItem: (tid: string, iid: string, ni: InfoItem) => void;
+  updateInfoItem: (tid: string, iid: string, ni: Partial<InfoItem>) => void;
   deleteInfoItem: (tid: string, iid: string) => void;
 
   // 7. 行李清單 (Packing)
@@ -446,9 +446,14 @@ export const useTripStore = create<TripState>()(
       },
       updateInfoItem: (tid, iid, ni) => {
         set(s => ({
-          trips: s.trips.map(t => t.id === tid ? { ...t, infoItems: (t.infoItems || []).map(x => x.id === iid ? ni : x) } : t)
+          trips: s.trips.map(t => t.id === tid ? {
+            ...t,
+            infoItems: (t.infoItems || []).map(x => x.id === iid ? { ...x, ...ni } : x)
+          } : t)
         }));
-        syncItemToCloud(tid, "info", ni);
+        const updatedTrip = get().trips.find(x => x.id === tid);
+        const item = updatedTrip?.infoItems?.find(x => x.id === iid);
+        if (item) syncItemToCloud(tid, "info", item);
       },
       deleteInfoItem: (tid, iid) => {
         const item = (get().trips.find(t => t.id === tid)?.infoItems || []).find(it => it.id === iid);
