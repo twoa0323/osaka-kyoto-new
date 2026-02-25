@@ -248,6 +248,7 @@ export const Shopping = () => {
 const ShoppingRow = ({ item, onToggle, onClick, onPriceCheck, onDelete }: { item: ShoppingItem, onToggle: () => void, onClick: () => void, onPriceCheck: () => void, onDelete: () => void }) => {
   const { exchangeRate } = useTripStore();
   const cat = CATEGORIES[item.category as keyof typeof CATEGORIES] || CATEGORIES.general;
+  const isGoodDeal = item.aiPriceInfo?.dealRating === 'good' || item.aiPriceInfo?.lowPriceAlert;
 
   return (
     <motion.div
@@ -256,7 +257,9 @@ const ShoppingRow = ({ item, onToggle, onClick, onPriceCheck, onDelete }: { item
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, scale: 0.95 }}
       transition={{ type: "spring", bounce: 0.2, duration: 0.4 }}
-      className={`relative bg-white border-[3px] border-splat-dark rounded-3xl p-4 flex items-center gap-4 transition-all overflow-hidden ${item.isBought ? 'bg-gray-100' : 'shadow-splat-solid-sm'} ${item.aiPriceInfo?.lowPriceAlert ? 'border-splat-pink ring-4 ring-splat-pink/20' : ''}`}
+      className={`relative bg-white border-[3px] border-splat-dark rounded-3xl p-4 flex items-center gap-4 transition-all overflow-hidden ${item.isBought ? 'bg-gray-100' : 'shadow-splat-solid-sm'
+        } ${isGoodDeal ? 'bg-splat-pink/5 border-splat-pink ring-4 ring-splat-pink/30 animate-pulse-subtle' : ''
+        }`}
     >
       {/* 1. 勾選按鈕 (iOS 震盪感) */}
       <motion.button
@@ -273,8 +276,9 @@ const ShoppingRow = ({ item, onToggle, onClick, onPriceCheck, onDelete }: { item
             {cat.label}
           </span>
           <div className="flex flex-col">
-            <span className="text-[10px] font-black text-splat-dark font-mono leading-none">
+            <span className="text-[10px] font-black text-splat-dark font-mono leading-none flex items-center gap-1">
               {item.currency} {item.price?.toLocaleString()}
+              {isGoodDeal && <span className="text-splat-pink text-xs">🔥</span>}
             </span>
             {item.currency === 'JPY' && (
               <span className="text-[8px] font-bold text-gray-400 mt-0.5">

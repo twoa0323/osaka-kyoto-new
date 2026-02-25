@@ -34,44 +34,75 @@ const calculateSettlements = (expenses: ExpenseItem[], members: Member[], rate: 
   exps.forEach(exp => {
     if (!exp || exp.amount === undefined) return;
 
-    // 換算回主幣別 (TWD) 計算
-    const amountTwd = exp.currency === 'TWD' ? (exp.amount || 0) : (exp.amount || 0) * (rate || 1);
+    // 換算回主幣別 (TWD)
+    const currentRate = exp.currency === 'TWD' ? 1 : rate;
+    const amountTwd = exp.amount * currentRate;
 
     // 計算每個人應該分攤的金額
     let shares: Record<string, number> = {};
-    const splitWith = exp.splitWith || [];
+    mems.forEach(m => { shares[m.id] = 0; });
 
-    if (splitWith.length === 0) {
-      // 預設平均分攤
-      const activeMembers = mems.length || 1;
-      const share = amountTwd / activeMembers;
-      mems.forEach(m => { shares[m.id] = share; });
-    } else {
-      // 權重/金額分攤
-      const totalWeight = splitWith.reduce((sum, s) => sum + (s.weight || 0), 0);
-      const fixedAmountTwd = splitWith.reduce((sum, s) => {
-        const itemAmount = s.amount || 0;
-        return sum + (exp.currency === 'TWD' ? itemAmount : itemAmount * (rate || 1));
-      }, 0);
+    if (exp.items && exp.items.length > 0) {
+      // 📍 精細分帳邏輯 (Granular Splitting)
+      const itemsTotal = exp.items.reduce((sum, it) => sum + it.price, 0);
 
-      const remainingAmount = amountTwd - fixedAmountTwd;
+      // 計算比例縮放係數 (Scale Factor)，考量稅金、折扣或服務費
+      // 例如：明細總和 1000，但實付 1100 (含稅)，則每個明細金額需 * 1.1
+      const scale = itemsTotal > 0 ? amountTwd / (itemsTotal * currentRate) : 1;
 
-      splitWith.forEach(s => {
-        if (!s.memberId) return;
-        let memberShare = (s.amount || 0) * (exp.currency === 'TWD' ? 1 : (rate || 1));
-        if (totalWeight > 0 && s.weight) {
-          memberShare += (remainingAmount * s.weight) / totalWeight;
+      let assignedAmountTwd = 0;
+
+      // 分配明細金額
+      exp.items.forEach(it => {
+        const itemPriceTwd = it.price * currentRate * scale;
+        const assignedTo = it.assignedTo && it.assignedTo.length > 0 ? it.assignedTo : [];
+
+        if (assignedTo.length > 0) {
+          // 若有指定成員，平分該明細金額
+          const sharePerPerson = itemPriceTwd / assignedTo.length;
+          assignedTo.forEach(mid => {
+            if (shares[mid] !== undefined) shares[mid] += sharePerPerson;
+          });
+          assignedAmountTwd += itemPriceTwd;
         }
-        shares[s.memberId] = (shares[s.memberId] || 0) + memberShare;
       });
+
+      // 剩餘金額 (未指派的項目、服務費等) 由全員平分
+      const residualAmountTwd = Math.max(0, amountTwd - assignedAmountTwd);
+      if (residualAmountTwd > 0.01) {
+        const sharePerPerson = residualAmountTwd / mems.length;
+        mems.forEach(m => { shares[m.id] += sharePerPerson; });
+      }
+    } else {
+      // 📍 傳統分帳邏輯 (Fallback to SplitWith or Average)
+      const splitWith = exp.splitWith || [];
+      if (splitWith.length === 0) {
+        const share = amountTwd / mems.length;
+        mems.forEach(m => { shares[m.id] = share; });
+      } else {
+        const totalWeight = splitWith.reduce((sum, s) => sum + (s.weight || 0), 0);
+        const fixedAmountTwd = splitWith.reduce((sum, s) => {
+          return sum + (s.amount || 0) * currentRate;
+        }, 0);
+
+        const remainingAmountTwd = amountTwd - fixedAmountTwd;
+
+        splitWith.forEach(s => {
+          if (!s.memberId) return;
+          let memberShare = (s.amount || 0) * currentRate;
+          if (totalWeight > 0 && s.weight) {
+            memberShare += (remainingAmountTwd * s.weight) / totalWeight;
+          }
+          shares[s.memberId] = (shares[s.memberId] || 0) + memberShare;
+        });
+      }
     }
 
-    // 付款人增加餘額 (代墊)
+    // 更新餘額：帳首 (Payer) 增加 (代墊)，分攤人減少 (欠款)
     if (exp.payerId && balances[exp.payerId] !== undefined) {
       balances[exp.payerId] += amountTwd;
     }
 
-    // 扣除分攤
     Object.keys(shares).forEach(mid => {
       if (balances[mid] !== undefined) {
         balances[mid] -= shares[mid];
@@ -79,13 +110,13 @@ const calculateSettlements = (expenses: ExpenseItem[], members: Member[], rate: 
     });
   });
 
-  // 3. 區分債務人與債權人
+  // 3. 區分債務人與債權人 (過濾微小浮點數誤差)
   let debtors = Object.keys(balances)
-    .filter(id => balances[id] < -1)
+    .filter(id => balances[id] < -0.1)
     .map(id => ({ id, amount: Math.abs(balances[id]) }));
 
   let creditors = Object.keys(balances)
-    .filter(id => balances[id] > 1)
+    .filter(id => balances[id] > 0.1)
     .map(id => ({ id, amount: balances[id] }));
 
   // 4. 貪婪配對結算
@@ -100,8 +131,8 @@ const calculateSettlements = (expenses: ExpenseItem[], members: Member[], rate: 
     });
     debtors[d].amount -= settle;
     creditors[c].amount -= settle;
-    if (debtors[d].amount < 1) d++;
-    if (creditors[c].amount < 1) c++;
+    if (debtors[d].amount < 0.1) d++;
+    if (creditors[c].amount < 0.1) c++;
   }
   return results;
 };

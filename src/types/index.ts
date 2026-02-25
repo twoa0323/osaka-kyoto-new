@@ -95,7 +95,7 @@ export interface ExpenseItem extends SyncMetadata {
   payerId: string;
   splitWith: { memberId: string; weight?: number; amount?: number }[]; // 👈 改為物件陣列支援權重
   images: string[];
-  items?: { name: string; price: number }[];
+  items?: { name: string; price: number; assignedTo?: string[] }[];
   isTaxFree?: boolean; // 👈 新增：是否免稅
 }
 

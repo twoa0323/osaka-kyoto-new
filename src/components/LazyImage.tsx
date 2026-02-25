@@ -17,7 +17,32 @@ export const LazyImage: React.FC<LazyImageProps> = ({
     const [isLoaded, setIsLoaded] = useState(false);
     const [hasError, setHasError] = useState(false);
     const [isInView, setIsInView] = useState(false);
+    const [displaySrc, setDisplaySrc] = useState<string>("");
     const imgRef = useRef<HTMLDivElement>(null);
+
+    // 📍 離線優先快取邏輯
+    const fetchWithCache = async (imageUrl: string) => {
+        if (!imageUrl) return;
+        const CACHE_NAME = 'zakka-vouchers-v1';
+
+        try {
+            if ('caches' in window) {
+                const cache = await caches.open(CACHE_NAME);
+                const cachedResponse = await cache.match(imageUrl);
+
+                if (cachedResponse) {
+                    const blob = await cachedResponse.blob();
+                    setDisplaySrc(URL.createObjectURL(blob));
+                    return;
+                }
+            }
+        } catch (err) {
+            console.warn("Cache access error:", err);
+        }
+
+        // 若無快取或失敗，退回使用原始 URL
+        setDisplaySrc(imageUrl);
+    };
 
     useEffect(() => {
         if (!src) {
@@ -31,6 +56,7 @@ export const LazyImage: React.FC<LazyImageProps> = ({
             (entries) => {
                 if (entries[0].isIntersecting) {
                     setIsInView(true);
+                    if (src) fetchWithCache(src);
                     observer.disconnect();
                 }
             },
@@ -41,8 +67,13 @@ export const LazyImage: React.FC<LazyImageProps> = ({
             observer.observe(imgRef.current);
         }
 
-        return () => observer.disconnect();
-    }, []);
+        return () => {
+            observer.disconnect();
+            if (displaySrc.startsWith('blob:')) {
+                URL.revokeObjectURL(displaySrc);
+            }
+        };
+    }, [src]);
 
     return (
         <div
@@ -60,17 +91,22 @@ export const LazyImage: React.FC<LazyImageProps> = ({
                     <span className="text-[10px] font-black uppercase tracking-widest leading-tight">Image Unavailable</span>
                 </div>
             )}
-            {(isInView && src) ? (
+            {(isInView && displaySrc) ? (
                 <img
-                    src={src}
+                    src={displaySrc}
                     alt={alt}
                     onLoad={() => {
                         setIsLoaded(true);
                         setHasError(false);
                     }}
                     onError={() => {
-                        setHasError(true);
-                        setIsLoaded(true); // Stop loader
+                        // 如果 blob 失敗，嘗試回歸原始 src
+                        if (displaySrc.startsWith('blob:') && src) {
+                            setDisplaySrc(src);
+                        } else {
+                            setHasError(true);
+                            setIsLoaded(true);
+                        }
                     }}
                     className={`w-full h-full object-cover transition-opacity duration-700 ease-out ${isLoaded && !hasError ? 'opacity-100' : 'opacity-0'} ${className}`}
                     {...props}
