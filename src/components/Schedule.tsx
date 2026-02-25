@@ -5,7 +5,7 @@ import { format, addDays, differenceInDays, parseISO, isValid, isSameDay } from 
 import { MapPin, Plus, Edit3, Trash2, Utensils, Plane, Home, Camera, Sparkles, X, Loader2, Wind, Umbrella, Sunrise, ChevronUp, ChevronDown, Clock, Cloud, CloudRain, Sun, Droplets, AlertTriangle, Wand2, Check, WifiOff, Star, Map as MapIcon } from 'lucide-react';
 import { ScheduleEditor } from './ScheduleEditor';
 import { ScheduleItem, Trip } from '../types';
-import { WeatherReportModal } from './ScheduleModals';
+import { WeatherReportModal, TransportAiModal } from './ScheduleModals';
 import { motion, AnimatePresence, Reorder } from 'framer-motion';
 import { LazyImage } from './LazyImage';
 import { useNetworkStatus } from '../hooks/useNetworkStatus';
@@ -25,16 +25,16 @@ const CATEGORY_STYLE = {
 
 const getWeatherDesc = (code: number) => {
   if (code === undefined || code === -1) return { t: '等待載入', e: '☁️', color: 'bg-[#F4F5F7]', splat: '#F4F5F7' };
-  if (code === 0) return { t: '晴朗無雲', e: '☀️', color: 'bg-[#FFCC00]', splat: '#FFCC00' }; // 更鮮豔的噴漆黃
-  if (code === 1) return { t: '大致晴朗', e: '🌤️', color: 'bg-[#FFD93D]', splat: '#FFD93D' };
-  if (code === 2) return { t: '多雲時晴', e: '⛅', color: 'bg-[#87CEEB]', splat: '#87CEEB' };
-  if (code === 3) return { t: '陰天多雲', e: '☁️', color: 'bg-[#94A3B8]', splat: '#94A3B8' };
-  if ([45, 48].includes(code)) return { t: '霧氣瀰漫', e: '🌫️', color: 'bg-[#94A3B8]', splat: '#94A3B8' };
-  if ([51, 53, 55, 56, 57].includes(code)) return { t: '毛毛細雨', e: '🌦️', color: 'bg-[#60A5FA]', splat: '#60A5FA' };
-  if ([61, 63, 65, 66, 67, 80, 81, 82].includes(code)) return { t: '陣雨綿綿', e: '🌧️', color: 'bg-[#2932CF]', splat: '#2932CF' }; // 噴漆藍
-  if ([71, 73, 75, 77, 85, 86].includes(code)) return { t: '降雪紛飛', e: '🌨️', color: 'bg-[#E2E8F0]', splat: '#E2E8F0' };
-  if ([95, 96, 99].includes(code)) return { t: '雷雨交加', e: '⛈️', color: 'bg-[#8B5CF6]', splat: '#8B5CF6' };
-  return { t: '晴朗無雲', e: '☀️', color: 'bg-[#FFCC00]', splat: '#FFCC00' };
+  if (code === 0) return { t: '晴朗無雲', e: '☀️', color: 'bg-[#FFF9C4]', splat: '#FFEB3B' }; // 淺黃色
+  if (code === 1) return { t: '大致晴朗', e: '🌤️', color: 'bg-[#FFFDE7]', splat: '#FFEB3B' };
+  if (code === 2) return { t: '多雲時晴', e: '⛅', color: 'bg-[#E3F2FD]', splat: '#64B5F6' };
+  if (code === 3) return { t: '陰天多雲', e: '☁️', color: 'bg-[#F1F5F9]', splat: '#94A3B8' };
+  if ([45, 48].includes(code)) return { t: '霧氣瀰漫', e: '🌫️', color: 'bg-[#F1F5F9]', splat: '#94A3B8' };
+  if ([51, 53, 55, 56, 57].includes(code)) return { t: '毛毛細雨', e: '🌦️', color: 'bg-[#E0F2FE]', splat: '#38BDF8' };
+  if ([61, 63, 65, 66, 67, 80, 81, 82].includes(code)) return { t: '陣雨綿綿', e: '🌧️', color: 'bg-[#DBEAFE]', splat: '#3B82F6' }; // 淺藍色
+  if ([71, 73, 75, 77, 85, 86].includes(code)) return { t: '降雪紛飛', e: '🌨️', color: 'bg-[#F8FAFC]', splat: '#E2E8F0' };
+  if ([95, 96, 99].includes(code)) return { t: '雷雨交加', e: '⛈️', color: 'bg-[#F3E8FF]', splat: '#A855F7' };
+  return { t: '晴朗無雲', e: '☀️', color: 'bg-[#FFF9C4]', splat: '#FFEB3B' };
 };
 
 const getWindLevel = (speed: number) => {
@@ -93,29 +93,30 @@ const ScheduleItemRow: React.FC<{
 
   // 💡 自動取圖邏輯：放在組件層級符合 Hook 規範
   useEffect(() => {
-    if (!item.images || item.images.length === 0) {
-      const fetchImage = async () => {
-        try {
-          const res = await fetch('/api/ai', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              action: 'get-image-for-item',
-              payload: { title: item.title, location: item.location, category: item.category }
-            })
-          });
-          const data = await res.json();
-          if (data.imageUrl) {
-            updateScheduleItem(tripId, item.id, { ...item, images: [data.imageUrl] });
-          }
-        } catch (err) {
-          console.error("Failed to fetch image for item:", item.title);
+    // 如果已經有圖片，絕對不要重複讀取，避免覆蓋使用者自定義或已儲存的圖片
+    if (item.images && item.images.length > 0) return;
+
+    const fetchImage = async () => {
+      try {
+        const res = await fetch('/api/ai', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'get-image-for-item',
+            payload: { title: item.title, location: item.location, category: item.category }
+          })
+        });
+        const data = await res.json();
+        if (data.imageUrl && (!item.images || item.images.length === 0)) {
+          updateScheduleItem(tripId, item.id, { ...item, images: [data.imageUrl] });
         }
-      };
-      const timeoutId = setTimeout(fetchImage, 500 + Math.random() * 2000);
-      return () => clearTimeout(timeoutId);
-    }
-  }, [item.id, item.images, item.title, item.location, item.category, tripId, updateScheduleItem]);
+      } catch (err) {
+        console.error("Failed to fetch image for item:", item.title);
+      }
+    };
+    const timeoutId = setTimeout(fetchImage, 500 + Math.random() * 2000);
+    return () => clearTimeout(timeoutId);
+  }, [item.id, item.images?.length, item.title, item.location, item.category, tripId, updateScheduleItem]);
 
   return (
     <Reorder.Item key={item.id} value={item} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, scale: 0.9 }} dragListener={isEditMode} className="relative pl-6">
@@ -129,11 +130,26 @@ const ScheduleItemRow: React.FC<{
         </div>
         <div className="flex-1 min-w-0 flex flex-col gap-2">
           {warningMsg && <div className="bg-white border-2 border-splat-dark px-3 py-1.5 rounded-lg text-[10px] font-black flex items-center gap-1.5 shadow-sm overflow-hidden"><AlertTriangle size={14} className="text-splat-orange" /> {warningMsg}</div>}
-          <motion.div onClick={() => isEditMode ? (setEditingItem(item), setIsEditorOpen(true)) : setDetailItem(item)} className={`card-splat p-0 overflow-hidden cursor-pointer bg-white border-[3px] border-splat-dark rounded-[24px] shadow-splat-solid relative ${item.isCompleted ? 'opacity-60 grayscale' : ''} ${isEditMode ? 'pr-12' : ''}`}>
-            <div className={`h-7 w-full ${catStyle.bg} border-b-[3px] border-splat-dark flex items-center px-3 justify-between`}>
-              <span className={`text-[10px] font-black uppercase tracking-widest ${catStyle.text}`}>{catStyle.label}</span>
+          <motion.div onClick={() => isEditMode ? (setEditingItem(item), setIsEditorOpen(true)) : setDetailItem(item)} className={`card-splat p-0 overflow-hidden cursor-pointer bg-white border-[3px] border-splat-dark rounded-[24px] shadow-splat-solid relative ${item.isCompleted ? 'bg-splat-green/10 ring-4 ring-splat-green/20' : ''} ${isEditMode ? 'pr-12' : ''}`}>
+            {item.isCompleted && (
+              <div className="absolute inset-0 z-20 pointer-events-none flex items-center justify-center overflow-hidden">
+                <motion.div
+                  initial={{ scale: 2, opacity: 0, rotate: -20 }}
+                  animate={{ scale: 1, opacity: 1, rotate: -15 }}
+                  className="border-[6px] border-splat-green text-splat-green font-black text-3xl px-6 py-2 rounded-2xl uppercase tracking-tighter mix-blend-multiply opacity-40"
+                  style={{ fontFamily: 'system-ui' }}
+                >
+                  MISSION CLEAR
+                </motion.div>
+              </div>
+            )}
+            <div className={`h-7 w-full ${item.isCompleted ? 'bg-splat-green opacity-40' : catStyle.bg} border-b-[3px] border-splat-dark flex items-center px-3 justify-between`}>
+              <span className={`text-[10px] font-black uppercase tracking-widest ${item.isCompleted ? 'text-white' : catStyle.text}`}>
+                {item.isCompleted ? 'COMPLETED' : catStyle.label}
+              </span>
+              {item.isCompleted && <Check size={14} className="text-white" strokeWidth={4} />}
             </div>
-            <div className="p-4 flex justify-between items-center bg-white relative">
+            <div className={`p-4 flex justify-between items-center bg-white relative ${item.isCompleted ? 'opacity-40 grayscale' : ''}`}>
               <div className="flex-1 min-w-0 pr-2">
                 <h4 className="font-black text-xl uppercase truncate">{item.title}</h4>
                 <p className="text-xs font-bold text-gray-500 truncate"><MapPin size={14} /> {item.location}</p>
@@ -306,6 +322,8 @@ export const Schedule: React.FC<{ externalDateIdx?: number }> = ({ externalDateI
 
   // 📍 Phase 5: 天氣巫師狀態
   const [isWizardLoading, setIsWizardLoading] = useState(false);
+  const [showTransportModal, setShowTransportModal] = useState(false);
+  const [selectedTransportSuggestion, setSelectedTransportSuggestion] = useState<any>(null);
   const [weatherAdvice, setWeatherAdvice] = useState<{ reason: string, recommendations: any[] } | null>(null);
   const [showWizardModal, setShowWizardModal] = useState(false);
 
@@ -532,13 +550,16 @@ export const Schedule: React.FC<{ externalDateIdx?: number }> = ({ externalDateI
         })
       });
       const data = await res.json();
-      const text = data.text || "";
 
-      if (!text) throw new Error("AI 未能產出建議文字");
+      if (!data || !data.steps) throw new Error("AI 未能產出有效建議");
 
-      updateScheduleItem(trip!.id, currentItem.id, { ...currentItem, transportSuggestion: text });
-      setDetailItem(prev => prev ? { ...prev, transportSuggestion: text } : undefined);
-      triggerHaptic('light');
+      // 儲存至目前的行程項目中，並開啟彈窗
+      const updatedItem = { ...currentItem, transportSuggestion: JSON.stringify(data) };
+      updateScheduleItem(trip!.id, currentItem.id, updatedItem);
+      setSelectedTransportSuggestion(data);
+      setShowTransportModal(true);
+
+      triggerHaptic('success');
     } catch (e) {
       alert("AI 目前想不出好點子，請稍後再試！🤔");
     } finally {
@@ -721,25 +742,25 @@ export const Schedule: React.FC<{ externalDateIdx?: number }> = ({ externalDateI
         const lines = completeData.split('\n');
         for (const line of lines) {
           const trimmedLine = line.trim();
-          if (!trimmedLine || !trimmedLine.startsWith('0:')) continue;
+          // 改進解析邏輯，兼容各種 Vercel Data Stream 格式 (例如 0: "text" 或直接 "text")
+          if (!trimmedLine) continue;
 
-          try {
-            // 嘗試標準解法
-            const rawContent = trimmedLine.substring(2);
-            const content = JSON.parse(rawContent);
-            if (typeof content === 'string') {
-              fullText += content;
-              setCompletion(fullText);
+          let content = "";
+          if (trimmedLine.startsWith('0:')) {
+            try {
+              content = JSON.parse(trimmedLine.substring(2));
+            } catch (e) {
+              const match = trimmedLine.match(/^0:"(.*)"$/);
+              if (match) content = match[1].replace(/\\n/g, '\n').replace(/\\"/g, '"').replace(/\\\\/g, '\\');
             }
-          } catch (e) {
-            // 備用方案：使用 Regex 提取被引號包圍的內容 (防止轉義字元導致 JSON.parse 失敗)
-            const match = trimmedLine.match(/^0:"(.*)"$/);
-            if (match) {
-              // 處理基本的轉義字元
-              const unescaped = match[1].replace(/\\n/g, '\n').replace(/\\"/g, '"').replace(/\\\\/g, '\\');
-              fullText += unescaped;
-              setCompletion(fullText);
-            }
+          } else {
+            // 處理非標準前綴
+            try { content = JSON.parse(trimmedLine); } catch (e) { }
+          }
+
+          if (typeof content === 'string' && content) {
+            fullText += content;
+            setCompletion(fullText);
           }
         }
       }
@@ -856,6 +877,7 @@ export const Schedule: React.FC<{ externalDateIdx?: number }> = ({ externalDateI
           </div>
           {/* 加入背景潑墨點綴 */}
           <div className="absolute -bottom-4 -right-4 w-32 h-32 bg-black/5 rounded-full blur-3xl" />
+          <div className="absolute inset-0 opacity-[0.03] pointer-events-none" style={{ backgroundImage: 'radial-gradient(circle, currentColor 1px, transparent 1px)', backgroundSize: '12px 12px' }} />
         </motion.div>
 
         {/* 🪄 降雨超能力移至 AI Menu 中統一觸發 */}
@@ -934,14 +956,37 @@ export const Schedule: React.FC<{ externalDateIdx?: number }> = ({ externalDateI
                 <div className="card-splat p-4">
                   <h4 className="text-[10px] font-black uppercase mb-2 flex items-center gap-1.5"><Plane size={14} /> 交通建議</h4>
                   {detailItem.transportSuggestion ? (
-                    <p className="text-sm font-bold text-gray-700">{detailItem.transportSuggestion}</p>
+                    <div className="space-y-3">
+                      <p className="text-[11px] font-bold text-gray-400 leading-snug">
+                        {(() => {
+                          try {
+                            const parsed = JSON.parse(detailItem.transportSuggestion || "{}");
+                            return parsed.summary;
+                          } catch (e) { return detailItem.transportSuggestion || ""; }
+                        })()}
+                      </p>
+                      <button
+                        onClick={() => {
+                          try {
+                            const parsed = JSON.parse(detailItem.transportSuggestion || "{}");
+                            setSelectedTransportSuggestion(parsed);
+                            setShowTransportModal(true);
+                          } catch (e) {
+                            handleTransportAiSuggest(detailItem);
+                          }
+                        }}
+                        className="w-full py-2 bg-splat-yellow/10 border-2 border-splat-yellow rounded-lg text-[10px] font-black text-splat-yellow uppercase"
+                      >
+                        查看圖文導覽 ➔
+                      </button>
+                    </div>
                   ) : (
                     <button onClick={() => handleTransportAiSuggest(detailItem)} disabled={!!transportAiLoading} className="w-full py-3 border-2 border-dashed rounded-lg text-xs font-black">
                       {transportAiLoading === detailItem.id ? <Loader2 size={16} className="animate-spin" /> : <Wand2 size={16} />} 取得交通建議
                     </button>
                   )}
                 </div>
-                <button onClick={() => window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(detailItem.location)}`, '_blank')} className="btn-splat w-full py-4 bg-splat-blue text-white flex items-center justify-center gap-2">
+                <button onClick={() => window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(detailItem.location || "")}`, '_blank')} className="btn-splat w-full py-4 bg-splat-blue text-white flex items-center justify-center gap-2">
                   <MapPin size={20} /> 開啟導航
                 </button>
               </div>
@@ -951,6 +996,13 @@ export const Schedule: React.FC<{ externalDateIdx?: number }> = ({ externalDateI
       </AnimatePresence>
 
       {isEditorOpen && <ScheduleEditor tripId={trip!.id} date={selectedDateStr} item={editingItem} onClose={() => setIsEditorOpen(false)} />}
+
+      {showTransportModal && selectedTransportSuggestion && (
+        <TransportAiModal
+          suggestion={selectedTransportSuggestion}
+          onClose={() => setShowTransportModal(false)}
+        />
+      )}
     </div>
   );
 };

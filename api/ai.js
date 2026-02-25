@@ -4,7 +4,7 @@ import { z } from 'zod';
 
 const apiKey = process.env.GEMINI_API_KEY || process.env.VITE_GEMINI_API_KEY;
 const google = createGoogleGenerativeAI({ apiKey });
-const model = google('gemini-3-flash-preview');
+const model = google('gemini-1.5-flash');
 
 // 🌐 Wikipedia 圖片獲取助手 (支援多語言 fallback)
 async function fetchWikipediaImage(query) {
@@ -262,8 +262,18 @@ export default async function handler(req, res) {
       case 'suggest-transport':
         const transResult = await generateObject({
           model,
-          schema: z.object({ text: z.string() }),
-          prompt: `建議從「${payload.prevLocation || payload.prevTitle || '起點'}」到「${payload.currentLocation || payload.currentTitle}」的交通方式（如：地鐵、走路、計程車）。請考慮效率與日本常用的交通工具。`
+          schema: z.object({
+            summary: z.string(),
+            steps: z.array(z.object({
+              type: z.enum(['walk', 'train', 'bus', 'taxi', 'ferry', 'other']),
+              title: z.string(),
+              description: z.string(),
+              duration: z.string()
+            }))
+          }),
+          prompt: `建議從「${payload.prevLocation || payload.prevTitle || '起點'}」到「${payload.currentLocation || payload.currentTitle}」的交通方式（如：地鐵、走路、計程車）。
+            請考慮效率與日本常用的交通工具。將過程拆分為多個邏輯步驟，例如：步行到車站 -> 搭乘XX線 -> 步行到目的地。
+            請以繁體中文回答。`
         });
         finalObject = transResult.object;
         break;

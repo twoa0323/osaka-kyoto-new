@@ -236,15 +236,15 @@ export const BookingEditor: React.FC<Props> = ({ tripId, type, item, onClose }) 
                 <div className="grid grid-cols-2 gap-4 relative z-10">
                   <div className="space-y-2.5">
                     <label className="text-[10px] font-black text-ac-brown/30 uppercase tracking-widest text-center block w-full">出發地</label>
-                    <input placeholder="TPE" className="w-full h-12 bg-[#F5F6F8] border-2 border-ac-border/30 rounded-xl font-black text-center text-lg uppercase outline-none focus:border-ac-green focus:bg-white transition-colors" value={form.depIata} onChange={e => setForm({ ...form, depIata: e.target.value })} />
-                    <input type="time" className="w-full h-12 bg-[#F5F6F8] border-2 border-ac-border/30 rounded-xl font-black text-center text-sm outline-none focus:border-ac-green focus:bg-white transition-colors" value={form.depTime} onChange={e => setForm({ ...form, depTime: e.target.value })} />
+                    <input placeholder="TPE" className="w-full h-16 bg-[#F5F6F8] border-2 border-ac-border/30 rounded-xl font-black text-center text-4xl uppercase outline-none focus:border-ac-green focus:bg-white transition-colors text-ac-brown" value={form.depIata} onChange={e => setForm({ ...form, depIata: e.target.value })} />
+                    <input type="time" className="w-full h-14 bg-[#F5F6F8] border-2 border-ac-border/30 rounded-xl font-black text-center text-xl outline-none focus:border-ac-green focus:bg-white transition-colors text-ac-brown" value={form.depTime} onChange={e => setForm({ ...form, depTime: e.target.value })} />
                     <input placeholder="台北" className="w-full h-10 bg-[#F5F6F8] border-2 border-ac-border/30 rounded-xl font-bold text-center text-[11px] outline-none focus:border-ac-green focus:bg-white transition-colors" value={form.depCity} onChange={e => setForm({ ...form, depCity: e.target.value })} />
                   </div>
 
                   <div className="space-y-2.5">
                     <label className="text-[10px] font-black text-ac-brown/30 uppercase tracking-widest text-center block w-full">目的地</label>
-                    <input placeholder="KIX" className="w-full h-12 bg-[#F5F6F8] border-2 border-ac-border/30 rounded-xl font-black text-center text-lg uppercase outline-none focus:border-ac-green focus:bg-white transition-colors" value={form.arrIata} onChange={e => setForm({ ...form, arrIata: e.target.value })} />
-                    <input type="time" className="w-full h-12 bg-[#F5F6F8] border-2 border-ac-border/30 rounded-xl font-black text-center text-sm outline-none focus:border-ac-green focus:bg-white transition-colors" value={form.arrTime} onChange={e => setForm({ ...form, arrTime: e.target.value })} />
+                    <input placeholder="KIX" className="w-full h-16 bg-[#F5F6F8] border-2 border-ac-border/30 rounded-xl font-black text-center text-4xl uppercase outline-none focus:border-ac-green focus:bg-white transition-colors text-ac-brown" value={form.arrIata} onChange={e => setForm({ ...form, arrIata: e.target.value })} />
+                    <input type="time" className="w-full h-14 bg-[#F5F6F8] border-2 border-ac-border/30 rounded-xl font-black text-center text-xl outline-none focus:border-ac-green focus:bg-white transition-colors text-ac-brown" value={form.arrTime} onChange={e => setForm({ ...form, arrTime: e.target.value })} />
                     <input placeholder="大阪" className="w-full h-10 bg-[#F5F6F8] border-2 border-ac-border/30 rounded-xl font-bold text-center text-[11px] outline-none focus:border-ac-green focus:bg-white transition-colors" value={form.arrCity} onChange={e => setForm({ ...form, arrCity: e.target.value })} />
                   </div>
                 </div>
@@ -253,13 +253,13 @@ export const BookingEditor: React.FC<Props> = ({ tripId, type, item, onClose }) 
                 <div className="bg-[#F5F6F8] border border-ac-border/30 rounded-2xl p-4 flex flex-col items-center justify-center gap-3 relative z-10">
                   <span className="text-[9px] font-black text-ac-brown/40 uppercase tracking-widest">飛行時間</span>
                   <div className="flex items-center gap-3">
-                    <div className="flex items-center gap-1.5 bg-white px-2 py-1 rounded-lg border border-ac-border/30 shadow-sm">
-                      <input type="number" min="0" value={durH} onChange={e => setDurH(e.target.value)} className="w-10 bg-transparent font-black text-center text-sm outline-none" placeholder="0" />
-                      <span className="text-[10px] font-black text-ac-border">h</span>
+                    <div className="flex items-center gap-1.5 bg-white px-3 py-2 rounded-xl border border-ac-border/30 shadow-sm">
+                      <input type="number" min="0" value={durH} onChange={e => setDurH(e.target.value)} className="w-12 bg-transparent font-black text-center text-lg outline-none text-ac-brown" placeholder="0" />
+                      <span className="text-[12px] font-black text-ac-border uppercase">h</span>
                     </div>
-                    <div className="flex items-center gap-1.5 bg-white px-2 py-1 rounded-lg border border-ac-border/30 shadow-sm">
-                      <input type="number" min="0" max="59" value={durM} onChange={e => setDurM(e.target.value)} className="w-10 bg-transparent font-black text-center text-sm outline-none" placeholder="0" />
-                      <span className="text-[10px] font-black text-ac-border">m</span>
+                    <div className="flex items-center gap-1.5 bg-white px-3 py-2 rounded-xl border border-ac-border/30 shadow-sm">
+                      <input type="number" min="0" max="59" value={durM} onChange={e => setDurM(e.target.value)} className="w-12 bg-transparent font-black text-center text-lg outline-none text-ac-brown" placeholder="0" />
+                      <span className="text-[12px] font-black text-ac-border uppercase">m</span>
                     </div>
                   </div>
                 </div>
