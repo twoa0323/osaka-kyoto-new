@@ -13,7 +13,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { LazyImage } from './LazyImage';
 
 export const Journal = () => {
-  const { trips, currentTripId, addJournalItem, updateJournalItem, deleteJournalItem } = useTripStore();
+  const { trips, currentTripId, addJournalItem, updateJournalItem, deleteJournalItem, showToast } = useTripStore();
   const trip = trips.find(t => t.id === currentTripId);
   const [isAdding, setIsAdding] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
@@ -37,7 +37,7 @@ export const Journal = () => {
         const urls = await Promise.all(files.map(f => uploadImage(f)));
         setForm(prev => ({ ...prev, images: [...(prev.images || []), ...urls] }));
       } catch (err) {
-        alert("有圖片上傳失敗了！📸");
+        showToast("有圖片上傳失敗了！📸", "error");
       } finally {
         setIsUploading(false);
       }
@@ -46,7 +46,7 @@ export const Journal = () => {
 
   const handleSave = () => {
     if (!form.title || (form.images?.length === 0)) {
-      return alert("標題跟美食美照至少要有一個唷！🦑");
+      return showToast("標題跟美食美照至少要有一個唷！🦑", "info");
     }
 
     // 判斷是新增還是編輯
@@ -120,7 +120,7 @@ export const Journal = () => {
                 key={item.id}
                 item={item}
                 index={idx}
-                onDelete={(e) => { e.stopPropagation(); if (confirm('確定要刪除這段美味回憶嗎？')) deleteJournalItem(trip.id, item.id); }}
+                onDelete={(e) => { e.stopPropagation(); deleteJournalItem(trip.id, item.id); showToast("已刪除回憶", "success"); }}
                 onClick={() => setViewingItem(item)}
                 tripId={trip.id}
                 updateJournalItem={updateJournalItem}

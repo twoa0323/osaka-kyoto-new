@@ -1,7 +1,11 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, RefreshCcw, Edit3, Camera, User } from 'lucide-react';
+import {
+    Plane, Home, MapPin, Plus, Edit3, Globe, QrCode,
+    ArrowRight, X, Luggage, Phone, Camera, Ticket, Download, CheckCircle2, Calendar, Clock, Trash2, RefreshCcw, User
+} from 'lucide-react';
 import { Trip, Member } from '../types';
+import { useTripStore } from '../store/useTripStore';
 import { uploadImage } from '../utils/imageUtils';
 
 interface MemberManagementProps {
@@ -15,6 +19,7 @@ interface MemberManagementProps {
 export const MemberManagement: React.FC<MemberManagementProps> = ({
     trip, myProfile, onClose, onEditProfile, onShowSettings
 }) => {
+    const { showToast } = useTripStore();
     const [showEditIcon, setShowEditIcon] = useState<string | null>(null);
 
     return (
@@ -87,6 +92,7 @@ interface ProfileEditorProps {
 }
 
 export const ProfileEditor: React.FC<ProfileEditorProps> = ({ myProfile, onSave, onClose }) => {
+    const { showToast } = useTripStore();
     const [form, setForm] = useState({ name: myProfile.name, mood: myProfile.mood || '', avatar: myProfile.avatar });
 
     const PRESET_AVATARS = [
@@ -135,7 +141,7 @@ export const ProfileEditor: React.FC<ProfileEditorProps> = ({ myProfile, onSave,
                     </div>
 
                     <button onClick={() => {
-                        if (!form.name) return alert("名字不能空白喔！");
+                        if (!form.name) return showToast("名字不能空白喔！", "info");
                         onSave({ ...myProfile, ...form });
                     }} className="btn-splat w-full py-4 text-lg bg-splat-green text-white">SAVE ➔</button>
                 </div>
@@ -149,6 +155,7 @@ interface PersonalSetupProps {
 }
 
 export const PersonalSetup: React.FC<PersonalSetupProps> = ({ onComplete }) => {
+    const { showToast } = useTripStore();
     const [setupForm, setSetupForm] = useState({ name: '', email: '', pin: '' });
 
     return (
@@ -161,7 +168,7 @@ export const PersonalSetup: React.FC<PersonalSetupProps> = ({ onComplete }) => {
                     <div className="space-y-1 text-left"><label className="text-[10px] font-black opacity-30 uppercase tracking-widest pl-1">Recovery Email</label><input type="email" placeholder="信箱" className="w-full p-4 bg-gray-50 rounded-xl border-[3px] border-splat-dark font-black outline-none focus:bg-white" value={setupForm.email} onChange={e => setSetupForm({ ...setupForm, email: e.target.value })} /></div>
                     <div className="space-y-1 text-left"><label className="text-[10px] font-black opacity-30 uppercase tracking-widest pl-1">Personal PIN</label><input type="password" maxLength={4} inputMode="numeric" placeholder="****" className="w-full p-4 bg-gray-50 rounded-xl border-[3px] border-splat-dark font-black outline-none text-2xl tracking-[0.5em] focus:bg-white" value={setupForm.pin} onChange={e => setSetupForm({ ...setupForm, pin: e.target.value })} /></div>
                     <button onClick={() => {
-                        if (!setupForm.name || !setupForm.email || setupForm.pin.length < 4) return alert("資訊要填完整唷！🦑");
+                        if (!setupForm.name || !setupForm.email || setupForm.pin.length < 4) return showToast("資訊要填完整唷！🦑", "info");
                         onComplete(setupForm);
                     }} className="btn-splat w-full py-5 text-xl bg-splat-blue text-white">READY GO! ➔</button>
                 </div>

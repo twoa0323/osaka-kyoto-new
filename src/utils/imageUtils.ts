@@ -27,13 +27,12 @@ export const uploadImage = async (file: File): Promise<string> => {
 
   // 防呆機制：提醒尚未填寫金鑰
   if (CLOUD_NAME === "您的_cloud_name") {
-    alert("請先到 src/utils/imageUtils.ts 填寫 Cloudinary 金鑰！");
     throw new Error("Missing Cloudinary Config");
   }
 
   const url = `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`;
   const formData = new FormData();
-  
+
   formData.append("file", base64Image);
   formData.append("upload_preset", UPLOAD_PRESET);
 
@@ -48,16 +47,15 @@ export const uploadImage = async (file: File): Promise<string> => {
     }
 
     const data = await response.json();
-    
+
     // ✅ 核心優化：插入 f_auto,q_auto,c_limit,w_1080
     // 自動判斷格式、畫質壓縮、限制最大寬度為 1080px (超大圖也不會拖慢手機效能)
     const optimizedUrl = data.secure_url.replace('/upload/', '/upload/f_auto,q_auto,c_limit,w_1080/');
-    
+
     return optimizedUrl;
-    
+
   } catch (error) {
     console.error("Cloudinary 上傳發生錯誤:", error);
-    alert("照片上傳失敗，請檢查網路狀態或 Cloudinary 設定！");
     throw error;
   }
 };

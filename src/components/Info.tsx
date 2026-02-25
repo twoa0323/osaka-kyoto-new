@@ -4,9 +4,11 @@ import { ExternalLink, ShieldAlert, Plus, X, Camera, Trash2, Globe, Phone, Loade
 import { uploadImage } from '../utils/imageUtils';
 import { InfoItem } from '../types';
 import { PackingList } from './PackingList';
+import { motion } from 'framer-motion';
+import { triggerHaptic } from '../utils/haptics';
 
 export const Info = () => {
-  const { trips, currentTripId, addInfoItem, deleteInfoItem } = useTripStore();
+  const { trips, currentTripId, addInfoItem, deleteInfoItem, showToast } = useTripStore();
   const trip = trips.find(t => t.id === currentTripId);
   const [isAdding, setIsAdding] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
@@ -17,12 +19,12 @@ export const Info = () => {
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
       const files = Array.from(e.target.files); e.target.value = ''; setIsUploading(true);
-      try { const urls = await Promise.all(files.map(f => uploadImage(f))); setForm(prev => ({ ...prev, images: [...(prev.images || []), ...urls] })); } catch (err) { alert("上傳失敗！"); } finally { setIsUploading(false); }
+      try { const urls = await Promise.all(files.map(f => uploadImage(f))); setForm(prev => ({ ...prev, images: [...(prev.images || []), ...urls] })); } catch (err) { showToast("上傳失敗！", "error"); } finally { setIsUploading(false); }
     }
   };
   const handleSave = () => {
-    if (!form.title) return alert("給這條資訊一個標題吧！");
-    const newItem: InfoItem = { id: Date.now().toString(), type: form.type as any, title: form.title!, content: form.content || '', images: form.images || [], url: form.url };
+    if (!form.title) return showToast("給這條資訊一個標題吧！", "info");
+    const newItem: InfoItem = { id: Date.now().toString(), type: form.type as any, title: form.title || '', content: form.content || '', images: form.images || [], url: form.url || '' };
     addInfoItem(trip.id, newItem); setIsAdding(false); setForm({ type: 'note', title: '', content: '', images: [], url: '' });
   };
 
@@ -76,50 +78,65 @@ export const Info = () => {
 
       <div className="space-y-4">
         {(trip.infoItems || []).map(item => (
-          <div key={item.id} className={`bg-white border-[3px] border-splat-dark rounded-[24px] overflow-hidden transition-all duration-300 ${expandedId === item.id ? 'shadow-[8px_8px_0px_#1A1A1A] -translate-y-1' : 'shadow-splat-solid-sm'}`}>
-
-            {/* 標題列 (點擊展開/收合) */}
-            <div className="p-5 flex justify-between items-center cursor-pointer select-none bg-white hover:bg-gray-50 active:bg-gray-100 transition-colors" onClick={() => setExpandedId(prev => prev === item.id ? null : item.id)}>
-              <div className="flex items-center gap-3 flex-1 min-w-0 pr-4">
-                <div className="w-10 h-10 bg-splat-blue border-2 border-splat-dark rounded-xl flex items-center justify-center text-white shadow-sm shrink-0">
-                  <FileText size={20} strokeWidth={2.5} />
-                </div>
-                <h4 className="font-black text-splat-dark text-lg uppercase truncate">{item.title}</h4>
-              </div>
-              <ChevronDown size={24} strokeWidth={3} className={`text-splat-dark shrink-0 transition-transform duration-300 ${expandedId === item.id ? 'rotate-180' : ''}`} />
+          <div key={item.id} className="relative overflow-hidden rounded-[24px]">
+            {/* Swipe Delete Background */}
+            <div className="absolute inset-0 bg-red-500 flex justify-end items-center pr-6 rounded-[24px]">
+              <Trash2 size={24} className="text-white animate-pulse" strokeWidth={3} />
             </div>
 
-            {/* 展開的詳細內容區塊 */}
-            {expandedId === item.id && (
-              <div className="p-5 pt-0 border-t-2 border-dashed border-gray-200 bg-gray-50/50 animate-in slide-in-from-top-2 fade-in relative">
-                <button onClick={() => deleteInfoItem(trip.id, item.id)} className="absolute top-4 right-4 p-2 bg-white border-2 border-splat-dark rounded-lg text-red-500 hover:bg-red-50 transition-colors shadow-sm active:scale-95"><Trash2 size={16} strokeWidth={2.5} /></button>
-
-                {item.content && (
-                  <div className="mt-4 pr-12">
-                    <p className="text-sm text-gray-700 font-bold whitespace-pre-wrap leading-relaxed">{item.content}</p>
+            <motion.div
+              drag="x"
+              dragConstraints={{ right: 0, left: -80 }}
+              onDragEnd={(_, info: any) => {
+                if (info.offset.x < -50) {
+                  triggerHaptic('medium');
+                  deleteInfoItem(trip.id, item.id);
+                  showToast("已刪除資訊 🗑️", "success");
+                }
+              }}
+              className={`relative z-10 bg-white border-[3px] border-splat-dark rounded-[24px] overflow-hidden transition-all duration-300 ${expandedId === item.id ? 'shadow-[8px_8px_0px_#1A1A1A] -translate-y-1' : 'shadow-splat-solid-sm'}`}
+            >
+              {/* 標題列 (點擊展開/收合) */}
+              <div className="p-5 flex justify-between items-center cursor-pointer select-none bg-white hover:bg-gray-50 active:bg-gray-100 transition-colors" onClick={() => setExpandedId(prev => prev === item.id ? null : item.id)}>
+                <div className="flex items-center gap-3 flex-1 min-w-0 pr-4">
+                  <div className="w-10 h-10 bg-splat-blue border-2 border-splat-dark rounded-xl flex items-center justify-center text-white shadow-sm shrink-0">
+                    <FileText size={20} strokeWidth={2.5} />
                   </div>
-                )}
-
-                {item.images && item.images.length > 0 && (
-                  <div className="flex gap-3 overflow-x-auto py-4 hide-scrollbar">
-                    {item.images.map((img, i) => (
-                      <div key={i} className="min-w-[120px] h-32 rounded-xl overflow-hidden border-[3px] border-splat-dark shadow-sm shrink-0 relative group cursor-pointer" onClick={() => window.open(img, '_blank')}>
-                        <img src={img} loading="lazy" decoding="async" className="w-full h-full object-cover transition-transform group-hover:scale-110" alt="info" />
-                        <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                          <span className="text-white text-[10px] font-black border-2 border-white px-2 py-1 rounded-md">放大</span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {item.url && (
-                  <a href={item.url} target="_blank" rel="noreferrer" className="mt-2 inline-flex items-center gap-2 text-xs font-black text-splat-dark bg-white px-4 py-3 rounded-xl border-[3px] border-splat-dark uppercase tracking-widest shadow-sm active:translate-y-1 active:shadow-none transition-all w-full justify-center">
-                    <ExternalLink size={16} strokeWidth={3} /> 前往相關網站
-                  </a>
-                )}
+                  <h4 className="font-black text-splat-dark text-lg uppercase truncate">{item.title}</h4>
+                </div>
+                <ChevronDown size={24} strokeWidth={3} className={`text-splat-dark shrink-0 transition-transform duration-300 ${expandedId === item.id ? 'rotate-180' : ''}`} />
               </div>
-            )}
+
+              {/* 展開的詳細內容區塊 */}
+              {expandedId === item.id && (
+                <div className="p-5 pt-0 border-t-2 border-dashed border-gray-200 bg-gray-50/50 animate-in slide-in-from-top-2 fade-in relative">
+                  {item.content && (
+                    <div className="mt-4">
+                      <p className="text-sm text-gray-700 font-bold whitespace-pre-wrap leading-relaxed">{item.content}</p>
+                    </div>
+                  )}
+
+                  {item.images && item.images.length > 0 && (
+                    <div className="flex gap-3 overflow-x-auto py-4 hide-scrollbar">
+                      {item.images.map((img, i) => (
+                        <div key={i} className="min-w-[120px] h-32 rounded-xl overflow-hidden border-[3px] border-splat-dark shadow-sm shrink-0 relative group cursor-pointer" onClick={() => window.open(img, '_blank')}>
+                          <img src={img} loading="lazy" decoding="async" className="w-full h-full object-cover transition-transform group-hover:scale-110" alt="info" />
+                          <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                            <span className="text-white text-[10px] font-black border-2 border-white px-2 py-1 rounded-md">放大</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {item.url && (
+                    <a href={item.url} target="_blank" rel="noreferrer" className="mt-2 inline-flex items-center gap-2 text-xs font-black text-splat-dark bg-white px-4 py-3 rounded-xl border-[3px] border-splat-dark uppercase tracking-widest shadow-sm active:translate-y-1 active:shadow-none transition-all w-full justify-center">
+                      <ExternalLink size={16} strokeWidth={3} /> 前往相關網站
+                    </a>
+                  )}
+                </div>
+              )}
+            </motion.div>
           </div>
         ))}
 

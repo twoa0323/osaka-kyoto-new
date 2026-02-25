@@ -92,6 +92,7 @@ interface TripState {
   exchangeRate: number;
   isAiModalOpen: boolean;
   aiContext: string;
+  toast: { message: string, type: 'success' | 'error' | 'info' } | null;
 
   // 全域狀態設定
   setTrips: (trips: Trip[]) => void;
@@ -99,6 +100,7 @@ interface TripState {
   setExchangeRate: (rate: number) => void;
   setAiModalOpen: (open: boolean) => void;
   openAiAssistant: (context?: string) => void;
+  showToast: (message: string, type?: 'success' | 'error' | 'info') => void;
 
   // 行程 (Trip) 操作
   addTrip: (trip: Trip) => void;
@@ -164,7 +166,7 @@ export const useTripStore = create<TripState>()(
       exchangeRate: 1,
       isAiModalOpen: false,
       aiContext: 'schedule',
-
+      toast: null,
       uiSettings: {
         showSplash: true,
         enableHaptics: true,
@@ -179,6 +181,14 @@ export const useTripStore = create<TripState>()(
       setExchangeRate: (rate) => set({ exchangeRate: rate }),
       setAiModalOpen: (open) => set({ isAiModalOpen: open }),
       openAiAssistant: (context) => set({ isAiModalOpen: true, aiContext: context || get().activeTab }),
+      showToast: (message, type = 'info') => {
+        set({ toast: { message, type } });
+        setTimeout(() => {
+          if (get().toast?.message === message) {
+            set({ toast: null });
+          }
+        }, 3000);
+      },
 
       addTrip: (trip) => {
         const newTrip = { ...trip, creatorId: auth.currentUser?.uid || 'unknown' };

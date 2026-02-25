@@ -9,7 +9,7 @@ export const AiAssistant: React.FC = () => {
     const {
         isAiModalOpen, setAiModalOpen, aiContext, activeTab,
         trips, currentTripId, addScheduleItem, updateTripData,
-        addExpenseItem, exchangeRate, addPackingItem
+        addExpenseItem, exchangeRate, addPackingItem, showToast
     } = useTripStore();
     const trip = trips.find(t => t.id === currentTripId);
 
@@ -69,9 +69,9 @@ export const AiAssistant: React.FC = () => {
                 setAiText('');
                 setAiImages([]);
             } else {
-                alert("未解析到任何有效行程或支出 🥲");
+                showToast("未解析到任何有效行程或支出 🥲", "error");
             }
-        } catch (e) { alert("解析失敗 🥲"); }
+        } catch (e) { showToast("解析失敗 🥲", "error"); }
         finally { setLoadingAction(null); }
     };
 
@@ -82,7 +82,7 @@ export const AiAssistant: React.FC = () => {
         try {
             const b64 = await compressImage(file);
             setAiImages(prev => [...prev, b64]);
-        } catch (err) { alert("圖片載入失敗"); }
+        } catch (err) { showToast("圖片載入失敗", "error"); }
         finally { setIsUploadingImage(false); }
     };
 
@@ -118,7 +118,7 @@ export const AiAssistant: React.FC = () => {
             triggerHaptic('success');
         } catch (err) {
             console.error("Receipt Scan Error:", err);
-            alert("收據辨識失敗 🥲");
+            showToast("收據辨識失敗 🥲", "error");
         } finally {
             setLoadingAction(null);
             if (e.target) e.target.value = ''; // 清除 input 以便下次選擇
@@ -177,9 +177,9 @@ export const AiAssistant: React.FC = () => {
             });
             const data = await res.json();
             if (data.insight) {
-                alert(`AI 建議：\n${data.insight}`);
+                showToast(`AI 建議：${data.insight.substring(0, 50)}...`, "info");
             }
-        } catch (e) { alert("分析失敗 🥲"); }
+        } catch (e) { showToast("分析失敗 🥲", "error"); }
         finally { setLoadingAction(null); }
     };
 
@@ -211,7 +211,7 @@ export const AiAssistant: React.FC = () => {
                 });
                 triggerHaptic('success');
             }
-        } catch (e) { alert("研究失敗 🥲"); }
+        } catch (e) { showToast("研究失敗 🥲", "error"); }
         finally { setLoadingAction(null); }
     };
 
@@ -254,14 +254,14 @@ export const AiAssistant: React.FC = () => {
                 });
 
                 if (importedCount === 0) {
-                    alert("行李清單中已存在所有建議項目！🦑");
+                    showToast("行李清單中已存在所有項目！🦑", "info");
                 } else {
                     triggerHaptic('success');
-                    alert(`成功匯入 ${importedCount} 項新行李！✨`);
+                    showToast(`成功匯入 ${importedCount} 項新行李！✨`, "success");
                 }
                 setAiModalOpen(false);
             }
-        } catch (err) { alert("建議失敗 🥲"); }
+        } catch (err) { showToast("建議失敗 🥲", "error"); }
         finally { setLoadingAction(null); }
     };
 

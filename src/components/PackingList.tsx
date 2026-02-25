@@ -55,7 +55,7 @@ const CATEGORY_COLORS: Record<string, string> = {
 };
 
 export const PackingList = ({ className = "" }: { className?: string }) => {
-    const { trips, currentTripId, addPackingItem, togglePackingItem, deletePackingItem, clearPackingList, updatePackingItem } = useTripStore();
+    const { trips, currentTripId, addPackingItem, togglePackingItem, deletePackingItem, clearPackingList, updatePackingItem, showToast } = useTripStore();
     const trip = trips.find(t => t.id === currentTripId);
     const packingList = trip?.packingList || [];
 
@@ -143,7 +143,7 @@ export const PackingList = ({ className = "" }: { className?: string }) => {
                     <Sparkles size={18} /> AI 推薦
                 </button>
                 <button
-                    onClick={() => { if (confirm('⚠️ 清空清單？')) clearPackingList(currentTripId!); }}
+                    onClick={() => { clearPackingList(currentTripId!); showToast("清單已清空 🧳", "info"); }}
                     className="shrink-0 flex items-center justify-center w-12 h-12 bg-white text-splat-pink border-[3px] border-splat-dark rounded-2xl font-black shadow-splat-solid-sm active:translate-y-0.5 active:shadow-none transition-all"
                 >
                     <Trash2 size={20} />
@@ -179,47 +179,51 @@ export const PackingList = ({ className = "" }: { className?: string }) => {
                         const colorClass = CATEGORY_COLORS[item.category] || 'bg-gray-400';
 
                         return (
-                            <motion.div
-                                key={item.id}
-                                layout
-                                initial={{ opacity: 0, scale: 0.9 }}
-                                animate={{ opacity: 1, scale: 1 }}
-                                exit={{ opacity: 0, scale: 0.9 }}
-                                onClick={() => {
-                                    togglePackingItem(currentTripId!, item.id);
-                                    triggerHaptic(item.isPacked ? 'light' : 'success');
-                                }}
-                                className={`group relative bg-white border-[3px] border-splat-dark rounded-[24px] overflow-hidden transition-all active:scale-[0.98] cursor-pointer ${item.isPacked ? 'opacity-50 grayscale shadow-none translate-y-1' : 'shadow-splat-solid'}`}
-                            >
-                                <div className="p-4 flex items-center gap-4">
-                                    <div className={`w-12 h-12 rounded-xl border-2 border-splat-dark flex items-center justify-center text-white ${colorClass} shadow-sm shrink-0 transition-transform group-active:rotate-6`}>
-                                        <Icon size={24} strokeWidth={2.5} />
-                                    </div>
-
-                                    <div className="flex-1 min-w-0">
-                                        <div className="flex items-center gap-2">
-                                            <h3 className={`font-black text-splat-dark text-base truncate uppercase tracking-tight ${item.isPacked ? 'line-through' : ''}`}>{item.title}</h3>
-                                            {item.quantity > 1 && <span className="bg-splat-dark text-white text-[9px] px-1.5 py-0.5 rounded-md font-black italic">x{item.quantity}</span>}
-                                        </div>
-                                        {item.note && <p className="text-[9px] font-black text-gray-400 uppercase truncate mt-0.5">{item.note}</p>}
-                                    </div>
-
-                                    <div className={`w-6 h-6 rounded-full border-[3px] border-splat-dark flex items-center justify-center transition-all ${item.isPacked ? 'bg-splat-blue text-white' : 'bg-gray-100'}`}>
-                                        {item.isPacked && <CheckCircle2 size={14} strokeWidth={4} />}
-                                    </div>
+                            <div key={item.id} className="relative overflow-hidden rounded-[24px]">
+                                {/* Swipe Delete Background */}
+                                <div className="absolute inset-0 bg-red-500 flex justify-end items-center pr-6 rounded-[24px]">
+                                    <Trash2 size={24} className="text-white animate-pulse" strokeWidth={3} />
                                 </div>
 
-                                {/* Delete Button (Visible on long press/desktop hover - here simplified to a side button) */}
-                                <button
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        if (confirm('REMOVE ITEM?')) deletePackingItem(currentTripId!, item.id);
+                                <motion.div
+                                    layout
+                                    drag="x"
+                                    dragConstraints={{ right: 0, left: -80 }}
+                                    onDragEnd={(_, info) => {
+                                        if (info.offset.x < -50) {
+                                            triggerHaptic('medium');
+                                            deletePackingItem(currentTripId!, item.id);
+                                            showToast("已移除項目 🗑️", "success");
+                                        }
                                     }}
-                                    className="absolute top-2 right-2 p-1 text-gray-300 opacity-0 group-hover:opacity-100 transition-opacity"
+                                    initial={{ opacity: 0, scale: 0.9 }}
+                                    animate={{ opacity: 1, scale: 1 }}
+                                    exit={{ opacity: 0, scale: 0.9 }}
+                                    onClick={() => {
+                                        togglePackingItem(currentTripId!, item.id);
+                                        triggerHaptic(item.isPacked ? 'light' : 'success');
+                                    }}
+                                    className={`group relative z-10 bg-white border-[3px] border-splat-dark rounded-[24px] overflow-hidden transition-all active:scale-[0.98] cursor-pointer ${item.isPacked ? 'opacity-50 grayscale shadow-none translate-y-1' : 'shadow-splat-solid'}`}
                                 >
-                                    <Trash2 size={14} />
-                                </button>
-                            </motion.div>
+                                    <div className="p-4 flex items-center gap-4">
+                                        <div className={`w-12 h-12 rounded-xl border-2 border-splat-dark flex items-center justify-center text-white ${colorClass} shadow-sm shrink-0 transition-transform group-active:rotate-6`}>
+                                            <Icon size={24} strokeWidth={2.5} />
+                                        </div>
+
+                                        <div className="flex-1 min-w-0">
+                                            <div className="flex items-center gap-2">
+                                                <h3 className={`font-black text-splat-dark text-base truncate uppercase tracking-tight ${item.isPacked ? 'line-through' : ''}`}>{item.title}</h3>
+                                                {item.quantity > 1 && <span className="bg-splat-dark text-white text-[9px] px-1.5 py-0.5 rounded-md font-black italic">x{item.quantity}</span>}
+                                            </div>
+                                            {item.note && <p className="text-[9px] font-black text-gray-400 uppercase truncate mt-0.5">{item.note}</p>}
+                                        </div>
+
+                                        <div className={`w-6 h-6 rounded-full border-[3px] border-splat-dark flex items-center justify-center transition-all ${item.isPacked ? 'bg-splat-blue text-white' : 'bg-gray-100'}`}>
+                                            {item.isPacked && <CheckCircle2 size={14} strokeWidth={4} />}
+                                        </div>
+                                    </div>
+                                </motion.div>
+                            </div>
                         );
                     })}
                 </AnimatePresence>

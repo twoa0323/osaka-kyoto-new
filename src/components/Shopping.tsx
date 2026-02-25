@@ -19,7 +19,7 @@ const CATEGORIES = {
 };
 
 export const Shopping = () => {
-  const { trips, currentTripId, addShoppingItem, updateShoppingItem, toggleShoppingItem, deleteShoppingItem, exchangeRate } = useTripStore();
+  const { trips, currentTripId, addShoppingItem, updateShoppingItem, toggleShoppingItem, deleteShoppingItem, exchangeRate, showToast } = useTripStore();
   const trip = trips.find(t => t.id === currentTripId);
 
   const [isAdding, setIsAdding] = useState(false);
@@ -46,7 +46,7 @@ export const Shopping = () => {
         const urls = await Promise.all(files.map(f => uploadImage(f)));
         setForm(prev => ({ ...prev, images: [...(prev.images || []), ...urls] }));
       } catch (err) {
-        alert("圖片噴漆失敗！🎨");
+        showToast("圖片噴漆失敗！🎨", "error");
       } finally {
         setIsUploading(false);
       }
@@ -54,7 +54,10 @@ export const Shopping = () => {
   };
 
   const handleSave = () => {
-    if (!form.title) return alert("要買什麼呢？別空手而回唷！🎒");
+    if (!form.title) {
+      showToast("要買什麼呢？別空手而回唷！🎒", "info");
+      return;
+    }
     if (editingItemId) {
       updateShoppingItem(trip.id, editingItemId, form);
     } else {
@@ -150,7 +153,10 @@ export const Shopping = () => {
                 }}
                 onClick={() => openEditor(item)}
                 onPriceCheck={() => handleAiPriceCheck(item)}
-                onDelete={() => { if (confirm('確定刪除？')) deleteShoppingItem(trip.id, item.id); }}
+                onDelete={() => {
+                  deleteShoppingItem(trip.id, item.id);
+                  showToast("已從清單中移除 🗑️", "success");
+                }}
               />
             ))
           )}
@@ -175,7 +181,7 @@ export const Shopping = () => {
                 <h2 className="text-2xl font-black italic uppercase tracking-tighter">{editingItemId ? 'Edit Item' : 'Add to list'}</h2>
                 <div className="flex items-center gap-2">
                   {editingItemId && (
-                    <button onClick={() => { if (confirm('確定刪除這個項目？')) { deleteShoppingItem(trip.id, editingItemId); setIsAdding(false); setEditingItemId(null); } }} className="p-2 text-red-500 bg-red-50 rounded-full border-2 border-red-200"><Trash2 size={20} strokeWidth={3} /></button>
+                    <button onClick={() => { deleteShoppingItem(trip.id, editingItemId); setIsAdding(false); setEditingItemId(null); showToast("已刪除項目 🗑️", "success"); }} className="p-2 text-red-500 bg-red-50 rounded-full border-2 border-red-200"><Trash2 size={20} strokeWidth={3} /></button>
                   )}
                   <button onClick={() => setIsAdding(false)} className="p-2 bg-gray-100 rounded-full border-2 border-splat-dark"><X size={20} strokeWidth={3} /></button>
                 </div>
@@ -250,135 +256,143 @@ const ShoppingRow = ({ item, onToggle, onClick, onPriceCheck, onDelete }: { item
   const cat = CATEGORIES[item.category as keyof typeof CATEGORIES] || CATEGORIES.general;
   const isGoodDeal = item.aiPriceInfo?.dealRating === 'good' || item.aiPriceInfo?.lowPriceAlert;
 
+  const swipeThreshold = -80;
+
   return (
-    <motion.div
-      layout
-      initial={{ opacity: 0, x: -10 }}
-      animate={{ opacity: 1, x: 0 }}
-      exit={{ opacity: 0, scale: 0.95 }}
-      transition={{ type: "spring", bounce: 0.2, duration: 0.4 }}
-      className={`relative bg-white border-[3px] border-splat-dark rounded-3xl p-4 flex items-center gap-4 transition-all overflow-hidden ${item.isBought ? 'bg-gray-100' : 'shadow-splat-solid-sm'
-        } ${isGoodDeal ? 'bg-splat-pink/5 border-splat-pink ring-4 ring-splat-pink/30 animate-pulse-subtle' : ''
-        }`}
-    >
-      {/* 1. 勾選按鈕 (iOS 震盪感) */}
-      <motion.button
-        whileTap={{ scale: 0.8 }}
-        onClick={onToggle}
-        className={`w-10 h-10 rounded-full border-[3px] border-splat-dark flex items-center justify-center transition-colors relative z-10 shrink-0 ${item.isBought ? 'bg-splat-green text-white' : 'bg-white shadow-inner'}`}
+    <div className="relative overflow-hidden rounded-3xl group">
+      {/* 底部 刪除按鈕層 */}
+      <div className="absolute inset-0 bg-red-500 flex justify-end items-center pr-6 rounded-3xl">
+        <Trash2 size={24} className="text-white animate-pulse" strokeWidth={3} />
+      </div>
+
+      <motion.div
+        layout
+        drag="x"
+        dragConstraints={{ right: 0, left: swipeThreshold }}
+        onDragEnd={(_, info) => {
+          if (info.offset.x < -50) {
+            triggerHaptic('medium');
+            onDelete();
+          }
+        }}
+        initial={{ opacity: 0, x: -10 }}
+        animate={{ opacity: 1, x: 0 }}
+        exit={{ opacity: 0, scale: 0.95 }}
+        transition={{ type: "spring", bounce: 0.2, duration: 0.4 }}
+        className={`relative bg-white border-[3px] border-splat-dark rounded-3xl p-4 flex items-center gap-4 transition-all cursor-grab active:cursor-grabbing ${item.isBought ? 'bg-gray-100' : 'shadow-splat-solid-sm'
+          } ${isGoodDeal ? 'bg-splat-pink/5 border-splat-pink ring-4 ring-splat-pink/30 animate-pulse-subtle' : ''
+          }`}
       >
-        {item.isBought && <Check size={24} strokeWidth={4} />}
-      </motion.button>
+        {/* 1. 勾選按鈕 (iOS 震盪感) */}
+        <motion.button
+          whileTap={{ scale: 0.8 }}
+          onClick={onToggle}
+          className={`w-10 h-10 rounded-full border-[3px] border-splat-dark flex items-center justify-center transition-colors relative z-10 shrink-0 ${item.isBought ? 'bg-splat-green text-white' : 'bg-white shadow-inner'}`}
+        >
+          {item.isBought && <Check size={24} strokeWidth={4} />}
+        </motion.button>
 
-      <div className="flex-1 min-w-0 relative z-10 cursor-pointer" onClick={onClick}>
-        <div className="flex items-center gap-2 mb-1">
-          <span className={`text-[8px] font-black px-1.5 py-0.5 rounded-md border-2 border-splat-dark text-white ${cat.color} shadow-sm`}>
-            {cat.label}
-          </span>
-          <div className="flex flex-col">
-            <span className="text-[10px] font-black text-splat-dark font-mono leading-none flex items-center gap-1">
-              {item.currency} {item.price?.toLocaleString()}
-              {isGoodDeal && <span className="text-splat-pink text-xs">🔥</span>}
+        <div className="flex-1 min-w-0 relative z-10 cursor-pointer" onClick={onClick}>
+          <div className="flex items-center gap-2 mb-1">
+            <span className={`text-[8px] font-black px-1.5 py-0.5 rounded-md border-2 border-splat-dark text-white ${cat.color} shadow-sm`}>
+              {cat.label}
             </span>
-            {item.currency === 'JPY' && (
-              <span className="text-[8px] font-bold text-gray-400 mt-0.5">
-                ≈ TWD {Math.round(item.price * exchangeRate).toLocaleString()}
+            <div className="flex flex-col">
+              <span className="text-[10px] font-black text-splat-dark font-mono leading-none flex items-center gap-1">
+                {item.currency} {item.price?.toLocaleString()}
+                {isGoodDeal && <span className="text-splat-pink text-xs">🔥</span>}
               </span>
-            )}
-          </div>
-          {item.targetPrice ? (
-            <div className="flex flex-col border-l-2 border-dotted border-gray-200 pl-2">
-              <span className="text-[9px] font-black text-splat-pink uppercase tracking-tighter leading-none">
-                🎯 Target
-              </span>
-              <span className="text-[8px] font-bold text-splat-pink/60">
-                {item.currency} {item.targetPrice.toLocaleString()}
-              </span>
+              {item.currency === 'JPY' && (
+                <span className="text-[8px] font-bold text-gray-400 mt-0.5">
+                  ≈ TWD {Math.round(item.price * exchangeRate).toLocaleString()}
+                </span>
+              )}
             </div>
-          ) : null}
-        </div>
+            {item.targetPrice ? (
+              <div className="flex flex-col border-l-2 border-dotted border-gray-200 pl-2">
+                <span className="text-[9px] font-black text-splat-pink uppercase tracking-tighter leading-none">
+                  🎯 Target
+                </span>
+                <span className="text-[8px] font-bold text-splat-pink/60">
+                  {item.currency} {item.targetPrice.toLocaleString()}
+                </span>
+              </div>
+            ) : null}
+          </div>
 
-        <div className="relative inline-block">
-          <h4 className={`text-lg font-black tracking-tight uppercase transition-colors duration-300 ${item.isBought ? 'text-gray-400' : 'text-splat-dark'}`}>
-            {item.title}
-          </h4>
+          <div className="relative inline-block">
+            <h4 className={`text-lg font-black tracking-tight uppercase transition-colors duration-300 ${item.isBought ? 'text-gray-400' : 'text-splat-dark'}`}>
+              {item.title}
+            </h4>
 
-          {/* 📍 核心：墨跡刷過特效 (Ink Brush Stroke) */}
+            {/* 📍 核心：墨跡刷過特效 (Ink Brush Stroke) */}
+            <AnimatePresence>
+              {item.isBought && (
+                <motion.div
+                  initial={{ width: 0 }}
+                  animate={{ width: '105%' }}
+                  exit={{ width: 0 }}
+                  transition={{ duration: 0.3, ease: "easeOut" }}
+                  className="absolute top-[55%] left-[-2.5%] h-3 pointer-events-none opacity-80 mix-blend-multiply"
+                  style={{
+                    backgroundColor: cat.splat,
+                    rotate: '-1deg',
+                    borderRadius: '4px',
+                    boxShadow: 'inset 0 0 5px rgba(0,0,0,0.1)'
+                  }}
+                />
+              )}
+            </AnimatePresence>
+          </div>
+
+          {/* AI Price Advice Badge */}
           <AnimatePresence>
-            {item.isBought && (
-              <motion.div
-                initial={{ width: 0 }}
-                animate={{ width: '105%' }}
-                exit={{ width: 0 }}
-                transition={{ duration: 0.3, ease: "easeOut" }}
-                className="absolute top-[55%] left-[-2.5%] h-3 pointer-events-none opacity-80 mix-blend-multiply"
-                style={{
-                  backgroundColor: cat.splat,
-                  rotate: '-1deg',
-                  borderRadius: '4px',
-                  boxShadow: 'inset 0 0 5px rgba(0,0,0,0.1)'
-                }}
-              />
+            {item.aiPriceInfo && !item.isBought && (
+              <motion.div initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} className={`mt-2 p-2 rounded-xl border-2 border-dotted flex flex-col gap-1 ${item.aiPriceInfo.lowPriceAlert ? 'bg-splat-pink/5 border-splat-pink' : 'bg-gray-50 border-gray-200'}`}>
+                <div className="flex justify-between items-center">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[9px] font-black text-gray-400 uppercase">AI Market Report</span>
+                    {item.aiPriceInfo.dealRating && (
+                      <span className={`text-[8px] font-black px-1.5 rounded-full border border-current ${item.aiPriceInfo.dealRating === 'good' ? 'bg-splat-green/10 text-splat-green' :
+                        item.aiPriceInfo.dealRating === 'bad' ? 'bg-splat-pink/10 text-splat-pink' : 'bg-splat-blue/10 text-splat-blue'
+                        }`}>
+                        {item.aiPriceInfo.dealRating.toUpperCase()}
+                      </span>
+                    )}
+                  </div>
+                  {item.aiPriceInfo.lowPriceAlert && (
+                    <span className="text-[8px] font-black bg-splat-pink text-white px-1 rounded animate-pulse">GREAT DEAL! 💸</span>
+                  )}
+                </div>
+                <div className="flex items-center gap-2">
+                  <Sparkles size={10} className="text-splat-yellow shrink-0" />
+                  <p className="text-[10px] font-bold text-splat-dark leading-tight">{item.aiPriceInfo.advice}</p>
+                </div>
+                {item.aiPriceInfo.currentMarketPrice > 0 && (
+                  <p className="text-[9px] font-black text-splat-blue/60 tabular-nums">EST: JPY {item.aiPriceInfo.currentMarketPrice.toLocaleString()} @ {item.aiPriceInfo.shopName}</p>
+                )}
+              </motion.div>
             )}
           </AnimatePresence>
         </div>
 
-        {/* AI Price Advice Badge */}
-        <AnimatePresence>
-          {item.aiPriceInfo && !item.isBought && (
-            <motion.div initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }} className={`mt-2 p-2 rounded-xl border-2 border-dotted flex flex-col gap-1 ${item.aiPriceInfo.lowPriceAlert ? 'bg-splat-pink/5 border-splat-pink' : 'bg-gray-50 border-gray-200'}`}>
-              <div className="flex justify-between items-center">
-                <div className="flex items-center gap-1.5">
-                  <span className="text-[9px] font-black text-gray-400 uppercase">AI Market Report</span>
-                  {item.aiPriceInfo.dealRating && (
-                    <span className={`text-[8px] font-black px-1.5 rounded-full border border-current ${item.aiPriceInfo.dealRating === 'good' ? 'bg-splat-green/10 text-splat-green' :
-                      item.aiPriceInfo.dealRating === 'bad' ? 'bg-splat-pink/10 text-splat-pink' : 'bg-splat-blue/10 text-splat-blue'
-                      }`}>
-                      {item.aiPriceInfo.dealRating.toUpperCase()}
-                    </span>
-                  )}
-                </div>
-                {item.aiPriceInfo.lowPriceAlert && (
-                  <span className="text-[8px] font-black bg-splat-pink text-white px-1 rounded animate-pulse">GREAT DEAL! 💸</span>
-                )}
-              </div>
-              <div className="flex items-center gap-2">
-                <Sparkles size={10} className="text-splat-yellow shrink-0" />
-                <p className="text-[10px] font-bold text-splat-dark leading-tight">{item.aiPriceInfo.advice}</p>
-              </div>
-              {item.aiPriceInfo.currentMarketPrice > 0 && (
-                <p className="text-[9px] font-black text-splat-blue/60 tabular-nums">EST: JPY {item.aiPriceInfo.currentMarketPrice.toLocaleString()} @ {item.aiPriceInfo.shopName}</p>
-              )}
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
+        {!item.isBought && (
+          <motion.button
+            whileTap={{ scale: 0.9, rotate: 10 }}
+            onClick={(e) => { e.stopPropagation(); onPriceCheck(); }}
+            className={`w-10 h-10 rounded-xl border-[2.5px] border-splat-dark shadow-splat-solid-sm flex items-center justify-center transition-all bg-splat-yellow relative z-20`}
+          >
+            <Sparkles size={18} strokeWidth={3} />
+          </motion.button>
+        )}
 
-      {!item.isBought && (
-        <motion.button
-          whileTap={{ scale: 0.9, rotate: 10 }}
-          onClick={(e) => { e.stopPropagation(); onPriceCheck(); }}
-          className={`w-10 h-10 rounded-xl border-[2.5px] border-splat-dark shadow-splat-solid-sm flex items-center justify-center transition-all bg-splat-yellow`}
-        >
-          <Sparkles size={18} strokeWidth={3} />
-        </motion.button>
-      )}
-
-      {item.images.length > 0 && item.isBought && (
-        <div className={`w-14 h-14 rounded-2xl border-[3px] border-splat-dark overflow-hidden relative transition-all grayscale opacity-30 scale-90`}>
-          <img src={item.images[0]} className="w-full h-full object-cover" alt="item" />
-        </div>
-      )}
-
-      {/* 側滑刪除感的隱藏按鈕 (這裡用簡化版) */}
-      <motion.button
-        whileTap={{ scale: 0.9 }}
-        onClick={(e) => { e.stopPropagation(); onDelete(); }}
-        className="p-2 text-gray-300 hover:text-red-500 transition-colors shrink-0"
-      >
-        <Trash2 size={18} strokeWidth={3} />
-      </motion.button>
-    </motion.div>
+        {item.images.length > 0 && item.isBought && (
+          <div className={`w-14 h-14 rounded-2xl border-[3px] border-splat-dark overflow-hidden relative transition-all grayscale opacity-30 scale-90`}>
+            <img src={item.images[0]} className="w-full h-full object-cover" alt="item" />
+          </div>
+        )}
+      </motion.div>
+    </div>
   );
 };
 

@@ -26,7 +26,7 @@ const AIRLINES = [
 ];
 
 export const BookingEditor: React.FC<Props> = ({ tripId, type, item, onClose }) => {
-  const { addBookingItem, updateBookingItem, deleteBookingItem } = useTripStore();
+  const { addBookingItem, updateBookingItem, deleteBookingItem, showToast } = useTripStore();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const qrInputRef = useRef<HTMLInputElement>(null);
   const aiInputRef = useRef<HTMLInputElement>(null); // 👈 新增 AI 檔案選擇
@@ -92,13 +92,13 @@ export const BookingEditor: React.FC<Props> = ({ tripId, type, item, onClose }) 
             exchangeLocation: data.exchangeLocation || prev.exchangeLocation
           }));
         }
-        alert("✨ AI 解析成功！已為您自動填入資訊。");
+        showToast("✨ AI 解析成功！已為您自動填入資訊。", "success");
       } else {
         throw new Error("AI 解析失敗");
       }
     } catch (e) {
       console.error(e);
-      alert("AI 解析失敗，請手動確認填寫。");
+      showToast("AI 解析失敗，請手動確認填寫。", "error");
     } finally {
       setIsAiLoading(false);
       if (aiInputRef.current) aiInputRef.current.value = '';
@@ -137,7 +137,7 @@ export const BookingEditor: React.FC<Props> = ({ tripId, type, item, onClose }) 
         const url = await uploadImage(file);
         if (field === 'images') setForm(prev => ({ ...prev, images: [url] }));
         else setForm(prev => ({ ...prev, qrCode: url }));
-      } catch (err) { alert("上傳失敗！"); }
+      } catch (err) { showToast("上傳失敗！", "error"); }
       finally { setUploadingField(null); }
     }
   };
@@ -160,8 +160,8 @@ export const BookingEditor: React.FC<Props> = ({ tripId, type, item, onClose }) 
   }, [form.date, form.endDate, type, form.nights]);
 
   const handleSave = () => {
-    if (type !== 'flight' && !form.title) return alert("請輸入名稱唷！");
-    if (type === 'flight' && !form.flightNo) return alert("請輸入航班號碼！");
+    if (type !== 'flight' && !form.title) return showToast("請輸入名稱唷！", "info");
+    if (type === 'flight' && !form.flightNo) return showToast("請輸入航班號碼！", "info");
 
     const finalForm = { ...form };
     if (type === 'flight') {
@@ -180,7 +180,7 @@ export const BookingEditor: React.FC<Props> = ({ tripId, type, item, onClose }) 
       <div className="space-y-6">
         {item && (
           <div className="flex justify-end -mb-4">
-            <button onClick={() => { if (confirm('確定要刪除嗎？')) { deleteBookingItem(tripId, item.id); onClose(); } }} className="p-2 bg-red-50 text-red-500 rounded-full active:scale-90"><Trash2 size={18} /></button>
+            <button onClick={() => { deleteBookingItem(tripId, item.id); showToast("已刪除資訊", "success"); onClose(); }} className="p-2 bg-red-50 text-red-500 rounded-full active:scale-90"><Trash2 size={18} /></button>
           </div>
         )}
 

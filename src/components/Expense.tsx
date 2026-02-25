@@ -240,7 +240,7 @@ const SettlementSection = ({ expenses, members, rate }: { expenses: ExpenseItem[
 };
 
 export const Expense = () => {
-  const { trips, currentTripId, exchangeRate, addExpenseItem, deleteExpenseItem, updateExpenseItem, updateTripData, setExchangeRate } = useTripStore();
+  const { trips, currentTripId, exchangeRate, addExpenseItem, deleteExpenseItem, updateExpenseItem, updateTripData, setExchangeRate, showToast } = useTripStore();
   const trip = trips.find(t => t.id === currentTripId);
 
   const [activeTab, setActiveTab] = useState<'record' | 'list' | 'stats'>('record');
@@ -323,7 +323,7 @@ export const Expense = () => {
   }, {} as Record<string, ExpenseItem[]>);
 
   const handleSave = () => {
-    if (!form.amount || !form.title) return alert("資訊不完整唷！💰");
+    if (!form.amount || !form.title) return showToast("資訊不完整唷！💰", "error");
     const item: ExpenseItem = {
       id: editingId || Date.now().toString(), date: form.date!, storeName: form.storeName || '', title: form.title!, amount: Number(form.amount),
       currency: form.currency as CurrencyCode, method: form.method as any, location: form.location || '',
@@ -398,11 +398,11 @@ export const Expense = () => {
         title: `${prev.title || prev.storeName} (剩餘項目)`,
         items: prev.items?.filter((_, i) => !selectedItemIndices.includes(i))
       }));
-      alert(`已將 ${selectedItemIndices.length} 個項目拆分為獨立支出，其餘金額存回草稿。`);
+      showToast(`已將 ${selectedItemIndices.length} 個項目拆分為獨立支出，其餘金額存回草稿。`, "success");
     } else {
       // 全部拆完了，重設表單
       resetForm();
-      alert(`已將全部 ${selectedItemIndices.length} 個項目拆分為獨立支出！✨`);
+      showToast(`已將全部 ${selectedItemIndices.length} 個項目拆分為獨立支出！✨`, "success");
     }
 
     setShowExplodeModal(false);
@@ -698,7 +698,7 @@ export const Expense = () => {
               </button>
               <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={async e => {
                 const file = e.target.files?.[0];
-                if (file) { e.target.value = ''; setIsUploadingImg(true); try { const url = await uploadImage(file); setForm(prev => ({ ...prev, images: [url] })); } catch (err) { alert("上傳失敗"); } finally { setIsUploadingImg(false); } }
+                if (file) { e.target.value = ''; setIsUploadingImg(true); try { const url = await uploadImage(file); setForm(prev => ({ ...prev, images: [url] })); } catch (err) { showToast("上傳失敗", "error"); } finally { setIsUploadingImg(false); } }
               }} />
             </div>
 
@@ -796,18 +796,37 @@ export const Expense = () => {
                 {grouped[date].map(e => {
                   const sym = CURRENCY_SYMBOLS[e.currency] || e.currency;
                   return (
-                    <div key={e.id} onClick={() => setDetailItem(e)} className="bg-white border-[3px] border-splat-dark rounded-[20px] shadow-splat-solid p-4 flex justify-between items-center group active:translate-y-1 active:shadow-none transition-all cursor-pointer">
-                      <div className="flex items-center gap-4">
-                        <div className={`w-10 h-10 rounded-xl border-2 border-splat-dark flex items-center justify-center text-white font-black text-sm shadow-sm ${e.category === '餐飲' ? 'bg-splat-orange' : e.category === '交通' ? 'bg-splat-blue' : 'bg-splat-green'}`}>{e.category?.slice(0, 1) || '其'}</div>
-                        <div className="flex-1 min-w-0"><h3 className="font-black text-splat-dark text-base truncate w-32 uppercase tracking-tight">{e.storeName || e.title}</h3><p className="text-[9px] font-black text-gray-400 uppercase tracking-tighter">{e.method} • {e.category}</p></div>
+                    <div key={e.id} className="relative overflow-hidden rounded-[20px]">
+                      {/* Swipe Delete Background */}
+                      <div className="absolute inset-0 bg-red-500 flex justify-end items-center pr-6 rounded-[20px]">
+                        <Trash2 size={24} className="text-white animate-pulse" strokeWidth={3} />
                       </div>
-                      <div className="text-right flex items-center gap-3">
-                        <div>
-                          <p className="font-black text-xl text-splat-dark leading-none mb-1">{sym} {e.amount.toLocaleString()}</p>
-                          <p className="text-[9px] text-gray-400 font-black tracking-widest uppercase">≈ ${Math.round(e.currency === 'TWD' ? e.amount : e.amount * exchangeRate)}</p>
+
+                      <motion.div
+                        drag="x"
+                        dragConstraints={{ right: 0, left: -80 }}
+                        onDragEnd={(_, info) => {
+                          if (info.offset.x < -50) {
+                            triggerHaptic('medium');
+                            deleteExpenseItem(trip.id, e.id);
+                            showToast("已刪除支出 🗑️", "success");
+                          }
+                        }}
+                        onClick={() => setDetailItem(e)}
+                        className="relative z-10 bg-white border-[3px] border-splat-dark rounded-[20px] shadow-splat-solid p-4 flex justify-between items-center group active:translate-y-1 active:shadow-none transition-all cursor-pointer"
+                      >
+                        <div className="flex items-center gap-4">
+                          <div className={`w-10 h-10 rounded-xl border-2 border-splat-dark flex items-center justify-center text-white font-black text-sm shadow-sm ${e.category === '餐飲' ? 'bg-splat-orange' : e.category === '交通' ? 'bg-splat-blue' : 'bg-splat-green'}`}>{e.category?.slice(0, 1) || '其'}</div>
+                          <div className="flex-1 min-w-0"><h3 className="font-black text-splat-dark text-base truncate w-32 uppercase tracking-tight">{e.storeName || e.title}</h3><p className="text-[9px] font-black text-gray-400 uppercase tracking-tighter">{e.method} • {e.category}</p></div>
                         </div>
-                        <ChevronRight className="text-gray-300" size={18} />
-                      </div>
+                        <div className="text-right flex items-center gap-3">
+                          <div>
+                            <p className="font-black text-xl text-splat-dark leading-none mb-1">{sym} {e.amount.toLocaleString()}</p>
+                            <p className="text-[9px] text-gray-400 font-black tracking-widest uppercase">≈ ${Math.round(e.currency === 'TWD' ? e.amount : e.amount * exchangeRate)}</p>
+                          </div>
+                          <ChevronRight className="text-gray-300" size={18} />
+                        </div>
+                      </motion.div>
                     </div>
                   );
                 })}
@@ -857,7 +876,7 @@ export const Expense = () => {
 
               <div className="flex gap-4">
                 <button onClick={() => { setForm(detailItem); setEditingId(detailItem.id); setDetailItem(null); setActiveTab('record'); }} className="flex-1 py-4 bg-white border-[3px] border-splat-dark rounded-2xl font-black text-splat-dark flex items-center justify-center gap-2 active:translate-y-1 shadow-splat-solid-sm uppercase tracking-widest"><Edit3 size={18} strokeWidth={3} /> Edit</button>
-                <button onClick={() => { if (confirm('⚠️ DELETE RECORD PERMANENTLY?')) { deleteExpenseItem(trip.id, detailItem.id); setDetailItem(null); triggerHaptic('warning'); } }} className="flex-1 py-4 bg-white border-[3px] border-splat-dark rounded-2xl font-black text-splat-pink flex items-center justify-center gap-2 active:translate-y-1 shadow-splat-solid-sm uppercase tracking-widest"><Trash2 size={18} strokeWidth={3} /> Delete</button>
+                <button onClick={() => { deleteExpenseItem(trip.id, detailItem.id); setDetailItem(null); triggerHaptic('warning'); showToast("已刪除支出", "success"); }} className="flex-1 py-4 bg-white border-[3px] border-splat-dark rounded-2xl font-black text-splat-pink flex items-center justify-center gap-2 active:translate-y-1 shadow-splat-solid-sm uppercase tracking-widest"><Trash2 size={18} strokeWidth={3} /> Delete</button>
               </div>
             </div>
           </div>

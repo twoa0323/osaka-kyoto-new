@@ -15,7 +15,7 @@ const CATEGORIES = [
 ] as const;
 
 export const ScheduleEditor: React.FC<Props> = ({ tripId, date, item, onClose }) => {
-  const { addScheduleItem, updateScheduleItem, deleteScheduleItem } = useTripStore();
+  const { addScheduleItem, updateScheduleItem, deleteScheduleItem, showToast } = useTripStore();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isUploading, setIsUploading] = useState(false);
 
@@ -32,7 +32,7 @@ export const ScheduleEditor: React.FC<Props> = ({ tripId, date, item, onClose })
         const url = await uploadImage(file);
         setForm(prev => ({ ...prev, images: [url] }));
       } catch (err) {
-        alert("圖片上傳失敗，請稍後再試！");
+        showToast("圖片上傳失敗，請稍後再試！", "error");
       } finally {
         setIsUploading(false);
       }
@@ -40,7 +40,7 @@ export const ScheduleEditor: React.FC<Props> = ({ tripId, date, item, onClose })
   };
 
   const handleSave = () => {
-    if (!form.title) return alert("請輸入標題！");
+    if (!form.title) return showToast("請輸入標題！", "info");
     if (item) updateScheduleItem(tripId, item.id, form);
     else addScheduleItem(tripId, { ...form, id: Date.now().toString() });
     onClose();
@@ -51,7 +51,7 @@ export const ScheduleEditor: React.FC<Props> = ({ tripId, date, item, onClose })
       <div className="space-y-5">
         {item && (
           <div className="flex justify-end -mb-4">
-            <button onClick={() => { if (confirm('確定刪除？')) { deleteScheduleItem(tripId, item.id); onClose(); } }} className="p-2 bg-red-50 text-red-500 rounded-full active:scale-90"><Trash2 size={20} /></button>
+            <button onClick={() => { deleteScheduleItem(tripId, item.id); showToast("已刪除行程", "success"); onClose(); }} className="p-2 bg-red-50 text-red-500 rounded-full active:scale-90"><Trash2 size={20} /></button>
           </div>
         )}
 

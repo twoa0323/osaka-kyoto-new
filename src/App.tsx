@@ -13,7 +13,7 @@ import {
   Plus, ChevronDown, Trash2, Calendar, CreditCard, Wallet,
   Utensils, ShoppingBag, Info as InfoIcon, Lock, User,
   Camera, X, Edit3, RefreshCcw, Settings as SettingsIcon,
-  ToggleLeft, ToggleRight, Luggage, PenTool
+  ToggleLeft, ToggleRight, Luggage, PenTool, Sparkles as SparklesIcon
 } from 'lucide-react';
 import { format, addDays, differenceInDays, parseISO } from 'date-fns';
 import { compressImage, uploadImage } from './utils/imageUtils';
@@ -26,7 +26,7 @@ import { OfflineStatus } from './components/OfflineStatus';
 import { triggerHaptic } from './utils/haptics';
 import { useHapticShake } from './hooks/useHapticShake';
 import { AiAssistant } from './components/AiAssistant';
-import { Sparkles as SparklesIcon } from 'lucide-react';
+import { SplatToast } from './components/ui/SplatToast';
 
 // --- 常數設定 ---
 const PRESET_AVATARS = [
@@ -65,7 +65,7 @@ const NavIcon = ({ icon, label, id, active, onClick, color }: any) => {
 // 🚀 唯一的主要 App 元件 (完美合併版)
 // ==========================================
 const App: React.FC = () => {
-  const { trips, currentTripId, switchTrip, activeTab, setActiveTab, updateTripData, isAiModalOpen, openAiAssistant, uiSettings, setUISettings } = useTripStore();
+  const { trips, currentTripId, switchTrip, activeTab, setActiveTab, updateTripData, isAiModalOpen, openAiAssistant, uiSettings, setUISettings, showToast } = useTripStore();
 
   // 狀態管理
   const [menuOpen, setMenuOpen] = useState(false);
@@ -96,6 +96,11 @@ const App: React.FC = () => {
       setShowPersonalSetup(true);
     }
   }, [currentTrip]);
+
+  // 📍 Phase 3: Vercel 冷啟動優化
+  useEffect(() => {
+    fetch('/api/ping').catch(() => { });
+  }, []);
 
   if (trips.length === 0 || showOnboarding) return <Onboarding onComplete={() => setShowOnboarding(false)} />;
   if (!currentTrip) return <Onboarding onComplete={() => setShowOnboarding(false)} />;
@@ -131,7 +136,7 @@ const App: React.FC = () => {
       setLockedTripId(null);
       setMenuOpen(false);
     } else {
-      alert("密碼錯誤！🔒");
+      showToast("密碼錯誤！🔒", "error");
       setVerifyPin('');
     }
   };
@@ -175,9 +180,11 @@ const App: React.FC = () => {
                           <button className="flex-1 text-left font-black text-sm truncate pr-2" onClick={() => { if (t.id === currentTrip.id) return; setLockedTripId(t.id); setVerifyPin(''); }}>{t.tripName || t.dest}</button>
                           <button onClick={() => {
                             if (isCreator) {
-                              if (confirm('⚠️ 確定要永久刪除此行程嗎？(所有旅伴都會遺失資料)')) useTripStore.getState().deleteTrip(t.id);
+                              deleteTrip(t.id);
+                              showToast("行程已永久刪除 🗑️", "success");
                             } else {
-                              if (confirm('要退出此行程嗎？(僅從您的設備移除，其他人仍可查看)')) useTripStore.getState().removeTripLocal(t.id);
+                              removeTripLocal(t.id);
+                              showToast("已退出行程 👋", "info");
                             }
                           }} className="text-red-500 hover:scale-110 transition-transform shrink-0">
                             <Trash2 size={16} />
@@ -192,7 +199,10 @@ const App: React.FC = () => {
                       onClick={async () => {
                         const shareId = prompt("請輸入旅伴提供的行程代碼 (ID):");
                         if (!shareId) return;
-                        if (trips.find(t => t.id === shareId)) return alert("您已經在這個行程裡囉！");
+                        if (trips.find(t => t.id === shareId)) {
+                          showToast("您已經在這個行程裡囉！", "info");
+                          return;
+                        }
 
                         const { doc, getDoc } = await import('firebase/firestore');
                         const { db } = await import('./services/firebase');
@@ -203,10 +213,10 @@ const App: React.FC = () => {
                           const pin = prompt(`找到「${tripData.dest}」！請輸入密碼加入：`);
                           if (pin === tripData.tripPin) {
                             useTripStore.getState().addTripLocal(tripData);
-                            alert("成功加入行程！🎉 (已自動儲存於本機)");
+                            showToast("成功加入行程！🎉", "success");
                             setMenuOpen(false);
-                          } else { alert("密碼錯誤！🔒"); }
-                        } else { alert("找不到這個行程代碼喔 🥲"); }
+                          } else { showToast("密碼錯誤！🔒", "error"); }
+                        } else { showToast("找不到這個行程代碼喔 🥲", "error"); }
                       }}
                       className="w-full p-3 bg-white text-splat-blue text-sm font-black rounded-xl border-2 border-splat-dark shadow-sm flex items-center justify-center gap-2 active:scale-95 transition-all"
                     >
@@ -238,7 +248,8 @@ const App: React.FC = () => {
             ))}
           </div>
         </header>
-      )}
+      )
+      }
 
       <main className={`flex-1 w-full max-w-md mx-auto overflow-x-hidden ${activeTab !== 'schedule' ? 'pt-6' : 'pt-2'}`}>
         <AnimatePresence mode="wait">
@@ -280,29 +291,33 @@ const App: React.FC = () => {
         </motion.button>
       </nav>
 
-      {lockedTripId && (
-        <div className="fixed inset-0 bg-splat-dark/80 backdrop-blur-sm z-[1000] flex items-center justify-center p-4">
-          <div className="bg-white border-4 border-splat-dark w-full max-w-sm rounded-[32px] shadow-[8px_8px_0px_#FFC000] p-8 text-center space-y-4 animate-in zoom-in-95">
-            <Lock size={48} className="mx-auto text-splat-dark mb-2" strokeWidth={2.5} />
-            <h3 className="text-2xl font-black text-splat-dark uppercase">切換行程</h3>
-            <input type="password" maxLength={4} inputMode="numeric" placeholder="****" className="w-full bg-gray-100 text-splat-dark font-black p-4 rounded-xl text-center text-3xl tracking-[0.5em] outline-none border-4 border-splat-dark focus:bg-white transition-colors" value={verifyPin} onChange={(e) => setVerifyPin(e.target.value)} />
-            <div className="flex gap-3 mt-4">
-              <button onClick={() => { setLockedTripId(null); setVerifyPin(''); }} className="flex-1 py-3 border-4 border-splat-dark bg-gray-200 font-black rounded-xl active:translate-y-1 transition-all shadow-splat-solid-sm">取消</button>
-              <button onClick={confirmTripSwitch} className="flex-[2] py-3 bg-splat-blue text-white border-4 border-splat-dark font-black rounded-xl shadow-splat-solid-sm active:translate-y-1 active:shadow-none transition-all">解鎖 ➔</button>
+      {
+        lockedTripId && (
+          <div className="fixed inset-0 bg-splat-dark/80 backdrop-blur-sm z-[1000] flex items-center justify-center p-4">
+            <div className="bg-white border-4 border-splat-dark w-full max-w-sm rounded-[32px] shadow-[8px_8px_0px_#FFC000] p-8 text-center space-y-4 animate-in zoom-in-95">
+              <Lock size={48} className="mx-auto text-splat-dark mb-2" strokeWidth={2.5} />
+              <h3 className="text-2xl font-black text-splat-dark uppercase">切換行程</h3>
+              <input type="password" maxLength={4} inputMode="numeric" placeholder="****" className="w-full bg-gray-100 text-splat-dark font-black p-4 rounded-xl text-center text-3xl tracking-[0.5em] outline-none border-4 border-splat-dark focus:bg-white transition-colors" value={verifyPin} onChange={(e) => setVerifyPin(e.target.value)} />
+              <div className="flex gap-3 mt-4">
+                <button onClick={() => { setLockedTripId(null); setVerifyPin(''); }} className="flex-1 py-3 border-4 border-splat-dark bg-gray-200 font-black rounded-xl active:translate-y-1 transition-all shadow-splat-solid-sm">取消</button>
+                <button onClick={confirmTripSwitch} className="flex-[2] py-3 bg-splat-blue text-white border-4 border-splat-dark font-black rounded-xl shadow-splat-solid-sm active:translate-y-1 active:shadow-none transition-all">解鎖 ➔</button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )
+      }
 
-      {memberOpen && (
-        <MemberManagement
-          trip={currentTrip}
-          myProfile={myProfile}
-          onClose={() => setMemberOpen(false)}
-          onEditProfile={() => setEditingProfile(true)}
-          onShowSettings={() => setShowSettings(true)}
-        />
-      )}
+      {
+        memberOpen && (
+          <MemberManagement
+            trip={currentTrip}
+            myProfile={myProfile}
+            onClose={() => setMemberOpen(false)}
+            onEditProfile={() => setEditingProfile(true)}
+            onShowSettings={() => setShowSettings(true)}
+          />
+        )
+      }
 
       <AnimatePresence>
         {showSettings && (
@@ -336,28 +351,33 @@ const App: React.FC = () => {
         )}
       </AnimatePresence>
 
-      {editingProfile && myProfile && (
-        <ProfileEditor
-          myProfile={myProfile}
-          onClose={() => setEditingProfile(false)}
-          onSave={(updated: Member) => {
-            const nm = currentTrip.members.map(x => x.id === myProfile.id ? updated : x);
-            updateTripData(currentTrip.id, { members: nm });
-            setEditingProfile(false);
-          }}
-        />
-      )}
+      {
+        editingProfile && myProfile && (
+          <ProfileEditor
+            myProfile={myProfile}
+            onClose={() => setEditingProfile(false)}
+            onSave={(updated: Member) => {
+              const nm = currentTrip.members.map(x => x.id === myProfile.id ? updated : x);
+              updateTripData(currentTrip.id, { members: nm });
+              setEditingProfile(false);
+            }}
+          />
+        )
+      }
 
-      {showPersonalSetup && (
-        <PersonalSetup
-          onComplete={(data) => {
-            updateTripData(currentTrip.id, { members: [{ ...data, id: 'm-' + Date.now(), avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${data.name}`, mood: '準備出發！✈️' }] });
-            setShowPersonalSetup(false);
-          }}
-        />
-      )}
+      {
+        showPersonalSetup && (
+          <PersonalSetup
+            onComplete={(data) => {
+              updateTripData(currentTrip.id, { members: [{ ...data, id: 'm-' + Date.now(), avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${data.name}`, mood: '準備出發！✈️' }] });
+              setShowPersonalSetup(false);
+            }}
+          />
+        )
+      }
       <AiAssistant />
-    </div>
+      <SplatToast />
+    </div >
   );
 };
 

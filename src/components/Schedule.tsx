@@ -78,6 +78,7 @@ const ScheduleItemRow: React.FC<{
   setDetailItem: any,
   timeToMins: (t: string) => number
 }> = ({ item, idx, isEditMode, dayItems, tripId, updateScheduleItem, deleteScheduleItem, setEditingItem, setIsEditorOpen, setDetailItem, timeToMins }) => {
+  const { showToast } = useTripStore();
   const catStyle = CATEGORY_STYLE[item.category as keyof typeof CATEGORY_STYLE] || CATEGORY_STYLE.sightseeing;
   const prevItem = idx > 0 ? dayItems[idx - 1] : null;
   let warningMsg = null;
@@ -118,48 +119,68 @@ const ScheduleItemRow: React.FC<{
     return () => clearTimeout(timeoutId);
   }, [item.id, item.images?.length, item.title, item.location, item.category, tripId, updateScheduleItem]);
 
+  const swipeThreshold = -80;
+
   return (
-    <Reorder.Item key={item.id} value={item} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, scale: 0.9 }} dragListener={isEditMode} className="relative pl-6">
+    <Reorder.Item key={item.id} value={item} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, scale: 0.9 }} dragListener={isEditMode} className="relative pl-6 group">
       <div className={`absolute left-[7px] top-6 bottom-[-24px] w-1 border-r-[3px] border-dashed border-splat-dark opacity-20 ${idx === dayItems.length - 1 ? 'hidden' : ''}`} />
       <div className={`absolute left-0 top-[18px] w-4 h-4 rounded-full border-[3px] border-splat-dark z-10 ${catStyle.bg}`} />
-      <div className="flex gap-3 mb-6 relative group">
-        <div className="w-16 shrink-0 flex flex-col items-center mt-3 z-10">
-          <motion.button onClick={() => updateScheduleItem(tripId, item.id, { ...item, isCompleted: !item.isCompleted })} className={`rounded-xl py-2 w-full text-center border-[3px] border-splat-dark -rotate-3 transition-colors ${item.isCompleted ? 'bg-gray-300 text-gray-500' : 'bg-white shadow-splat-solid-sm'}`}>
-            <span className="font-black text-[15px]">{item.time}</span>
-          </motion.button>
+
+      <div className="flex gap-3 mb-6 relative overflow-hidden rounded-[24px]">
+        {/* Swipe Delete Background */}
+        <div className="absolute inset-0 bg-red-500 flex justify-end items-center pr-6 rounded-[24px]">
+          <Trash2 size={24} className="text-white animate-pulse" strokeWidth={3} />
         </div>
-        <div className="flex-1 min-w-0 flex flex-col gap-2">
-          {warningMsg && <div className="bg-white border-2 border-splat-dark px-3 py-1.5 rounded-lg text-[10px] font-black flex items-center gap-1.5 shadow-sm overflow-hidden"><AlertTriangle size={14} className="text-splat-orange" /> {warningMsg}</div>}
-          <motion.div onClick={() => isEditMode ? (setEditingItem(item), setIsEditorOpen(true)) : setDetailItem(item)} className={`card-splat p-0 overflow-hidden cursor-pointer bg-white border-[3px] border-splat-dark rounded-[24px] shadow-splat-solid relative ${item.isCompleted ? 'bg-gray-100 ring-4 ring-gray-200 overflow-hidden' : ''} ${isEditMode ? 'pr-12' : ''}`}>
-            {item.isCompleted && (
-              <>
-                {/* 增加斜槓效果：簡潔且專業的完成感 */}
-                <div className="absolute inset-0 z-10 pointer-events-none opacity-20">
-                  <div className="absolute top-1/2 left-[-10%] w-[120%] h-[12px] bg-gray-400 -translate-y-1/2 -rotate-[25deg] origin-center skew-x-12" />
-                  <div className="absolute top-1/2 left-[-10%] w-[120%] h-[2px] bg-gray-400 translate-y-6 -rotate-[25deg] origin-center" />
-                </div>
-              </>
-            )}
-            <div className={`h-7 w-full ${item.isCompleted ? 'bg-gray-400 opacity-60' : catStyle.bg} border-b-[3px] border-splat-dark flex items-center px-3 justify-between`}>
-              <span className={`text-[10px] font-black uppercase tracking-widest ${item.isCompleted ? 'text-white' : catStyle.text}`}>
-                {item.isCompleted ? 'COMPLETED' : catStyle.label}
-              </span>
-              {item.isCompleted && <Check size={14} className="text-white" strokeWidth={4} />}
-            </div>
-            <div className={`p-4 flex justify-between items-center bg-white relative ${item.isCompleted ? 'opacity-40 grayscale' : ''}`}>
-              <div className="flex-1 min-w-0 pr-2">
-                <h4 className="font-black text-xl uppercase truncate">{item.title}</h4>
-                <p className="text-xs font-bold text-gray-500 truncate"><MapPin size={14} /> {item.location}</p>
-              </div>
-              {isEditMode && (
-                <div className="absolute right-0 top-0 bottom-0 w-12 bg-gray-50 border-l-[3px] border-splat-dark flex flex-col z-30">
-                  <button onClick={(e) => { e.stopPropagation(); setEditingItem(item); setIsEditorOpen(true); }} className="flex-1 flex items-center justify-center border-b-[3px] border-splat-dark"><Edit3 size={16} /></button>
-                  <button onClick={(e) => { e.stopPropagation(); if (confirm('確定刪除？')) deleteScheduleItem(tripId, item.id); }} className="flex-1 flex items-center justify-center text-red-500"><Trash2 size={16} /></button>
-                </div>
+
+        <motion.div
+          drag={isEditMode ? false : "x"}
+          dragConstraints={{ right: 0, left: swipeThreshold }}
+          onDragEnd={(_, info) => {
+            if (info.offset.x < -50) {
+              triggerHaptic('medium');
+              deleteScheduleItem(tripId, item.id);
+              showToast("已移除行程 🗑️", "success");
+            }
+          }}
+          className="flex-1 flex gap-3 relative z-10 bg-transparent active:cursor-grabbing cursor-grab"
+        >
+          <div className="w-16 shrink-0 flex flex-col items-center mt-3 z-10">
+            <motion.button onClick={() => updateScheduleItem(tripId, item.id, { ...item, isCompleted: !item.isCompleted })} className={`rounded-xl py-2 w-full text-center border-[3px] border-splat-dark -rotate-3 transition-colors ${item.isCompleted ? 'bg-gray-300 text-gray-500' : 'bg-white shadow-splat-solid-sm'}`}>
+              <span className="font-black text-[15px]">{item.time}</span>
+            </motion.button>
+          </div>
+          <div className="flex-1 min-w-0 flex flex-col gap-2">
+            {warningMsg && <div className="bg-white border-2 border-splat-dark px-3 py-1.5 rounded-lg text-[10px] font-black flex items-center gap-1.5 shadow-sm overflow-hidden"><AlertTriangle size={14} className="text-splat-orange" /> {warningMsg}</div>}
+            <motion.div onClick={() => isEditMode ? (setEditingItem(item), setIsEditorOpen(true)) : setDetailItem(item)} className={`card-splat p-0 overflow-hidden cursor-pointer bg-white border-[3px] border-splat-dark rounded-[24px] shadow-splat-solid relative ${item.isCompleted ? 'bg-gray-100 ring-4 ring-gray-200 overflow-hidden' : ''} ${isEditMode ? 'pr-12' : ''}`}>
+              {item.isCompleted && (
+                <>
+                  <div className="absolute inset-0 z-10 pointer-events-none opacity-20">
+                    <div className="absolute top-1/2 left-[-10%] w-[120%] h-[12px] bg-gray-400 -translate-y-1/2 -rotate-[25deg] origin-center skew-x-12" />
+                    <div className="absolute top-1/2 left-[-10%] w-[120%] h-[2px] bg-gray-400 translate-y-6 -rotate-[25deg] origin-center" />
+                  </div>
+                </>
               )}
-            </div>
-          </motion.div>
-        </div>
+              <div className={`h-7 w-full ${item.isCompleted ? 'bg-gray-400 opacity-60' : catStyle.bg} border-b-[3px] border-splat-dark flex items-center px-3 justify-between`}>
+                <span className={`text-[10px] font-black uppercase tracking-widest ${item.isCompleted ? 'text-white' : catStyle.text}`}>
+                  {item.isCompleted ? 'COMPLETED' : catStyle.label}
+                </span>
+                {item.isCompleted && <Check size={14} className="text-white" strokeWidth={4} />}
+              </div>
+              <div className={`p-4 flex justify-between items-center bg-white relative ${item.isCompleted ? 'opacity-40 grayscale' : ''}`}>
+                <div className="flex-1 min-w-0 pr-2">
+                  <h4 className="font-black text-xl uppercase truncate">{item.title}</h4>
+                  <p className="text-xs font-bold text-gray-500 truncate"><MapPin size={14} /> {item.location}</p>
+                </div>
+                {isEditMode && (
+                  <div className="absolute right-0 top-0 bottom-0 w-12 bg-gray-50 border-l-[3px] border-splat-dark flex flex-col z-30">
+                    <button onClick={(e) => { e.stopPropagation(); setEditingItem(item); setIsEditorOpen(true); }} className="flex-1 flex items-center justify-center border-b-[3px] border-splat-dark"><Edit3 size={16} /></button>
+                    <button onClick={(e) => { e.stopPropagation(); deleteScheduleItem(tripId, item.id); showToast("已刪除", "success"); }} className="flex-1 flex items-center justify-center text-red-500"><Trash2 size={16} /></button>
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          </div>
+        </motion.div>
       </div>
     </Reorder.Item>
   );
@@ -173,6 +194,7 @@ const ScheduleMapView: React.FC<{
   addScheduleItem: any,
   selectedDateStr: string
 }> = ({ items, trip, setDetailItem, addScheduleItem, selectedDateStr }) => {
+  const { showToast } = useTripStore();
   const MAPTILER_KEY = (import.meta as any).env.VITE_MAPTILER_API_KEY;
   const mapRef = useRef<MapLibreGLType.Map | null>(null);
 
@@ -207,7 +229,7 @@ const ScheduleMapView: React.FC<{
   // 📍 觸發魔法雷達 API
   const handleExploreNearby = async () => {
     if (!mapRef.current) return;
-    if (!navigator.onLine) return alert("請先連上網路才能開啟魔法雷達唷！📡");
+    if (!navigator.onLine) return showToast("請先連上網路才能開啟魔法雷達唷！📡", "info");
 
     const center = mapRef.current.getCenter();
     setIsExploring(true);
@@ -230,10 +252,10 @@ const ScheduleMapView: React.FC<{
         setAiPlaces(data.places);
         triggerHaptic('success');
       } else {
-        alert("這附近好像沒有特別的推薦點，試著拖動地圖到別的地方看看！🦑");
+        showToast("這附近好像沒有特別的推薦點，試著拖動地圖到別的地方看看！🦑", "info");
       }
     } catch (e) {
-      alert("魔法雷達暫時失效，請稍後再試！🪄");
+      showToast("魔法雷達暫時失效，請稍後再試！🪄", "error");
     } finally {
       setIsExploring(false);
     }
@@ -380,7 +402,7 @@ const ScheduleMapView: React.FC<{
 export const Schedule: React.FC<{ externalDateIdx?: number }> = ({ externalDateIdx = 0 }) => {
   const {
     trips, currentTripId, deleteScheduleItem, addScheduleItem, reorderScheduleItems, updateScheduleItem,
-    addBookingItem, addJournalItem, addShoppingItem, addInfoItem, openAiAssistant
+    addBookingItem, addJournalItem, addShoppingItem, addInfoItem, openAiAssistant, showToast
   } = useTripStore();
   const trip = trips.find(t => t.id === currentTripId);
   const isOnline = useNetworkStatus();
@@ -546,7 +568,7 @@ export const Schedule: React.FC<{ externalDateIdx?: number }> = ({ externalDateI
   const [spotAiLoading, setSpotAiLoading] = useState<string | null>(null);
 
   const handleGapAiSuggest = async (prevItem: ScheduleItem, nextItem: ScheduleItem) => {
-    if (!isOnline) return alert("請檢查網路連線才能使用魔法唷！✨");
+    if (!isOnline) return showToast("請檢查網路連線才能使用魔法唷！✨", "info");
     setGapAiLoading(prevItem.id);
 
     const prefs = [
@@ -572,10 +594,10 @@ export const Schedule: React.FC<{ externalDateIdx?: number }> = ({ externalDateI
           images: []
         });
         triggerHaptic('light');
-        alert("✨ 成功發掘順遊好去處！");
+        showToast("✨ 成功發掘順遊好去處！", "success");
       }
     } catch (e) {
-      alert("AI 目前想不出好點子，換個時間再試試吧！🤔");
+      showToast("AI 目前想不出好點子，換個時間再試試吧！🤔", "error");
     } finally {
       setGapAiLoading(null);
     }
@@ -596,13 +618,13 @@ export const Schedule: React.FC<{ externalDateIdx?: number }> = ({ externalDateI
     if (foundGap) {
       await handleGapAiSuggest(foundGap.prev, foundGap.curr);
     } else {
-      alert("目前行程很滿，沒有大於2小時的長空檔唷！🦑");
+      showToast("目前行程很滿，沒有大於2小時的長空檔唷！🦑", "info");
     }
   };
 
   // 💡 修復 3：AI 交通建議 (修正 Schema 提取對應錯誤)
   const handleTransportAiSuggest = async (currentItem: ScheduleItem) => {
-    if (!isOnline) return alert("請檢查網路連線才能使用魔法唷！✨");
+    if (!isOnline) return showToast("請檢查網路連線才能使用魔法唷！✨", "info");
     setTransportAiLoading(currentItem.id);
 
     const items = trip?.items || [];
@@ -643,14 +665,14 @@ export const Schedule: React.FC<{ externalDateIdx?: number }> = ({ externalDateI
       triggerHaptic('success');
     } catch (e) {
       console.error(e);
-      alert("AI 目前想不出好點子，請稍後再試！🤔");
+      showToast("AI 目前想不出好點子，請稍後再試！🤔", "error");
     } finally {
       setTransportAiLoading(null);
     }
   };
 
   const handleAiAnalyze = async (text: string) => {
-    if (!isOnline) return alert("請檢查網路連線");
+    if (!isOnline) return showToast("請檢查網路連線", "info");
     setIsAiLoading(true);
     try {
       const res = await fetch('/api/ai', {
@@ -711,15 +733,15 @@ export const Schedule: React.FC<{ externalDateIdx?: number }> = ({ externalDateI
           }));
         }
         triggerHaptic('success');
-        alert("✨ 智慧分析完成！已將資訊自動分類。");
+        showToast("✨ 智慧分析完成！已將資訊自動分類。", "success");
       }
     } catch (e) {
-      alert("AI 解析失敗，請嘗試更具體的描述。");
+      showToast("AI 解析失敗，請嘗試更具體的描述。", "error");
     } finally { setIsAiLoading(false); }
   };
 
   const handleWeatherMagic = async () => {
-    if (!isOnline) return alert("連線後才能施展天氣魔法唷！🦑");
+    if (!isOnline) return showToast("連線後才能施展天氣魔法唷！🦑", "info");
     setIsWizardLoading(true);
     triggerHaptic('success');
 
@@ -746,7 +768,7 @@ export const Schedule: React.FC<{ externalDateIdx?: number }> = ({ externalDateI
         setShowWizardModal(true);
       }
     } catch (e) {
-      alert("天氣巫師目前魔力不足，請稍後再試！🪄");
+      showToast("天氣巫師目前魔力不足，請稍後再試！🪄", "error");
     } finally {
       setIsWizardLoading(false);
     }
@@ -785,7 +807,7 @@ export const Schedule: React.FC<{ externalDateIdx?: number }> = ({ externalDateI
 
   // 💡 修復 2：AI 景點建議 (極簡化純文字串流接收)
   const handleFetchSpotGuide = async (item: ScheduleItem) => {
-    if (!isOnline) return alert("請檢查網路連線");
+    if (!isOnline) return showToast("請檢查網路連線", "info");
     activeSpotIdRef.current = item.id;
     setSpotAiLoading(item.id);
     setCompletion("");
@@ -826,7 +848,7 @@ export const Schedule: React.FC<{ externalDateIdx?: number }> = ({ externalDateI
       triggerHaptic('success');
     } catch (err) {
       console.error("Spot Guide Error:", err);
-      alert("取得景點導覽失敗，請稍後再試。");
+      showToast("取得景點導覽失敗，請稍後再試。", "error");
     } finally {
       activeSpotIdRef.current = null;
       setSpotAiLoading(null);
@@ -838,8 +860,8 @@ export const Schedule: React.FC<{ externalDateIdx?: number }> = ({ externalDateI
   const [isOptimizing, setIsOptimizing] = useState(false);
 
   const handleOptimizeRoute = async () => {
-    if (dayItems.length <= 2) return alert("行程太少，不需要優化唷！🦑");
-    if (!isOnline) return alert("優化路徑需要連線。");
+    if (dayItems.length <= 2) return showToast("行程太少，不需要優化唷！🦑", "info");
+    if (!isOnline) return showToast("優化路徑需要連線。", "info");
     setIsOptimizing(true);
     triggerHaptic('light');
 
@@ -862,10 +884,10 @@ export const Schedule: React.FC<{ externalDateIdx?: number }> = ({ externalDateI
         const missing = dayItems.filter(i => !optimizedIds.includes(i.id));
         reorderScheduleItems(trip!.id, [...newOrder, ...missing]);
         triggerHaptic('success');
-        alert("✨ AI 路徑優化成功！");
+        showToast("✨ AI 路徑優化成功！", "success");
       }
     } catch (e) {
-      alert("優化失敗，請稍後再試。");
+      showToast("優化失敗，請稍後再試。", "error");
     } finally {
       setIsOptimizing(false);
     }

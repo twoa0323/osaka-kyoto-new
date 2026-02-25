@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useTripStore } from '../store/useTripStore';
 import {
   Plane, Home, MapPin, Plus, Edit3, Globe, QrCode,
-  ArrowRight, X, Luggage, Phone, Camera, Ticket, Download, CheckCircle2, Calendar, Clock
+  ArrowRight, X, Luggage, Phone, Camera, Ticket, Download, CheckCircle2, Calendar, Clock, Trash2
 } from 'lucide-react';
 import { cacheAsset, isAssetCached } from '../utils/offlineCache';
 import { downloadIcs } from '../utils/icsGenerator';
@@ -52,7 +52,7 @@ const getCountdown = (dateStr: string, timeStr?: string) => {
 };
 
 export const Booking = () => {
-  const { trips, currentTripId, deleteBookingItem } = useTripStore();
+  const { trips, currentTripId, deleteBookingItem, showToast } = useTripStore();
   const trip = trips.find(t => t.id === currentTripId);
   const [activeSubTab, setActiveSubTab] = useState<'flight' | 'hotel' | 'spot' | 'voucher'>('flight');
   const [editingItem, setEditingItem] = useState<BookingItem | undefined>();
@@ -141,11 +141,29 @@ export const Booking = () => {
               </div>
             ) : (
               bookings.map(item => (
-                <div key={item.id}>
-                  {item.type === 'flight' && <FlightCard item={item} onEdit={(e: any) => { e.stopPropagation(); setEditingItem(item); setIsEditorOpen(true); }} onViewDetails={() => setDetailItem(item)} onQrClick={setFocusedQr} />}
-                  {item.type === 'hotel' && <HotelCard item={item} onEdit={(e: any) => { e.stopPropagation(); setEditingItem(item); setIsEditorOpen(true); }} onViewDetails={() => setDetailItem(item)} onQrClick={setFocusedQr} />}
-                  {item.type === 'spot' && <SpotCard item={item} onEdit={(e: any) => { e.stopPropagation(); setEditingItem(item); setIsEditorOpen(true); }} onViewDetails={() => setDetailItem(item)} onQrClick={setFocusedQr} />}
-                  {item.type === 'voucher' && <VoucherCard item={item} onEdit={(e: any) => { e.stopPropagation(); setEditingItem(item); setIsEditorOpen(true); }} onViewDetails={() => setDetailItem(item)} onQrClick={setFocusedQr} />}
+                <div key={item.id} className="relative overflow-hidden rounded-[2.5rem]">
+                  {/* Swipe Delete Background */}
+                  <div className="absolute inset-0 bg-red-500 flex justify-end items-center pr-6 rounded-[2.5rem]">
+                    <Trash2 size={24} className="text-white animate-pulse" strokeWidth={3} />
+                  </div>
+
+                  <motion.div
+                    drag="x"
+                    dragConstraints={{ right: 0, left: -80 }}
+                    onDragEnd={(_, info: any) => {
+                      if (info.offset.x < -50) {
+                        triggerHaptic('medium');
+                        deleteBookingItem(trip.id, item.id);
+                        showToast("已刪除預訂 🗑️", "success");
+                      }
+                    }}
+                    className="relative z-10 bg-transparent"
+                  >
+                    {item.type === 'flight' && <FlightCard item={item} onEdit={(e: any) => { e.stopPropagation(); setEditingItem(item); setIsEditorOpen(true); }} onViewDetails={() => setDetailItem(item)} onQrClick={setFocusedQr} />}
+                    {item.type === 'hotel' && <HotelCard item={item} onEdit={(e: any) => { e.stopPropagation(); setEditingItem(item); setIsEditorOpen(true); }} onViewDetails={() => setDetailItem(item)} onQrClick={setFocusedQr} />}
+                    {item.type === 'spot' && <SpotCard item={item} onEdit={(e: any) => { e.stopPropagation(); setEditingItem(item); setIsEditorOpen(true); }} onViewDetails={() => setDetailItem(item)} onQrClick={setFocusedQr} />}
+                    {item.type === 'voucher' && <VoucherCard item={item} onEdit={(e: any) => { e.stopPropagation(); setEditingItem(item); setIsEditorOpen(true); }} onViewDetails={() => setDetailItem(item)} onQrClick={setFocusedQr} />}
+                  </motion.div>
                 </div>
               ))
             )}
