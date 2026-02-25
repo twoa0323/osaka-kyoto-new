@@ -131,6 +131,7 @@ export interface ShoppingItem extends SyncMetadata {
   id: string;
   title: string;
   price: number;
+  quantity: number;       // 👈 新增：購買數量
   targetPrice?: number;   // 👈 新增：目標促銷價 / 願望價格
   currency: CurrencyCode;
   isBought: boolean;
@@ -147,6 +148,9 @@ export interface ShoppingItem extends SyncMetadata {
   };
   location?: string;      // 👈 新增：購買地點 (例如：心齋橋)
   storeName?: string;     // 👈 新增：店家名稱 (例如：Bic Camera)
+  forWhom?: string;       // 👈 新增：代購受託人 (例如：媽媽)
+  isTaxFreeEligible?: boolean; // 👈 新增：是否符合免稅資格
+  priority?: 'high' | 'medium' | 'low'; // 👈 新增：購買優先級
 }
 
 // --- 6. 旅遊資訊 (Info) 項目 ---
