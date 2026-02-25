@@ -130,18 +130,24 @@ const ScheduleItemRow: React.FC<{
         </div>
         <div className="flex-1 min-w-0 flex flex-col gap-2">
           {warningMsg && <div className="bg-white border-2 border-splat-dark px-3 py-1.5 rounded-lg text-[10px] font-black flex items-center gap-1.5 shadow-sm overflow-hidden"><AlertTriangle size={14} className="text-splat-orange" /> {warningMsg}</div>}
-          <motion.div onClick={() => isEditMode ? (setEditingItem(item), setIsEditorOpen(true)) : setDetailItem(item)} className={`card-splat p-0 overflow-hidden cursor-pointer bg-white border-[3px] border-splat-dark rounded-[24px] shadow-splat-solid relative ${item.isCompleted ? 'bg-splat-green/10 ring-4 ring-splat-green/20' : ''} ${isEditMode ? 'pr-12' : ''}`}>
+          <motion.div onClick={() => isEditMode ? (setEditingItem(item), setIsEditorOpen(true)) : setDetailItem(item)} className={`card-splat p-0 overflow-hidden cursor-pointer bg-white border-[3px] border-splat-dark rounded-[24px] shadow-splat-solid relative ${item.isCompleted ? 'bg-splat-green/10 ring-4 ring-splat-green/20 overflow-hidden' : ''} ${isEditMode ? 'pr-12' : ''}`}>
             {item.isCompleted && (
-              <div className="absolute inset-0 z-20 pointer-events-none flex items-center justify-center overflow-hidden">
-                <motion.div
-                  initial={{ scale: 2, opacity: 0, rotate: -20 }}
-                  animate={{ scale: 1, opacity: 1, rotate: -15 }}
-                  className="border-[6px] border-splat-green text-splat-green font-black text-3xl px-6 py-2 rounded-2xl uppercase tracking-tighter mix-blend-multiply opacity-40"
-                  style={{ fontFamily: 'system-ui' }}
-                >
-                  MISSION CLEAR
-                </motion.div>
-              </div>
+              <>
+                <div className="absolute inset-0 z-20 pointer-events-none flex items-center justify-center">
+                  <motion.div
+                    initial={{ scale: 2, opacity: 0, rotate: -20 }}
+                    animate={{ scale: 1, opacity: 0.8, rotate: -15 }}
+                    className="border-[6px] border-splat-green text-splat-green font-black text-3xl px-6 py-2 rounded-2xl uppercase tracking-tighter mix-blend-multiply"
+                    style={{ fontFamily: 'system-ui' }}
+                  >
+                    MISSION CLEAR
+                  </motion.div>
+                </div>
+                {/* 增加斜槓效果：模仿蓋章後的斜劃線 */}
+                <div className="absolute inset-0 z-10 pointer-events-none opacity-40">
+                  <div className="absolute top-1/2 left-[-10%] w-[120%] h-[15px] bg-splat-green -translate-y-1/2 -rotate-[25deg] origin-center skew-x-12" />
+                </div>
+              </>
             )}
             <div className={`h-7 w-full ${item.isCompleted ? 'bg-splat-green opacity-40' : catStyle.bg} border-b-[3px] border-splat-dark flex items-center px-3 justify-between`}>
               <span className={`text-[10px] font-black uppercase tracking-widest ${item.isCompleted ? 'text-white' : catStyle.text}`}>
@@ -742,19 +748,24 @@ export const Schedule: React.FC<{ externalDateIdx?: number }> = ({ externalDateI
         const lines = completeData.split('\n');
         for (const line of lines) {
           const trimmedLine = line.trim();
-          // 改進解析邏輯，兼容各種 Vercel Data Stream 格式 (例如 0: "text" 或直接 "text")
           if (!trimmedLine) continue;
 
           let content = "";
+          // 支援 0:"text" 格式或單純 JSON 格式
           if (trimmedLine.startsWith('0:')) {
+            const raw = trimmedLine.substring(2).trim();
             try {
-              content = JSON.parse(trimmedLine.substring(2));
+              content = JSON.parse(raw);
             } catch (e) {
-              const match = trimmedLine.match(/^0:"(.*)"$/);
-              if (match) content = match[1].replace(/\\n/g, '\n').replace(/\\"/g, '"').replace(/\\\\/g, '\\');
+              // 如果 JSON.parse 失敗，嘗試手動提取引號內的內容
+              const match = raw.match(/^"(.*)"$/);
+              if (match) {
+                content = match[1].replace(/\\n/g, '\n').replace(/\\"/g, '"').replace(/\\\\/g, '\\');
+              } else {
+                content = raw;
+              }
             }
           } else {
-            // 處理非標準前綴
             try { content = JSON.parse(trimmedLine); } catch (e) { }
           }
 
@@ -960,18 +971,26 @@ export const Schedule: React.FC<{ externalDateIdx?: number }> = ({ externalDateI
                       <p className="text-[11px] font-bold text-gray-400 leading-snug">
                         {(() => {
                           try {
-                            const parsed = JSON.parse(detailItem.transportSuggestion || "{}");
-                            return parsed.summary;
-                          } catch (e) { return detailItem.transportSuggestion || ""; }
+                            if (!detailItem.transportSuggestion) return "無建議內容";
+                            // 移除可能存在的快取字串並嘗試解析
+                            const raw = detailItem.transportSuggestion.trim();
+                            const parsed = JSON.parse(raw);
+                            return parsed.summary || "查看交通指南";
+                          } catch (e) {
+                            // 如果不是 JSON，則視為舊格式文字
+                            return detailItem.transportSuggestion;
+                          }
                         })()}
                       </p>
                       <button
                         onClick={() => {
                           try {
-                            const parsed = JSON.parse(detailItem.transportSuggestion || "{}");
+                            const raw = (detailItem.transportSuggestion || "").trim();
+                            const parsed = JSON.parse(raw);
                             setSelectedTransportSuggestion(parsed);
                             setShowTransportModal(true);
                           } catch (e) {
+                            // 解析失敗則重新觸發製作新格式的 AI 建議
                             handleTransportAiSuggest(detailItem);
                           }
                         }}
