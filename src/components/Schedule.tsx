@@ -59,7 +59,7 @@ const CITY_DB = [
   { keys: ['福岡', 'Fukuoka', '博多', '天神'], name: 'FUKUOKA', lat: 33.5902, lng: 130.4017 },
 ];
 
-import { Map, MapMarker, MarkerContent, MapRoute, MapControls } from './ui/map';
+import { Map, MapMarker, MarkerContent, MapRoute, MapControls, MapPopup } from './ui/map';
 import MapLibreGL, { LngLatBounds } from 'maplibre-gl';
 import type * as MapLibreGLType from 'maplibre-gl';
 
@@ -166,61 +166,81 @@ const ScheduleItemRow: React.FC<{
 };
 
 // --- 輔助組件：地圖路徑視圖 ---
-const ScheduleMapView: React.FC<{ items: ScheduleItem[], trip?: Trip, setDetailItem: any }> = ({ items, trip, setDetailItem }) => {
+const ScheduleMapView: React.FC<{
+  items: ScheduleItem[],
+  trip?: Trip,
+  setDetailItem: any,
+  addScheduleItem: any,
+  selectedDateStr: string
+}> = ({ items, trip, setDetailItem, addScheduleItem, selectedDateStr }) => {
   const MAPTILER_KEY = (import.meta as any).env.VITE_MAPTILER_API_KEY;
   const mapRef = useRef<MapLibreGLType.Map | null>(null);
 
+  // 📍 魔法雷達狀態
+  const [aiPlaces, setAiPlaces] = useState<any[]>([]);
+  const [isExploring, setIsExploring] = useState(false);
+  const [selectedAiPlace, setSelectedAiPlace] = useState<any>(null);
+
   const points = useMemo(() => {
-    return items
-      .filter(item => item.lat && item.lng)
-      .map(item => [item.lng, item.lat] as [number, number]);
+    return items.filter(item => item.lat && item.lng).map(item => [item.lng, item.lat] as [number, number]);
   }, [items]);
 
   const viewport = useMemo(() => {
-    if (points.length > 0) {
-      return {
-        center: points[0],
-        zoom: points.length === 1 ? 15 : 12,
-        bearing: 0,
-        pitch: 0
-      };
-    }
-    return {
-      center: [trip?.lng || 135.5023, trip?.lat || 34.6937] as [number, number],
-      zoom: 12,
-      bearing: 0,
-      pitch: 0
-    };
+    if (points.length > 0) return { center: points[0], zoom: points.length === 1 ? 15 : 12, bearing: 0, pitch: 0 };
+    return { center: [trip?.lng || 135.5023, trip?.lat || 34.6937] as [number, number], zoom: 12, bearing: 0, pitch: 0 };
   }, [points, trip]);
 
-  // 🪄 自動縮放至包含所有景點 (FitBounds)
   useEffect(() => {
     if (!mapRef.current || points.length === 0) return;
-
     const bounds = new LngLatBounds();
     points.forEach(p => bounds.extend(p));
-
-    mapRef.current.fitBounds(bounds, {
-      padding: 80,
-      duration: 1000,
-      maxZoom: 16
-    });
+    mapRef.current.fitBounds(bounds, { padding: 80, duration: 1000, maxZoom: 16 });
   }, [points]);
 
   const handleCardClick = (item: ScheduleItem) => {
     if (item.lat && item.lng && mapRef.current) {
-      mapRef.current.flyTo({
-        center: [item.lng, item.lat],
-        zoom: 15,
-        duration: 1200,
-        essential: true
-      });
+      mapRef.current.flyTo({ center: [item.lng, item.lat], zoom: 16, duration: 1200, essential: true });
       triggerHaptic('medium');
     }
   };
 
+  // 📍 觸發魔法雷達 API
+  const handleExploreNearby = async () => {
+    if (!mapRef.current) return;
+    if (!navigator.onLine) return alert("請先連上網路才能開啟魔法雷達唷！📡");
+
+    const center = mapRef.current.getCenter();
+    setIsExploring(true);
+    triggerHaptic('heavy');
+
+    try {
+      const res = await fetch('/api/ai', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'explore-nearby',
+          payload: { lat: center.lat, lng: center.lng, city: trip?.dest }
+        })
+      });
+
+      if (!res.ok) throw new Error("API Error");
+      const data = await res.json();
+
+      if (data.places && data.places.length > 0) {
+        setAiPlaces(data.places);
+        triggerHaptic('success');
+      } else {
+        alert("這附近好像沒有特別的推薦點，試著拖動地圖到別的地方看看！🦑");
+      }
+    } catch (e) {
+      alert("魔法雷達暫時失效，請稍後再試！🪄");
+    } finally {
+      setIsExploring(false);
+    }
+  };
+
   return (
-    <div className="flex flex-col h-full gap-4">
+    <div className="flex flex-col h-full gap-4 relative">
       <div className="flex-1 relative rounded-[32px] overflow-hidden border-[4px] border-splat-dark shadow-splat-solid bg-gray-100">
         <Map
           ref={mapRef as any}
@@ -228,31 +248,16 @@ const ScheduleMapView: React.FC<{ items: ScheduleItem[], trip?: Trip, setDetailI
           className="w-full h-full z-10"
           styles={
             MAPTILER_KEY
-              ? {
-                light: `https://api.maptiler.com/maps/streets-v2/style.json?key=${MAPTILER_KEY}`,
-                dark: `https://api.maptiler.com/maps/streets-v2-dark/style.json?key=${MAPTILER_KEY}`
-              }
+              ? { light: `https://api.maptiler.com/maps/streets-v2/style.json?key=${MAPTILER_KEY}` }
               : undefined
           }
         >
-          <MapRoute
-            coordinates={points}
-            color="#5BA4E5"
-            width={5}
-            dashArray={[2, 2]}
-          />
+          <MapRoute coordinates={points} color="#5BA4E5" width={5} dashArray={[2, 2]} />
 
+          {/* 1. 渲染原本的行程標記 */}
           {items.map((item, idx) => (
             item.lat && item.lng && (
-              <MapMarker
-                key={item.id}
-                longitude={item.lng}
-                latitude={item.lat}
-                onClick={() => {
-                  handleCardClick(item);
-                  setTimeout(() => setDetailItem?.(item), 1300);
-                }}
-              >
+              <MapMarker key={item.id} longitude={item.lng} latitude={item.lat} onClick={() => { handleCardClick(item); setTimeout(() => setDetailItem?.(item), 1300); }}>
                 <MarkerContent>
                   <div className="flex flex-col items-center">
                     <div className="w-8 h-8 bg-splat-blue border-2 border-white rounded-full flex items-center justify-center text-white font-black shadow-lg text-xs hover:bg-splat-pink transition-colors">
@@ -264,12 +269,85 @@ const ScheduleMapView: React.FC<{ items: ScheduleItem[], trip?: Trip, setDetailI
             )
           ))}
 
+          {/* 2. 渲染 AI 推薦的發光標記 */}
+          {aiPlaces.map((place, idx) => (
+            <MapMarker key={`ai-${idx}`} longitude={place.lng} latitude={place.lat} onClick={() => setSelectedAiPlace(place)}>
+              <MarkerContent>
+                <motion.div
+                  animate={{ y: [0, -10, 0] }}
+                  transition={{ repeat: Infinity, duration: 1.5, delay: idx * 0.2 }}
+                  className="w-10 h-10 bg-splat-yellow rounded-full border-[3px] border-splat-dark flex items-center justify-center shadow-[0_0_15px_#FFC000]"
+                >
+                  <Sparkles size={18} className="text-splat-dark" strokeWidth={3} />
+                </motion.div>
+              </MarkerContent>
+            </MapMarker>
+          ))}
+
+          {/* 3. AI 地點彈出視窗 (Popup) */}
+          {selectedAiPlace && (
+            <MapPopup
+              longitude={selectedAiPlace.lng}
+              latitude={selectedAiPlace.lat}
+              onClose={() => setSelectedAiPlace(null)}
+              closeButton={true}
+              className="border-[3px] border-splat-dark rounded-2xl shadow-splat-solid-sm p-4 w-56 bg-white z-[100]"
+            >
+              <div className="pt-2">
+                <div className="text-[9px] font-black bg-splat-pink text-white px-2 py-0.5 rounded-full inline-block mb-1 tracking-widest">
+                  AI DISCOVERY
+                </div>
+                <h4 className="font-black text-splat-dark text-base leading-tight mb-1">{selectedAiPlace.name}</h4>
+                <p className="text-xs font-bold text-gray-600 leading-snug mb-3">
+                  {selectedAiPlace.reason}
+                </p>
+                <p className="text-[10px] font-black text-gray-400 mb-3 flex items-center gap-1">
+                  <Clock size={12} /> 建議停留: {selectedAiPlace.estimatedTime}
+                </p>
+                <button
+                  className="w-full bg-splat-green text-white font-black text-xs py-2.5 rounded-xl border-2 border-splat-dark shadow-sm active:translate-y-0.5 transition-transform flex items-center justify-center gap-2"
+                  onClick={() => {
+                    addScheduleItem(trip!.id, {
+                      id: Date.now().toString(),
+                      title: selectedAiPlace.name,
+                      location: selectedAiPlace.name,
+                      lat: selectedAiPlace.lat,
+                      lng: selectedAiPlace.lng,
+                      category: selectedAiPlace.category === 'food' ? 'food' : 'sightseeing',
+                      time: '12:00', // 預設時間，使用者稍後可改
+                      note: `[AI 推薦] ${selectedAiPlace.reason}`,
+                      date: selectedDateStr,
+                      images: []
+                    });
+                    setSelectedAiPlace(null);
+                    setAiPlaces(places => places.filter(p => p.name !== selectedAiPlace.name)); // 移除已加入的點
+                    triggerHaptic('success');
+                  }}
+                >
+                  <Plus size={14} strokeWidth={3} /> 加入今日行程
+                </button>
+              </div>
+            </MapPopup>
+          )}
+
           <MapControls showZoom showLocate position="bottom-right" />
         </Map>
 
-        <div className="absolute top-4 left-4 z-20 bg-white/90 backdrop-blur px-3 py-1.5 rounded-full border-2 border-splat-dark font-black text-[10px] flex items-center gap-2 shadow-sm pointer-events-none">
-          <MapIcon size={12} className="text-splat-blue" />
-          {items.length} SPOTS
+        {/* 📍 頂部控制列：包含計數器與魔法雷達按鈕 */}
+        <div className="absolute top-4 left-4 right-4 z-20 flex justify-between items-start pointer-events-none">
+          <div className="bg-white/90 backdrop-blur px-3 py-1.5 rounded-full border-2 border-splat-dark font-black text-[10px] flex items-center gap-2 shadow-sm">
+            <MapIcon size={12} className="text-splat-blue" />
+            {items.length} SPOTS
+          </div>
+
+          <button
+            onClick={handleExploreNearby}
+            disabled={isExploring}
+            className="pointer-events-auto bg-splat-dark text-splat-yellow border-[3px] border-splat-dark px-4 py-2 rounded-2xl font-black text-xs flex items-center gap-2 shadow-splat-solid-sm active:translate-y-1 transition-all disabled:opacity-70"
+          >
+            {isExploring ? <Loader2 size={16} className="animate-spin text-white" /> : <Sparkles size={16} />}
+            {isExploring ? "掃描中..." : "探索此區"}
+          </button>
         </div>
       </div>
 
@@ -282,7 +360,7 @@ const ScheduleMapView: React.FC<{ items: ScheduleItem[], trip?: Trip, setDetailI
               key={item.id}
               whileTap={{ scale: 0.95 }}
               onClick={() => handleCardClick(item)}
-              className="snap-center shrink-0 w-44 bg-white border-[3px] border-splat-dark rounded-[20px] shadow-splat-solid-sm overflow-hidden flex"
+              className="snap-center shrink-0 w-44 bg-white border-[3px] border-splat-dark rounded-[20px] shadow-splat-solid-sm overflow-hidden flex cursor-pointer"
             >
               <div className={`w-1.5 ${catStyle.bg} h-full border-r-2 border-splat-dark`} />
               <div className="flex-1 p-2.5 flex flex-col justify-between overflow-hidden">
@@ -883,7 +961,13 @@ export const Schedule: React.FC<{ externalDateIdx?: number }> = ({ externalDateI
           </div>
         ) : (
           <div className="relative h-[65vh] mt-4 flex flex-col gap-4">
-            <ScheduleMapView items={dayItems} trip={trip!} setDetailItem={setDetailItem} />
+            <ScheduleMapView
+              items={dayItems}
+              trip={trip!}
+              setDetailItem={setDetailItem}
+              addScheduleItem={addScheduleItem}
+              selectedDateStr={selectedDateStr}
+            />
           </div>
         )}
       </div>

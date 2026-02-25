@@ -54,6 +54,27 @@ export default async function handler(req, res) {
     let finalObject = {};
 
     switch (action) {
+      // 📍 新增：魔法雷達地圖探索
+      case 'explore-nearby':
+        const exploreResult = await generateObject({
+          model, // 確保使用的是 gemini-3-flash-preview
+          schema: z.object({
+            places: z.array(z.object({
+              name: z.string(),
+              category: z.enum(['sightseeing', 'food', 'shopping']).describe('分類'),
+              lat: z.number().describe('精確緯度'),
+              lng: z.number().describe('精確經度'),
+              reason: z.string().describe('幽默活潑的推薦理由，包含一個Emoji，30字內'),
+              estimatedTime: z.string().describe('建議停留時間，如：1小時')
+            }))
+          }),
+          prompt: `使用者目前在地圖上的座標為 緯度 ${payload.lat}, 經度 ${payload.lng} (位於 ${payload.city || '日本'})。
+            請推薦 4 個距離此座標步行 15 分鐘以內的優質景點、隱藏版美食或特色小店。
+            請務必提供真實且準確的經緯度 (lat, lng)。理由請用斯普拉遁的活潑風格，並使用繁體中文。`
+        });
+        finalObject = exploreResult.object;
+        break;
+
       case 'analyze-receipt':
         const receiptResult = await generateObject({
           model,
