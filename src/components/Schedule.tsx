@@ -522,6 +522,7 @@ export const Schedule: React.FC<{ externalDateIdx?: number }> = ({ externalDateI
     }
   };
 
+  // 💡 修復 3：AI 交通建議 (修正 Schema 提取對應錯誤)
   const handleTransportAiSuggest = async (currentItem: ScheduleItem) => {
     if (!isOnline) return alert("請檢查網路連線才能使用魔法唷！✨");
     setTransportAiLoading(currentItem.id);
@@ -546,18 +547,24 @@ export const Schedule: React.FC<{ externalDateIdx?: number }> = ({ externalDateI
           }
         })
       });
+
       const data = await res.json();
 
-      if (!data || !data.steps) throw new Error("AI 未能產出有效建議");
+      // 🛑 修正點：原本查的是 data.text，但 api/ai.js 裡定義的是 summary 和 steps
+      if (!data || !data.steps || !data.summary) {
+        throw new Error("AI 未能產出有效建議格式");
+      }
 
       // 儲存至目前的行程項目中，並開啟彈窗
       const updatedItem = { ...currentItem, transportSuggestion: JSON.stringify(data) };
       updateScheduleItem(trip!.id, currentItem.id, updatedItem);
+
       setSelectedTransportSuggestion(data);
       setShowTransportModal(true);
 
       triggerHaptic('success');
     } catch (e) {
+      console.error(e);
       alert("AI 目前想不出好點子，請稍後再試！🤔");
     } finally {
       setTransportAiLoading(null);
@@ -698,6 +705,7 @@ export const Schedule: React.FC<{ externalDateIdx?: number }> = ({ externalDateI
   const activeSpotIdRef = React.useRef<string | null>(null);
   const [completion, setCompletion] = useState<string>("");
 
+  // 💡 修復 2：AI 景點建議 (極簡化純文字串流接收)
   const handleFetchSpotGuide = async (item: ScheduleItem) => {
     if (!isOnline) return alert("請檢查網路連線");
     activeSpotIdRef.current = item.id;
@@ -714,83 +722,32 @@ export const Schedule: React.FC<{ externalDateIdx?: number }> = ({ externalDateI
         })
       });
 
-      if (!res.ok) throw new Error("串流請求失敗");
-      if (!res.body) throw new Error("回應內容為空");
+      if (!res.ok) throw new Error("請求失敗");
+      if (!res.body) throw new Error("回應為空");
 
       const reader = res.body.getReader();
       const decoder = new TextDecoder();
       let fullText = "";
-      let buffer = "";
 
-      // 🔄 具備 Buffer 的強健行解析器
+      // 移除了所有容易崩潰的 JSON.parse 與 Buffer 邏輯
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
 
-        buffer += decoder.decode(value, { stream: true });
-
-        // 🔄 具備 Buffer 的強健行解析器
-        let boundary = buffer.lastIndexOf('\n');
-        if (boundary === -1) continue;
-
-        const completeData = buffer.substring(0, boundary);
-        buffer = buffer.substring(boundary + 1);
-
-        const lines = completeData.split('\n');
-        for (const line of lines) {
-          const trimmedLine = line.trim();
-          if (!trimmedLine) continue;
-
-          let content = "";
-          // 支援 0:"text" 格式或單純 JSON 格式
-          if (trimmedLine.startsWith('0:')) {
-            const raw = trimmedLine.substring(2).trim();
-            try {
-              content = JSON.parse(raw);
-            } catch (e) {
-              // 如果 JSON.parse 失敗，嘗試手動提取引號內的內容
-              const match = raw.match(/^"(.*)"$/);
-              if (match) {
-                content = match[1].replace(/\\n/g, '\n').replace(/\\"/g, '"').replace(/\\\\/g, '\\');
-              } else {
-                content = raw;
-              }
-            }
-          } else {
-            try { content = JSON.parse(trimmedLine); } catch (e) { }
-          }
-
-          if (typeof content === 'string' && content) {
-            fullText += content;
-            setCompletion(fullText);
-          }
-        }
-      }
-
-      // 處理最後殘留且可能完整的最後一行
-      if (buffer.trim().startsWith('0:')) {
-        try {
-          const content = JSON.parse(buffer.trim().substring(2));
-          if (typeof content === 'string') {
-            fullText += content;
-          }
-        } catch (e) {
-          const match = buffer.trim().match(/^0:"(.*)"$/);
-          if (match) {
-            fullText += match[1].replace(/\\n/g, '\n').replace(/\\"/g, '"').replace(/\\\\/g, '\\');
-          }
-        }
+        // 直接將收到的 chunk 解碼並加上去
+        const chunkText = decoder.decode(value, { stream: true });
+        fullText += chunkText;
+        setCompletion(fullText); // 即時更新打字機畫面
       }
 
       const guide = { background: fullText, highlights: [], suggestedDuration: "" };
       const updatedItem = { ...item, spotGuide: guide };
-      if (trip) {
-        updateScheduleItem(trip.id, item.id, updatedItem);
-      }
+      if (trip) updateScheduleItem(trip.id, item.id, updatedItem);
       setDetailItem(prev => prev?.id === item.id ? updatedItem : prev);
+
       triggerHaptic('success');
     } catch (err) {
-      console.error("Spot Guide Stream Error:", err);
+      console.error("Spot Guide Error:", err);
       alert("取得景點導覽失敗，請稍後再試。");
     } finally {
       activeSpotIdRef.current = null;
