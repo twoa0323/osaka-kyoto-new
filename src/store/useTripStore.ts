@@ -92,7 +92,8 @@ interface TripState {
   exchangeRate: number;
   isAiModalOpen: boolean;
   aiContext: string;
-  toast: { message: string, type: 'success' | 'error' | 'info' } | null;
+  toast: { message: string, type: 'success' | 'error' | 'info', action?: { label: string, onClick: () => void } } | null;
+  lastDeletedItem: { type: 'schedule' | 'shopping' | 'booking' | 'expense' | 'journal' | 'info' | 'packing', tripId: string, item: any } | null;
 
   // 全域狀態設定
   setTrips: (trips: Trip[]) => void;
@@ -100,7 +101,8 @@ interface TripState {
   setExchangeRate: (rate: number) => void;
   setAiModalOpen: (open: boolean) => void;
   openAiAssistant: (context?: string) => void;
-  showToast: (message: string, type?: 'success' | 'error' | 'info') => void;
+  showToast: (message: string, type?: 'success' | 'error' | 'info', action?: { label: string, onClick: () => void }) => void;
+  undoDelete: () => void;
 
   // 行程 (Trip) 操作
   addTrip: (trip: Trip) => void;
@@ -167,6 +169,7 @@ export const useTripStore = create<TripState>()(
       isAiModalOpen: false,
       aiContext: 'schedule',
       toast: null,
+      lastDeletedItem: null,
       uiSettings: {
         showSplash: true,
         enableHaptics: true,
@@ -181,13 +184,32 @@ export const useTripStore = create<TripState>()(
       setExchangeRate: (rate) => set({ exchangeRate: rate }),
       setAiModalOpen: (open) => set({ isAiModalOpen: open }),
       openAiAssistant: (context) => set({ isAiModalOpen: true, aiContext: context || get().activeTab }),
-      showToast: (message, type = 'info') => {
-        set({ toast: { message, type } });
-        setTimeout(() => {
-          if (get().toast?.message === message) {
-            set({ toast: null });
-          }
-        }, 3000);
+      showToast: (message, type = 'info', action) => {
+        set({ toast: { message, type, action } });
+        if (!action) {
+          setTimeout(() => {
+            if (get().toast?.message === message) {
+              set({ toast: null });
+            }
+          }, 3000);
+        }
+      },
+
+      undoDelete: () => {
+        const last = get().lastDeletedItem;
+        if (!last) return;
+
+        const { type, tripId, item } = last;
+        if (type === 'schedule') get().addScheduleItem(tripId, item);
+        else if (type === 'shopping') get().addShoppingItem(tripId, item);
+        else if (type === 'booking') get().addBookingItem(tripId, item);
+        else if (type === 'expense') get().addExpenseItem(tripId, item);
+        else if (type === 'journal') get().addJournalItem(tripId, item);
+        else if (type === 'info') get().addInfoItem(tripId, item);
+        else if (type === 'packing') get().addPackingItem(tripId, item);
+
+        set({ lastDeletedItem: null, toast: null });
+        get().showToast("已復原項目 ✨", "success");
       },
 
       addTrip: (trip) => {
@@ -281,10 +303,15 @@ export const useTripStore = create<TripState>()(
         syncItemToCloud(tid, "items", ni);
       },
       deleteScheduleItem: (tid, iid) => {
+        const item = (get().trips.find(t => t.id === tid)?.items || []).find(it => it.id === iid);
+        if (item) set({ lastDeletedItem: { type: 'schedule', tripId: tid, item } });
+
         set(s => ({
           trips: s.trips.map(t => t.id === tid ? { ...t, items: (t.items || []).filter(x => x.id !== iid) } : t)
         }));
         deleteItemFromCloud(tid, "items", iid);
+
+        get().showToast("已刪除行程項目", "info", { label: "復原", onClick: () => get().undoDelete() });
       },
       reorderScheduleItems: (tid, ni) => {
         set(s => ({
@@ -387,10 +414,15 @@ export const useTripStore = create<TripState>()(
         if (item) syncItemToCloud(tid, "shopping", item);
       },
       deleteShoppingItem: (tid, iid) => {
+        const item = (get().trips.find(t => t.id === tid)?.shoppingList || []).find(it => it.id === iid);
+        if (item) set({ lastDeletedItem: { type: 'shopping', tripId: tid, item } });
+
         set(s => ({
           trips: s.trips.map(t => t.id === tid ? { ...t, shoppingList: (t.shoppingList || []).filter(x => x.id !== iid) } : t)
         }));
         deleteItemFromCloud(tid, "shopping", iid);
+
+        get().showToast("已刪除購物項目", "info", { label: "復原", onClick: () => get().undoDelete() });
       },
 
       // --- 6. Info ---

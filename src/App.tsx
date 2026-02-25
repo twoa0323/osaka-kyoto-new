@@ -65,7 +65,7 @@ const NavIcon = ({ icon, label, id, active, onClick, color }: any) => {
 // 🚀 唯一的主要 App 元件 (完美合併版)
 // ==========================================
 const App: React.FC = () => {
-  const { trips, currentTripId, switchTrip, activeTab, setActiveTab, updateTripData, isAiModalOpen, openAiAssistant, uiSettings, setUISettings, showToast } = useTripStore();
+  const { trips, currentTripId, switchTrip, deleteTrip, removeTripLocal, activeTab, setActiveTab, updateTripData, isAiModalOpen, openAiAssistant, uiSettings, setUISettings, showToast } = useTripStore();
 
   // 狀態管理
   const [menuOpen, setMenuOpen] = useState(false);
@@ -99,6 +99,8 @@ const App: React.FC = () => {
 
   // 📍 Phase 3: Vercel 冷啟動優化
   useEffect(() => {
+    fetch('/api/ai', { method: 'POST', body: JSON.stringify({ action: 'ping' }) }).catch(() => { });
+    // Also ping a dedicated ping endpoint if it exists
     fetch('/api/ping').catch(() => { });
   }, []);
 

@@ -119,30 +119,46 @@ const ScheduleItemRow: React.FC<{
     return () => clearTimeout(timeoutId);
   }, [item.id, item.images?.length, item.title, item.location, item.category, tripId, updateScheduleItem]);
 
-  const swipeThreshold = -80;
+  const [hasTriggeredHaptic, setHasTriggeredHaptic] = useState(false);
 
   return (
-    <Reorder.Item key={item.id} value={item} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, scale: 0.9 }} dragListener={isEditMode} className="relative pl-6 group">
+    <Reorder.Item key={item.id} value={item} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, scale: 0.9 }} dragListener={isEditMode} className="relative pl-6 group select-none touch-pan-y">
       <div className={`absolute left-[7px] top-6 bottom-[-24px] w-1 border-r-[3px] border-dashed border-splat-dark opacity-20 ${idx === dayItems.length - 1 ? 'hidden' : ''}`} />
       <div className={`absolute left-0 top-[18px] w-4 h-4 rounded-full border-[3px] border-splat-dark z-10 ${catStyle.bg}`} />
 
       <div className="flex gap-3 mb-6 relative overflow-hidden rounded-[24px]">
-        {/* Swipe Delete Background */}
-        <div className="absolute inset-0 bg-red-500 flex justify-end items-center pr-6 rounded-[24px]">
-          <Trash2 size={24} className="text-white animate-pulse" strokeWidth={3} />
+        {/* Swipe Delete Background (Reveal) */}
+        <div className="absolute inset-y-0 right-0 w-[100px] bg-red-500 flex justify-end items-center pr-8 rounded-[24px]">
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              triggerHaptic('medium');
+              deleteScheduleItem(tripId, item.id);
+            }}
+            className="p-3 text-white active:scale-90 transition-transform"
+          >
+            <Trash2 size={24} strokeWidth={3} />
+          </button>
         </div>
 
         <motion.div
           drag={isEditMode ? false : "x"}
-          dragConstraints={{ right: 0, left: swipeThreshold }}
-          onDragEnd={(_, info) => {
-            if (info.offset.x < -50) {
-              triggerHaptic('medium');
-              deleteScheduleItem(tripId, item.id);
-              showToast("已移除行程 🗑️", "success");
+          dragConstraints={{ right: 0, left: -100 }}
+          dragElastic={0.1}
+          onDrag={(e, info) => {
+            if (info.offset.x <= -80 && !hasTriggeredHaptic) {
+              triggerHaptic('light');
+              setHasTriggeredHaptic(true);
+            } else if (info.offset.x > -80 && hasTriggeredHaptic) {
+              setHasTriggeredHaptic(false);
             }
           }}
-          className="flex-1 flex gap-3 relative z-10 bg-transparent active:cursor-grabbing cursor-grab"
+          onDragEnd={(_, info) => {
+            if (info.offset.x > -40) {
+              setHasTriggeredHaptic(false);
+            }
+          }}
+          className="flex-1 flex gap-3 relative z-10 bg-[#F4F5F7] active:cursor-grabbing cursor-grab"
         >
           <div className="w-16 shrink-0 flex flex-col items-center mt-3 z-10">
             <motion.button onClick={() => updateScheduleItem(tripId, item.id, { ...item, isCompleted: !item.isCompleted })} className={`rounded-xl py-2 w-full text-center border-[3px] border-splat-dark -rotate-3 transition-colors ${item.isCompleted ? 'bg-gray-300 text-gray-500' : 'bg-white shadow-splat-solid-sm'}`}>
@@ -174,7 +190,7 @@ const ScheduleItemRow: React.FC<{
                 {isEditMode && (
                   <div className="absolute right-0 top-0 bottom-0 w-12 bg-gray-50 border-l-[3px] border-splat-dark flex flex-col z-30">
                     <button onClick={(e) => { e.stopPropagation(); setEditingItem(item); setIsEditorOpen(true); }} className="flex-1 flex items-center justify-center border-b-[3px] border-splat-dark"><Edit3 size={16} /></button>
-                    <button onClick={(e) => { e.stopPropagation(); deleteScheduleItem(tripId, item.id); showToast("已刪除", "success"); }} className="flex-1 flex items-center justify-center text-red-500"><Trash2 size={16} /></button>
+                    <button onClick={(e) => { e.stopPropagation(); deleteScheduleItem(tripId, item.id); }} className="flex-1 flex items-center justify-center text-red-500"><Trash2 size={16} /></button>
                   </div>
                 )}
               </div>

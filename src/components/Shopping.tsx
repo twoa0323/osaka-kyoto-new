@@ -155,7 +155,6 @@ export const Shopping = () => {
                 onPriceCheck={() => handleAiPriceCheck(item)}
                 onDelete={() => {
                   deleteShoppingItem(trip.id, item.id);
-                  showToast("已從清單中移除 🗑️", "success");
                 }}
               />
             ))
@@ -181,7 +180,7 @@ export const Shopping = () => {
                 <h2 className="text-2xl font-black italic uppercase tracking-tighter">{editingItemId ? 'Edit Item' : 'Add to list'}</h2>
                 <div className="flex items-center gap-2">
                   {editingItemId && (
-                    <button onClick={() => { deleteShoppingItem(trip.id, editingItemId); setIsAdding(false); setEditingItemId(null); showToast("已刪除項目 🗑️", "success"); }} className="p-2 text-red-500 bg-red-50 rounded-full border-2 border-red-200"><Trash2 size={20} strokeWidth={3} /></button>
+                    <button onClick={() => { deleteShoppingItem(trip.id, editingItemId); setIsAdding(false); setEditingItemId(null); }} className="p-2 text-red-500 bg-red-50 rounded-full border-2 border-red-200"><Trash2 size={20} strokeWidth={3} /></button>
                   )}
                   <button onClick={() => setIsAdding(false)} className="p-2 bg-gray-100 rounded-full border-2 border-splat-dark"><X size={20} strokeWidth={3} /></button>
                 </div>
@@ -256,30 +255,46 @@ const ShoppingRow = ({ item, onToggle, onClick, onPriceCheck, onDelete }: { item
   const cat = CATEGORIES[item.category as keyof typeof CATEGORIES] || CATEGORIES.general;
   const isGoodDeal = item.aiPriceInfo?.dealRating === 'good' || item.aiPriceInfo?.lowPriceAlert;
 
-  const swipeThreshold = -80;
+  const [hasTriggeredHaptic, setHasTriggeredHaptic] = useState(false);
 
   return (
-    <div className="relative overflow-hidden rounded-3xl group">
-      {/* 底部 刪除按鈕層 */}
-      <div className="absolute inset-0 bg-red-500 flex justify-end items-center pr-6 rounded-3xl">
-        <Trash2 size={24} className="text-white animate-pulse" strokeWidth={3} />
+    <div className="relative overflow-hidden rounded-3xl group select-none touch-pan-y">
+      {/* 底部 刪除按鈕層 (Swipe-to-Reveal) */}
+      <div className="absolute inset-y-0 right-0 w-[100px] bg-red-500 flex justify-end items-center pr-8 rounded-3xl">
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            triggerHaptic('medium');
+            onDelete();
+          }}
+          className="p-3 text-white active:scale-90 transition-transform"
+        >
+          <Trash2 size={24} strokeWidth={3} />
+        </button>
       </div>
 
       <motion.div
-        layout
         drag="x"
-        dragConstraints={{ right: 0, left: swipeThreshold }}
+        dragConstraints={{ right: 0, left: -100 }}
+        dragElastic={0.1}
+        onDrag={(e, info) => {
+          if (info.offset.x <= -80 && !hasTriggeredHaptic) {
+            triggerHaptic('light');
+            setHasTriggeredHaptic(true);
+          } else if (info.offset.x > -80 && hasTriggeredHaptic) {
+            setHasTriggeredHaptic(false);
+          }
+        }}
         onDragEnd={(_, info) => {
-          if (info.offset.x < -50) {
-            triggerHaptic('medium');
-            onDelete();
+          if (info.offset.x > -40) {
+            setHasTriggeredHaptic(false);
           }
         }}
         initial={{ opacity: 0, x: -10 }}
         animate={{ opacity: 1, x: 0 }}
         exit={{ opacity: 0, scale: 0.95 }}
         transition={{ type: "spring", bounce: 0.2, duration: 0.4 }}
-        className={`relative bg-white border-[3px] border-splat-dark rounded-3xl p-4 flex items-center gap-4 transition-all cursor-grab active:cursor-grabbing ${item.isBought ? 'bg-gray-100' : 'shadow-splat-solid-sm'
+        className={`relative z-10 bg-white border-[3px] border-splat-dark rounded-3xl p-4 flex items-center gap-4 transition-all cursor-grab active:cursor-grabbing ${item.isBought ? 'bg-gray-100' : 'shadow-splat-solid-sm'
           } ${isGoodDeal ? 'bg-splat-pink/5 border-splat-pink ring-4 ring-splat-pink/30 animate-pulse-subtle' : ''
           }`}
       >

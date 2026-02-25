@@ -6,6 +6,13 @@
 @tailwind utilities;
 
 @layer base {
+  :root {
+    --sat: env(safe-area-inset-top);
+    --sab: env(safe-area-inset-bottom);
+    --sar: env(safe-area-inset-right);
+    --sal: env(safe-area-inset-left);
+  }
+
   body {
     background-color: #F4F5F7;
     color: #1A1A1A;
@@ -13,10 +20,19 @@
     /* 遊戲感波點背景 */
     background-image: radial-gradient(#D1D5DB 2px, transparent 2px);
     background-size: 24px 24px;
-    padding-top: env(safe-area-inset-top);
-    padding-bottom: env(safe-area-inset-bottom);
+
+    /* 確保在 PWA 模式下填滿整個螢幕且不滾動 */
     min-height: 100vh;
     min-height: 100dvh;
+    margin: 0;
+    overflow-x: hidden;
+    position: relative;
+
+    /* 運用安全區域變量 */
+    padding-top: var(--sat, 0px);
+    padding-bottom: var(--sab, 0px);
+    padding-left: var(--sal, 0px);
+    padding-right: var(--sar, 0px);
   }
 }
 
