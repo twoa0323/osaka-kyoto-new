@@ -19,6 +19,20 @@ export const AiAssistant: React.FC = () => {
     const [isUploadingImage, setIsUploadingImage] = useState(false);
     const aiInputRef = useRef<HTMLInputElement>(null);
 
+    const [loadingStage, setLoadingStage] = useState(0);
+    const LOADING_TEXTS = ["正在噴灑墨水...", "正在詢問當地大師...", "規劃最佳塗地路徑..."];
+
+    React.useEffect(() => {
+        if (!loadingAction) {
+            setLoadingStage(0);
+            return;
+        }
+        const interval = setInterval(() => {
+            setLoadingStage(prev => (prev + 1) % LOADING_TEXTS.length);
+        }, 1500);
+        return () => clearInterval(interval);
+    }, [loadingAction]);
+
     // --- 預覽狀態 ---
     const [receiptPreview, setReceiptPreview] = useState<{
         data: any;
@@ -350,7 +364,7 @@ export const AiAssistant: React.FC = () => {
                                         disabled={loadingAction === 'analyze' || (!aiText.trim() && aiImages.length === 0)}
                                         className="btn-splat w-full py-3 mt-3 bg-splat-yellow text-splat-dark text-sm flex items-center justify-center gap-2 disabled:opacity-50 disabled:active:translate-y-0"
                                     >
-                                        {loadingAction === 'analyze' ? <Loader2 className="animate-spin" size={18} /> : "開始魔法解析 ➔"}
+                                        {loadingAction === 'analyze' ? <><Loader2 className="animate-spin" size={18} /> {LOADING_TEXTS[loadingStage]}</> : "開始魔法解析 ➔"}
                                     </button>
                                 </div>
 
@@ -385,7 +399,7 @@ export const AiAssistant: React.FC = () => {
                                         disabled={loadingAction === 'receipt'}
                                         className="btn-splat w-full py-4 bg-splat-pink text-white text-sm flex items-center justify-center gap-2"
                                     >
-                                        {loadingAction === 'receipt' ? <Loader2 className="animate-spin" size={18} /> : <><Camera size={18} /> 選擇收據照片</>}
+                                        {loadingAction === 'receipt' ? <><Loader2 className="animate-spin" size={18} /> {LOADING_TEXTS[loadingStage]}</> : <><Camera size={18} /> 選擇收據照片</>}
                                     </button>
                                     <input ref={aiInputRef} type="file" accept="image/*" className="hidden" onChange={handleReceiptScan} />
                                 </div>
@@ -401,7 +415,7 @@ export const AiAssistant: React.FC = () => {
                                         </div>
                                         <div className="text-left">
                                             <p className="font-black text-xs text-splat-dark uppercase">Financial Insights</p>
-                                            <p className="text-[9px] font-bold text-gray-400 uppercase">分析旅遊支出並提供省錢建議</p>
+                                            <p className="text-[9px] font-bold text-gray-400 uppercase">{loadingAction === 'finance' ? LOADING_TEXTS[loadingStage] : '分析旅遊支出並提供省錢建議'}</p>
                                         </div>
                                     </div>
                                     <Sparkles size={18} className="text-splat-yellow" />
@@ -423,7 +437,7 @@ export const AiAssistant: React.FC = () => {
                                         disabled={loadingAction === 'packing'}
                                         className="btn-splat w-full py-4 bg-splat-pink text-white text-sm flex items-center justify-center gap-2"
                                     >
-                                        {loadingAction === 'packing' ? <Loader2 className="animate-spin" size={18} /> : <><Sparkles size={18} /> 生成打包清單 ➔</>}
+                                        {loadingAction === 'packing' ? <><Loader2 className="animate-spin" size={18} /> {LOADING_TEXTS[loadingStage]}</> : <><Sparkles size={18} /> 生成打包清單 ➔</>}
                                     </button>
                                 </div>
                             </motion.div>

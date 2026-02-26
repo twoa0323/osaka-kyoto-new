@@ -283,9 +283,10 @@ const ScheduleMapView: React.FC<{
 
           {/* 2. 渲染 AI 推薦的發光標記 */}
           {aiPlaces.map((place, idx) => (
-            <MapMarker key={`ai-${idx}`} longitude={place.lng} latitude={place.lat} onClick={() => setSelectedAiPlace(place)}>
+            <MapMarker key={`ai-${idx}`} longitude={place.lng} latitude={place.lat} onClick={(e: any) => { e.originalEvent?.stopPropagation(); setSelectedAiPlace(place); }}>
               <MarkerContent>
                 <motion.div
+                  onClick={(e) => { e.stopPropagation(); setSelectedAiPlace(place); }}
                   animate={{ y: [0, -10, 0] }}
                   transition={{ repeat: Infinity, duration: 1.5, delay: idx * 0.2 }}
                   className="w-10 h-10 bg-splat-yellow rounded-full border-[3px] border-splat-dark flex items-center justify-center shadow-[0_0_15px_#FFC000]"
@@ -303,7 +304,8 @@ const ScheduleMapView: React.FC<{
               latitude={selectedAiPlace.lat}
               onClose={() => setSelectedAiPlace(null)}
               closeButton={true}
-              className="border-[3px] border-splat-dark rounded-2xl shadow-splat-solid-sm p-4 w-56 bg-white z-[100]"
+              style={{ zIndex: 9999 }}
+              className="border-[3px] border-splat-dark rounded-2xl shadow-splat-solid-sm p-4 w-56 bg-white relative"
             >
               <div className="pt-2">
                 <div className="text-[9px] font-black bg-splat-pink text-white px-2 py-0.5 rounded-full inline-block mb-1 tracking-widest">

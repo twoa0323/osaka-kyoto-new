@@ -53,9 +53,23 @@ export const useFirebaseSync = () => {
           const items: any[] = [];
           snapshot.docs.forEach(doc => items.push(doc.data()));
 
-          useTripStore.setState(state => ({
-            trips: state.trips.map(t => t.id === tripId ? { ...t, [sub.field]: items } : t)
-          }));
+          useTripStore.setState(state => {
+            const trip = state.trips.find(t => t.id === tripId);
+            if (!trip) return state;
+
+            const currentItems = trip[sub.field as keyof Trip] || [];
+            if (JSON.stringify(currentItems) === JSON.stringify(items)) {
+              return state;
+            }
+
+            // Reveal syncing indicator smoothly, auto hide after 1.5s
+            state.setIsSyncing(true);
+            setTimeout(() => useTripStore.getState().setIsSyncing(false), 1500);
+
+            return {
+              trips: state.trips.map(t => t.id === tripId ? { ...t, [sub.field]: items } : t)
+            };
+          });
         });
         unsubscribes.push(unsubSub);
       });

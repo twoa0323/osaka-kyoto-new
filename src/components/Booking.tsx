@@ -542,8 +542,8 @@ const HotelCard = ({ item, onEdit, onViewDetails, onQrClick, onCopy }: any) => {
         <button onClick={onEdit} className="p-2.5 bg-splat-yellow border-[3px] border-splat-dark rounded-full text-splat-dark shadow-splat-solid-sm"><Edit3 size={18} strokeWidth={3} /></button>
       </div>
 
-      <div className="h-40 bg-gray-200 relative border-b-[3px] border-splat-dark">
-        {item.images?.[0] ? (<LazyImage src={item.images[0]} containerClassName="w-full h-full" />) : (<div className="w-full h-full flex items-center justify-center bg-splat-pink/10"><Home size={40} className="text-splat-pink/40" /></div>)}
+      <div className="aspect-video bg-gray-200 relative border-b-[3px] border-splat-dark overflow-hidden">
+        {item.images?.[0] ? (<LazyImage src={item.images[0]} containerClassName="absolute inset-0 w-full h-full object-cover" />) : (<div className="absolute inset-0 w-full h-full flex items-center justify-center bg-splat-pink/10"><Home size={40} className="text-splat-pink/40" /></div>)}
 
         {/* 倒數計時標籤改放在圖片左上角，並加上陰影分離 */}
         {(() => {

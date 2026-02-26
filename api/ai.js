@@ -44,7 +44,7 @@ export default async function handler(req, res) {
 
     // 1. 串流功能：景點導覽 (改為純文本串流輸出，簡化前端解析)
     if (action === 'get-spot-guide') {
-      const prompt = `你是一個專業的日本旅遊導覽人員。請針對景點「${payload.location} ${payload.title}」提供專業的背景介紹與必看亮點。請直接回傳排版精美的 Markdown 文字，建議包含：1. 歷史背景介紹 2. 必看亮點 (條列式) 3. 建議停留時間。語氣專業活潑，使用繁體中文。`;
+      const prompt = `介紹「${payload.location} ${payload.title}」，回傳包含歷史、亮點、停留時間的簡短 Markdown，繁體中文。`;
       console.log("[AI Text Stream Prompt]:", prompt);
       const result = streamText({ model, prompt });
       return result.toTextStreamResponse();
@@ -68,9 +68,7 @@ export default async function handler(req, res) {
               estimatedTime: z.string().describe('建議停留時間，如：1小時')
             }))
           }),
-          prompt: `使用者目前在地圖上的座標為 緯度 ${payload.lat}, 經度 ${payload.lng} (位於 ${payload.city || '日本'})。
-            請推薦 4 個距離此座標步行 15 分鐘以內的優質景點、隱藏版美食或特色小店。
-            請務必提供真實且準確的經緯度 (lat, lng)。理由請用斯普拉遁的活潑風格，並使用繁體中文。`
+          prompt: `推薦座標(${payload.lat},${payload.lng})附近4個景點/美食，附帶精準經緯度和簡短活潑原因，繁體中文。`
         });
         finalObject = exploreResult.object;
         break;
@@ -94,20 +92,7 @@ export default async function handler(req, res) {
           messages: [
             {
               role: 'system',
-              content: `你是一個世界級的日本旅遊收據分析助手。請精準提取以下資訊：
-              1. storeName: 商店名稱。
-              2. shopType: 根據店家特徵判斷類型。
-              3. title: 簡短消費主題。
-              4. date: 消費日期 (YYYY-MM-DD)。
-              5. amount: 總金額 (Total)。
-              6. currency: 幣別（預設 JPY）。
-              7. category: 分類（飲食, 交通, 購物, 娛樂, 住宿, 其他）。請根據 shopType 進行精準分類。
-              8. isTaxFree: 偵測是否有 "Tax-Free"、"免稅" 標記或 0% 稅率。
-              9. confidence: 評估你對此張收據辨識結果的整體信心。
-              
-              - 特別注意：日本旅遊場景中，藥妝店與百貨常有免稅與含稅兩種價格，請以「最終實付處 (Total)」為準。
-              - 品項識別：請盡可能列出收據上的單一品項名稱與單價，這將用於後續的精確分帳。
-              - 確保金額不包含千分位逗號。`
+              content: `分析此日文收據提取：商店名稱、類型、消費主題、日期(YYYY-MM-DD)、單純總金額、幣別、分類判斷、免稅狀態與信心值。列出各細項名稱及單價。最終實付金額為準。`
             },
             { role: 'user', content: [{ type: 'image', image: payload.imageBase64, mimeType: 'image/jpeg' }] }
           ]
@@ -137,12 +122,7 @@ export default async function handler(req, res) {
           }),
           messages: [
             {
-              role: 'system', content: `你是一個頂尖的旅遊數據分析師，具備 OCR 與圖像理解能力。請分析提供的圖片或文字，並將其智能歸類。
-              - 費用提取：務必精確識別總金額 (Amount) 與幣別 (Currency)，優先從收據底部找 Total。
-              - 日期合併：如果日期模糊，請結合旅程範圍：${payload.startDate || '未提供'} 至 ${payload.endDate || '未提供'}。
-              - 智能補完：如果缺乏類別，請根據店家名稱推斷最合適的分類。
-              - 目前參考日期為：${payload.date || '今日'}。
-              - 輸出格式必須完全符合 Schema。`
+              role: 'system', content: `分析圖片/文字並歸類為行程/花費等。旅程區間：${payload.startDate}至${payload.endDate}。參考日：${payload.date}。精確識別總金額不含逗號。嚴格遵守Schema。`
             },
             { role: 'user', content: magicContent }
           ]
@@ -156,7 +136,7 @@ export default async function handler(req, res) {
           schema: z.object({
             packingList: z.array(z.object({ title: z.string(), category: z.string(), quantity: z.number(), note: z.string() }))
           }),
-          prompt: `我即將前往 ${payload.destination}，旅行日期從 ${payload.startDate} 開始。請推薦適合的行李清單，包含衣物、電子產品、必備證件、藥品等，並考慮季節特性。`
+          prompt: `前往 ${payload.destination} (${payload.startDate}) 的精簡行李清單推薦。`
         });
         finalObject = packingResult.object;
         break;

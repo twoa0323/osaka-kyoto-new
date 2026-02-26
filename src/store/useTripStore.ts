@@ -157,6 +157,8 @@ interface TripState {
     showBudgetAlert: boolean; // 預算警報開關
   };
   setUISettings: (settings: Partial<TripState['uiSettings']>) => void;
+  isSyncing: boolean;
+  setIsSyncing: (s: boolean) => void;
 }
 
 export const useTripStore = create<TripState>()(
@@ -170,6 +172,7 @@ export const useTripStore = create<TripState>()(
       aiContext: 'schedule',
       toast: null,
       lastDeletedItem: null,
+      isSyncing: false,
       uiSettings: {
         showSplash: true,
         enableHaptics: true,
@@ -178,6 +181,7 @@ export const useTripStore = create<TripState>()(
       setUISettings: (newSettings) => set((s) => ({
         uiSettings: { ...s.uiSettings, ...newSettings }
       })),
+      setIsSyncing: (isSyncing) => set({ isSyncing }),
 
       setTrips: (trips) => set({ trips }),
       setActiveTab: (tab) => set({ activeTab: tab }),
@@ -186,13 +190,11 @@ export const useTripStore = create<TripState>()(
       openAiAssistant: (context) => set({ isAiModalOpen: true, aiContext: context || get().activeTab }),
       showToast: (message, type = 'info', action) => {
         set({ toast: { message, type, action } });
-        if (!action) {
-          setTimeout(() => {
-            if (get().toast?.message === message) {
-              set({ toast: null });
-            }
-          }, 3000);
-        }
+        setTimeout(() => {
+          if (get().toast?.message === message) {
+            set({ toast: null });
+          }
+        }, action ? 5000 : 3000);
       },
 
       undoDelete: () => {
@@ -516,7 +518,10 @@ export const useTripStore = create<TripState>()(
     }),
     {
       name: 'trip-storage',
-      storage: createJSONStorage(() => idbStorage)
+      storage: createJSONStorage(() => idbStorage),
+      partialize: (state) => Object.fromEntries(
+        Object.entries(state).filter(([key]) => !['toast', 'lastDeletedItem', 'isAiModalOpen', 'aiContext', 'isSyncing'].includes(key) && !key.toLowerCase().includes('loading'))
+      ) as any
     }
   )
 );

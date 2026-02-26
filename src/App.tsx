@@ -65,7 +65,7 @@ const NavIcon = ({ icon, label, id, active, onClick, color }: any) => {
 // 🚀 唯一的主要 App 元件 (完美合併版)
 // ==========================================
 const App: React.FC = () => {
-  const { trips, currentTripId, switchTrip, deleteTrip, removeTripLocal, activeTab, setActiveTab, updateTripData, isAiModalOpen, openAiAssistant, uiSettings, setUISettings, showToast } = useTripStore();
+  const { trips, currentTripId, switchTrip, deleteTrip, removeTripLocal, activeTab, setActiveTab, updateTripData, isAiModalOpen, openAiAssistant, uiSettings, setUISettings, showToast, isSyncing } = useTripStore();
 
   // 狀態管理
   const [menuOpen, setMenuOpen] = useState(false);
@@ -157,6 +157,16 @@ const App: React.FC = () => {
               <h2 className="text-[10px] font-black text-splat-dark uppercase tracking-widest mb-0.5 bg-white inline-block px-2 border-2 border-splat-dark rounded-full shadow-splat-solid-sm -rotate-2">
                 {currentTrip.startDate} — {currentTrip.endDate}
               </h2>
+
+              <AnimatePresence>
+                {isSyncing && (
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0 }}
+                    className="absolute -top-1 -right-4 w-2 h-2 bg-splat-pink rounded-full shadow-[0_0_8px_#F03C69] animate-pulse z-30"
+                  />
+                )}
+              </AnimatePresence>
+
               <div className="flex items-center gap-1 cursor-pointer group mt-1" onClick={() => setMenuOpen(!menuOpen)}>
                 <h1 className="text-2xl font-black tracking-tight drop-shadow-md truncate max-w-[200px]">
                   {currentTrip.tripName || currentTrip.dest}
