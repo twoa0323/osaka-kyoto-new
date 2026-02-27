@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState, FC } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     Plane, Home, MapPin, Plus, Edit3, Globe, QrCode,
@@ -16,7 +16,7 @@ interface MemberManagementProps {
     onShowSettings: () => void;
 }
 
-export const MemberManagement: React.FC<MemberManagementProps> = ({
+export const MemberManagement: FC<MemberManagementProps> = ({
     trip, myProfile, onClose, onEditProfile, onShowSettings
 }) => {
     const { showToast } = useTripStore();
@@ -91,7 +91,7 @@ interface ProfileEditorProps {
     onClose: () => void;
 }
 
-export const ProfileEditor: React.FC<ProfileEditorProps> = ({ myProfile, onSave, onClose }) => {
+export const ProfileEditor: FC<ProfileEditorProps> = ({ myProfile, onSave, onClose }) => {
     const { showToast } = useTripStore();
     const [form, setForm] = useState({ name: myProfile.name, mood: myProfile.mood || '', avatar: myProfile.avatar });
 
@@ -154,7 +154,7 @@ interface PersonalSetupProps {
     onComplete: (data: { name: string; email: string; pin: string }) => void;
 }
 
-export const PersonalSetup: React.FC<PersonalSetupProps> = ({ onComplete }) => {
+export const PersonalSetup: FC<PersonalSetupProps> = ({ onComplete }) => {
     const { showToast } = useTripStore();
     const [setupForm, setSetupForm] = useState({ name: '', email: '', pin: '' });
 

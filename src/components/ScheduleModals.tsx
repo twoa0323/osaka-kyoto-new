@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState, FC } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Clock, Sparkles, Loader2, Train, Bus, Car, Footprints, Navigation, MapPin, ArrowDown } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
@@ -9,7 +9,7 @@ interface WeatherReportModalProps {
     getWeatherDesc: (code: number) => { t: string; e: string };
 }
 
-export const WeatherReportModal: React.FC<WeatherReportModalProps> = ({
+export const WeatherReportModal: FC<WeatherReportModalProps> = ({
     onClose, todayHourly, getWeatherDesc
 }) => (
     <div className="fixed inset-0 bg-splat-dark/60 backdrop-blur-md z-[500] p-4 flex items-center justify-center" onClick={onClose}>
@@ -63,7 +63,7 @@ interface AiAssistantModalProps {
     onFillGaps: () => void;
 }
 
-export const AiAssistantModal: React.FC<AiAssistantModalProps> = ({
+export const AiAssistantModal: FC<AiAssistantModalProps> = ({
     onClose, onAnalyze, isAiLoading, onOptimize, isOptimizing, canOptimize, onWeather, isWizardLoading, onFillGaps
 }) => {
     const [aiText, setAiText] = useState('');
@@ -137,7 +137,7 @@ export const AiAssistantModal: React.FC<AiAssistantModalProps> = ({
     );
 };
 
-export const TransportAiModal: React.FC<{
+export const TransportAiModal: FC<{
     onClose: () => void;
     suggestion: {
         summary: string;

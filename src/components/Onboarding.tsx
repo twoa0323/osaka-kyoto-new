@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useTripStore } from '../store/useTripStore';
 import { getCurrencyByCountry } from '../utils/currencyMapping';
 import { fetchExchangeRate } from '../utils/exchange';

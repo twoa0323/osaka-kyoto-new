@@ -1,15 +1,15 @@
-import React from 'react';
+import { FC, ReactNode } from 'react';
 import { motion, AnimatePresence, useDragControls } from 'framer-motion';
 
 interface BottomSheetProps {
     isOpen: boolean;
     onClose: () => void;
-    children: React.ReactNode;
+    children: ReactNode;
     title?: string;
     className?: string;
 }
 
-export const BottomSheet: React.FC<BottomSheetProps> = ({ isOpen, onClose, children, title, className }) => {
+export const BottomSheet: FC<BottomSheetProps> = ({ isOpen, onClose, children, title, className }) => {
     return (
         <AnimatePresence>
             {isOpen && (

@@ -1,4 +1,3 @@
-import React from 'react';
 import { useNetworkStatus } from '../hooks/useNetworkStatus';
 import { WifiOff } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';

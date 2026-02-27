@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { useState, useEffect, useRef, useMemo, ChangeEvent } from 'react';
 import { useTripStore } from '../store/useTripStore';
 import {
   Wallet, Coins, Trash2, Camera, BarChart3, Upload, PenTool,
@@ -368,7 +368,7 @@ export const Expense = () => {
     setEditingId(null); setInputMode('manual');
   };
 
-  const handleAIAnalyze = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleAIAnalyze = async (e: ChangeEvent<HTMLInputElement>) => {
     // 這裡的功能已遷移至全域 AiAssistant.tsx
     // 保留此空函式或直接在 UI 移除調用
   };

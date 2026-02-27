@@ -1,5 +1,4 @@
-// filepath: src/components/Journal.tsx
-import React, { useState, useMemo, useRef } from 'react';
+import { useState, useMemo, useRef, useEffect, ChangeEvent } from 'react';
 import { useTripStore } from '../store/useTripStore';
 import {
   Camera, MapPin, Star, Plus, X, ListOrdered, Calendar as CalendarIcon, Sparkles,
@@ -53,7 +52,7 @@ export const Journal = () => {
 
   if (!trip) return null;
 
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
       const files = Array.from(e.target.files);
       e.target.value = '';
@@ -511,7 +510,7 @@ export const Journal = () => {
 
 // --- 拍立得卡片子組件 (Scrapbook Style) ---
 const PolaroidCard = ({ item, onClick, tripId, updateJournalItem }: { item: JournalItem, onClick: () => void, tripId: string, updateJournalItem: any }) => {
-  React.useEffect(() => {
+  useEffect(() => {
     if (!item.images || item.images.length === 0) {
       const fetchImage = async () => {
         try {

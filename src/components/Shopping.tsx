@@ -1,5 +1,4 @@
-// filepath: src/components/Shopping.tsx
-import React, { useState, useMemo } from 'react';
+import { useState, useMemo, ChangeEvent, ReactNode } from 'react';
 import { useTripStore } from '../store/useTripStore';
 import {
   Check, Plus, X, Camera, Trash2, Loader2,
@@ -100,7 +99,7 @@ export const Shopping = () => {
 
   if (!trip) return null;
 
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
       const files = Array.from(e.target.files);
       setIsUploading(true);
@@ -564,7 +563,7 @@ export const Shopping = () => {
 
 
 // --- 子組件: 快速篩選標籤 ---
-const FilterTab = ({ active, onClick, label, icon }: { active: boolean, onClick: () => void, label: string, icon: React.ReactNode }) => (
+const FilterTab = ({ active, onClick, label, icon }: { active: boolean, onClick: () => void, label: string, icon: ReactNode }) => (
   <button
     onClick={onClick}
     className={`shrink-0 flex items-center gap-1.5 px-4 py-2.5 rounded-2xl border-[3px] font-black text-[12px] uppercase tracking-wider transition-colors ${active ? 'bg-splat-dark text-white border-splat-dark shadow-sm' : 'bg-white text-gray-400 border-gray-200'}`}

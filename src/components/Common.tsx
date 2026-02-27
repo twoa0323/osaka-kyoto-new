@@ -1,4 +1,4 @@
-import React from 'react';
+import { FC, ReactNode, useState } from 'react';
 import { motion, useAnimate } from 'framer-motion';
 import { ToggleLeft, ToggleRight, Trash2 } from 'lucide-react';
 import { triggerHaptic } from '../utils/haptics';
@@ -10,7 +10,7 @@ interface SettingToggleProps {
     onChange: (enabled: boolean) => void;
 }
 
-export const SettingToggle: React.FC<SettingToggleProps> = ({ label, desc, enabled, onChange }) => (
+export const SettingToggle: FC<SettingToggleProps> = ({ label, desc, enabled, onChange }) => (
     <div className="flex justify-between items-center bg-gray-50 p-4 rounded-2xl border-2 border-gray-100">
         <div className="text-left">
             <p className="font-black text-sm text-splat-dark">{label}</p>
@@ -35,7 +35,7 @@ const D0 = 'M50 44 C52 41, 56 40, 58 44 C60 48, 57 55, 50 56 C43 55, 40 48, 42 4
 const D1 = 'M50 10 C68 8, 90 20, 92 40 C95 60, 82 85, 62 90 C42 95, 12 85, 8 62 C4 40, 18 8, 50 10 Z';
 const D2 = 'M0 0 C30 -2, 70 -2, 100 0 C102 30, 102 70, 100 100 C70 102, 30 102, 0 100 C-2 70, -2 30, 0 0 Z';
 
-export const InkSplat: React.FC<{ color: string }> = ({ color }) => (
+export const InkSplat: FC<{ color: string }> = ({ color }) => (
     <motion.div
         key="ink-splat-svg"
         className="fixed inset-0 pointer-events-none z-[9999]"
@@ -76,16 +76,16 @@ export const InkSplat: React.FC<{ color: string }> = ({ color }) => (
 
 interface SwipeableItemProps {
     id: string;
-    children: React.ReactNode;
-    onDelete: () => void;
+    children: ReactNode;
+    onDelete: (id: string) => void;
     className?: string;
     disabled?: boolean;
 }
 
-export const SwipeableItem: React.FC<SwipeableItemProps> = ({ id, children, onDelete, className = "", disabled = false }) => {
+export const SwipeableItem: FC<SwipeableItemProps> = ({ id, children, onDelete, className = "", disabled = false }) => {
     const [scope, animate] = useAnimate();
-    const [isRevealed, setIsRevealed] = React.useState(false);
-    const [hasTriggeredHaptic, setHasTriggeredHaptic] = React.useState(false);
+    const [isRevealed, setIsRevealed] = useState(false);
+    const [hasTriggeredHaptic, setHasTriggeredHaptic] = useState(false);
 
     const handleDragEnd = (_: any, info: any) => {
         if (disabled) return;
@@ -112,7 +112,7 @@ export const SwipeableItem: React.FC<SwipeableItemProps> = ({ id, children, onDe
                         e.preventDefault();
                         e.stopPropagation();
                         triggerHaptic('medium');
-                        onDelete();
+                        onDelete(id);
                     }}
                     className="p-3 text-white active:scale-90 transition-transform relative z-50"
                 >

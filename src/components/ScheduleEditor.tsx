@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import { useState, useRef, FC, ChangeEvent } from 'react';
 import { useTripStore } from '../store/useTripStore';
 import { X, Search, Camera, Trash2, Loader2 } from 'lucide-react';
 import { ScheduleItem } from '../types';
@@ -14,7 +14,7 @@ const CATEGORIES = [
   { id: 'hotel', label: '住宿', color: 'bg-purple-400' }
 ] as const;
 
-export const ScheduleEditor: React.FC<Props> = ({ tripId, date, item, onClose }) => {
+export const ScheduleEditor: FC<Props> = ({ tripId, date, item, onClose }) => {
   const { addScheduleItem, updateScheduleItem, deleteScheduleItem, showToast } = useTripStore();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isUploading, setIsUploading] = useState(false);
@@ -23,7 +23,7 @@ export const ScheduleEditor: React.FC<Props> = ({ tripId, date, item, onClose })
     id: Date.now().toString(), date, time: '09:00', endTime: '', title: '', location: '', category: 'sightseeing', note: '', images: []
   });
 
-  const handlePhoto = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handlePhoto = async (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       e.target.value = '';

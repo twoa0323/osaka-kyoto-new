@@ -1,12 +1,12 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, FC, ImgHTMLAttributes } from 'react';
 import { Loader2, ImageOff } from 'lucide-react';
 
-interface LazyImageProps extends React.ImgHTMLAttributes<HTMLImageElement> {
+interface LazyImageProps extends ImgHTMLAttributes<HTMLImageElement> {
     placeholderSrc?: string;
     containerClassName?: string;
 }
 
-export const LazyImage: React.FC<LazyImageProps> = ({
+export const LazyImage: FC<LazyImageProps> = ({
     src,
     alt,
     className,

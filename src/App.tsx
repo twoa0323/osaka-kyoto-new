@@ -1,5 +1,4 @@
-// @ts-ignore: React 19 Activity
-import React, { useState, useEffect, Suspense, useMemo, Activity } from 'react';
+import { FC, useState, useEffect, Suspense, useMemo, lazy, cloneElement } from 'react';
 import { useTripStore } from './store/useTripStore';
 import { useFirebaseSync } from './hooks/useFirebaseSync';
 import { Onboarding } from './components/Onboarding';
@@ -24,13 +23,13 @@ import { AiAssistant } from './components/AiAssistant';
 import { SplatToast } from './components/ui/SplatToast';
 
 // 🚀 Lazy Load 各分頁組件，大幅減少首次載入 bundle 體積
-const Schedule = React.lazy(() => import('./components/Schedule').then(m => ({ default: m.Schedule })));
-const Booking = React.lazy(() => import('./components/Booking').then(m => ({ default: m.Booking })));
-const Expense = React.lazy(() => import('./components/Expense').then(m => ({ default: m.Expense })));
-const Journal = React.lazy(() => import('./components/Journal').then(m => ({ default: m.Journal })));
-const Shopping = React.lazy(() => import('./components/Shopping').then(m => ({ default: m.Shopping })));
-const PackingList = React.lazy(() => import('./components/PackingList').then(m => ({ default: m.PackingList })));
-const Info = React.lazy(() => import('./components/Info').then(m => ({ default: m.Info })));
+const Schedule = lazy(() => import('./components/Schedule').then(m => ({ default: m.Schedule })));
+const Booking = lazy(() => import('./components/Booking').then(m => ({ default: m.Booking })));
+const Expense = lazy(() => import('./components/Expense').then(m => ({ default: m.Expense })));
+const Journal = lazy(() => import('./components/Journal').then(m => ({ default: m.Journal })));
+const Shopping = lazy(() => import('./components/Shopping').then(m => ({ default: m.Shopping })));
+const PackingList = lazy(() => import('./components/PackingList').then(m => ({ default: m.PackingList })));
+const Info = lazy(() => import('./components/Info').then(m => ({ default: m.Info })));
 
 // --- 常數設定 ---
 const PRESET_AVATARS = [
@@ -58,7 +57,7 @@ const NavIcon = ({ icon, label, id, active, onClick, color }: any) => {
             transition={{ type: "spring", bounce: 0.4, duration: 0.5 }}
           />
         )}
-        {React.cloneElement(icon, { size: 24, strokeWidth: isActive ? 3 : 2.5 })}
+        {cloneElement(icon, { size: 24, strokeWidth: isActive ? 3 : 2.5 })}
       </div>
       <span className="text-[10px] font-black tracking-widest">{label}</span>
     </motion.button>
@@ -68,7 +67,7 @@ const NavIcon = ({ icon, label, id, active, onClick, color }: any) => {
 // ==========================================
 // 🚀 唯一的主要 App 元件
 // ==========================================
-const App: React.FC = () => {
+const App: FC = () => {
   // Prompt 1: Zustand per-selector 寫法，避免全域解構造成無關組件 re-render
   const trips = useTripStore(s => s.trips);
   const currentTripId = useTripStore(s => s.currentTripId);
@@ -319,58 +318,46 @@ const App: React.FC = () => {
             - 隱藏分頁的 CPU 佔用率降至最低，且能瞬間恢復捲動深度
           */}
         {visitedTabs.has('schedule') && (
-          <Activity mode={activeTab === 'schedule' ? 'visible' : 'hidden'}>
-            <div className="h-full">
-              <Suspense fallback={<div className="flex justify-center items-center h-64"><Loader2 size={32} className="animate-spin text-splat-blue" /></div>}>
-                <Schedule externalDateIdx={selectedDateIdx} />
-              </Suspense>
-            </div>
-          </Activity>
+          <div hidden={activeTab !== 'schedule'} className="h-full">
+            <Suspense fallback={<div className="flex justify-center items-center h-64"><Loader2 size={32} className="animate-spin text-splat-blue" /></div>}>
+              <Schedule externalDateIdx={selectedDateIdx} />
+            </Suspense>
+          </div>
         )}
         {visitedTabs.has('booking') && (
-          <Activity mode={activeTab === 'booking' ? 'visible' : 'hidden'}>
-            <div className="h-full">
-              <Suspense fallback={<div className="flex justify-center items-center h-64"><Loader2 size={32} className="animate-spin text-splat-pink" /></div>}>
-                <Booking />
-              </Suspense>
-            </div>
-          </Activity>
+          <div hidden={activeTab !== 'booking'} className="h-full">
+            <Suspense fallback={<div className="flex justify-center items-center h-64"><Loader2 size={32} className="animate-spin text-splat-pink" /></div>}>
+              <Booking />
+            </Suspense>
+          </div>
         )}
         {visitedTabs.has('expense') && (
-          <Activity mode={activeTab === 'expense' ? 'visible' : 'hidden'}>
-            <div className="h-full">
-              <Suspense fallback={<div className="flex justify-center items-center h-64"><Loader2 size={32} className="animate-spin text-splat-yellow" /></div>}>
-                <Expense />
-              </Suspense>
-            </div>
-          </Activity>
+          <div hidden={activeTab !== 'expense'} className="h-full">
+            <Suspense fallback={<div className="flex justify-center items-center h-64"><Loader2 size={32} className="animate-spin text-splat-yellow" /></div>}>
+              <Expense />
+            </Suspense>
+          </div>
         )}
         {visitedTabs.has('food') && (
-          <Activity mode={activeTab === 'food' ? 'visible' : 'hidden'}>
-            <div className="h-full">
-              <Suspense fallback={<div className="flex justify-center items-center h-64"><Loader2 size={32} className="animate-spin text-splat-orange" /></div>}>
-                <Journal />
-              </Suspense>
-            </div>
-          </Activity>
+          <div hidden={activeTab !== 'food'} className="h-full">
+            <Suspense fallback={<div className="flex justify-center items-center h-64"><Loader2 size={32} className="animate-spin text-splat-orange" /></div>}>
+              <Journal />
+            </Suspense>
+          </div>
         )}
         {visitedTabs.has('shop') && (
-          <Activity mode={activeTab === 'shop' ? 'visible' : 'hidden'}>
-            <div className="h-full">
-              <Suspense fallback={<div className="flex justify-center items-center h-64"><Loader2 size={32} className="animate-spin text-splat-green" /></div>}>
-                <Shopping />
-              </Suspense>
-            </div>
-          </Activity>
+          <div hidden={activeTab !== 'shop'} className="h-full">
+            <Suspense fallback={<div className="flex justify-center items-center h-64"><Loader2 size={32} className="animate-spin text-splat-green" /></div>}>
+              <Shopping />
+            </Suspense>
+          </div>
         )}
         {visitedTabs.has('info') && (
-          <Activity mode={activeTab === 'info' ? 'visible' : 'hidden'}>
-            <div className="h-full">
-              <Suspense fallback={<div className="flex justify-center items-center h-64"><Loader2 size={32} className="animate-spin text-splat-dark" /></div>}>
-                <Info />
-              </Suspense>
-            </div>
-          </Activity>
+          <div hidden={activeTab !== 'info'} className="h-full">
+            <Suspense fallback={<div className="flex justify-center items-center h-64"><Loader2 size={32} className="animate-spin text-splat-dark" /></div>}>
+              <Info />
+            </Suspense>
+          </div>
         )}
       </main>
 
@@ -471,7 +458,7 @@ const App: React.FC = () => {
       {
         showPersonalSetup && (
           <PersonalSetup
-            onComplete={(data) => {
+            onComplete={(data: { name: string; email: string; pin: string }) => {
               updateTripData(currentTrip.id, { members: [{ ...data, id: 'm-' + Date.now(), avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${data.name}`, mood: '準備出發！✈️' }] });
               setShowPersonalSetup(false);
             }}

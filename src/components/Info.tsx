@@ -1,5 +1,4 @@
-// filepath: src/components/Info.tsx
-import React, { useState, useMemo } from 'react';
+import { useState, useMemo, createElement, ChangeEvent, ReactNode } from 'react';
 import { useTripStore } from '../store/useTripStore';
 import {
   ExternalLink, ShieldAlert, Plus, X, Camera, Trash2, Globe, Phone, Loader2,
@@ -62,7 +61,7 @@ export const Info = () => {
     });
   }, [list, filterCategory, searchQuery]);
 
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
       const files = Array.from(e.target.files); e.target.value = ''; setIsUploading(true);
       try {
@@ -259,7 +258,7 @@ export const Info = () => {
                 className={`bg-white border-[3px] border-splat-dark rounded-[24px] overflow-hidden p-4 flex items-center gap-4 cursor-pointer active:scale-[0.98] transition-transform shadow-splat-solid-sm relative ${item.priority ? 'ring-4 ring-splat-yellow/50' : ''}`}
               >
                 <div className={`w-14 h-14 rounded-2xl border-2 border-splat-dark flex flex-col items-center justify-center shrink-0 shadow-inner text-white ${CATEGORIES[item.category as keyof typeof CATEGORIES]?.color || CATEGORIES.Other.color}`}>
-                  {React.createElement(CATEGORIES[item.category as keyof typeof CATEGORIES]?.icon || FileText, { size: 24, strokeWidth: 2.5 })}
+                  {createElement(CATEGORIES[item.category as keyof typeof CATEGORIES]?.icon || FileText, { size: 24, strokeWidth: 2.5 })}
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-1.5 mb-1">
@@ -510,7 +509,7 @@ const highlightText = (text: string, query: string) => {
 };
 
 // --- 子組件: 快速篩選標籤 ---
-const FilterTab = ({ active, onClick, label, icon, customBg }: { active: boolean, onClick: () => void, label: string, icon?: React.ReactNode, customBg?: string }) => (
+const FilterTab = ({ active, onClick, label, icon, customBg }: { active: boolean, onClick: () => void, label: string, icon?: ReactNode, customBg?: string }) => (
   <button
     onClick={onClick}
     className={`shrink-0 flex items-center gap-1.5 px-4 py-2.5 rounded-2xl border-[3px] font-black text-[12px] uppercase tracking-wider transition-colors ${active ? `bg-splat-dark text-white border-splat-dark shadow-sm` : 'bg-white text-gray-400 border-gray-200'}`}

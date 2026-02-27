@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
+import { useState, useMemo, useEffect, useCallback, useRef, FC } from 'react';
 import { useQueries } from '@tanstack/react-query';
 import { useTripStore } from '../store/useTripStore';
 import { format, addDays, differenceInDays, parseISO, isValid, isSameDay } from 'date-fns';
@@ -66,7 +66,7 @@ import type * as MapLibreGLType from 'maplibre-gl';
 
 
 // --- 輔助組件：每個行程項目的渲染（包含自動取圖邏輯） ---
-const ScheduleItemRow: React.FC<{
+const ScheduleItemRow: FC<{
   item: ScheduleItem,
   idx: number,
   isEditMode: boolean,
@@ -188,7 +188,7 @@ const ScheduleItemRow: React.FC<{
 };
 
 // --- 輔助組件：地圖路徑視圖 ---
-const ScheduleMapView: React.FC<{
+const ScheduleMapView: FC<{
   items: ScheduleItem[],
   trip?: Trip,
   setDetailItem: any,
@@ -428,7 +428,7 @@ const ScheduleMapView: React.FC<{
 };
 
 
-export const Schedule: React.FC<{ externalDateIdx?: number }> = ({ externalDateIdx = 0 }) => {
+export const Schedule: FC<{ externalDateIdx?: number }> = ({ externalDateIdx = 0 }) => {
   const trips = useTripStore(s => s.trips);
   const currentTripId = useTripStore(s => s.currentTripId);
   const deleteScheduleItem = useTripStore(s => s.deleteScheduleItem);
@@ -897,7 +897,7 @@ export const Schedule: React.FC<{ externalDateIdx?: number }> = ({ externalDateI
     }
   };
 
-  const activeSpotIdRef = React.useRef<string | null>(null);
+  const activeSpotIdRef = useRef<string | null>(null);
   const [completion, setCompletion] = useState<string>("");
 
   // AI 景點導覽 (純文字串流接收）

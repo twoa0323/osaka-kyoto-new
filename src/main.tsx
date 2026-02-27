@@ -1,5 +1,4 @@
-import React from 'react'
-import ReactDOM from 'react-dom/client'
+import { createRoot } from 'react-dom/client'
 import App from './App'
 import './index.css'
 import { registerSW } from 'virtual:pwa-register'
@@ -19,7 +18,7 @@ const queryClient = new QueryClient({
 // 移除 React.StrictMode：framer-motion v12 的 useMemo 在 StrictMode 雙重渲染
 // 搭配 Zustand IndexedDB hydration 時會觸發 React #310 (Invalid hook call)
 // StrictMode 在 production build 本就不啟用，移除後無副作用
-ReactDOM.createRoot(document.getElementById('root')).render(
+createRoot(document.getElementById('root')!).render(
   <QueryClientProvider client={queryClient}>
     <App />
   </QueryClientProvider>,

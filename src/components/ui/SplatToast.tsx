@@ -1,9 +1,9 @@
-import React from 'react';
+import { FC } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTripStore } from '../../store/useTripStore';
 import { CheckCircle2, AlertCircle, Info } from 'lucide-react';
 
-export const SplatToast: React.FC = () => {
+export const SplatToast: FC = () => {
     const toast = useTripStore((state) => state.toast);
     const showToast = useTripStore((state) => state.showToast);
 

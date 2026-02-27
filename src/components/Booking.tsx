@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useTripStore } from '../store/useTripStore';
 import {
   Plane, Home, MapPin, Plus, Edit3, Globe, QrCode,
@@ -74,7 +74,7 @@ export const Booking = () => {
   const [cachedUrls, setCachedUrls] = useState<Set<string>>(new Set());
 
   // 初始化時檢查已快取的項目
-  React.useEffect(() => {
+  useEffect(() => {
     const checkCache = async () => {
       if (!trip) return;
       const allUrls = [

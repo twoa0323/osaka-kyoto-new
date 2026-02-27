@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import { useState, useRef, useEffect, FC, ChangeEvent } from 'react';
 import { useTripStore } from '../store/useTripStore';
 import { X, Camera, Globe, QrCode, Loader2, Trash2, Plane, ChevronDown, Sparkles, MapPin } from 'lucide-react';
 import { BookingItem } from '../types';
@@ -25,7 +25,7 @@ const AIRLINES = [
   { id: 'other', name: '其他 (Other)' }
 ];
 
-export const BookingEditor: React.FC<Props> = ({ tripId, type, item, onClose }) => {
+export const BookingEditor: FC<Props> = ({ tripId, type, item, onClose }) => {
   const { addBookingItem, updateBookingItem, deleteBookingItem, showToast } = useTripStore();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const qrInputRef = useRef<HTMLInputElement>(null);
@@ -34,7 +34,7 @@ export const BookingEditor: React.FC<Props> = ({ tripId, type, item, onClose }) 
   const [isAiLoading, setIsAiLoading] = useState(false); // 👈 新增 AI 載入狀態
 
   // 📍 殺手級功能：AI 截圖解析邏輯
-  const handleAiParse = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleAiParse = async (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -141,7 +141,7 @@ export const BookingEditor: React.FC<Props> = ({ tripId, type, item, onClose }) 
     pnr: '', eTicketNo: '', terminal: '', gate: '', boardingTime: '', baggageAllowance: ''
   });
 
-  const handlePhoto = async (e: React.ChangeEvent<HTMLInputElement>, field: 'images' | 'qrCode') => {
+  const handlePhoto = async (e: ChangeEvent<HTMLInputElement>, field: 'images' | 'qrCode') => {
     const file = e.target.files?.[0];
     if (file) {
       e.target.value = '';
@@ -156,7 +156,7 @@ export const BookingEditor: React.FC<Props> = ({ tripId, type, item, onClose }) 
   };
 
   // 🌙 自動計算住宿天數邏輯
-  React.useEffect(() => {
+  useEffect(() => {
     if (type === 'hotel' && form.date && form.endDate) {
       try {
         const start = new Date(form.date);

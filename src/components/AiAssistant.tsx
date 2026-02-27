@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import { FC, ReactElement, cloneElement, useEffect, useState, useRef, ChangeEvent } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Sparkles, Loader2, Camera, Compass, CloudRain, Layout, Receipt, BarChart3, Search, Trash2, Package, Check, AlertTriangle, User, Tag, MapPinOff, ArrowRight, Train, Car, Footprints, Bus, Anchor } from 'lucide-react';
 import { useTripStore } from '../store/useTripStore';
@@ -17,7 +17,7 @@ const transportSchema = z.object({
     }))
 });
 
-export const AiAssistant: React.FC = () => {
+export const AiAssistant: FC = () => {
     const {
         isAiModalOpen, setAiModalOpen, aiContext, activeTab,
         trips, currentTripId, addScheduleItem, updateTripData,
@@ -50,7 +50,7 @@ export const AiAssistant: React.FC = () => {
         }
     });
 
-    React.useEffect(() => {
+    useEffect(() => {
         if (!loadingAction) {
             setLoadingStage(0);
             return;
@@ -137,7 +137,7 @@ export const AiAssistant: React.FC = () => {
         finally { setLoadingAction(null); }
     };
 
-    const handleAiImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleAiImageUpload = async (e: ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
         setIsUploadingImage(true);
@@ -160,7 +160,7 @@ export const AiAssistant: React.FC = () => {
     };
 
     // 3. 收據掃描 (重構為預覽審核模式)
-    const handleReceiptScan = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleReceiptScan = async (e: ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
         setLoadingAction('receipt');
@@ -384,7 +384,7 @@ export const AiAssistant: React.FC = () => {
                                 onClick={() => useTripStore.getState().openAiAssistant(t.id)}
                                 className={`flex-1 flex flex-col items-center py-2 rounded-xl transition-all ${currentContext === t.id ? 'bg-white shadow-sm border-2 border-splat-dark' : 'text-gray-400 opacity-60'}`}
                             >
-                                {React.cloneElement(t.icon as React.ReactElement, { size: 18 })}
+                                {cloneElement(t.icon as any, { size: 18 })}
                                 <span className="text-[9px] font-black mt-1 uppercase">{t.label}</span>
                             </button>
                         ))}
