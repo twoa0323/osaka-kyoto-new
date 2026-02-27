@@ -286,30 +286,38 @@ const App: React.FC = () => {
         }
 
         <main className={`flex-1 w-full max-w-md mx-auto overflow-x-hidden ${activeTab !== 'schedule' ? 'pt-6' : 'pt-2'}`}>
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={activeTab}
-              initial={{ opacity: 0, x: 10 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -10 }}
-              transition={{ duration: 0.2 }}
-              className="h-full"
-            >
-              {/* Fix 1: Suspense 包裹 Lazy 組件，fallback 為空白背景 */}
-              <Suspense fallback={
-                <div className="flex items-center justify-center h-64">
-                  <div className="w-8 h-8 border-4 border-splat-blue border-t-transparent rounded-full animate-spin" />
-                </div>
-              }>
-                {activeTab === 'schedule' && <Schedule externalDateIdx={selectedDateIdx} />}
-                {activeTab === 'booking' && <Booking />}
-                {activeTab === 'expense' && <Expense />}
-                {activeTab === 'food' && <Journal />}
-                {activeTab === 'shop' && <Shopping />}
-                {activeTab === 'info' && <Info />}
-              </Suspense>
-            </motion.div>
-          </AnimatePresence>
+          {/*
+            Step 1: React 19 <Activity> 相容模式
+            - React 18: 使用 CSS visibility + display:none 保留 DOM，切換零延遲
+            - React 19+ 升級後替換為: import { Activity } from 'react'
+              並將 div style 換成 <Activity mode={activeTab==='xxx' ? 'visible' : 'hidden'}>
+            - 效果等同：所有分頁都保持 Mount，狀態與捲動位置完整保留
+          */}
+          <Suspense fallback={
+            <div className="flex items-center justify-center h-64">
+              <div className="w-8 h-8 border-4 border-splat-blue border-t-transparent rounded-full animate-spin" />
+            </div>
+          }>
+            {/* Schedule — 永遠 Mount，透過 display 控制可見性 */}
+            <div style={{ display: activeTab === 'schedule' ? 'block' : 'none' }} className="h-full">
+              <Schedule externalDateIdx={selectedDateIdx} />
+            </div>
+            <div style={{ display: activeTab === 'booking' ? 'block' : 'none' }} className="h-full">
+              <Booking />
+            </div>
+            <div style={{ display: activeTab === 'expense' ? 'block' : 'none' }} className="h-full">
+              <Expense />
+            </div>
+            <div style={{ display: activeTab === 'food' ? 'block' : 'none' }} className="h-full">
+              <Journal />
+            </div>
+            <div style={{ display: activeTab === 'shop' ? 'block' : 'none' }} className="h-full">
+              <Shopping />
+            </div>
+            <div style={{ display: activeTab === 'info' ? 'block' : 'none' }} className="h-full">
+              <Info />
+            </div>
+          </Suspense>
         </main>
 
         <nav className="fixed bottom-6 left-1/2 -translate-x-1/2 w-[92%] max-w-md bg-white border-[3px] border-splat-dark rounded-[32px] shadow-splat-solid px-2 py-3 flex justify-between items-center z-50">
@@ -418,8 +426,8 @@ const App: React.FC = () => {
         }
         <AiAssistant />
         <SplatToast />
-      </div>
-    </LazyMotion>
+      </div >
+    </LazyMotion >
   );
 };
 

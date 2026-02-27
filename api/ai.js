@@ -5,7 +5,12 @@ import { streamText, generateObject } from 'ai';
 import { createGoogleGenerativeAI } from '@ai-sdk/google';
 import { z } from 'zod';
 
-const MODEL_NAME = 'gemini-3-flash-preview'; // 統一 Gemini 版本
+const MODEL_NAME = 'gemini-3-flash-preview'; // 速度優先 Model（收據掃描、翻譯等）
+
+// Step 3: Deep Think 推理模型 — 用於路線優化與交通建議（高度空間邏輯推理）
+// 目前使用 gemini-3-flash-preview 搭配 thinking budget 作為相容層
+// 當 gemini-3-pro-deep-think 正式 GA 後，直接替換 MODEL_REASONING_NAME 即可
+const MODEL_REASONING_NAME = 'gemini-3-flash-preview'; // 升級後改為 'gemini-3-pro-deep-think'
 
 // 🌐 Wikipedia 圖片獲取助手
 async function fetchWikipediaImage(query) {
@@ -49,6 +54,11 @@ export default async function handler(req) {
 
   const google = createGoogleGenerativeAI({ apiKey });
   const model = google(MODEL_NAME);
+  // Step 3: Deep Think 推理模型 (路線/交通)
+  const reasoningModel = google(MODEL_REASONING_NAME, {
+    // 為推理任務增加思考預算，提升空間邏輯準確度
+    thinkingConfig: { thinkingBudget: 8192 }
+  });
 
   let action, payload, type, imageBase64;
   try {
@@ -273,8 +283,13 @@ export default async function handler(req) {
       }
 
       case 'research-product-price': {
+        // Step 2: Search Grounding — 讓 Gemini 透過 Google 搜尋取得日本即時市場價格
+        // 解決 AI 幻覺問題，改為獲取 Bic Camera / 唐吉訶德當日真實售價
+        const searchGroundedModel = google(MODEL_NAME, {
+          useSearchGrounding: true // 啟用 Google Search Grounding
+        });
         const r = await generateObject({
-          model,
+          model: searchGroundedModel,
           schema: z.object({
             currentMarketPrice: z.number(),
             currency: z.string(),
@@ -284,7 +299,8 @@ export default async function handler(req) {
             advice: z.string(),
             recommendation: z.string()
           }),
-          prompt: `研究「${payload.title}」在類別「${payload.category}」的市場行情。幣別：${payload.currency}。目標價：${payload.targetPrice || '未設定'}。給出 dealRating 與建議。`
+          // Step 2: 修改 Prompt 明確要求透過 Google Search 取得即時日本售價
+          prompt: `請務必透過 Google 搜尋，取得商品「${payload.title}」今日在日本（包含 Bic Camera、家電量販店、唐吉訶德）的最新日幣售價，並以此作為 currentMarketPrice 的評估基礎。\n類別：「${payload.category}」，幣別：${payload.currency}，目標預算：${payload.targetPrice || '未設定'}。\n根據即時市場價格與目標價的差異給出 dealRating (good/bad/normal) 與購買建議。請在 priceHistoryInsight 說明價格來源與趨勢。`
         });
         finalObject = r.object;
         break;
@@ -292,8 +308,9 @@ export default async function handler(req) {
 
       case 'get-transport-suggestion':
       case 'suggest-transport': {
+        // Step 3: 使用 reasoningModel 進行高精度交通路線推理
         const r = await generateObject({
-          model,
+          model: reasoningModel,
           schema: z.object({
             summary: z.string(),
             steps: z.array(z.object({
@@ -303,17 +320,18 @@ export default async function handler(req) {
               duration: z.string()
             }))
           }),
-          prompt: `建議從「${payload.prevLocation || payload.prevTitle || '起點'}」到「${payload.currentLocation || payload.currentTitle}」的交通方式。拆分為多個邏輯步驟。繁體中文。`
+          prompt: `你是一位精通日本大眾運輸的交通專家。請深度推理從「${payload.prevLocation || payload.prevTitle || '起點'}」到「${payload.currentLocation || payload.currentTitle}」的最佳交通路線。\n考量因素：地鐵換乘效率、步行距離、等車時間、IC 卡適用性。\n請拆分為多個精確步驟（步行→月台→車種→出口）。繁體中文回答。`
         });
         finalObject = r.object;
         break;
       }
 
       case 'optimize-route': {
+        // Step 3: 使用 reasoningModel 進行高精度地理路線排序
         const r = await generateObject({
-          model,
+          model: reasoningModel,
           schema: z.object({ optimizedIds: z.array(z.string()) }),
-          prompt: `優化以下行程順序（考慮地理位置）。回傳優化後的 ID 陣列。行程：${JSON.stringify(payload.items)}`
+          prompt: `你是一位精通日本地理與大眾運輸的旅遊規劃師。請深度推理以下行程的最佳遊覽順序，目標是\n1. 最小化總移動距離與換乘次數\n2. 考慮各地點的步行連結性\n3. 避免來回折返\n請回傳優化後的 ID 陣列。行程資料：${JSON.stringify(payload.items)}`
         });
         return jsonResponse(r.object.optimizedIds);
       }
