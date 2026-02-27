@@ -319,9 +319,16 @@ export const useTripStore = create<TripState>()(
         set(s => ({
           trips: s.trips.map(t => t.id === tid ? { ...t, items: ni } : t)
         }));
-        // Reorder 較特殊，目前仍採全物件覆蓋或需批次更新，此處先單個處理或由 Metadata 紀錄順序
-        // 為簡化，Reorder 時同步所有項目的順序 ID (假設 ScheduleItem 有 order)
-        ni.forEach(item => syncItemToCloud(tid, "items", item));
+        // Fix 9: 僅更新排序 ID 陣列到 metadata，避免 N 次 setDoc
+        // 每次 reorder 只需 1 次 updateDoc，而非每個 item 一次
+        const currentUser = auth.currentUser?.displayName || auth.currentUser?.email || "Guest";
+        const itemOrder = ni.map(item => item.id);
+        updateTripTimestamp(tid, currentUser, Date.now());
+        import('firebase/firestore').then(({ updateDoc, doc }) => {
+          import('../services/firebase').then(({ db }) => {
+            updateDoc(doc(db, "trips", tid), { itemOrder, lastUpdatedBy: currentUser, updatedAt: Date.now() });
+          });
+        });
       },
 
       // --- 2. Booking ---

@@ -11,10 +11,10 @@ export default defineConfig({
       manifest: {
         name: 'Travel Planner 手帳',
         short_name: 'Travel Plan',
-        description: '你的動森風旅遊計畫手帳',
-        theme_color: '#328383', // 對應我們設定的背景色
+        description: '你的動森風旅遊計番手帳',
+        theme_color: '#328383',
         background_color: '#F7F4EB',
-        display: 'standalone', // 隱藏瀏覽器網址列
+        display: 'standalone',
         orientation: 'portrait',
         icons: [
           {
@@ -40,7 +40,7 @@ export default defineConfig({
               cacheName: 'google-fonts-cache',
               expiration: {
                 maxEntries: 10,
-                maxAgeSeconds: 60 * 60 * 24 * 365 // 1 year
+                maxAgeSeconds: 60 * 60 * 24 * 365
               },
               cacheableResponse: {
                 statuses: [0, 200]
@@ -54,7 +54,7 @@ export default defineConfig({
               cacheName: 'gstatic-fonts-cache',
               expiration: {
                 maxEntries: 10,
-                maxAgeSeconds: 60 * 60 * 24 * 365 // 1 year
+                maxAgeSeconds: 60 * 60 * 24 * 365
               },
               cacheableResponse: {
                 statuses: [0, 200]
@@ -68,7 +68,7 @@ export default defineConfig({
               cacheName: 'images-cache',
               expiration: {
                 maxEntries: 100,
-                maxAgeSeconds: 60 * 60 * 24 * 30 // 30 days
+                maxAgeSeconds: 60 * 60 * 24 * 30
               },
               cacheableResponse: {
                 statuses: [0, 200]
@@ -78,5 +78,19 @@ export default defineConfig({
         ]
       }
     })
-  ]
+  ],
+  // Fix 12: 分割大套件為獨立 chunk，減少首次 bundle 解析時間
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'vendor-react': ['react', 'react-dom'],
+          'vendor-firebase': ['firebase/app', 'firebase/auth', 'firebase/firestore'],
+          'vendor-map': ['maplibre-gl'],
+          'vendor-framer': ['framer-motion'],
+          'vendor-query': ['@tanstack/react-query'],
+        }
+      }
+    }
+  }
 })

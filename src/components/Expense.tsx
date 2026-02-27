@@ -281,9 +281,49 @@ export const Expense = () => {
 
   if (!trip) return null;
 
+  // Fix 13: useMemo 包裹所有 O(n) 統計計算，避免每次 re-render 都重跑
   const expenses = trip.expenses || [];
-  const totalTwd = expenses.reduce((s, e) => s + (e.currency === 'TWD' ? e.amount : e.amount * (exchangeRate || 1)), 0);
-  const totalForeign = expenses.filter(e => e.currency === trip.baseCurrency).reduce((s, e) => s + e.amount, 0);
+
+  const { totalTwd, totalForeign, dailyData, pieData, methodData, grouped } = useMemo(() => {
+    const exps = trip.expenses || [];
+    const rate = exchangeRate || 1;
+
+    const totalTwd = exps.reduce((s, e) => s + (e.currency === 'TWD' ? e.amount : e.amount * rate), 0);
+    const totalForeign = exps.filter(e => e.currency === trip.baseCurrency).reduce((s, e) => s + e.amount, 0);
+
+    const dailyStats = exps.reduce((acc, curr) => {
+      const val = curr.currency === 'TWD' ? curr.amount : curr.amount * rate;
+      acc[curr.date] = (acc[curr.date] || 0) + val;
+      return acc;
+    }, {} as Record<string, number>);
+    const dailyData = Object.keys(dailyStats).sort().map(d => ({ date: d, amount: Math.round(dailyStats[d]) }));
+
+    const catStats = exps.reduce((acc, curr) => {
+      const val = curr.currency === 'TWD' ? curr.amount : curr.amount * rate;
+      acc[curr.category] = (acc[curr.category] || 0) + val;
+      return acc;
+    }, {} as Record<string, number>);
+    const pieData = Object.entries(catStats).map(([k, v], i) => ({
+      label: k, value: v, percent: Math.round((v / (totalTwd || 1)) * 100), color: ['#F03C69', '#2932CF', '#FFC000', '#21CC65', '#FF6C00'][i % 5]
+    })).sort((a, b) => b.value - a.value);
+
+    const methodStats = exps.reduce((acc, curr) => {
+      const val = curr.currency === 'TWD' ? curr.amount : curr.amount * rate;
+      acc[curr.method] = (acc[curr.method] || 0) + val;
+      return acc;
+    }, {} as Record<string, number>);
+    const methodData = Object.entries(methodStats).map(([k, v], i) => ({
+      label: k, value: v, percent: Math.round((v / (totalTwd || 1)) * 100), color: ['#60A5FA', '#F472B6', '#FBBF24', '#34D399', '#A78BFA'][i % 5]
+    })).sort((a, b) => b.value - a.value);
+
+    const grouped = exps.reduce((acc, curr) => {
+      if (!acc[curr.date]) acc[curr.date] = [];
+      acc[curr.date].push(curr); return acc;
+    }, {} as Record<string, ExpenseItem[]>);
+
+    return { totalTwd, totalForeign, dailyData, pieData, methodData, grouped };
+  }, [trip.expenses, exchangeRate, trip.baseCurrency]);
+
   const budget = trip.budget || 0;
   const percent = budget ? Math.min(100, Math.round((totalTwd / budget) * 100)) : 0;
 
@@ -292,36 +332,6 @@ export const Expense = () => {
   const inputTwd = form.currency === 'TWD' ? (form.amount || 0) : (form.amount || 0) * exchangeRate;
   const predictiveTotal = totalTwd - editingOriginalTwd + inputTwd;
   const predictivePercent = budget ? Math.round((predictiveTotal / budget) * 100) : 0;
-
-  const dailyStats = expenses.reduce((acc, curr) => {
-    const val = curr.currency === 'TWD' ? curr.amount : curr.amount * exchangeRate;
-    acc[curr.date] = (acc[curr.date] || 0) + val;
-    return acc;
-  }, {} as Record<string, number>);
-  const dailyData = Object.keys(dailyStats).sort().map(d => ({ date: d, amount: Math.round(dailyStats[d]) }));
-
-  const catStats = expenses.reduce((acc, curr) => {
-    const val = curr.currency === 'TWD' ? curr.amount : curr.amount * exchangeRate;
-    acc[curr.category] = (acc[curr.category] || 0) + val;
-    return acc;
-  }, {} as Record<string, number>);
-  const pieData = Object.entries(catStats).map(([k, v], i) => ({
-    label: k, value: v, percent: Math.round((v / (totalTwd || 1)) * 100), color: ['#F03C69', '#2932CF', '#FFC000', '#21CC65', '#FF6C00'][i % 5]
-  })).sort((a, b) => b.value - a.value);
-
-  const methodStats = expenses.reduce((acc, curr) => {
-    const val = curr.currency === 'TWD' ? curr.amount : curr.amount * exchangeRate;
-    acc[curr.method] = (acc[curr.method] || 0) + val;
-    return acc;
-  }, {} as Record<string, number>);
-  const methodData = Object.entries(methodStats).map(([k, v], i) => ({
-    label: k, value: v, percent: Math.round((v / (totalTwd || 1)) * 100), color: ['#60A5FA', '#F472B6', '#FBBF24', '#34D399', '#A78BFA'][i % 5]
-  })).sort((a, b) => b.value - a.value);
-
-  const grouped = (expenses || []).reduce((acc, curr) => {
-    if (!acc[curr.date]) acc[curr.date] = [];
-    acc[curr.date].push(curr); return acc;
-  }, {} as Record<string, ExpenseItem[]>);
 
   const handleSave = () => {
     if (!form.amount || !form.title) return showToast("資訊不完整唷！💰", "error");

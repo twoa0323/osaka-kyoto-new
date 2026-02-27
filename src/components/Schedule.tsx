@@ -14,7 +14,7 @@ import { triggerHaptic } from '../utils/haptics';
 
 // 移除受限制的前端 API Key 引進
 // const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY || "";
-const GEMINI_MODEL = "gemini-3-flash-preview";
+const GEMINI_MODEL = "gemini-3-flash-preview"; // Fix 14: 確保使用正確模型版本
 const ICON_MAP = { sightseeing: Camera, food: Utensils, transport: Plane, hotel: Home };
 
 const CATEGORY_STYLE = {
@@ -93,12 +93,18 @@ const ScheduleItemRow: React.FC<{
     else if (gapMins > 0 && gapMins < 30 && prevItem.location !== item.location) warningMsg = "行程有點趕！🏃";
   }
 
-  // 💡 自動取圖邏輯：放在組件層級符合 Hook 規範
+  // Fix 2: sessionStorage 快取避免重複呼叫 AI 取圖 (N+1 問題)
   useEffect(() => {
-    // 如果已經有圖片，絕對不要重複讀取，避免覆蓋使用者自定義或已儲存的圖片
     if (item.images && item.images.length > 0) return;
 
+    // 檢查本次會話是否已經嘗試過取圖
+    const cacheKey = `img_fetched_${item.id}`;
+    if (sessionStorage.getItem(cacheKey)) return;
+
+    const controller = new AbortController();
     const fetchImage = async () => {
+      // 標記為「已嘗試」不論成成費，避免重複呼叫
+      sessionStorage.setItem(cacheKey, '1');
       try {
         const res = await fetch('/api/ai', {
           method: 'POST',
@@ -106,19 +112,24 @@ const ScheduleItemRow: React.FC<{
           body: JSON.stringify({
             action: 'get-image-for-item',
             payload: { title: item.title, location: item.location, category: item.category }
-          })
+          }),
+          signal: controller.signal
         });
         const data = await res.json();
         if (data.imageUrl && (!item.images || item.images.length === 0)) {
           updateScheduleItem(tripId, item.id, { ...item, images: [data.imageUrl] });
         }
-      } catch (err) {
-        console.error("Failed to fetch image for item:", item.title);
+      } catch (err: any) {
+        if (err?.name !== 'AbortError') {
+          console.error("Failed to fetch image for item:", item.title);
+        }
       }
     };
-    const timeoutId = setTimeout(fetchImage, 500 + Math.random() * 2000);
-    return () => clearTimeout(timeoutId);
-  }, [item.id, item.images?.length, item.title, item.location, item.category, tripId, updateScheduleItem]);
+    // 隨機延遲降低同時呼叫數，避免發出一波 AI 請求
+    const delay = 800 + Math.random() * 3000;
+    const timeoutId = setTimeout(fetchImage, delay);
+    return () => { clearTimeout(timeoutId); controller.abort(); };
+  }, [item.id]);
 
   const [hasTriggeredHaptic, setHasTriggeredHaptic] = useState(false);
 
@@ -305,7 +316,6 @@ const ScheduleMapView: React.FC<{
               latitude={selectedAiPlace.lat}
               onClose={() => setSelectedAiPlace(null)}
               closeButton={true}
-              style={{ zIndex: 9999 }}
               className="border-[3px] border-splat-dark rounded-2xl shadow-splat-solid-sm p-4 w-56 bg-white relative"
             >
               <div className="pt-2">
@@ -512,6 +522,10 @@ export const Schedule: React.FC<{ externalDateIdx?: number }> = ({ externalDateI
         if (!res.ok) throw new Error('Weather API error');
         return res.json();
       },
+      // Fix 4: 30分鐘 staleTime 避免頻繁 re-fetch
+      staleTime: 1000 * 60 * 30,
+      gcTime: 1000 * 60 * 60,
+      retry: 1,
     })),
   });
 
@@ -595,6 +609,10 @@ export const Schedule: React.FC<{ externalDateIdx?: number }> = ({ externalDateI
       ...(trip?.expenses || []).map(e => e.storeName)
     ].filter(Boolean).slice(-15).join(", ");
 
+    // Fix 5: 30 秒 AbortController 超時保護
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 30000);
+
     try {
       const res = await fetch('/api/ai', {
         method: 'POST',
@@ -602,8 +620,10 @@ export const Schedule: React.FC<{ externalDateIdx?: number }> = ({ externalDateI
         body: JSON.stringify({
           action: 'suggest-gap',
           payload: { prevItem, nextItem, preferences: prefs }
-        })
+        }),
+        signal: controller.signal
       });
+      clearTimeout(timeout);
       const data = await res.json();
       if (data && !data.error) {
         addScheduleItem(trip!.id, {
@@ -615,8 +635,10 @@ export const Schedule: React.FC<{ externalDateIdx?: number }> = ({ externalDateI
         triggerHaptic('light');
         showToast("✨ 成功發掘順遊好去處！", "success");
       }
-    } catch (e) {
-      showToast("AI 目前想不出好點子，換個時間再試試吧！🤔", "error");
+    } catch (e: any) {
+      clearTimeout(timeout);
+      if (e?.name === 'AbortError') showToast("AI 回應逾時，請稍後再試！⏱️", "error");
+      else showToast("AI 目前想不出好點子，換個時間再試試吧！🤔", "error");
     } finally {
       setGapAiLoading(null);
     }
@@ -641,7 +663,6 @@ export const Schedule: React.FC<{ externalDateIdx?: number }> = ({ externalDateI
     }
   };
 
-  // 💡 修復 3：AI 交通建議 (修正 Schema 提取對應錯誤)
   const handleTransportAiSuggest = async (currentItem: ScheduleItem) => {
     if (!isOnline) return showToast("請檢查網路連線才能使用魔法唷！✨", "info");
     setTransportAiLoading(currentItem.id);
@@ -650,6 +671,10 @@ export const Schedule: React.FC<{ externalDateIdx?: number }> = ({ externalDateI
     const sortedItems = [...items].filter(i => i.date === currentItem.date).sort((a, b) => (a.time || '').localeCompare(b.time || ''));
     const globalIdx = sortedItems.findIndex(i => i.id === currentItem.id);
     const prevItem = globalIdx > 0 ? sortedItems[globalIdx - 1] : null;
+
+    // Fix 5: 30 秒超時保護
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 30000);
 
     try {
       const res = await fetch('/api/ai', {
@@ -664,17 +689,17 @@ export const Schedule: React.FC<{ externalDateIdx?: number }> = ({ externalDateI
             currentTitle: currentItem.title,
             prevItem: prevItem ? true : false
           }
-        })
+        }),
+        signal: controller.signal
       });
+      clearTimeout(timeout);
 
       const data = await res.json();
 
-      // 🛑 修正點：原本查的是 data.text，但 api/ai.js 裡定義的是 summary 和 steps
       if (!data || !data.steps || !data.summary) {
         throw new Error("AI 未能產出有效建議格式");
       }
 
-      // 儲存至目前的行程項目中，並開啟彈窗
       const updatedItem = { ...currentItem, transportSuggestion: JSON.stringify(data) };
       updateScheduleItem(trip!.id, currentItem.id, updatedItem);
 
@@ -682,9 +707,11 @@ export const Schedule: React.FC<{ externalDateIdx?: number }> = ({ externalDateI
       setShowTransportModal(true);
 
       triggerHaptic('success');
-    } catch (e) {
+    } catch (e: any) {
+      clearTimeout(timeout);
       console.error(e);
-      showToast("AI 目前想不出好點子，請稍後再試！🤔", "error");
+      if (e?.name === 'AbortError') showToast("AI 回應逾時，請稍後再試！⏱️", "error");
+      else showToast("AI 目前想不出好點子，請稍後再試！🤔", "error");
     } finally {
       setTransportAiLoading(null);
     }
@@ -764,6 +791,10 @@ export const Schedule: React.FC<{ externalDateIdx?: number }> = ({ externalDateI
     setIsWizardLoading(true);
     triggerHaptic('success');
 
+    // Fix 5: 超時保護
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 30000);
+
     try {
       const res = await fetch('/api/ai', {
         method: 'POST',
@@ -779,15 +810,19 @@ export const Schedule: React.FC<{ externalDateIdx?: number }> = ({ externalDateI
               ...(trip?.expenses || []).map(e => e.storeName)
             ].slice(-10).join(", ")
           }
-        })
+        }),
+        signal: controller.signal
       });
+      clearTimeout(timeout);
       const data = await res.json();
       if (data && !data.error) {
         setWeatherAdvice(data);
         setShowWizardModal(true);
       }
-    } catch (e) {
-      showToast("天氣巫師目前魔力不足，請稍後再試！🪄", "error");
+    } catch (e: any) {
+      clearTimeout(timeout);
+      if (e?.name === 'AbortError') showToast("AI 回應逾時！🪄", "error");
+      else showToast("天氣巫師目前魔力不足，請稍後再試！🪄", "error");
     } finally {
       setIsWizardLoading(false);
     }
@@ -824,12 +859,16 @@ export const Schedule: React.FC<{ externalDateIdx?: number }> = ({ externalDateI
   const activeSpotIdRef = React.useRef<string | null>(null);
   const [completion, setCompletion] = useState<string>("");
 
-  // 💡 修復 2：AI 景點建議 (極簡化純文字串流接收)
+  // AI 景點導覽 (純文字串流接收）
   const handleFetchSpotGuide = async (item: ScheduleItem) => {
     if (!isOnline) return showToast("請檢查網路連線", "info");
     activeSpotIdRef.current = item.id;
     setSpotAiLoading(item.id);
     setCompletion("");
+
+    // Fix 5: 串流也需要超時保護
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 45000); // 串流給 45 秒
 
     try {
       const res = await fetch('/api/ai', {
@@ -838,7 +877,8 @@ export const Schedule: React.FC<{ externalDateIdx?: number }> = ({ externalDateI
         body: JSON.stringify({
           action: 'get-spot-guide',
           payload: { title: item.title, location: item.location }
-        })
+        }),
+        signal: controller.signal
       });
 
       if (!res.ok) throw new Error("請求失敗");
@@ -848,16 +888,14 @@ export const Schedule: React.FC<{ externalDateIdx?: number }> = ({ externalDateI
       const decoder = new TextDecoder();
       let fullText = "";
 
-      // 移除了所有容易崩潰的 JSON.parse 與 Buffer 邏輯
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
-
-        // 直接將收到的 chunk 解碼並加上去
         const chunkText = decoder.decode(value, { stream: true });
         fullText += chunkText;
-        setCompletion(fullText); // 即時更新打字機畫面
+        setCompletion(fullText);
       }
+      clearTimeout(timeout);
 
       const guide = { background: fullText, highlights: [], suggestedDuration: "" };
       const updatedItem = { ...item, spotGuide: guide };
@@ -865,9 +903,11 @@ export const Schedule: React.FC<{ externalDateIdx?: number }> = ({ externalDateI
       setDetailItem(prev => prev?.id === item.id ? updatedItem : prev);
 
       triggerHaptic('success');
-    } catch (err) {
+    } catch (err: any) {
+      clearTimeout(timeout);
       console.error("Spot Guide Error:", err);
-      showToast("取得景點導覽失敗，請稍後再試。", "error");
+      if (err?.name === 'AbortError') showToast("取得景點導覽逾時，請稍後再試。⏱️", "error");
+      else showToast("取得景點導覽失敗，請稍後再試。", "error");
     } finally {
       activeSpotIdRef.current = null;
       setSpotAiLoading(null);
@@ -884,6 +924,10 @@ export const Schedule: React.FC<{ externalDateIdx?: number }> = ({ externalDateI
     setIsOptimizing(true);
     triggerHaptic('light');
 
+    // Fix 5: 超時保護
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 30000);
+
     try {
       const res = await fetch('/api/ai', {
         method: 'POST',
@@ -893,8 +937,10 @@ export const Schedule: React.FC<{ externalDateIdx?: number }> = ({ externalDateI
           payload: {
             items: dayItems.map(i => ({ id: i.id, title: i.title, location: i.location }))
           }
-        })
+        }),
+        signal: controller.signal
       });
+      clearTimeout(timeout);
       const optimizedIds = await res.json();
       if (Array.isArray(optimizedIds)) {
         const newOrder = [...optimizedIds]
@@ -905,8 +951,10 @@ export const Schedule: React.FC<{ externalDateIdx?: number }> = ({ externalDateI
         triggerHaptic('success');
         showToast("✨ AI 路徑優化成功！", "success");
       }
-    } catch (e) {
-      showToast("優化失敗，請稍後再試。", "error");
+    } catch (e: any) {
+      clearTimeout(timeout);
+      if (e?.name === 'AbortError') showToast("AI 回應逾時！⏱️", "error");
+      else showToast("優化失敗，請稍後再試。", "error");
     } finally {
       setIsOptimizing(false);
     }

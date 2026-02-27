@@ -1,14 +1,15 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense, useMemo } from 'react';
 import { useTripStore } from './store/useTripStore';
 import { useFirebaseSync } from './hooks/useFirebaseSync';
 import { Onboarding } from './components/Onboarding';
-import { Schedule } from './components/Schedule';
-import { Booking } from './components/Booking';
-import { Expense } from './components/Expense';
-import { Journal } from './components/Journal';
-import { Shopping } from './components/Shopping';
-import { PackingList } from './components/PackingList';
-import { Info } from './components/Info';
+// 🚀 Lazy Load 各分頁組件，大幅減少首次載入 bundle 體積
+const Schedule = React.lazy(() => import('./components/Schedule').then(m => ({ default: m.Schedule })));
+const Booking = React.lazy(() => import('./components/Booking').then(m => ({ default: m.Booking })));
+const Expense = React.lazy(() => import('./components/Expense').then(m => ({ default: m.Expense })));
+const Journal = React.lazy(() => import('./components/Journal').then(m => ({ default: m.Journal })));
+const Shopping = React.lazy(() => import('./components/Shopping').then(m => ({ default: m.Shopping })));
+const PackingList = React.lazy(() => import('./components/PackingList').then(m => ({ default: m.PackingList })));
+const Info = React.lazy(() => import('./components/Info').then(m => ({ default: m.Info })));
 import {
   Plus, ChevronDown, Trash2, Calendar, CreditCard, Wallet,
   Utensils, ShoppingBag, Info as InfoIcon, Lock, User,
@@ -97,11 +98,13 @@ const App: React.FC = () => {
     }
   }, [currentTrip]);
 
-  // 📍 Phase 3: Vercel 冷啟動優化
+  // 📍 Vercel 冷啟動 Warm-up Ping (Fix 3: 正確帶 Content-Type)
   useEffect(() => {
-    fetch('/api/ai', { method: 'POST', body: JSON.stringify({ action: 'ping' }) }).catch(() => { });
-    // Also ping a dedicated ping endpoint if it exists
-    fetch('/api/ping').catch(() => { });
+    fetch('/api/ai', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'ping' })
+    }).catch(() => { });
   }, []);
 
   if (trips.length === 0 || showOnboarding) return <Onboarding onComplete={() => setShowOnboarding(false)} />;
@@ -109,11 +112,13 @@ const App: React.FC = () => {
 
   const myProfile = currentTrip.members?.[0];
 
-  const dateRange = currentTrip ? (() => {
+  // Fix 11: useMemo 避免每次 render 重新計算日期範圍
+  const dateRange = useMemo(() => {
+    if (!currentTrip) return [];
     const start = parseISO(currentTrip.startDate);
     const diff = Math.max(0, differenceInDays(parseISO(currentTrip.endDate), start)) + 1;
     return Array.from({ length: diff }, (_, i) => addDays(start, i));
-  })() : [];
+  }, [currentTrip?.startDate, currentTrip?.endDate]);
 
   const handleTabChange = (tabId: string) => {
     if (tabId === activeTab) return;
@@ -273,12 +278,19 @@ const App: React.FC = () => {
             transition={{ duration: 0.2 }}
             className="h-full"
           >
-            {activeTab === 'schedule' && <Schedule externalDateIdx={selectedDateIdx} />}
-            {activeTab === 'booking' && <Booking />}
-            {activeTab === 'expense' && <Expense />}
-            {activeTab === 'food' && <Journal />}
-            {activeTab === 'shop' && <Shopping />}
-            {activeTab === 'info' && <Info />}
+            {/* Fix 1: Suspense 包裹 Lazy 組件，fallback 為空白背景 */}
+            <Suspense fallback={
+              <div className="flex items-center justify-center h-64">
+                <div className="w-8 h-8 border-4 border-splat-blue border-t-transparent rounded-full animate-spin" />
+              </div>
+            }>
+              {activeTab === 'schedule' && <Schedule externalDateIdx={selectedDateIdx} />}
+              {activeTab === 'booking' && <Booking />}
+              {activeTab === 'expense' && <Expense />}
+              {activeTab === 'food' && <Journal />}
+              {activeTab === 'shop' && <Shopping />}
+              {activeTab === 'info' && <Info />}
+            </Suspense>
           </motion.div>
         </AnimatePresence>
       </main>

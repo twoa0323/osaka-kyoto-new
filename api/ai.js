@@ -42,6 +42,12 @@ export default async function handler(req, res) {
       return res.status(500).json({ error: "系統配置錯誤：缺少 API 金鑰" });
     }
 
+    // 0. Warm-up Ping (Fix 3: 讓冷啟動預熱有效)
+    if (action === 'ping') {
+      console.log('[AI Ping] Warm-up request received.');
+      return res.status(200).json({ ok: true, model: 'gemini-3-flash-preview' });
+    }
+
     // 1. 串流功能：景點導覽 (改為純文本串流輸出，簡化前端解析)
     if (action === 'get-spot-guide') {
       const prompt = `介紹「${payload.location} ${payload.title}」，回傳包含歷史、亮點、停留時間的簡短 Markdown，繁體中文。`;
