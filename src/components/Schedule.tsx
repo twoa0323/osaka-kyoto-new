@@ -295,9 +295,10 @@ const ScheduleMapView: FC<{
           <MapRoute coordinates={points} color="#5BA4E5" width={5} dashArray={[2, 2]} />
 
           {/* 🚀 Step 2: 開啟 3D 建築物圖層 */}
-          <Map3DBuildings />
+          <Map3DBuildings enabled={uiSettings.enable3DMap} />
 
           {/* 1. 渲染原本的行程標記 */}
+          <MapControls showZoom showCompass showLocate position="bottom-right" />
           {items.map((item, idx) => (
             item.lat && item.lng && (
               <MapMarker key={item.id} longitude={item.lng} latitude={item.lat} onClick={() => { handleCardClick(item); setTimeout(() => setDetailItem?.(item), 1300); }}>
@@ -454,20 +455,7 @@ const ScheduleMapView: FC<{
 
 
 export const Schedule: FC<{ externalDateIdx?: number }> = ({ externalDateIdx = 0 }) => {
-  const trips = useTripStore(s => s.trips);
-  const currentTripId = useTripStore(s => s.currentTripId);
-  const deleteScheduleItem = useTripStore(s => s.deleteScheduleItem);
-  const addScheduleItem = useTripStore(s => s.addScheduleItem);
-  const reorderScheduleItems = useTripStore(s => s.reorderScheduleItems);
-  const updateScheduleItem = useTripStore(s => s.updateScheduleItem);
-  const addBookingItem = useTripStore(s => s.addBookingItem);
-  const addJournalItem = useTripStore(s => s.addJournalItem);
-  const addShoppingItem = useTripStore(s => s.addShoppingItem);
-  const addInfoItem = useTripStore(s => s.addInfoItem);
-  const openAiAssistant = useTripStore(s => s.openAiAssistant);
-  const showToast = useTripStore(s => s.showToast);
-  const checkAiFallback = useTripStore(s => s.checkAiFallback);
-
+  const { trips, currentTripId, updateTripData, addScheduleItem, updateScheduleItem, deleteScheduleItem, showToast, checkAiFallback, uiSettings, addBookingItem, addJournalItem, addShoppingItem, addInfoItem, reorderScheduleItems } = useTripStore();
   const trip = trips.find(t => t.id === currentTripId);
   const isOnline = useNetworkStatus();
   const [isEditorOpen, setIsEditorOpen] = useState(false);
@@ -575,7 +563,7 @@ export const Schedule: FC<{ externalDateIdx?: number }> = ({ externalDateIdx = 0
     return cache;
   }, [uniqueCities, weatherQueries]);
 
-  let todayWeather = { max: '--', min: '--', code: -1, rain: '0', sunrise: '--:--', wind: '0級', cityName: timeline[0]?.city.name || 'CITY' };
+  let todayWeather = { max: '--', min: '--', code: -1, rain: 0, sunrise: '--:--', wind: '0級', cityName: timeline[0]?.city.name || 'CITY' };
   let currentTempStr = '--';
 
   if (timeline.length > 0 && weatherCache[timeline[0].city.name]) {
@@ -588,7 +576,7 @@ export const Schedule: FC<{ externalDateIdx?: number }> = ({ externalDateIdx = 0
       max: Math.round(mainCityData.daily.temperature_2m_max[dailyIdx]).toString(),
       min: Math.round(mainCityData.daily.temperature_2m_min[dailyIdx]).toString(),
       code: mainCityData.daily.weathercode[dailyIdx],
-      rain: mainCityData.daily.precipitation_probability_max[dailyIdx].toString(),
+      rain: mainCityData.daily.precipitation_probability_max[dailyIdx] || 0,
       sunrise: format(parseISO(mainCityData.daily.sunrise[dailyIdx]), 'HH:mm'),
       wind: getWindLevel(mainCityData.daily.windspeed_10m_max[dailyIdx] || 0)
     };

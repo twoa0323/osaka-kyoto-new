@@ -130,6 +130,7 @@ export default async function handler(req) {
   }
 
   console.log(`[AI Edge Action]: ${action}`);
+  const startTime = Date.now();
 
   // 🚀 Step 1: Vercel KV 快取檢查
   const cacheableActions = ['research-product-price', 'optimize-route', 'suggest-transport', 'suggest-weather-fallback'];

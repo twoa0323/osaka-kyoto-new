@@ -195,7 +195,7 @@ export interface Trip extends SyncMetadata {
 
   // 安全與預算設定
   tripPin: string;
-  adminEmail: string;
+  adminEmail?: string;
   members: Member[];
   memberIds?: string[];
   budget?: number; // 總預算

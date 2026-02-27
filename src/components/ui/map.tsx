@@ -1474,19 +1474,24 @@ function MapClusterLayer<
     return null;
 }
 
-/** Layer for rendering 3D buildings from vector tiles */
-function Map3DBuildings() {
+function Map3DBuildings({ enabled = true }: { enabled?: boolean }) {
     const { map, isLoaded } = useMap();
 
     useEffect(() => {
         if (!map || !isLoaded) return;
 
         const layerId = "3d-buildings";
+
+        if (!enabled) {
+            if (map.getLayer(layerId)) {
+                map.removeLayer(layerId);
+            }
+            return;
+        }
+
         const addLayer = () => {
             if (map.getLayer(layerId)) return;
 
-            // Check if source exists, if not, we might be using a style that doesn't have buildings
-            // This assumes OSM-based vector tiles often have a 'building' layer in a 'composite' or 'openmaptiles' source
             const sources = map.getStyle().sources;
             const sourceId = Object.keys(sources).find(id => id === 'composite' || id === 'openmaptiles') || 'composite';
 
@@ -1502,14 +1507,14 @@ function Map3DBuildings() {
                         "interpolate", ["linear"], ["get", "height"],
                         0, "#eef2f6",
                         20, "#cbd5e1",
-                        50, "#94a3b8",
-                        100, "#64748b"
+                        50, "rgba(50, 131, 131, 0.6)",
+                        100, "rgba(26, 26, 26, 0.6)"
                     ],
                     "fill-extrusion-height": ["get", "height"],
                     "fill-extrusion-base": ["get", "min_height"],
                     "fill-extrusion-opacity": 0.6
                 }
-            }, "waterway-name"); // Insert below name layers if possible
+            }, "waterway-name");
         };
 
         if (map.isStyleLoaded()) {
@@ -1521,7 +1526,7 @@ function Map3DBuildings() {
         return () => {
             if (map.getLayer(layerId)) map.removeLayer(layerId);
         };
-    }, [map, isLoaded]);
+    }, [map, isLoaded, enabled]);
 
     return null;
 }

@@ -66,16 +66,17 @@ export const Onboarding = ({ onComplete }: { onComplete: () => void }) => {
       destination: form.selectedPlace.display_name,
       lat: parseFloat(form.selectedPlace.lat),
       lng: parseFloat(form.selectedPlace.lon),
-      startDate: form.start, endDate: form.end, baseCurrency: form.currency,
+      startDate: form.start,
+      endDate: form.end,
+      baseCurrency: form.currency,
       tripPin: form.tripPin,
       creatorId: uid,
-      memberIds: [uid],
-      adminEmail: '',
+      memberIds: [uid], // 👈 確保 UID 被放入權限陣列
       members: [{
         id: uid,
         name: form.creatorName || '主揪',
         avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + (form.creatorName || '主揪'),
-        email: '',
+        email: auth.currentUser?.email || '',
         pin: form.tripPin
       }],
       items: [], bookings: [], expenses: [], journals: [], shoppingList: [], infoItems: [], packingList: []
@@ -196,11 +197,11 @@ export const Onboarding = ({ onComplete }: { onComplete: () => void }) => {
                   </div>
                 </div>
 
-                <div className="bg-[#EDF1F7] rounded-2xl p-4 flex items-center gap-4">
+                <div className="bg-[#EDF1F7] rounded-2xl p-4 flex items-center gap-4 border-2 border-transparent focus-within:border-splat-blue">
                   <User className="text-[#5C6B89]" size={20} />
-                  <input placeholder="你的暱稱 (例如: 主揪, 小明...)" className="bg-transparent w-full text-splat-dark font-black outline-none" value={form.creatorName} onChange={e => setForm({ ...form, creatorName: e.target.value })} />
+                  <input placeholder="您的暱稱 (例如: 主揪, 小明...)" className="bg-transparent w-full text-splat-dark font-black outline-none" value={form.creatorName} onChange={e => setForm({ ...form, creatorName: e.target.value })} />
                 </div>
-                <div className="bg-[#EDF1F7] rounded-2xl p-4 flex items-center gap-4">
+                <div className="bg-[#EDF1F7] rounded-2xl p-4 flex items-center gap-4 border-2 border-transparent focus-within:border-splat-blue">
                   <Lock className="text-[#5C6B89]" size={20} />
                   <input type="password" maxLength={4} inputMode="numeric" placeholder="4 位數進入密碼" className="bg-transparent w-full text-splat-dark font-black outline-none text-2xl tracking-[0.5em]" value={form.tripPin} onChange={e => setForm({ ...form, tripPin: e.target.value })} />
                 </div>

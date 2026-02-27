@@ -174,6 +174,7 @@ interface TripState {
     enableWeatherFX: boolean; // 氣候情境雨滴
     enableTaxTracker: boolean; // 退稅蓄力槽顯示
     enableAiStreaming: boolean; // AI 串流模式
+    enable3DMap: boolean; // 3D 地圖模式
   };
   setUISettings: (settings: Partial<TripState['uiSettings']>) => void;
   isSyncing: boolean;
@@ -206,6 +207,7 @@ export const useTripStore = create<TripState>()(
         enableWeatherFX: true,
         enableTaxTracker: true,
         enableAiStreaming: true,
+        enable3DMap: true,
       },
       setUISettings: (newSettings) => set((s) => ({
         uiSettings: { ...s.uiSettings, ...newSettings }

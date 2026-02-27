@@ -99,9 +99,29 @@ const App: FC = () => {
 
   const [editingProfile, setEditingProfile] = useState(false);
 
+  const SPLAT_COLORS = ['#FFC000', '#F03C69', '#2932CF', '#21CC65', '#5BA4E5'];
+
   // 動畫與 UI 設定狀態
   const [isSplatting, setIsSplatting] = useState(false);
   const [splatColor, setSplatColor] = useState('#FFC000');
+  const [splatPos, setSplatPos] = useState({ x: 0, y: 0 });
+
+  // 🚀 全域噴漆特效監聽器
+  const GlobalSplatObserver: FC = () => {
+    useEffect(() => {
+      const handleGlobalClick = (e: MouseEvent) => {
+        if (!uiSettings.enableSplatter) return;
+        setSplatPos({ x: e.clientX, y: e.clientY });
+        setSplatColor(SPLAT_COLORS[Math.floor(Math.random() * SPLAT_COLORS.length)]);
+        setIsSplatting(true);
+        triggerHaptic('light');
+        setTimeout(() => setIsSplatting(false), 800);
+      };
+      window.addEventListener('click', handleGlobalClick);
+      return () => window.removeEventListener('click', handleGlobalClick);
+    }, []);
+    return null;
+  };
 
   // Step 1: Lazy-Keep — 追蹤已造訪的分頁，只 Mount 一次，之後用 display 保留
   const [visitedTabs, setVisitedTabs] = useState<Set<string>>(() => new Set([activeTab]));
@@ -143,6 +163,28 @@ const App: FC = () => {
     }, 5000);
     return () => clearTimeout(pushTimer);
   }, [currentTripId]);
+
+  // 🔋 iPhone 15 Pro Max 視覺封頂：彈簧參數優化 (120Hz)
+  const SPRING_CONFIG = uiSettings.enableMotionDepth
+    ? { stiffness: 300, damping: 30 }
+    : { stiffness: 500, damping: 50 }; // 省電模式較快
+
+  // 💊 靈動島適配：AI 同步膠囊
+  const AIStatusCapsule: FC = () => {
+    return (
+      <motion.div
+        initial={{ y: -100 }}
+        animate={{ y: 0 }}
+        style={{ top: 'var(--sat, 12px)' }}
+        className="fixed left-1/2 -translate-x-1/2 z-[3000] pointer-events-none"
+      >
+        <div className="bg-splat-dark text-white px-4 py-1.5 rounded-full flex items-center gap-2 border-[2px] border-white/20 shadow-lg min-w-[120px] justify-center">
+          <div className="w-2 h-2 rounded-full bg-splat-green animate-pulse" />
+          <span className="text-[10px] font-black tracking-widest uppercase">AI Syncing</span>
+        </div>
+      </motion.div>
+    );
+  };
 
   // Fix 11/Root Cause of #310: 確保所有 Hooks 都在提早 return 之前執行
   const dateRange = useMemo(() => {
@@ -434,6 +476,7 @@ const App: FC = () => {
               <SettingToggle label="氣候情境特效" desc="下雨時畫面流下墨跡雨滴" enabled={uiSettings.enableWeatherFX} onChange={(v: boolean) => setUISettings({ enableWeatherFX: v })} />
               <SettingToggle label="退稅目標追蹤" desc="顯示購物免稅 ¥5,000 蓄力槽" enabled={uiSettings.enableTaxTracker} onChange={(v: boolean) => setUISettings({ enableTaxTracker: v })} />
               <SettingToggle label="AI 串流產出" desc="交通建議以打字機方式即時呈現" enabled={uiSettings.enableAiStreaming} onChange={(v: boolean) => setUISettings({ enableAiStreaming: v })} />
+              <SettingToggle label="3D 空間地圖" desc="顯示建築物立體層次" enabled={uiSettings.enable3DMap} onChange={(v: boolean) => setUISettings({ enable3DMap: v })} />
 
               <div className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl border-2 border-dashed border-gray-300 mt-4">
                 <div className="flex-1 pr-4">
@@ -481,6 +524,8 @@ const App: FC = () => {
           />
         )
       }
+      <AIStatusCapsule />
+      <GlobalSplatObserver />
       <AiAssistant />
       <SplatToast />
     </div>

@@ -11,6 +11,11 @@
     --sab: env(safe-area-inset-bottom);
     --sar: env(safe-area-inset-right);
     --sal: env(safe-area-inset-left);
+
+    /* 2026 P3 Wide Color Gamut Definitions */
+    --p3-blue: color(display-p3 0.16 0.2 0.81);
+    --p3-pink: color(display-p3 0.94 0.24 0.41);
+    --p3-yellow: color(display-p3 1 0.75 0);
   }
 
   body {
@@ -46,6 +51,20 @@
   /* 斯普拉遁風格通用按鈕 */
   .btn-splat {
     @apply font-black uppercase tracking-widest border-[3px] border-splat-dark shadow-splat-solid active:shadow-splat-active active:translate-x-1 active:translate-y-1 transition-all rounded-full;
+  }
+
+  /* 💎 玻璃擬態 2.0 (iOS 適配) */
+  .glass-card {
+    background: rgba(255, 255, 255, 0.7);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    @apply rounded-[24px];
+  }
+
+  /* 🔋 電力平衡：降級為硬陰影風格 (不依賴背景模糊) */
+  .power-saving-card {
+    @apply bg-white border-[3px] border-splat-dark shadow-splat-solid rounded-[24px];
   }
 }
 
