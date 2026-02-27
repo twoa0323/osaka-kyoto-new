@@ -199,11 +199,21 @@ const ScheduleMapView: FC<{
   const MAPTILER_KEY = (import.meta as any).env.VITE_MAPTILER_API_KEY;
   const mapRef = useRef<MapLibreGLType.Map | null>(null);
   const activeCardIdRef = useRef<string | null>(null);
+  const activeTab = useTripStore(s => s.activeTab);
 
   // 📍 魔法雷達狀態
   const [aiPlaces, setAiPlaces] = useState<any[]>([]);
   const [isExploring, setIsExploring] = useState(false);
   const [selectedAiPlace, setSelectedAiPlace] = useState<any>(null);
+
+  // 🚀 修復 Lazy-Keep 導致的地圖破圖 (hidden 屬性變回 visible 時需要 resize)
+  useEffect(() => {
+    if (activeTab === 'schedule' && mapRef.current) {
+      requestAnimationFrame(() => {
+        mapRef.current?.resize();
+      });
+    }
+  }, [activeTab]);
 
   const points = useMemo(() => {
     return items.filter(item => item.lat && item.lng).map(item => [item.lng, item.lat] as [number, number]);

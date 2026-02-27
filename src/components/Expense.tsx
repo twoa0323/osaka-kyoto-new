@@ -262,8 +262,17 @@ export const Expense = () => {
     method: '現金', amount: 0, storeName: '', title: '', location: '', images: [], category: '餐飲', items: []
   });
 
+  const globalActiveTab = useTripStore(s => s.activeTab);
+
   useEffect(() => {
-    if (trip?.baseCurrency && trip.baseCurrency !== 'TWD') {
+    if (globalActiveTab === 'expense' && trip?.baseCurrency && trip.baseCurrency !== 'TWD') {
+      // 📍 檢查上次更新時間，避免 1 小時內重複抓取
+      const ONE_HOUR = 3600000;
+      if (trip.lastRateUpdate && (Date.now() - trip.lastRateUpdate < ONE_HOUR)) {
+        if (trip.lastFetchedRate) setExchangeRate(trip.lastFetchedRate);
+        return;
+      }
+
       fetch(`https://open.er-api.com/v6/latest/${trip.baseCurrency}`)
         .then(res => res.json())
         .then(data => {
@@ -276,8 +285,8 @@ export const Expense = () => {
           if (trip.lastFetchedRate) setExchangeRate(trip.lastFetchedRate);
           else setExchangeRate(trip.baseCurrency === 'JPY' ? 0.21 : 1);
         });
-    } else { setExchangeRate(1); }
-  }, [trip?.id, trip?.baseCurrency, setExchangeRate]);
+    } else if (trip?.baseCurrency === 'TWD') { setExchangeRate(1); }
+  }, [globalActiveTab, trip?.id, trip?.baseCurrency, setExchangeRate]);
 
   if (!trip) return null;
 

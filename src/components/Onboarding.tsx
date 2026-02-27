@@ -3,8 +3,8 @@ import { useTripStore } from '../store/useTripStore';
 import { getCurrencyByCountry } from '../utils/currencyMapping';
 import { fetchExchangeRate } from '../utils/exchange';
 import { Plane, MapPin, Calendar, Banknote, RefreshCw, Rocket, Loader2, Mail, Lock, Plus, User } from 'lucide-react';
-import { doc, getDoc } from 'firebase/firestore';
-import { db } from '../services/firebase';
+import { doc, getDoc, updateDoc, arrayUnion } from 'firebase/firestore';
+import { db, auth } from '../services/firebase';
 
 export const Onboarding = ({ onComplete }: { onComplete: () => void }) => {
   // ✅ 修復 3：引入 addTripLocal 與 trips 來處理加入邏輯
@@ -56,8 +56,9 @@ export const Onboarding = ({ onComplete }: { onComplete: () => void }) => {
   const handleFinish = () => {
     if (!form.creatorName || form.tripPin.length < 4) return showToast("您的暱稱與 4 位密碼都要填唷！🔒", "info");
 
-    // ✅ 直接建立帶有成員的行程
-    const creatorId = 'm-' + Date.now();
+    const uid = auth.currentUser?.uid;
+    if (!uid) return showToast("請先登入系統！", "error");
+
     addTrip({
       id: Date.now().toString(),
       tripName: form.tripName || form.selectedPlace.display_name.split(',')[0],
@@ -67,13 +68,15 @@ export const Onboarding = ({ onComplete }: { onComplete: () => void }) => {
       lng: parseFloat(form.selectedPlace.lon),
       startDate: form.start, endDate: form.end, baseCurrency: form.currency,
       tripPin: form.tripPin,
-      adminEmail: '', // 不再強制要求 email
+      creatorId: uid,
+      memberIds: [uid],
+      adminEmail: '',
       members: [{
-        id: creatorId,
+        id: uid,
         name: form.creatorName || '主揪',
         avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + (form.creatorName || '主揪'),
         email: '',
-        pin: form.tripPin // 對齊行程 PIN
+        pin: form.tripPin
       }],
       items: [], bookings: [], expenses: [], journals: [], shoppingList: [], infoItems: [], packingList: []
     });
@@ -93,29 +96,33 @@ export const Onboarding = ({ onComplete }: { onComplete: () => void }) => {
     }
 
     try {
-      const docSnap = await getDoc(doc(db, "trips", shareId));
+      const docRef = doc(db, "trips", shareId);
+      const docSnap = await getDoc(docRef);
       if (docSnap.exists()) {
         const tripData = docSnap.data() as any;
         const pin = prompt(`找到「${tripData.dest}」！請輸入密碼加入：`);
         if (pin === tripData.tripPin) {
-          // ✅ 詢問暱稱並同步更新到遠端/本地
           const nick = prompt("請輸入您在群組中的暱稱：");
-          if (nick) {
+          const uid = auth.currentUser?.uid;
+          if (nick && uid) {
             const newMember = {
-              id: 'm-' + Date.now(),
+              id: uid,
               name: nick,
               avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + nick,
               email: '',
               pin: ''
             };
-            // 加入到成員清單中
-            const updatedMembers = [...(tripData.members || []), newMember];
-            // 更新本地與遠端狀態 (這裡調用 store 內部更新邏輯)
-            useTripStore.getState().updateTripData(shareId, { members: updatedMembers });
 
-            addTripLocal({ ...tripData, members: updatedMembers });
+            // 🚀 同步更新 Firebase (重要：這解開了權限死結與 ID 脫鉤)
+            await updateDoc(docRef, {
+              members: arrayUnion(newMember),
+              memberIds: arrayUnion(uid)
+            });
+
+            const updatedMembers = [...(tripData.members || []), newMember];
+            addTripLocal({ ...tripData, members: updatedMembers, memberIds: [...(tripData.memberIds || []), uid] });
             showToast(`歡迎加入！${nick} 🎉`, "success");
-            onComplete(); // 進入主畫面
+            onComplete();
           }
         } else {
           showToast("密碼錯誤！🔒", "error");
@@ -124,7 +131,8 @@ export const Onboarding = ({ onComplete }: { onComplete: () => void }) => {
         showToast("找不到這個行程代碼喔 🥲", "error");
       }
     } catch (e) {
-      showToast("網路錯誤，請稍後再試！", "error");
+      console.error(e);
+      showToast("發生錯誤，可能是權限不足！", "error");
     }
   };
 

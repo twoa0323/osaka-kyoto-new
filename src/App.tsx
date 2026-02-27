@@ -310,7 +310,7 @@ const App: FC = () => {
       )
       }
 
-      <main className={`flex-1 w-full max-w-md mx-auto overflow-x-hidden ${activeTab !== 'schedule' ? 'pt-6' : 'pt-2'}`}>
+      <main className={`flex-1 w-full max-w-md mx-auto overflow-hidden flex flex-col ${activeTab !== 'schedule' ? 'pt-6' : 'pt-2'}`}>
         {/*
             React 19 Activity 模式：
             - 取代舊的 display:none 手動控制
@@ -318,42 +318,42 @@ const App: FC = () => {
             - 隱藏分頁的 CPU 佔用率降至最低，且能瞬間恢復捲動深度
           */}
         {visitedTabs.has('schedule') && (
-          <div hidden={activeTab !== 'schedule'} className="h-full">
+          <div hidden={activeTab !== 'schedule'} className="flex-1 overflow-y-auto hide-scrollbar">
             <Suspense fallback={<div className="flex justify-center items-center h-64"><Loader2 size={32} className="animate-spin text-splat-blue" /></div>}>
               <Schedule externalDateIdx={selectedDateIdx} />
             </Suspense>
           </div>
         )}
         {visitedTabs.has('booking') && (
-          <div hidden={activeTab !== 'booking'} className="h-full">
+          <div hidden={activeTab !== 'booking'} className="flex-1 overflow-y-auto hide-scrollbar">
             <Suspense fallback={<div className="flex justify-center items-center h-64"><Loader2 size={32} className="animate-spin text-splat-pink" /></div>}>
               <Booking />
             </Suspense>
           </div>
         )}
         {visitedTabs.has('expense') && (
-          <div hidden={activeTab !== 'expense'} className="h-full">
+          <div hidden={activeTab !== 'expense'} className="flex-1 overflow-y-auto hide-scrollbar">
             <Suspense fallback={<div className="flex justify-center items-center h-64"><Loader2 size={32} className="animate-spin text-splat-yellow" /></div>}>
               <Expense />
             </Suspense>
           </div>
         )}
         {visitedTabs.has('food') && (
-          <div hidden={activeTab !== 'food'} className="h-full">
+          <div hidden={activeTab !== 'food'} className="flex-1 overflow-y-auto hide-scrollbar">
             <Suspense fallback={<div className="flex justify-center items-center h-64"><Loader2 size={32} className="animate-spin text-splat-orange" /></div>}>
               <Journal />
             </Suspense>
           </div>
         )}
         {visitedTabs.has('shop') && (
-          <div hidden={activeTab !== 'shop'} className="h-full">
+          <div hidden={activeTab !== 'shop'} className="flex-1 overflow-y-auto hide-scrollbar">
             <Suspense fallback={<div className="flex justify-center items-center h-64"><Loader2 size={32} className="animate-spin text-splat-green" /></div>}>
               <Shopping />
             </Suspense>
           </div>
         )}
         {visitedTabs.has('info') && (
-          <div hidden={activeTab !== 'info'} className="h-full">
+          <div hidden={activeTab !== 'info'} className="flex-1 overflow-y-auto hide-scrollbar">
             <Suspense fallback={<div className="flex justify-center items-center h-64"><Loader2 size={32} className="animate-spin text-splat-dark" /></div>}>
               <Info />
             </Suspense>

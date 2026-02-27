@@ -92,11 +92,14 @@ async function streamAiWithFallback(streamObjectArgs, google, useDeepThink = tru
   return { result, modelUsed: useDeepThink ? 'flash-fallback' : 'flash' };
 }
 
-// 🔑 輔助：產生 Cache Key
-async function getCacheKey(action, payload) {
-  const str = JSON.stringify({ action, payload });
-  // 使用簡單的 hash 或是直接用字串作為 key
-  return `ai:cache:${action}:${btoa(str).slice(0, 32)}`;
+// 🔑 輔助：安全產生 Cache Key (使用 SHA-256 避免 Unicode 字元導致 btoa 崩潰)
+async function generateCacheKey(action, payload) {
+  const dataString = JSON.stringify({ action, payload });
+  const msgUint8 = new TextEncoder().encode(dataString);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', msgUint8);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+  return `ai_cache:${action}:${hashHex}`;
 }
 
 export default async function handler(req) {
@@ -133,7 +136,7 @@ export default async function handler(req) {
   let cacheKey = null;
   if (cacheableActions.includes(action)) {
     try {
-      cacheKey = await getCacheKey(action, payload);
+      cacheKey = await generateCacheKey(action, payload);
       const cachedData = await kv.get(cacheKey);
       if (cachedData) {
         console.log(`[AI Cache HIT]: ${action}`);
