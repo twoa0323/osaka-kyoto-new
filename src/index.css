@@ -53,18 +53,30 @@
     @apply font-black uppercase tracking-widest border-[3px] border-splat-dark shadow-splat-solid active:shadow-splat-active active:translate-x-1 active:translate-y-1 transition-all rounded-full;
   }
 
-  /* 💎 玻璃擬態 2.0 (iOS 適配) */
+  /* 💎 玻璃擬態 2.0 (iOS 適配 — 支援 backdrop-filter 時啟用) */
   .glass-card {
-    background: rgba(255, 255, 255, 0.7);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    border: 1px solid rgba(255, 255, 255, 0.3);
+    background: white;
+    border: 3px solid #1A1A1A;
+    box-shadow: 4px 4px 0px #1A1A1A;
     @apply rounded-[24px];
   }
 
+  @supports (backdrop-filter: blur(1px)) {
+    .glass-card {
+      background: rgba(255, 255, 255, 0.7);
+      backdrop-filter: blur(12px) saturate(180%);
+      -webkit-backdrop-filter: blur(12px) saturate(180%);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+    }
+  }
+
   /* 🔋 電力平衡：降級為硬陰影風格 (不依賴背景模糊) */
+  .glass-card-fallback,
   .power-saving-card {
-    @apply bg-white border-[3px] border-splat-dark shadow-splat-solid rounded-[24px];
+    background: white;
+    @apply border-[3px] border-splat-dark rounded-[24px];
+    box-shadow: 4px 4px 0px #1A1A1A;
   }
 }
 

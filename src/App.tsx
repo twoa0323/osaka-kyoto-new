@@ -165,19 +165,28 @@ const App: FC = () => {
     ? { stiffness: 300, damping: 30 }
     : { stiffness: 500, damping: 50 }; // 省電模式較快
 
-  // 💊 靈動島適配：AI 同步膠囊
+  // 💊 靈動島適配：AI 同步膠囊 (isSyncing 連動呼吸動畫)
   const AIStatusCapsule: FC = () => {
+    const syncing = isSyncing;
+    const animate = uiSettings.enableMotionDepth && syncing;
     return (
       <motion.div
-        initial={{ y: -100 }}
-        animate={{ y: 0 }}
+        initial={{ y: -100, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ type: 'spring', ...SPRING_CONFIG }}
         style={{ top: 'var(--sat, 12px)' }}
         className="fixed left-1/2 -translate-x-1/2 z-[3000] pointer-events-none"
       >
-        <div className="bg-splat-dark text-white px-4 py-1.5 rounded-full flex items-center gap-2 border-[2px] border-white/20 shadow-lg min-w-[120px] justify-center">
-          <div className="w-2 h-2 rounded-full bg-splat-green animate-pulse" />
-          <span className="text-[10px] font-black tracking-widest uppercase">AI Syncing</span>
-        </div>
+        <motion.div
+          animate={animate ? { scaleX: [1, 1.15, 1], scaleY: [1, 0.92, 1] } : {}}
+          transition={animate ? { duration: 1.6, repeat: Infinity, ease: 'easeInOut' } : {}}
+          className="bg-splat-dark text-white px-4 py-1.5 rounded-full flex items-center gap-2 border-[2px] border-white/20 shadow-lg min-w-[120px] justify-center origin-center"
+        >
+          <div className={`w-2 h-2 rounded-full ${syncing ? 'bg-splat-green animate-pulse' : 'bg-gray-500'}`} />
+          <span className="text-[10px] font-black tracking-widest uppercase">
+            {syncing ? 'AI Syncing' : 'Ready'}
+          </span>
+        </motion.div>
       </motion.div>
     );
   };
@@ -473,6 +482,7 @@ const App: FC = () => {
               <SettingToggle label="退稅目標追蹤" desc="顯示購物免稅 ¥5,000 蓄力槽" enabled={uiSettings.enableTaxTracker} onChange={(v: boolean) => setUISettings({ enableTaxTracker: v })} />
               <SettingToggle label="AI 串流產出" desc="交通建議以打字機方式即時呈現" enabled={uiSettings.enableAiStreaming} onChange={(v: boolean) => setUISettings({ enableAiStreaming: v })} />
               <SettingToggle label="3D 空間地圖" desc="顯示建築物立體層次" enabled={uiSettings.enable3DMap} onChange={(v: boolean) => setUISettings({ enable3DMap: v })} />
+              <SettingToggle label="玻璃擬態 2.0" desc="啟用 iOS 風毛玻璃透明效果" enabled={uiSettings.enableGlassmorphism} onChange={(v: boolean) => setUISettings({ enableGlassmorphism: v })} />
 
               <div className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl border-2 border-dashed border-gray-300 mt-4">
                 <div className="flex-1 pr-4">
