@@ -60,7 +60,7 @@ const CITY_DB = [
   { keys: ['福岡', 'Fukuoka', '博多', '天神'], name: 'FUKUOKA', lat: 33.5902, lng: 130.4017 },
 ];
 
-import { Map, MapMarker, MarkerContent, MapRoute, MapControls, MapPopup } from './ui/map';
+import { Map, MapMarker, MarkerContent, MapRoute, MapControls, MapPopup, Map3DBuildings } from './ui/map';
 import MapLibreGL, { LngLatBounds } from 'maplibre-gl';
 import type * as MapLibreGLType from 'maplibre-gl';
 
@@ -263,20 +263,26 @@ const ScheduleMapView: FC<{
     }
   };
 
+  const uiSettings = useTripStore(s => s.uiSettings);
+
   return (
     <div className="flex flex-col h-full gap-4 relative">
       <div className="flex-1 relative rounded-[32px] overflow-hidden border-[4px] border-splat-dark shadow-splat-solid bg-gray-100">
         <Map
           ref={mapRef as any}
-          viewport={viewport}
+          initialViewState={{
+            center: [trip?.lng || 135.5023, trip?.lat || 34.6937],
+            zoom: 13,
+            pitch: 60,   // 🚀 開啟 3D 傾斜視角
+            bearing: -20 // 🚀 微旋轉增加透視感
+          }}
+          maxPitch={85}  // 🚀 允許使用者手動滑動至更低視角
           className="w-full h-full z-10"
-          styles={
-            MAPTILER_KEY
-              ? { light: `https://api.maptiler.com/maps/streets-v2/style.json?key=${MAPTILER_KEY}` }
-              : undefined
-          }
         >
           <MapRoute coordinates={points} color="#5BA4E5" width={5} dashArray={[2, 2]} />
+
+          {/* 🚀 Step 2: 開啟 3D 建築物圖層 */}
+          <Map3DBuildings />
 
           {/* 1. 渲染原本的行程標記 */}
           {items.map((item, idx) => (

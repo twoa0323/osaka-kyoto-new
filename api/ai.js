@@ -4,6 +4,7 @@ export const config = { runtime: 'edge' };
 import { streamText, generateObject, streamObject } from 'ai';
 import { createGoogleGenerativeAI } from '@ai-sdk/google';
 import { z } from 'zod';
+import { kv } from '@vercel/kv';
 
 // ──── Smart Model Router ────
 // PRIMARY_MODEL: 高邏輯任務（路線最佳化、交通推理、天氣應對）
@@ -34,13 +35,14 @@ async function fetchWikipediaImage(query) {
 }
 
 // 🔧 輔助：建立 JSON 回應，附加 X-AI-Model-Used 標頭方便前端統計
-function jsonResponse(data, status = 200, modelUsed = null) {
+function jsonResponse(data, status = 200, modelUsed = null, cacheStatus = null) {
   const headers = {
     'Content-Type': 'application/json',
     'Connection': 'keep-alive',       // 避免 Edge Function 靜止連線被截斷
     'Cache-Control': 'no-cache'       // 確保 Deep Think 結果不被 CDN 快取
   };
   if (modelUsed) headers['X-AI-Model-Used'] = modelUsed;
+  if (cacheStatus) headers['X-Cache'] = cacheStatus;
   return new Response(JSON.stringify(data), { status, headers });
 }
 
@@ -90,6 +92,13 @@ async function streamAiWithFallback(streamObjectArgs, google, useDeepThink = tru
   return { result, modelUsed: useDeepThink ? 'flash-fallback' : 'flash' };
 }
 
+// 🔑 輔助：產生 Cache Key
+async function getCacheKey(action, payload) {
+  const str = JSON.stringify({ action, payload });
+  // 使用簡單的 hash 或是直接用字串作為 key
+  return `ai:cache:${action}:${btoa(str).slice(0, 32)}`;
+}
+
 export default async function handler(req) {
   if (req.method === 'OPTIONS') return new Response(null, { status: 200 });
   if (req.method !== 'POST') return new Response('Method Not Allowed', { status: 405 });
@@ -118,6 +127,22 @@ export default async function handler(req) {
   }
 
   console.log(`[AI Edge Action]: ${action}`);
+
+  // 🚀 Step 1: Vercel KV 快取檢查
+  const cacheableActions = ['research-product-price', 'optimize-route'];
+  let cacheKey = null;
+  if (cacheableActions.includes(action)) {
+    try {
+      cacheKey = await getCacheKey(action, payload);
+      const cachedData = await kv.get(cacheKey);
+      if (cachedData) {
+        console.log(`[AI Cache HIT]: ${action}`);
+        return jsonResponse(cachedData, 200, 'cache', 'HIT');
+      }
+    } catch (cacheErr) {
+      console.warn(`[AI Cache Error]:`, cacheErr);
+    }
+  }
 
   try {
     // 0. Warm-up Ping
@@ -418,6 +443,17 @@ export default async function handler(req) {
 
       default:
         return jsonResponse({ error: `Invalid action: ${action}` }, 400);
+    }
+
+    // 🚀 Step 3: 快取寫入 (若為 MISS)
+    if (cacheKey) {
+      try {
+        await kv.set(cacheKey, finalObject, { ex: 86400 }); // 24 小時過期
+        console.log(`[AI Cache SET]: ${action}`);
+      } catch (cacheErr) {
+        console.warn(`[AI Cache SET Error]:`, cacheErr);
+      }
+      return jsonResponse(finalObject, 200, _modelUsed, 'MISS');
     }
 
     return jsonResponse(finalObject, 200, _modelUsed);

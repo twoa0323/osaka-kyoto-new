@@ -142,6 +142,10 @@ type MapProps = {
      * to enable controlled mode where the map viewport is driven by your state.
      */
     onViewportChange?: (viewport: MapViewport) => void;
+    /** Initial view state when the map first loads. */
+    initialViewState?: Partial<MapViewport>;
+    /** Maximum pitch of the map (0-85). Defaults to 60. */
+    maxPitch?: number;
 } & Omit<MapLibreGL.MapOptions, "container" | "style">;
 
 function DefaultLoader() {
@@ -1470,10 +1474,58 @@ function MapClusterLayer<
     return null;
 }
 
+/** Layer for rendering 3D buildings from vector tiles */
+function Map3DBuildings() {
+    const { map, isLoaded } = useMap();
+
+    useEffect(() => {
+        if (!map || !isLoaded) return;
+
+        const layerId = "3d-buildings";
+        const addLayer = () => {
+            if (map.getLayer(layerId)) return;
+
+            // Check if source exists, if not, we might be using a style that doesn't have buildings
+            // This assumes OSM-based vector tiles often have a 'building' layer in a 'composite' or 'openmaptiles' source
+            const sources = map.getStyle().sources;
+            const sourceId = Object.keys(sources).find(id => id === 'composite' || id === 'openmaptiles') || 'composite';
+
+            map.addLayer({
+                id: layerId,
+                source: sourceId,
+                "source-layer": "building",
+                filter: ["==", "extrude", "true"],
+                type: "fill-extrusion",
+                minzoom: 13,
+                paint: {
+                    "fill-extrusion-color": "#e5e7eb",
+                    /* Use an 'interpolate' expression to add some color variation based on height */
+                    "fill-extrusion-height": ["get", "height"],
+                    "fill-extrusion-base": ["get", "min_height"],
+                    "fill-extrusion-opacity": 0.7
+                }
+            }, "waterway-name"); // Insert below name layers if possible
+        };
+
+        if (map.isStyleLoaded()) {
+            addLayer();
+        } else {
+            map.once('styledata', addLayer);
+        }
+
+        return () => {
+            if (map.getLayer(layerId)) map.removeLayer(layerId);
+        };
+    }, [map, isLoaded]);
+
+    return null;
+}
+
 export {
     Map,
     useMap,
     MapMarker,
+    Map3DBuildings,
     MarkerContent,
     MarkerPopup,
     MarkerTooltip,
