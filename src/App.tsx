@@ -514,7 +514,17 @@ const App: FC = () => {
         showPersonalSetup && (
           <PersonalSetup
             onComplete={(data: { name: string; email: string; pin: string }) => {
-              updateTripData(currentTrip.id, { members: [{ ...data, id: 'm-' + Date.now(), avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${data.name}`, mood: '準備出發！✈️' }] });
+              const uid = auth.currentUser?.uid || 'anon-' + Date.now();
+              const newMember = {
+                ...data,
+                id: uid,
+                avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${data.name}`,
+                mood: '準備出發！✈️'
+              };
+              updateTripData(currentTrip.id, {
+                members: [...(currentTrip.members || []), newMember],
+                memberIds: [...new Set([...(currentTrip.memberIds || []), uid])]
+              });
               setShowPersonalSetup(false);
             }}
           />
