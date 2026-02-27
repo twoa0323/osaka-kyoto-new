@@ -100,6 +100,9 @@ const App: React.FC = () => {
   const [isSplatting, setIsSplatting] = useState(false);
   const [splatColor, setSplatColor] = useState('#FFC000');
 
+  // Step 1: Lazy-Keep — 追蹤已造訪的分頁，只 Mount 一次，之後用 display 保留
+  const [visitedTabs, setVisitedTabs] = useState<Set<string>>(() => new Set([activeTab]));
+
   // 移除本地 state，改用 Zustand uiSettings
   useHapticShake();
 
@@ -112,6 +115,16 @@ const App: React.FC = () => {
       setShowPersonalSetup(true);
     }
   }, [currentTrip]);
+
+  // Step 1: 每次切換分頁時，將新分頁加入 visitedTabs（只加不刪）
+  useEffect(() => {
+    setVisitedTabs(prev => {
+      if (prev.has(activeTab)) return prev; // 已造訪，不需更新
+      const next = new Set(prev);
+      next.add(activeTab);
+      return next;
+    });
+  }, [activeTab]);
 
   // 📍 Vercel 冷啟動 Warm-up Ping (Fix 3: 正確帶 Content-Type)
   useEffect(() => {
@@ -287,36 +300,46 @@ const App: React.FC = () => {
 
         <main className={`flex-1 w-full max-w-md mx-auto overflow-x-hidden ${activeTab !== 'schedule' ? 'pt-6' : 'pt-2'}`}>
           {/*
-            Step 1: React 19 <Activity> 相容模式
-            - React 18: 使用 CSS visibility + display:none 保留 DOM，切換零延遲
-            - React 19+ 升級後替換為: import { Activity } from 'react'
-              並將 div style 換成 <Activity mode={activeTab==='xxx' ? 'visible' : 'hidden'}>
-            - 效果等同：所有分頁都保持 Mount，狀態與捲動位置完整保留
+            Lazy-Keep 模式：分頁首次造訪才 Mount（節省首屏），
+            之後用 display:none 保留 DOM（保留捲動位置與狀態）
+            React 19 升級路徑：將 div style 換成 <Activity mode=...> 即可
           */}
           <Suspense fallback={
             <div className="flex items-center justify-center h-64">
               <div className="w-8 h-8 border-4 border-splat-blue border-t-transparent rounded-full animate-spin" />
             </div>
           }>
-            {/* Schedule — 永遠 Mount，透過 display 控制可見性 */}
-            <div style={{ display: activeTab === 'schedule' ? 'block' : 'none' }} className="h-full">
-              <Schedule externalDateIdx={selectedDateIdx} />
-            </div>
-            <div style={{ display: activeTab === 'booking' ? 'block' : 'none' }} className="h-full">
-              <Booking />
-            </div>
-            <div style={{ display: activeTab === 'expense' ? 'block' : 'none' }} className="h-full">
-              <Expense />
-            </div>
-            <div style={{ display: activeTab === 'food' ? 'block' : 'none' }} className="h-full">
-              <Journal />
-            </div>
-            <div style={{ display: activeTab === 'shop' ? 'block' : 'none' }} className="h-full">
-              <Shopping />
-            </div>
-            <div style={{ display: activeTab === 'info' ? 'block' : 'none' }} className="h-full">
-              <Info />
-            </div>
+            {/* Schedule 是預設分頁，永遠首先 Mount */}
+            {visitedTabs.has('schedule') && (
+              <div style={{ display: activeTab === 'schedule' ? 'block' : 'none' }} className="h-full">
+                <Schedule externalDateIdx={selectedDateIdx} />
+              </div>
+            )}
+            {visitedTabs.has('booking') && (
+              <div style={{ display: activeTab === 'booking' ? 'block' : 'none' }} className="h-full">
+                <Booking />
+              </div>
+            )}
+            {visitedTabs.has('expense') && (
+              <div style={{ display: activeTab === 'expense' ? 'block' : 'none' }} className="h-full">
+                <Expense />
+              </div>
+            )}
+            {visitedTabs.has('food') && (
+              <div style={{ display: activeTab === 'food' ? 'block' : 'none' }} className="h-full">
+                <Journal />
+              </div>
+            )}
+            {visitedTabs.has('shop') && (
+              <div style={{ display: activeTab === 'shop' ? 'block' : 'none' }} className="h-full">
+                <Shopping />
+              </div>
+            )}
+            {visitedTabs.has('info') && (
+              <div style={{ display: activeTab === 'info' ? 'block' : 'none' }} className="h-full">
+                <Info />
+              </div>
+            )}
           </Suspense>
         </main>
 

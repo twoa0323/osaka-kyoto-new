@@ -283,26 +283,32 @@ export default async function handler(req) {
       }
 
       case 'research-product-price': {
-        // Step 2: Search Grounding — 讓 Gemini 透過 Google 搜尋取得日本即時市場價格
-        // 解決 AI 幻覺問題，改為獲取 Bic Camera / 唐吉訶德當日真實售價
-        const searchGroundedModel = google(MODEL_NAME, {
-          useSearchGrounding: true // 啟用 Google Search Grounding
+        // Step 2: Search Grounding — 嘗試取得即時日本市場售價
+        // 自動降級：Free Tier 無 Grounding 權限時，改回一般生成模式（不崩潰）
+        const priceSchema = z.object({
+          currentMarketPrice: z.number(),
+          currency: z.string(),
+          isGoodDeal: z.boolean(),
+          dealRating: z.enum(['good', 'bad', 'normal']),
+          priceHistoryInsight: z.string(),
+          advice: z.string(),
+          recommendation: z.string()
         });
-        const r = await generateObject({
-          model: searchGroundedModel,
-          schema: z.object({
-            currentMarketPrice: z.number(),
-            currency: z.string(),
-            isGoodDeal: z.boolean(),
-            dealRating: z.enum(['good', 'bad', 'normal']),
-            priceHistoryInsight: z.string(),
-            advice: z.string(),
-            recommendation: z.string()
-          }),
-          // Step 2: 修改 Prompt 明確要求透過 Google Search 取得即時日本售價
-          prompt: `請務必透過 Google 搜尋，取得商品「${payload.title}」今日在日本（包含 Bic Camera、家電量販店、唐吉訶德）的最新日幣售價，並以此作為 currentMarketPrice 的評估基礎。\n類別：「${payload.category}」，幣別：${payload.currency}，目標預算：${payload.targetPrice || '未設定'}。\n根據即時市場價格與目標價的差異給出 dealRating (good/bad/normal) 與購買建議。請在 priceHistoryInsight 說明價格來源與趨勢。`
-        });
-        finalObject = r.object;
+        const pricePromptGrounded = `請務必透過 Google 搜尋，取得商品「${payload.title}」今日在日本（包含 Bic Camera、家電量販店、唐吉訶德）的最新日幣售價，並以此作為 currentMarketPrice 的評估基礎。\n類別：「${payload.category}」，幣別：${payload.currency}，目標預算：${payload.targetPrice || '未設定'}。\n根據即時市場價格與目標價的差異給出 dealRating (good/bad/normal) 與購買建議。請在 priceHistoryInsight 說明價格來源與趨勢。`;
+        const pricePromptFallback = `研究商品「${payload.title}」在日本的市場行情（類別：${payload.category}，幣別：${payload.currency}，目標預算：${payload.targetPrice || '未設定'}）。根據訓練資料估算 currentMarketPrice，給出 dealRating 與建議。`;
+
+        let priceResult;
+        try {
+          // 第一次嘗試：Search Grounding（即時售價）
+          const searchGroundedModel = google(MODEL_NAME, { useSearchGrounding: true });
+          priceResult = await generateObject({ model: searchGroundedModel, schema: priceSchema, prompt: pricePromptGrounded });
+        } catch (groundingErr) {
+          // Grounding 失敗（403 / Free Tier 限制）→ 降級為一般生成
+          const errMsg = groundingErr?.message || String(groundingErr);
+          console.warn(`[AI] Grounding 失敗，降級為一般生成模式。原因：${errMsg}`);
+          priceResult = await generateObject({ model, schema: priceSchema, prompt: pricePromptFallback });
+        }
+        finalObject = priceResult.object;
         break;
       }
 
