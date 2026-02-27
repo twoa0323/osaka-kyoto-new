@@ -1,6 +1,7 @@
 import { FC, useState, useEffect, Suspense, useMemo, lazy, cloneElement } from 'react';
 import { useTripStore } from './store/useTripStore';
 import { useFirebaseSync } from './hooks/useFirebaseSync';
+import { usePushNotifications } from './hooks/usePushNotifications';
 import { Onboarding } from './components/Onboarding';
 import {
   Plus, ChevronDown, Trash2, Calendar, CreditCard, Wallet,
@@ -71,6 +72,7 @@ const App: FC = () => {
   // Prompt 1: Zustand per-selector 寫法，避免全域解構造成無關組件 re-render
   const trips = useTripStore(s => s.trips);
   const currentTripId = useTripStore(s => s.currentTripId);
+  const { requestPermission } = usePushNotifications(currentTripId || '');
   const switchTrip = useTripStore(s => s.switchTrip);
   const deleteTrip = useTripStore(s => s.deleteTrip);
   const removeTripLocal = useTripStore(s => s.removeTripLocal);
@@ -134,7 +136,13 @@ const App: FC = () => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'ping' })
     }).catch(() => { });
-  }, []);
+
+    // 🚀 手動啟動推播權限請求 (延遲 5 秒避免干擾載入)
+    const pushTimer = setTimeout(() => {
+      requestPermission();
+    }, 5000);
+    return () => clearTimeout(pushTimer);
+  }, [currentTripId]);
 
   // Fix 11/Root Cause of #310: 確保所有 Hooks 都在提早 return 之前執行
   const dateRange = useMemo(() => {

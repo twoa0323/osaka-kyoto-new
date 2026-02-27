@@ -1,8 +1,8 @@
 import { initializeApp } from "firebase/app";
-import { 
-  initializeFirestore, 
-  persistentLocalCache, 
-  persistentMultipleTabManager 
+import {
+  initializeFirestore,
+  persistentLocalCache,
+  persistentMultipleTabManager
 } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
 import { getAuth, signInAnonymously } from "firebase/auth";
@@ -27,8 +27,13 @@ export const db = initializeFirestore(app, {
   })
 });
 
+import { getMessaging, onMessage } from "firebase/messaging";
+
+// ... (config unchanged)
+
 export const storage = getStorage(app);
 export const auth = getAuth(app);
+export const messaging = typeof window !== 'undefined' ? getMessaging(app) : null;
 
 // 啟用匿名登入
 // 注意：請確保你在 Firebase Console -> Authentication -> Sign-in method 啟用了「匿名」提供商

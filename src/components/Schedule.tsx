@@ -11,6 +11,7 @@ import { LazyImage } from './LazyImage';
 import { SwipeableItem } from './Common';
 import { useNetworkStatus } from '../hooks/useNetworkStatus';
 import { triggerHaptic } from '../utils/haptics';
+import { ARCompass } from './ui/ARCompass';
 
 // 移除受限制的前端 API Key 引進
 // const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY || "";
@@ -205,6 +206,8 @@ const ScheduleMapView: FC<{
   const [aiPlaces, setAiPlaces] = useState<any[]>([]);
   const [isExploring, setIsExploring] = useState(false);
   const [selectedAiPlace, setSelectedAiPlace] = useState<any>(null);
+  const [showAR, setShowAR] = useState(false);
+  const [arTarget, setArTarget] = useState<{ lat: number, lng: number, name: string } | null>(null);
 
   // 🚀 修復 Lazy-Keep 導致的地圖破圖 (hidden 屬性變回 visible 時需要 resize)
   useEffect(() => {
@@ -220,8 +223,8 @@ const ScheduleMapView: FC<{
   }, [items]);
 
   const viewport = useMemo(() => {
-    if (points.length > 0) return { center: points[0], zoom: points.length === 1 ? 15 : 12, bearing: 0, pitch: 0 };
-    return { center: [trip?.lng || 135.5023, trip?.lat || 34.6937] as [number, number], zoom: 12, bearing: 0, pitch: 0 };
+    if (points.length > 0) return { center: points[0], zoom: points.length === 1 ? 15 : 12, bearing: -20, pitch: 60 };
+    return { center: [trip?.lng || 135.5023, trip?.lat || 34.6937] as [number, number], zoom: 12, bearing: -20, pitch: 60 };
   }, [points, trip]);
 
   useEffect(() => {
@@ -311,7 +314,13 @@ const ScheduleMapView: FC<{
 
           {/* 2. 渲染 AI 推薦的發光標記 */}
           {aiPlaces.map((place, idx) => (
-            <MapMarker key={`ai-${idx}`} longitude={place.lng} latitude={place.lat} onClick={(e: any) => { e.originalEvent?.stopPropagation(); setSelectedAiPlace(place); }}>
+            <MapMarker key={`ai-${idx}`} longitude={place.lng} latitude={place.lat} onClick={(e: any) => {
+              e.originalEvent?.stopPropagation();
+              setSelectedAiPlace(place);
+              setArTarget({ lat: place.lat, lng: place.lng, name: place.name });
+              setShowAR(true); // 🚀 直接開啟 AR 羅盤導向此點
+              triggerHaptic('heavy');
+            }}>
               <MarkerContent>
                 <motion.div
                   onClick={(e) => { e.stopPropagation(); setSelectedAiPlace(place); }}
