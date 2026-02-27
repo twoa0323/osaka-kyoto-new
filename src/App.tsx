@@ -7,7 +7,7 @@ import {
   Plus, ChevronDown, Trash2, Calendar, CreditCard, Wallet,
   Utensils, ShoppingBag, Info as InfoIcon, Lock, User,
   Camera, X, Edit3, RefreshCcw, Settings as SettingsIcon,
-  ToggleLeft, ToggleRight, Luggage, PenTool, Sparkles as SparklesIcon, Loader2
+  ToggleLeft, ToggleRight, Luggage, PenTool, Sparkles as SparklesIcon, Loader2, MapPinOff
 } from 'lucide-react';
 import { format, addDays, differenceInDays, parseISO } from 'date-fns';
 import { compressImage, uploadImage } from './utils/imageUtils';

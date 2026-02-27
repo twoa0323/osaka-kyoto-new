@@ -35,7 +35,11 @@ async function fetchWikipediaImage(query) {
 
 // 🔧 輔助：建立 JSON 回應，附加 X-AI-Model-Used 標頭方便前端統計
 function jsonResponse(data, status = 200, modelUsed = null) {
-  const headers = { 'Content-Type': 'application/json' };
+  const headers = {
+    'Content-Type': 'application/json',
+    'Connection': 'keep-alive',       // 避免 Edge Function 靜止連線被截斷
+    'Cache-Control': 'no-cache'       // 確保 Deep Think 結果不被 CDN 快取
+  };
   if (modelUsed) headers['X-AI-Model-Used'] = modelUsed;
   return new Response(JSON.stringify(data), { status, headers });
 }
