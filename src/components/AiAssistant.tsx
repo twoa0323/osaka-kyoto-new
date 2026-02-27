@@ -9,7 +9,7 @@ export const AiAssistant: React.FC = () => {
     const {
         isAiModalOpen, setAiModalOpen, aiContext, activeTab,
         trips, currentTripId, addScheduleItem, updateTripData,
-        addExpenseItem, exchangeRate, addPackingItem, showToast
+        addExpenseItem, exchangeRate, addPackingItem, showToast, setAiMetadata
     } = useTripStore();
     const trip = trips.find(t => t.id === currentTripId);
 
@@ -43,6 +43,13 @@ export const AiAssistant: React.FC = () => {
 
     if (!isAiModalOpen || !trip) return null;
 
+    // 📶 Smart Model Router 元資料追蹤
+    // 讀取 X-AI-Model-Used 標頭並將結果同步到 Zustand Store
+    const trackAiMeta = (res: Response) => {
+        const modelUsed = res.headers.get('X-AI-Model-Used');
+        if (modelUsed) setAiMetadata(modelUsed);
+    };
+
     // --- AI 動作實作 ---
 
     // 1. 行程/多元解析
@@ -65,6 +72,7 @@ export const AiAssistant: React.FC = () => {
             });
 
             if (!res.ok) throw new Error("解析失敗");
+            trackAiMeta(res); // 追蹤 AI 模型元資料
             const jsonResult = await res.json();
 
             let hasImported = false;
@@ -135,6 +143,7 @@ export const AiAssistant: React.FC = () => {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ action: 'analyze-receipt', payload: { imageBase64: b64.split(',')[1] } })
             });
+            trackAiMeta(res); // 追蹤 AI 模型元資料
             const data = await res.json();
             const url = await uploadImage(file);
 
@@ -213,6 +222,7 @@ export const AiAssistant: React.FC = () => {
                     }
                 })
             });
+            trackAiMeta(res); // 追蹤 AI 模型元資料
             const data = await res.json();
             if (data.insight) {
                 showToast(`AI 建議：${data.insight.substring(0, 50)}...`, "info");
@@ -237,6 +247,7 @@ export const AiAssistant: React.FC = () => {
                     }
                 })
             });
+            trackAiMeta(res); // 追蹤 AI 模型元資料
             const data = await res.json();
             if (data && !data.error) {
                 const isBetterDeal = item.targetPrice && data.currentMarketPrice <= item.targetPrice;
@@ -271,6 +282,7 @@ export const AiAssistant: React.FC = () => {
                     }
                 })
             });
+            trackAiMeta(res); // 追蹤 AI 模型元資料
             const data = await res.json();
             if (data.packingList) {
                 const existingTitles = new Set(trip.packingList?.map(p => p.title.toLowerCase()) || []);

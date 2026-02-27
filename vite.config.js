@@ -35,9 +35,25 @@ export default defineConfig({
         // Step 4: 離線時所有路由都回退到 index.html，防止 SPA 404 崩潰
         navigateFallback: '/index.html',
         // Step 4: 確保所有 JS/CSS chunk 都被預快取，解決離線點擊未造訪頁面 crash
-        globPatterns: ['**/*.{js,css,html,ico,png,svg,webp,woff2,webmanifest}'],
+        // Step 1: 2026 升級 - 確保 maplibre-gl.css 被離線打包
+        globPatterns: ['**/*.{js,css,html,ico,png,svg,webp,woff2,webmanifest}', '**/maplibre-gl.css'],
         maximumFileSizeToCacheInBytes: 6000000,
         runtimeCaching: [
+          // Step 3: PWA 離線地圖與圖磚靜態快取優化
+          {
+            urlPattern: /^https:\/\/.*\.(cartocdn|stadiamaps)\.com\/.*/i,
+            handler: 'StaleWhileRevalidate',
+            options: {
+              cacheName: 'map-tiles-cache',
+              expiration: {
+                maxEntries: 1000,
+                maxAgeSeconds: 30 * 24 * 60 * 60 // 30天
+              },
+              cacheableResponse: {
+                statuses: [0, 200]
+              }
+            }
+          },
           {
             urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
             handler: 'CacheFirst',

@@ -173,6 +173,11 @@ interface TripState {
   setUISettings: (settings: Partial<TripState['uiSettings']>) => void;
   isSyncing: boolean;
   setIsSyncing: (s: boolean) => void;
+  /** 每次 AI 呼叫後呼叫，若降級為 Flash 則顯示 Toast 提示 */
+  checkAiFallback: (data: any) => void;
+  /** AI 模型 Metadata 狀態，同步自 X-AI-Model-Used 標頭 */
+  aiMetadata: { lastModelUsed: string | null };
+  setAiMetadata: (modelUsed: string) => void;
 }
 
 export const useTripStore = create<TripState>()(
@@ -196,6 +201,19 @@ export const useTripStore = create<TripState>()(
         uiSettings: { ...s.uiSettings, ...newSettings }
       })),
       setIsSyncing: (isSyncing) => set({ isSyncing }),
+      // 智慧模型路由器：偵測 AI 降級並提示使用者
+      checkAiFallback: (data) => {
+        if (data?.ai_tier === 'standard') {
+          get().showToast('⚡️ Standard Mode (Flash)', 'info');
+        }
+      },
+      aiMetadata: { lastModelUsed: null },
+      setAiMetadata: (modelUsed) => {
+        set({ aiMetadata: { lastModelUsed: modelUsed } });
+        if (modelUsed === 'flash-fallback') {
+          get().showToast('系統繁忙，已切換至標準閃電模式 ⚡️', 'info');
+        }
+      },
 
       setTrips: (trips) => set({ trips }),
       setActiveTab: (tab) => set({ activeTab: tab }),

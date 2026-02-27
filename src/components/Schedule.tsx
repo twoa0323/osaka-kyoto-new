@@ -441,6 +441,7 @@ export const Schedule: React.FC<{ externalDateIdx?: number }> = ({ externalDateI
   const addInfoItem = useTripStore(s => s.addInfoItem);
   const openAiAssistant = useTripStore(s => s.openAiAssistant);
   const showToast = useTripStore(s => s.showToast);
+  const checkAiFallback = useTripStore(s => s.checkAiFallback);
 
   const trip = trips.find(t => t.id === currentTripId);
   const isOnline = useNetworkStatus();
@@ -709,6 +710,9 @@ export const Schedule: React.FC<{ externalDateIdx?: number }> = ({ externalDateI
         throw new Error("AI 未能產出有效建議格式");
       }
 
+      // Smart Router: show toast if Flash fallback was used
+      checkAiFallback(data);
+
       const updatedItem = { ...currentItem, transportSuggestion: JSON.stringify(data) };
       updateScheduleItem(trip!.id, currentItem.id, updatedItem);
 
@@ -825,6 +829,8 @@ export const Schedule: React.FC<{ externalDateIdx?: number }> = ({ externalDateI
       clearTimeout(timeout);
       const data = await res.json();
       if (data && !data.error) {
+        // Smart Router: show toast if Flash fallback was used
+        checkAiFallback(data);
         setWeatherAdvice(data);
         setShowWizardModal(true);
       }
@@ -951,6 +957,8 @@ export const Schedule: React.FC<{ externalDateIdx?: number }> = ({ externalDateI
       });
       clearTimeout(timeout);
       const optimizedIds = await res.json();
+      // Smart Router: if fallback occurred, api returns X-AI-Tier: standard header
+      if (res.headers.get('X-AI-Tier') === 'standard') checkAiFallback({ ai_tier: 'standard' });
       if (Array.isArray(optimizedIds)) {
         const newOrder = [...optimizedIds]
           .map(id => dayItems.find(i => i.id === id))

@@ -5,12 +5,11 @@ import { streamText, generateObject } from 'ai';
 import { createGoogleGenerativeAI } from '@ai-sdk/google';
 import { z } from 'zod';
 
-const MODEL_NAME = 'gemini-3-flash-preview'; // 速度優先 Model（收據掃描、翻譯等）
-
-// Step 3: Deep Think 推理模型 — 用於路線優化與交通建議（高度空間邏輯推理）
-// 目前使用 gemini-3-flash-preview 搭配 thinking budget 作為相容層
-// 當 gemini-3-pro-deep-think 正式 GA 後，直接替換 MODEL_REASONING_NAME 即可
-const MODEL_REASONING_NAME = 'gemini-3-flash-preview'; // 升級後改為 'gemini-3-pro-deep-think'
+// ──── Smart Model Router ────
+// PRIMARY_MODEL: 高邏輯任務（路線最佳化、交通推理、天氣應對）
+const PRIMARY_MODEL = 'gemini-3-pro-deep-think';
+// SECONDARY_MODEL: 一般任務（翻譯、收據掃描、Magic Import）& Primary fallback
+const SECONDARY_MODEL = 'gemini-3-flash-preview';
 
 // 🌐 Wikipedia 圖片獲取助手
 async function fetchWikipediaImage(query) {
@@ -34,12 +33,38 @@ async function fetchWikipediaImage(query) {
   return null;
 }
 
-// 🔧 輔助：建立 JSON 回應
-function jsonResponse(data, status = 200) {
-  return new Response(JSON.stringify(data), {
-    status,
-    headers: { 'Content-Type': 'application/json' }
-  });
+// 🔧 輔助：建立 JSON 回應，附加 X-AI-Model-Used 標頭方便前端統計
+function jsonResponse(data, status = 200, modelUsed = null) {
+  const headers = { 'Content-Type': 'application/json' };
+  if (modelUsed) headers['X-AI-Model-Used'] = modelUsed;
+  return new Response(JSON.stringify(data), { status, headers });
+}
+
+/**
+ * 🤖 Smart Model Router — callAiWithFallback
+ * @param {object} generateObjectArgs - Arguments to pass to generateObject (without 'model' key)
+ * @param {object} google - The createGoogleGenerativeAI instance
+ * @param {boolean} useDeepThink - If true, first tries PRIMARY_MODEL, falls back to SECONDARY_MODEL on 429/503
+ * @returns {{ result: object, modelUsed: 'deep-think'|'flash-fallback'|'flash' }}
+ */
+async function callAiWithFallback(generateObjectArgs, google, useDeepThink = true) {
+  if (useDeepThink) {
+    try {
+      // Deep Think model with thinkingBudget (only safe for PRIMARY_MODEL)
+      const primaryModel = google(PRIMARY_MODEL, { thinkingConfig: { thinkingBudget: 8192 } });
+      const r = await generateObject({ ...generateObjectArgs, model: primaryModel });
+      return { result: r.object, modelUsed: 'deep-think' };
+    } catch (err) {
+      const errMsg = err?.message || String(err);
+      const isRateLimit = errMsg.includes('429') || errMsg.includes('503') || errMsg.includes('RESOURCE_EXHAUSTED');
+      console.warn(`[AI Router] Falling back to Flash... (原因: ${isRateLimit ? 'Rate Limit 429/503' : 'Error'}: ${errMsg})`);
+      // Fallthrough to SECONDARY_MODEL below
+    }
+  }
+  // Flash path — no thinkingConfig (對 Flash 模型發送 thinkingConfig 會導致 API error)
+  const secondaryModel = google(SECONDARY_MODEL);
+  const r = await generateObject({ ...generateObjectArgs, model: secondaryModel });
+  return { result: r.object, modelUsed: useDeepThink ? 'flash-fallback' : 'flash' };
 }
 
 export default async function handler(req) {
@@ -53,12 +78,9 @@ export default async function handler(req) {
   }
 
   const google = createGoogleGenerativeAI({ apiKey });
-  const model = google(MODEL_NAME);
-  // Step 3: Deep Think 推理模型 (路線/交通)
-  const reasoningModel = google(MODEL_REASONING_NAME, {
-    // 為推理任務增加思考預算，提升空間邏輯準確度
-    thinkingConfig: { thinkingBudget: 8192 }
-  });
+  // Smart Model Router: models are instantiated inside callAiWithFallback per-call
+  // General-purpose secondary model for streaming and one-off calls
+  const model = google(SECONDARY_MODEL);
 
   let action, payload, type, imageBase64;
   try {
@@ -77,10 +99,10 @@ export default async function handler(req) {
   try {
     // 0. Warm-up Ping
     if (action === 'ping') {
-      return jsonResponse({ ok: true, model: MODEL_NAME, runtime: 'edge' });
+      return jsonResponse({ ok: true, primaryModel: PRIMARY_MODEL, secondaryModel: SECONDARY_MODEL, runtime: 'edge' });
     }
 
-    // 1. 景點導覽串流
+    // 1. 景點導覽串流 — [General] 使用 SECONDARY_MODEL
     if (action === 'get-spot-guide') {
       const prompt = `介紹「${payload.location} ${payload.title}」，回傳包含歷史、亮點、停留時間的簡短 Markdown，繁體中文。`;
       const result = streamText({ model, prompt });
@@ -89,6 +111,7 @@ export default async function handler(req) {
 
     // 2. 結構化 generateObject actions
     let finalObject = {};
+    let _modelUsed = 'flash'; // 預設為 flash，將在高邏輯任務中更新
 
     switch (action) {
       case 'explore-nearby': {
@@ -208,8 +231,8 @@ export default async function handler(req) {
       }
 
       case 'suggest-weather-fallback': {
-        const r = await generateObject({
-          model,
+        // [High-Logic] Smart Router — Deep Think 優先，429/503 自動降級
+        const { result, modelUsed: weatherModel } = await callAiWithFallback({
           schema: z.object({
             reason: z.string(),
             recommendations: z.array(z.object({
@@ -223,8 +246,9 @@ export default async function handler(req) {
             }))
           }),
           prompt: `目前天氣狀況：「${payload.weather}」，地點位於「${payload.location}」。請針對受天氣影響的行程推薦室內替代方案。原始行程：${JSON.stringify(payload.dayItems || [])}`
-        });
-        finalObject = r.object;
+        }, google, true);
+        _modelUsed = weatherModel;
+        finalObject = result;
         break;
       }
 
@@ -292,10 +316,11 @@ export default async function handler(req) {
           dealRating: z.enum(['good', 'bad', 'normal']),
           priceHistoryInsight: z.string(),
           advice: z.string(),
-          recommendation: z.string()
+          recommendation: z.string(),
+          citations: z.array(z.string()).optional()
         });
-        const pricePromptGrounded = `請務必透過 Google 搜尋，取得商品「${payload.title}」今日在日本（包含 Bic Camera、家電量販店、唐吉訶德）的最新日幣售價，並以此作為 currentMarketPrice 的評估基礎。\n類別：「${payload.category}」，幣別：${payload.currency}，目標預算：${payload.targetPrice || '未設定'}。\n根據即時市場價格與目標價的差異給出 dealRating (good/bad/normal) 與購買建議。請在 priceHistoryInsight 說明價格來源與趨勢。`;
-        const pricePromptFallback = `研究商品「${payload.title}」在日本的市場行情（類別：${payload.category}，幣別：${payload.currency}，目標預算：${payload.targetPrice || '未設定'}）。根據訓練資料估算 currentMarketPrice，給出 dealRating 與建議。`;
+        const pricePromptGrounded = `你必須先調用 Google Search 工具獲取該商品在日本主要量販店（Bic Camera, Yodobashi, Don Quijote）的今日即時價格，嚴禁憑空捏造數字。\n請取得商品「${payload.title}」最新日幣售價，並以此作為 currentMarketPrice 的評估基礎。\n類別：「${payload.category}」，幣別：${payload.currency}，目標預算：${payload.targetPrice || '未設定'}。\n根據即時市場價格與目標價的差異給出 dealRating (good/bad/normal) 與購買建議。請在 priceHistoryInsight 說明價格來源與趨勢，並將參考網址放入 citations 陣列中以正確處理來源標籤。`;
+        const pricePromptFallback = `研究商品「${payload.title}」在日本的市場行情（類別：${payload.category}，幣別：${payload.currency}，目標預算：${payload.targetPrice || '未設定'}）。根據訓練資料估算 currentMarketPrice，給出 dealRating 與建議，若有參考依據請列入 citations。`;
 
         let priceResult;
         try {
@@ -314,9 +339,8 @@ export default async function handler(req) {
 
       case 'get-transport-suggestion':
       case 'suggest-transport': {
-        // Step 3: 使用 reasoningModel 進行高精度交通路線推理
-        const r = await generateObject({
-          model: reasoningModel,
+        // [High-Logic] Smart Router — Deep Think 優先，429/503 自動降級
+        const { result: transportResult, modelUsed: transportModel } = await callAiWithFallback({
           schema: z.object({
             summary: z.string(),
             steps: z.array(z.object({
@@ -327,19 +351,20 @@ export default async function handler(req) {
             }))
           }),
           prompt: `你是一位精通日本大眾運輸的交通專家。請深度推理從「${payload.prevLocation || payload.prevTitle || '起點'}」到「${payload.currentLocation || payload.currentTitle}」的最佳交通路線。\n考量因素：地鐵換乘效率、步行距離、等車時間、IC 卡適用性。\n請拆分為多個精確步驟（步行→月台→車種→出口）。繁體中文回答。`
-        });
-        finalObject = r.object;
+        }, google, true);
+        _modelUsed = transportModel;
+        finalObject = transportResult;
         break;
       }
 
       case 'optimize-route': {
-        // Step 3: 使用 reasoningModel 進行高精度地理路線排序
-        const r = await generateObject({
-          model: reasoningModel,
+        // [High-Logic] Smart Router — Deep Think 優先，429/503 自動降級
+        const { result: routeResult, modelUsed: routeModel } = await callAiWithFallback({
           schema: z.object({ optimizedIds: z.array(z.string()) }),
           prompt: `你是一位精通日本地理與大眾運輸的旅遊規劃師。請深度推理以下行程的最佳遊覽順序，目標是\n1. 最小化總移動距離與換乘次數\n2. 考慮各地點的步行連結性\n3. 避免來回折返\n請回傳優化後的 ID 陣列。行程資料：${JSON.stringify(payload.items)}`
-        });
-        return jsonResponse(r.object.optimizedIds);
+        }, google, true);
+        // optimize-route returns array directly; use jsonResponse with modelUsed header
+        return jsonResponse(routeResult.optimizedIds, 200, routeModel);
       }
 
       case 'translate-phrase': {
@@ -366,7 +391,7 @@ export default async function handler(req) {
         return jsonResponse({ error: `Invalid action: ${action}` }, 400);
     }
 
-    return jsonResponse(finalObject);
+    return jsonResponse(finalObject, 200, _modelUsed);
 
   } catch (error) {
     const msg = error?.message || String(error);

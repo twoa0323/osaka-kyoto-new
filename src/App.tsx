@@ -1,4 +1,5 @@
-import React, { useState, useEffect, Suspense, useMemo } from 'react';
+// @ts-ignore: React 19 Activity
+import React, { useState, useEffect, Suspense, useMemo, Activity } from 'react';
 import { useTripStore } from './store/useTripStore';
 import { useFirebaseSync } from './hooks/useFirebaseSync';
 import { Onboarding } from './components/Onboarding';
@@ -152,18 +153,31 @@ const App: React.FC = () => {
   const handleTabChange = (tabId: string) => {
     if (tabId === activeTab) return;
 
+    // 觸發墨水 SVG 動畫
     if (uiSettings.showSplash) {
       setSplatColor(SPLAT_COLORS[Math.floor(Math.random() * SPLAT_COLORS.length)]);
       setIsSplatting(true);
-      setTimeout(() => setIsSplatting(false), 600);
+      setTimeout(() => setIsSplatting(false), 800); // 配合 SVG 動畫時間
     }
 
-    setActiveTab(tabId);
+    if (uiSettings.enableHaptics) triggerHaptic('light');
 
-    if (uiSettings.enableHaptics) {
-      triggerHaptic('light');
+    // 2026 View Transitions API：瀏覽器支援時啟用原生無縫轉場
+    if (typeof document.startViewTransition !== 'function') {
+      // 降級：直接切換（iOS Safari／舊版支援）
+      setActiveTab(tabId);
+    } else {
+      document.startViewTransition(() => {
+        // flushSync 確保 React re-render 與 DOM 變化同步，防止 Tearing
+        import('react-dom').then((ReactDOM) => {
+          ReactDOM.flushSync(() => {
+            setActiveTab(tabId);
+          });
+        });
+      });
     }
   };
+
 
   const confirmTripSwitch = () => {
     const target = trips.find(t => t.id === lockedTripId);
@@ -299,52 +313,64 @@ const App: React.FC = () => {
 
       <main className={`flex-1 w-full max-w-md mx-auto overflow-x-hidden ${activeTab !== 'schedule' ? 'pt-6' : 'pt-2'}`}>
         {/*
-            Lazy-Keep + 個別 Suspense 模式：
-            - 首次造訪才 Mount（節省首屏渲染）
-            - 再次切回用 display:none 保留 DOM（零延遲 + 捲動位置保留）
-            - 每個分頁有獨立 Suspense，只有當前新分頁閃爍，不影響其他已載入分頁
+            React 19 Activity 模式：
+            - 取代舊的 display:none 手動控制
+            - 優化 React 記憶體回收機制
+            - 隱藏分頁的 CPU 佔用率降至最低，且能瞬間恢復捲動深度
           */}
         {visitedTabs.has('schedule') && (
-          <div style={{ display: activeTab === 'schedule' ? 'block' : 'none' }} className="h-full">
-            <Suspense fallback={<div className="flex justify-center items-center h-64"><Loader2 size={32} className="animate-spin text-splat-blue" /></div>}>
-              <Schedule externalDateIdx={selectedDateIdx} />
-            </Suspense>
-          </div>
+          <Activity mode={activeTab === 'schedule' ? 'visible' : 'hidden'}>
+            <div className="h-full">
+              <Suspense fallback={<div className="flex justify-center items-center h-64"><Loader2 size={32} className="animate-spin text-splat-blue" /></div>}>
+                <Schedule externalDateIdx={selectedDateIdx} />
+              </Suspense>
+            </div>
+          </Activity>
         )}
         {visitedTabs.has('booking') && (
-          <div style={{ display: activeTab === 'booking' ? 'block' : 'none' }} className="h-full">
-            <Suspense fallback={<div className="flex justify-center items-center h-64"><Loader2 size={32} className="animate-spin text-splat-pink" /></div>}>
-              <Booking />
-            </Suspense>
-          </div>
+          <Activity mode={activeTab === 'booking' ? 'visible' : 'hidden'}>
+            <div className="h-full">
+              <Suspense fallback={<div className="flex justify-center items-center h-64"><Loader2 size={32} className="animate-spin text-splat-pink" /></div>}>
+                <Booking />
+              </Suspense>
+            </div>
+          </Activity>
         )}
         {visitedTabs.has('expense') && (
-          <div style={{ display: activeTab === 'expense' ? 'block' : 'none' }} className="h-full">
-            <Suspense fallback={<div className="flex justify-center items-center h-64"><Loader2 size={32} className="animate-spin text-splat-yellow" /></div>}>
-              <Expense />
-            </Suspense>
-          </div>
+          <Activity mode={activeTab === 'expense' ? 'visible' : 'hidden'}>
+            <div className="h-full">
+              <Suspense fallback={<div className="flex justify-center items-center h-64"><Loader2 size={32} className="animate-spin text-splat-yellow" /></div>}>
+                <Expense />
+              </Suspense>
+            </div>
+          </Activity>
         )}
         {visitedTabs.has('food') && (
-          <div style={{ display: activeTab === 'food' ? 'block' : 'none' }} className="h-full">
-            <Suspense fallback={<div className="flex justify-center items-center h-64"><Loader2 size={32} className="animate-spin text-splat-orange" /></div>}>
-              <Journal />
-            </Suspense>
-          </div>
+          <Activity mode={activeTab === 'food' ? 'visible' : 'hidden'}>
+            <div className="h-full">
+              <Suspense fallback={<div className="flex justify-center items-center h-64"><Loader2 size={32} className="animate-spin text-splat-orange" /></div>}>
+                <Journal />
+              </Suspense>
+            </div>
+          </Activity>
         )}
         {visitedTabs.has('shop') && (
-          <div style={{ display: activeTab === 'shop' ? 'block' : 'none' }} className="h-full">
-            <Suspense fallback={<div className="flex justify-center items-center h-64"><Loader2 size={32} className="animate-spin text-splat-green" /></div>}>
-              <Shopping />
-            </Suspense>
-          </div>
+          <Activity mode={activeTab === 'shop' ? 'visible' : 'hidden'}>
+            <div className="h-full">
+              <Suspense fallback={<div className="flex justify-center items-center h-64"><Loader2 size={32} className="animate-spin text-splat-green" /></div>}>
+                <Shopping />
+              </Suspense>
+            </div>
+          </Activity>
         )}
         {visitedTabs.has('info') && (
-          <div style={{ display: activeTab === 'info' ? 'block' : 'none' }} className="h-full">
-            <Suspense fallback={<div className="flex justify-center items-center h-64"><Loader2 size={32} className="animate-spin text-splat-dark" /></div>}>
-              <Info />
-            </Suspense>
-          </div>
+          <Activity mode={activeTab === 'info' ? 'visible' : 'hidden'}>
+            <div className="h-full">
+              <Suspense fallback={<div className="flex justify-center items-center h-64"><Loader2 size={32} className="animate-spin text-splat-dark" /></div>}>
+                <Info />
+              </Suspense>
+            </div>
+          </Activity>
         )}
       </main>
 
