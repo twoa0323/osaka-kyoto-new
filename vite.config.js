@@ -35,12 +35,7 @@ export default defineConfig({
         navigateFallback: '/index.html',
         globPatterns: ['**/*.{js,css,html,ico,png,svg,webp,woff2,webmanifest}', '**/maplibre-gl.css'],
         maximumFileSizeToCacheInBytes: 6000000,
-        backgroundSync: {
-          name: 'firebase-sync-queue',
-          options: {
-            maxRetentionTime: 24 * 60 // 24小時
-          }
-        },
+        // backgroundSync 已移除：Firebase Firestore SDK 內建離線同步，不需 workbox backgroundSync
         runtimeCaching: [
           // Step 3: PWA 離線地圖與圖磚靜態快取優化
           {
