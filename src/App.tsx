@@ -135,18 +135,18 @@ const App: React.FC = () => {
     }).catch(() => { });
   }, []);
 
-  if (trips.length === 0 || showOnboarding) return <Onboarding onComplete={() => setShowOnboarding(false)} />;
-  if (!currentTrip) return <Onboarding onComplete={() => setShowOnboarding(false)} />;
-
-  const myProfile = currentTrip.members?.[0];
-
-  // Fix 11: useMemo 避免每次 render 重新計算日期範圍
+  // Fix 11/Root Cause of #310: 確保所有 Hooks 都在提早 return 之前執行
   const dateRange = useMemo(() => {
     if (!currentTrip) return [];
     const start = parseISO(currentTrip.startDate);
     const diff = Math.max(0, differenceInDays(parseISO(currentTrip.endDate), start)) + 1;
     return Array.from({ length: diff }, (_, i) => addDays(start, i));
   }, [currentTrip?.startDate, currentTrip?.endDate]);
+
+  if (trips.length === 0 || showOnboarding) return <Onboarding onComplete={() => setShowOnboarding(false)} />;
+  if (!currentTrip) return <Onboarding onComplete={() => setShowOnboarding(false)} />;
+
+  const myProfile = currentTrip.members?.[0];
 
   const handleTabChange = (tabId: string) => {
     if (tabId === activeTab) return;
