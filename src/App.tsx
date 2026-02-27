@@ -14,7 +14,7 @@ import {
   Plus, ChevronDown, Trash2, Calendar, CreditCard, Wallet,
   Utensils, ShoppingBag, Info as InfoIcon, Lock, User,
   Camera, X, Edit3, RefreshCcw, Settings as SettingsIcon,
-  ToggleLeft, ToggleRight, Luggage, PenTool, Sparkles as SparklesIcon
+  ToggleLeft, ToggleRight, Luggage, PenTool, Sparkles as SparklesIcon, Loader2
 } from 'lucide-react';
 import { format, addDays, differenceInDays, parseISO } from 'date-fns';
 import { compressImage, uploadImage } from './utils/imageUtils';
@@ -300,47 +300,53 @@ const App: React.FC = () => {
 
         <main className={`flex-1 w-full max-w-md mx-auto overflow-x-hidden ${activeTab !== 'schedule' ? 'pt-6' : 'pt-2'}`}>
           {/*
-            Lazy-Keep 模式：分頁首次造訪才 Mount（節省首屏），
-            之後用 display:none 保留 DOM（保留捲動位置與狀態）
-            React 19 升級路徑：將 div style 換成 <Activity mode=...> 即可
+            Lazy-Keep + 個別 Suspense 模式：
+            - 首次造訪才 Mount（節省首屏渲染）
+            - 再次切回用 display:none 保留 DOM（零延遲 + 捲動位置保留）
+            - 每個分頁有獨立 Suspense，只有當前新分頁閃爍，不影響其他已載入分頁
           */}
-          <Suspense fallback={
-            <div className="flex items-center justify-center h-64">
-              <div className="w-8 h-8 border-4 border-splat-blue border-t-transparent rounded-full animate-spin" />
-            </div>
-          }>
-            {/* Schedule 是預設分頁，永遠首先 Mount */}
-            {visitedTabs.has('schedule') && (
-              <div style={{ display: activeTab === 'schedule' ? 'block' : 'none' }} className="h-full">
+          {visitedTabs.has('schedule') && (
+            <div style={{ display: activeTab === 'schedule' ? 'block' : 'none' }} className="h-full">
+              <Suspense fallback={<div className="flex justify-center items-center h-64"><Loader2 size={32} className="animate-spin text-splat-blue" /></div>}>
                 <Schedule externalDateIdx={selectedDateIdx} />
-              </div>
-            )}
-            {visitedTabs.has('booking') && (
-              <div style={{ display: activeTab === 'booking' ? 'block' : 'none' }} className="h-full">
+              </Suspense>
+            </div>
+          )}
+          {visitedTabs.has('booking') && (
+            <div style={{ display: activeTab === 'booking' ? 'block' : 'none' }} className="h-full">
+              <Suspense fallback={<div className="flex justify-center items-center h-64"><Loader2 size={32} className="animate-spin text-splat-pink" /></div>}>
                 <Booking />
-              </div>
-            )}
-            {visitedTabs.has('expense') && (
-              <div style={{ display: activeTab === 'expense' ? 'block' : 'none' }} className="h-full">
+              </Suspense>
+            </div>
+          )}
+          {visitedTabs.has('expense') && (
+            <div style={{ display: activeTab === 'expense' ? 'block' : 'none' }} className="h-full">
+              <Suspense fallback={<div className="flex justify-center items-center h-64"><Loader2 size={32} className="animate-spin text-splat-yellow" /></div>}>
                 <Expense />
-              </div>
-            )}
-            {visitedTabs.has('food') && (
-              <div style={{ display: activeTab === 'food' ? 'block' : 'none' }} className="h-full">
+              </Suspense>
+            </div>
+          )}
+          {visitedTabs.has('food') && (
+            <div style={{ display: activeTab === 'food' ? 'block' : 'none' }} className="h-full">
+              <Suspense fallback={<div className="flex justify-center items-center h-64"><Loader2 size={32} className="animate-spin text-splat-orange" /></div>}>
                 <Journal />
-              </div>
-            )}
-            {visitedTabs.has('shop') && (
-              <div style={{ display: activeTab === 'shop' ? 'block' : 'none' }} className="h-full">
+              </Suspense>
+            </div>
+          )}
+          {visitedTabs.has('shop') && (
+            <div style={{ display: activeTab === 'shop' ? 'block' : 'none' }} className="h-full">
+              <Suspense fallback={<div className="flex justify-center items-center h-64"><Loader2 size={32} className="animate-spin text-splat-green" /></div>}>
                 <Shopping />
-              </div>
-            )}
-            {visitedTabs.has('info') && (
-              <div style={{ display: activeTab === 'info' ? 'block' : 'none' }} className="h-full">
+              </Suspense>
+            </div>
+          )}
+          {visitedTabs.has('info') && (
+            <div style={{ display: activeTab === 'info' ? 'block' : 'none' }} className="h-full">
+              <Suspense fallback={<div className="flex justify-center items-center h-64"><Loader2 size={32} className="animate-spin text-splat-dark" /></div>}>
                 <Info />
-              </div>
-            )}
-          </Suspense>
+              </Suspense>
+            </div>
+          )}
         </main>
 
         <nav className="fixed bottom-6 left-1/2 -translate-x-1/2 w-[92%] max-w-md bg-white border-[3px] border-splat-dark rounded-[32px] shadow-splat-solid px-2 py-3 flex justify-between items-center z-50">

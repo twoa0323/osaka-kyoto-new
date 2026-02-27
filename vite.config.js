@@ -30,8 +30,13 @@ export default defineConfig({
         ]
       },
       workbox: {
+        // Step 4: 清理舊版快取，避免版本衝突導致 PWA 故障
+        cleanupOutdatedCaches: true,
+        // Step 4: 離線時所有路由都回退到 index.html，防止 SPA 404 崩潰
+        navigateFallback: '/index.html',
+        // Step 4: 確保所有 JS/CSS chunk 都被預快取，解決離線點擊未造訪頁面 crash
+        globPatterns: ['**/*.{js,css,html,ico,png,svg,webp,woff2,webmanifest}'],
         maximumFileSizeToCacheInBytes: 6000000,
-        globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
