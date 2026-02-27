@@ -16,6 +16,21 @@ export const compressImage = (file: File): Promise<string> =>
     );
   });
 
+// 專為 AI 準備的極限壓縮 (避免 Vercel 4.5MB 限制)
+export const compressImageForAI = (file: File): Promise<string> =>
+  new Promise((resolve) => {
+    Resizer.imageFileResizer(
+      file,
+      800, // 最大寬度限制在 800
+      800, // 最大高度限制在 800
+      "WEBP", // 格式為 WEBP
+      70, // 畫質 70%
+      0, // 旋轉角度
+      (uri) => resolve(uri as string),
+      "base64" // 輸出為 Base64
+    );
+  });
+
 // 2. 上傳至 Cloudinary 雲端圖床
 export const uploadImage = async (file: File): Promise<string> => {
   // 先將圖片在本地端壓縮成 Base64

@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, Sparkles, Loader2, Camera, Compass, CloudRain, Layout, Receipt, BarChart3, Search, Trash2, Package, Check, AlertTriangle, User, Tag } from 'lucide-react';
 import { useTripStore } from '../store/useTripStore';
 import { triggerHaptic } from '../utils/haptics';
-import { compressImage, uploadImage } from '../utils/imageUtils';
+import { compressImage, compressImageForAI, uploadImage } from '../utils/imageUtils';
 
 export const AiAssistant: React.FC = () => {
     const {
@@ -94,7 +94,7 @@ export const AiAssistant: React.FC = () => {
         if (!file) return;
         setIsUploadingImage(true);
         try {
-            const b64 = await compressImage(file);
+            const b64 = await compressImageForAI(file);
             setAiImages(prev => [...prev, b64]);
         } catch (err) { showToast("圖片載入失敗", "error"); }
         finally { setIsUploadingImage(false); }
@@ -113,7 +113,7 @@ export const AiAssistant: React.FC = () => {
         if (!file) return;
         setLoadingAction('receipt');
         try {
-            const b64 = await compressImage(file);
+            const b64 = await compressImageForAI(file);
             const res = await fetch('/api/ai', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },

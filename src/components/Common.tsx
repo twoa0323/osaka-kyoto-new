@@ -109,6 +109,16 @@ export const SwipeableItem: React.FC<SwipeableItemProps> = ({ id, children, onDe
                 whileTap={{ cursor: disabled ? 'default' : 'grabbing' }}
                 className="relative z-10"
             >
+                {isRevealed && (
+                    <button
+                        className="absolute inset-0 z-[100] bg-transparent cursor-default"
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            animate(scope.current, { x: 0 }, { type: "spring", bounce: 0.2, duration: 0.4 });
+                            setIsRevealed(false);
+                        }}
+                    />
+                )}
                 {children}
             </motion.div>
         </div>

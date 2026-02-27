@@ -187,6 +187,7 @@ const ScheduleMapView: React.FC<{
   const { showToast } = useTripStore();
   const MAPTILER_KEY = (import.meta as any).env.VITE_MAPTILER_API_KEY;
   const mapRef = useRef<MapLibreGLType.Map | null>(null);
+  const activeCardIdRef = useRef<string | null>(null);
 
   // 📍 魔法雷達狀態
   const [aiPlaces, setAiPlaces] = useState<any[]>([]);
@@ -366,7 +367,33 @@ const ScheduleMapView: React.FC<{
       </div>
 
       {/* 🎠 Snap Carousel */}
-      <div className="flex overflow-x-auto gap-4 px-1 py-1 hide-scrollbar snap-x snap-mandatory h-28 shrink-0">
+      <div
+        className="flex overflow-x-auto gap-4 px-1 py-1 hide-scrollbar snap-x snap-mandatory h-28 shrink-0"
+        onScroll={(e) => {
+          const container = e.currentTarget;
+          let closestItem: ScheduleItem | null = null;
+          let minDiff = Infinity;
+
+          Array.from(container.children).forEach((child: any, idx) => {
+            const childRect = child.getBoundingClientRect();
+            const containerRect = container.getBoundingClientRect();
+            const childCenter = childRect.left + childRect.width / 2;
+            const containerCenter = containerRect.left + containerRect.width / 2;
+            const diff = Math.abs(childCenter - containerCenter);
+            if (diff < minDiff) {
+              minDiff = diff;
+              closestItem = items[idx];
+            }
+          });
+
+          if (closestItem && (closestItem as ScheduleItem).id !== activeCardIdRef.current) {
+            activeCardIdRef.current = (closestItem as ScheduleItem).id;
+            if ((closestItem as ScheduleItem).lat && (closestItem as ScheduleItem).lng && mapRef.current) {
+              mapRef.current.flyTo({ center: [(closestItem as ScheduleItem).lng!, (closestItem as ScheduleItem).lat!], zoom: 16, duration: 800 });
+            }
+          }
+        }}
+      >
         {items.map((item, idx) => {
           const catStyle = CATEGORY_STYLE[item.category as keyof typeof CATEGORY_STYLE] || CATEGORY_STYLE.sightseeing;
           return (
