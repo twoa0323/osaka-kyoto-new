@@ -247,7 +247,12 @@ export const useTripStore = create<TripState>()(
       },
 
       addTrip: (trip) => {
-        const newTrip = { ...trip, creatorId: auth.currentUser?.uid || 'unknown' };
+        const uid = auth.currentUser?.uid || 'unknown';
+        const newTrip = {
+          ...trip,
+          creatorId: uid,
+          memberIds: [uid] // 👈 初始化成員清單，供 Security Rules 驗證
+        };
         set(s => ({
           trips: [newTrip, ...s.trips],
           currentTripId: newTrip.id

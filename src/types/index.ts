@@ -184,6 +184,7 @@ export interface PackingItem extends SyncMetadata {
 export interface Trip extends SyncMetadata {
   id: string;
   creatorId?: string;
+  memberIds?: string[]; // 👈 新增：用於 Firebase Security Rules 驗證
   tripName: string;
   dest: string;
   destination: string;

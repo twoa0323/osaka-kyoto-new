@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react'
 import { useQueries } from '@tanstack/react-query';
 import { useTripStore } from '../store/useTripStore';
 import { format, addDays, differenceInDays, parseISO, isValid, isSameDay } from 'date-fns';
-import { MapPin, Plus, Edit3, Trash2, Utensils, Plane, Home, Camera, Sparkles, X, Loader2, Wind, Umbrella, Sunrise, ChevronUp, ChevronDown, Clock, Cloud, CloudRain, Sun, Droplets, AlertTriangle, Wand2, Check, WifiOff, Star, Map as MapIcon } from 'lucide-react';
+import { MapPin, Plus, Edit3, Trash2, Utensils, Plane, Home, Camera, Sparkles, X, Loader2, Wind, Umbrella, Sunrise, ChevronUp, ChevronDown, Clock, Cloud, CloudRain, Sun, Droplets, AlertTriangle, Wand2, Check, WifiOff, Star, Map as MapIcon, MapPinOff } from 'lucide-react';
 import { ScheduleEditor } from './ScheduleEditor';
 import { ScheduleItem, Trip } from '../types';
 import { WeatherReportModal, TransportAiModal } from './ScheduleModals';
@@ -704,21 +704,47 @@ export const Schedule: React.FC<{ externalDateIdx?: number }> = ({ externalDateI
       });
       clearTimeout(timeout);
 
-      const data = await res.json();
+      if (!res.ok) throw new Error("API 請求失敗");
 
-      if (!data || !data.steps || !data.summary) {
-        throw new Error("AI 未能產出有效建議格式");
+      // [Task 2] 實作串流讀取 (Manual Stream Reader)
+      const reader = res.body?.getReader();
+      if (!reader) throw new Error("無法讀取回應串流");
+
+      const decoder = new TextDecoder();
+      let fullText = "";
+      let lastResult: any = null;
+
+      setShowTransportModal(true); // 先開啟 Modal 顯示串流中狀態
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        fullText += decoder.decode(value, { stream: true });
+
+        // Vercel AI SDK text stream 格式為多行 JSON 塊
+        const lines = fullText.split('\n');
+        for (const line of lines) {
+          if (!line.trim()) continue;
+          try {
+            // 解析部分 JSON 並即時更新 UI
+            const parsed = JSON.parse(line);
+            if (parsed && typeof parsed === 'object') {
+              lastResult = parsed;
+              setSelectedTransportSuggestion(parsed);
+            }
+          } catch (e) { /* 部分 JSON 尚未完整，忽略 */ }
+        }
       }
 
-      // Smart Router: show toast if Flash fallback was used
-      checkAiFallback(data);
+      if (!lastResult || !lastResult.steps) throw new Error("AI 未能產出有效建議格式");
 
-      const updatedItem = { ...currentItem, transportSuggestion: JSON.stringify(data) };
+      // Smart Router Meta: 讀取 Header 並處理 (從 fetch 回傳的 res 中讀取)
+      const modelUsed = res.headers.get('X-AI-Model-Used');
+      if (modelUsed === 'flash-fallback') showToast("系統繁忙，已切換至標準閃電模式 ⚡️", "info");
+
+      const updatedItem = { ...currentItem, transportSuggestion: JSON.stringify(lastResult) };
       updateScheduleItem(trip!.id, currentItem.id, updatedItem);
-
-      setSelectedTransportSuggestion(data);
-      setShowTransportModal(true);
-
       triggerHaptic('success');
     } catch (e: any) {
       clearTimeout(timeout);

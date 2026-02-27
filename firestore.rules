@@ -1,0 +1,58 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ─── 預設：全部拒絕 ───────────────────────────────────────────────────────
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // ─── Trip 主文件 ──────────────────────────────────────────────────────────
+    // 允許讀寫條件：
+    //   1. 已登入 (request.auth != null)
+    //   2. 且是行程建立者 (creatorId == uid) 或成員 (uid 在 memberIds 陣列中)
+    match /trips/{tripId} {
+
+      // 共用函式：判斷目前使用者是否為行程成員或建立者
+      function isTripMember() {
+        let trip = resource.data;
+        return request.auth != null
+          && (
+            trip.creatorId == request.auth.uid
+            || (trip.memberIds is list && request.auth.uid in trip.memberIds)
+          );
+      }
+
+      // 允許建立：只有登入使用者才可建立，且必須把自己的 uid 放入 memberIds
+      function isValidCreate() {
+        let data = request.resource.data;
+        return request.auth != null
+          && data.creatorId == request.auth.uid
+          && data.memberIds is list
+          && request.auth.uid in data.memberIds;
+      }
+
+      allow read:   if isTripMember();
+      allow create: if isValidCreate();
+      allow update: if isTripMember();
+      allow delete: if request.auth != null
+                    && resource.data.creatorId == request.auth.uid;
+
+      // ─── 所有子集合：items / bookings / expenses / journals / shopping / info / packing
+      // 使用 get() 從父文件讀取 memberIds 驗證權限
+      match /{subCollection}/{docId} {
+        function parentTripMember() {
+          let parentTrip = get(/databases/$(database)/documents/trips/$(tripId)).data;
+          return request.auth != null
+            && (
+              parentTrip.creatorId == request.auth.uid
+              || (parentTrip.memberIds is list && request.auth.uid in parentTrip.memberIds)
+            );
+        }
+
+        allow read, write: if parentTripMember();
+      }
+    }
+  }
+}

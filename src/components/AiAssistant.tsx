@@ -1,9 +1,21 @@
 import React, { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Sparkles, Loader2, Camera, Compass, CloudRain, Layout, Receipt, BarChart3, Search, Trash2, Package, Check, AlertTriangle, User, Tag } from 'lucide-react';
+import { X, Sparkles, Loader2, Camera, Compass, CloudRain, Layout, Receipt, BarChart3, Search, Trash2, Package, Check, AlertTriangle, User, Tag, MapPinOff, ArrowRight, Train, Car, Footprints, Bus, Anchor } from 'lucide-react';
 import { useTripStore } from '../store/useTripStore';
 import { triggerHaptic } from '../utils/haptics';
 import { compressImage, compressImageForAI, uploadImage } from '../utils/imageUtils';
+import { experimental_useObject as useObject } from '@ai-sdk/react';
+import { z } from 'zod';
+
+const transportSchema = z.object({
+    summary: z.string(),
+    steps: z.array(z.object({
+        type: z.enum(['walk', 'train', 'bus', 'taxi', 'ferry', 'other']),
+        title: z.string(),
+        description: z.string(),
+        duration: z.string()
+    }))
+});
 
 export const AiAssistant: React.FC = () => {
     const {
@@ -21,6 +33,22 @@ export const AiAssistant: React.FC = () => {
 
     const [loadingStage, setLoadingStage] = useState(0);
     const LOADING_TEXTS = ["正在噴灑墨水...", "正在詢問當地大師...", "規劃最佳塗地路徑..."];
+
+    // [Task 2] AI 串流生成 (useObject)
+    const { object: transportObj, submit: submitTransport, isLoading: isStreamingTransport } = useObject({
+        api: '/api/ai',
+        schema: transportSchema,
+        onFinish: ({ object }) => {
+            if (object) {
+                triggerHaptic('success');
+                showToast("交通建議生成完成！✨", "success");
+            }
+        },
+        onError: (err) => {
+            console.error('[Transport Stream Error]', err);
+            showToast("建議生成中斷，請重試 🥲", "error");
+        }
+    });
 
     React.useEffect(() => {
         if (!loadingAction) {
@@ -416,6 +444,94 @@ export const AiAssistant: React.FC = () => {
                                     <button className="col-span-2 p-3 bg-white rounded-2xl border-[3px] border-splat-dark flex items-center justify-center gap-2 shadow-splat-solid-sm active:translate-y-1 active:shadow-none">
                                         <Layout size={20} className="text-splat-orange" />
                                         <span className="font-black text-[11px]">自動填補行程空檔</span>
+                                    </button>
+                                </div>
+
+                                {/* [Task 2] 串流交通建議 UI */}
+                                <div className="bg-splat-blue/5 border-[3px] border-splat-blue border-dashed rounded-[32px] p-6 space-y-4 shadow-inner">
+                                    <div className="flex items-center gap-3">
+                                        <div className="p-2 bg-splat-blue text-white rounded-xl shadow-splat-solid-xs -rotate-3">
+                                            <Train size={18} strokeWidth={3} />
+                                        </div>
+                                        <h4 className="font-black text-splat-dark text-lg uppercase italic tracking-tighter">Transport Wizard</h4>
+                                    </div>
+
+                                    <p className="text-[11px] font-bold text-gray-500 leading-snug">
+                                        點選下方按鈕，AI 將即時規劃兩點間的最佳路線。
+                                    </p>
+
+                                    {/* 串流結果區域 */}
+                                    {(isStreamingTransport || transportObj) && (
+                                        <div className="bg-white border-2 border-splat-dark rounded-2xl p-4 space-y-3 overflow-hidden">
+                                            {transportObj?.summary && (
+                                                <div className="bg-splat-blue/10 p-2 rounded-lg border border-splat-blue/20">
+                                                    <p className="text-[10px] font-black text-splat-blue uppercase italic mb-1">AI 總結</p>
+                                                    <p className="text-xs font-bold text-splat-dark leading-relaxed">{transportObj.summary}</p>
+                                                </div>
+                                            )}
+
+                                            <div className="space-y-2">
+                                                {transportObj?.steps?.map((step, idx) => (
+                                                    <motion.div
+                                                        key={idx}
+                                                        initial={{ opacity: 0, x: -10 }}
+                                                        animate={{ opacity: 1, x: 0 }}
+                                                        className="flex gap-3 items-start border-l-2 border-splat-blue/20 pl-3 pb-2 relative"
+                                                    >
+                                                        <div className="absolute -left-[5px] top-1 w-2 h-2 rounded-full bg-splat-blue" />
+                                                        <div className="p-1 bg-gray-50 rounded-lg text-splat-blue">
+                                                            {step?.type === 'walk' && <Footprints size={14} />}
+                                                            {step?.type === 'train' && <Train size={14} />}
+                                                            {step?.type === 'bus' && <Bus size={14} />}
+                                                            {step?.type === 'taxi' && <Car size={14} />}
+                                                            {step?.type === 'ferry' && <Anchor size={14} />}
+                                                            {(!step?.type || step.type === 'other') && <MapPinOff size={14} />}
+                                                        </div>
+                                                        <div className="flex-1">
+                                                            <div className="flex justify-between items-center mb-0.5">
+                                                                <p className="font-black text-[11px] text-splat-dark uppercase">{step?.title || '規劃中...'}</p>
+                                                                <span className="text-[9px] font-black text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded-full">{step?.duration}</span>
+                                                            </div>
+                                                            <p className="text-[10px] font-bold text-gray-500 leading-tight">{step?.description}</p>
+                                                        </div>
+                                                    </motion.div>
+                                                ))}
+                                                {isStreamingTransport && (
+                                                    <div className="flex items-center gap-2 pl-3 py-2">
+                                                        <Loader2 size={12} className="animate-spin text-splat-blue" />
+                                                        <span className="text-[10px] font-black text-splat-blue/50 italic animate-pulse">正在精煉步驟...</span>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    <button
+                                        onClick={() => {
+                                            const items = trip.items || [];
+                                            if (items.length < 2) return showToast("至少需要兩個行程點才能規劃交通 🗺️", "info");
+
+                                            // 預設規劃最後兩個地點之間的交通
+                                            const last = items[items.length - 1];
+                                            const prev = items[items.length - 2];
+
+                                            submitTransport({
+                                                action: 'suggest-transport',
+                                                payload: {
+                                                    prevLocation: prev.location,
+                                                    prevTitle: prev.title,
+                                                    currentLocation: last.location,
+                                                    currentTitle: last.title,
+                                                    prevItem: true
+                                                }
+                                            });
+                                            triggerHaptic('medium');
+                                        }}
+                                        disabled={isStreamingTransport}
+                                        className="btn-splat w-full py-3 bg-splat-blue text-white text-sm flex items-center justify-center gap-2"
+                                    >
+                                        <ArrowRight size={18} strokeWidth={3} />
+                                        <span>即時規劃交通建議 ➔</span>
                                     </button>
                                 </div>
                             </motion.div>

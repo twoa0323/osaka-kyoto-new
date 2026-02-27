@@ -1,7 +1,7 @@
 // ✅ Vercel Edge Function — 無 10 秒逾時限制，串流原生支援
 export const config = { runtime: 'edge' };
 
-import { streamText, generateObject } from 'ai';
+import { streamText, generateObject, streamObject } from 'ai';
 import { createGoogleGenerativeAI } from '@ai-sdk/google';
 import { z } from 'zod';
 
@@ -69,6 +69,25 @@ async function callAiWithFallback(generateObjectArgs, google, useDeepThink = tru
   const secondaryModel = google(SECONDARY_MODEL);
   const r = await generateObject({ ...generateObjectArgs, model: secondaryModel });
   return { result: r.object, modelUsed: useDeepThink ? 'flash-fallback' : 'flash' };
+}
+
+/**
+ * 🤖 Streaming Smart Model Router — streamAiWithFallback
+ * @returns {object} streamResult (from streamObject) with modelUsed info
+ */
+async function streamAiWithFallback(streamObjectArgs, google, useDeepThink = true) {
+  if (useDeepThink) {
+    try {
+      const primaryModel = google(PRIMARY_MODEL, { thinkingConfig: { thinkingBudget: 8192 } });
+      const result = await streamObject({ ...streamObjectArgs, model: primaryModel });
+      return { result, modelUsed: 'deep-think' };
+    } catch (err) {
+      console.warn(`[AI Router Stream] Deep Think 失敗，切換至 Flash`);
+    }
+  }
+  const secondaryModel = google(SECONDARY_MODEL);
+  const result = await streamObject({ ...streamObjectArgs, model: secondaryModel });
+  return { result, modelUsed: useDeepThink ? 'flash-fallback' : 'flash' };
 }
 
 export default async function handler(req) {
@@ -343,8 +362,8 @@ export default async function handler(req) {
 
       case 'get-transport-suggestion':
       case 'suggest-transport': {
-        // [High-Logic] Smart Router — Deep Think 優先，429/503 自動降級
-        const { result: transportResult, modelUsed: transportModel } = await callAiWithFallback({
+        // [Task 2] 實作 AI 串流生成 (streamObject) 消除等待焦慮
+        const { result, modelUsed } = await streamAiWithFallback({
           schema: z.object({
             summary: z.string(),
             steps: z.array(z.object({
@@ -356,9 +375,15 @@ export default async function handler(req) {
           }),
           prompt: `你是一位精通日本大眾運輸的交通專家。請深度推理從「${payload.prevLocation || payload.prevTitle || '起點'}」到「${payload.currentLocation || payload.currentTitle}」的最佳交通路線。\n考量因素：地鐵換乘效率、步行距離、等車時間、IC 卡適用性。\n請拆分為多個精確步驟（步行→月台→車種→出口）。繁體中文回答。`
         }, google, true);
-        _modelUsed = transportModel;
-        finalObject = transportResult;
-        break;
+
+        // 回傳串流響應，並附加 X-AI-Model-Used 標頭
+        return result.toTextStreamResponse({
+          headers: {
+            'X-AI-Model-Used': modelUsed,
+            'Connection': 'keep-alive',
+            'Cache-Control': 'no-cache'
+          }
+        });
       }
 
       case 'optimize-route': {
