@@ -99,29 +99,25 @@ const App: FC = () => {
 
   const [editingProfile, setEditingProfile] = useState(false);
 
-  const SPLAT_COLORS = ['#FFC000', '#F03C69', '#2932CF', '#21CC65', '#5BA4E5'];
-
   // 動畫與 UI 設定狀態
   const [isSplatting, setIsSplatting] = useState(false);
   const [splatColor, setSplatColor] = useState('#FFC000');
   const [splatPos, setSplatPos] = useState({ x: 0, y: 0 });
 
-  // 🚀 全域噴漆特效監聽器
-  const GlobalSplatObserver: FC = () => {
-    useEffect(() => {
-      const handleGlobalClick = (e: MouseEvent) => {
-        if (!uiSettings.enableSplatter) return;
-        setSplatPos({ x: e.clientX, y: e.clientY });
-        setSplatColor(SPLAT_COLORS[Math.floor(Math.random() * SPLAT_COLORS.length)]);
-        setIsSplatting(true);
-        triggerHaptic('light');
-        setTimeout(() => setIsSplatting(false), 800);
-      };
-      window.addEventListener('click', handleGlobalClick);
-      return () => window.removeEventListener('click', handleGlobalClick);
-    }, []);
-    return null;
-  };
+  // 🚀 全域噴漆特效 (useEffect 取代內嵌組件，避免每次渲染重新建立)
+  useEffect(() => {
+    const handleGlobalClick = (e: MouseEvent) => {
+      if (!uiSettings.enableSplatter) return;
+      setSplatPos({ x: e.clientX, y: e.clientY });
+      setSplatColor(SPLAT_COLORS[Math.floor(Math.random() * SPLAT_COLORS.length)]);
+      setIsSplatting(true);
+      triggerHaptic('light');
+      setTimeout(() => setIsSplatting(false), 800);
+    };
+    window.addEventListener('click', handleGlobalClick);
+    return () => window.removeEventListener('click', handleGlobalClick);
+  }, [uiSettings.enableSplatter]);
+
 
   // Step 1: Lazy-Keep — 追蹤已造訪的分頁，只 Mount 一次，之後用 display 保留
   const [visitedTabs, setVisitedTabs] = useState<Set<string>>(() => new Set([activeTab]));
@@ -525,7 +521,6 @@ const App: FC = () => {
         )
       }
       <AIStatusCapsule />
-      <GlobalSplatObserver />
       <AiAssistant />
       <SplatToast />
     </div>
