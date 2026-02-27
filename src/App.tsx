@@ -2,14 +2,6 @@ import React, { useState, useEffect, Suspense, useMemo } from 'react';
 import { useTripStore } from './store/useTripStore';
 import { useFirebaseSync } from './hooks/useFirebaseSync';
 import { Onboarding } from './components/Onboarding';
-// 🚀 Lazy Load 各分頁組件，大幅減少首次載入 bundle 體積
-const Schedule = React.lazy(() => import('./components/Schedule').then(m => ({ default: m.Schedule })));
-const Booking = React.lazy(() => import('./components/Booking').then(m => ({ default: m.Booking })));
-const Expense = React.lazy(() => import('./components/Expense').then(m => ({ default: m.Expense })));
-const Journal = React.lazy(() => import('./components/Journal').then(m => ({ default: m.Journal })));
-const Shopping = React.lazy(() => import('./components/Shopping').then(m => ({ default: m.Shopping })));
-const PackingList = React.lazy(() => import('./components/PackingList').then(m => ({ default: m.PackingList })));
-const Info = React.lazy(() => import('./components/Info').then(m => ({ default: m.Info })));
 import {
   Plus, ChevronDown, Trash2, Calendar, CreditCard, Wallet,
   Utensils, ShoppingBag, Info as InfoIcon, Lock, User,
@@ -29,6 +21,15 @@ import { triggerHaptic } from './utils/haptics';
 import { useHapticShake } from './hooks/useHapticShake';
 import { AiAssistant } from './components/AiAssistant';
 import { SplatToast } from './components/ui/SplatToast';
+
+// 🚀 Lazy Load 各分頁組件，大幅減少首次載入 bundle 體積
+const Schedule = React.lazy(() => import('./components/Schedule').then(m => ({ default: m.Schedule })));
+const Booking = React.lazy(() => import('./components/Booking').then(m => ({ default: m.Booking })));
+const Expense = React.lazy(() => import('./components/Expense').then(m => ({ default: m.Expense })));
+const Journal = React.lazy(() => import('./components/Journal').then(m => ({ default: m.Journal })));
+const Shopping = React.lazy(() => import('./components/Shopping').then(m => ({ default: m.Shopping })));
+const PackingList = React.lazy(() => import('./components/PackingList').then(m => ({ default: m.PackingList })));
+const Info = React.lazy(() => import('./components/Info').then(m => ({ default: m.Info })));
 
 // --- 常數設定 ---
 const PRESET_AVATARS = [
