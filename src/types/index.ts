@@ -198,6 +198,7 @@ export interface Trip extends SyncMetadata {
   tripPin: string;
   adminEmail: string;
   members: Member[];
+  memberIds?: string[];
   budget?: number; // 總預算
 
   // 6 大模組資料集合
