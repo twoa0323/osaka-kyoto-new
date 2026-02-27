@@ -169,6 +169,11 @@ interface TripState {
     showSplash: boolean;    // 潑墨特效開關
     enableHaptics: boolean; // 觸覺回饋開關
     showBudgetAlert: boolean; // 預算警報開關
+    enableSplatter: boolean; // 全域噴漆特效
+    enableMotionDepth: boolean; // 陀螺儀動態層次
+    enableWeatherFX: boolean; // 氣候情境雨滴
+    enableTaxTracker: boolean; // 退稅蓄力槽顯示
+    enableAiStreaming: boolean; // AI 串流模式
   };
   setUISettings: (settings: Partial<TripState['uiSettings']>) => void;
   isSyncing: boolean;
@@ -196,6 +201,11 @@ export const useTripStore = create<TripState>()(
         showSplash: true,
         enableHaptics: true,
         showBudgetAlert: true,
+        enableSplatter: true,
+        enableMotionDepth: true,
+        enableWeatherFX: true,
+        enableTaxTracker: true,
+        enableAiStreaming: true,
       },
       setUISettings: (newSettings) => set((s) => ({
         uiSettings: { ...s.uiSettings, ...newSettings }

@@ -1498,11 +1498,16 @@ function Map3DBuildings() {
                 type: "fill-extrusion",
                 minzoom: 13,
                 paint: {
-                    "fill-extrusion-color": "#e5e7eb",
-                    /* Use an 'interpolate' expression to add some color variation based on height */
+                    "fill-extrusion-color": [
+                        "interpolate", ["linear"], ["get", "height"],
+                        0, "#eef2f6",
+                        20, "#cbd5e1",
+                        50, "#94a3b8",
+                        100, "#64748b"
+                    ],
                     "fill-extrusion-height": ["get", "height"],
                     "fill-extrusion-base": ["get", "min_height"],
-                    "fill-extrusion-opacity": 0.7
+                    "fill-extrusion-opacity": 0.6
                 }
             }, "waterway-name"); // Insert below name layers if possible
         };

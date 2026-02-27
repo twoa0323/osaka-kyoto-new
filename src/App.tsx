@@ -427,7 +427,15 @@ const App: FC = () => {
               <SettingToggle label="觸覺回饋 (Haptic)" desc="按鈕點擊時的輕微震動" enabled={uiSettings.enableHaptics} onChange={(v: boolean) => setUISettings({ enableHaptics: v })} />
               <SettingToggle label="智慧預算警報" desc="支出超過預算 80% 時顯示提示" enabled={uiSettings.showBudgetAlert} onChange={(v: boolean) => setUISettings({ showBudgetAlert: v })} />
 
-              <div className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl border-2 border-dashed border-gray-300">
+              <hr className="border-gray-100 my-2" />
+
+              <SettingToggle label="噴漆互動特效" desc="點擊畫面時噴灑彩色墨水" enabled={uiSettings.enableSplatter} onChange={(v: boolean) => setUISettings({ enableSplatter: v })} />
+              <SettingToggle label="動態層次感" desc="根據手機傾斜改變 UI 陰影深度" enabled={uiSettings.enableMotionDepth} onChange={(v: boolean) => setUISettings({ enableMotionDepth: v })} />
+              <SettingToggle label="氣候情境特效" desc="下雨時畫面流下墨跡雨滴" enabled={uiSettings.enableWeatherFX} onChange={(v: boolean) => setUISettings({ enableWeatherFX: v })} />
+              <SettingToggle label="退稅目標追蹤" desc="顯示購物免稅 ¥5,000 蓄力槽" enabled={uiSettings.enableTaxTracker} onChange={(v: boolean) => setUISettings({ enableTaxTracker: v })} />
+              <SettingToggle label="AI 串流產出" desc="交通建議以打字機方式即時呈現" enabled={uiSettings.enableAiStreaming} onChange={(v: boolean) => setUISettings({ enableAiStreaming: v })} />
+
+              <div className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl border-2 border-dashed border-gray-300 mt-4">
                 <div className="flex-1 pr-4">
                   <h4 className="font-black text-splat-dark text-sm uppercase">Base Currency 預設幣別</h4>
                   <p className="text-[10px] font-bold text-gray-400 mt-1">影響全域匯率轉換基礎</p>

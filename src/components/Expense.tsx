@@ -449,6 +449,43 @@ export const Expense = () => {
         <Coins className="absolute -bottom-4 -right-4 text-white opacity-40 rotate-12" size={100} />
       </div>
 
+      {/* 🚀 Task 1: 退稅蓄力槽 (Tax-Free Power Bar) */}
+      {trip.baseCurrency === 'JPY' && (
+        <div className="bg-white border-[3px] border-splat-dark rounded-2xl p-4 shadow-splat-solid-sm overflow-hidden relative">
+          <div className="flex justify-between items-center mb-2">
+            <span className="text-[10px] font-black uppercase tracking-widest text-splat-dark flex items-center gap-1">
+              <Sparkles size={12} className="text-splat-yellow" /> Tax-Free Power
+            </span>
+            <span className="text-xs font-black tabular-nums">¥{Math.round(expenses.filter(e => e.isTaxFree).reduce((s, e) => s + e.amount, 0)).toLocaleString()} / ¥5,000</span>
+          </div>
+          <div className="h-4 bg-gray-100 rounded-full border-2 border-splat-dark relative overflow-hidden">
+            {(() => {
+              const taxFreeTotal = expenses.filter(e => e.isTaxFree).reduce((s, e) => s + e.amount, 0);
+              const ratio = Math.min(1, taxFreeTotal / 5000);
+              const isGoal = ratio >= 1;
+              return (
+                <motion.div
+                  initial={{ width: 0 }}
+                  animate={{ width: `${ratio * 100}%` }}
+                  className={`h-full border-r-2 border-splat-dark relative ${isGoal ? 'bg-splat-yellow shadow-[0_0_15px_rgba(255,192,0,0.8)]' : 'bg-splat-green'}`}
+                >
+                  {isGoal && (
+                    <motion.div
+                      animate={{ opacity: [0.4, 1, 0.4] }}
+                      transition={{ duration: 1, repeat: Infinity }}
+                      className="absolute inset-0 bg-white/30"
+                    />
+                  )}
+                </motion.div>
+              );
+            })()}
+          </div>
+          {expenses.filter(e => e.isTaxFree).reduce((s, e) => s + e.amount, 0) >= 5000 && (
+            <p className="text-center text-[9px] font-black uppercase text-splat-orange mt-2 animate-pulse">✨ 已達成免稅門檻！蓄力完成 ✨</p>
+          )}
+        </div>
+      )}
+
       {/* --- Budget Alerts (Splatoon Style) --- */}
       {percent >= 80 && (
         <motion.div

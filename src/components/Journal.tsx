@@ -486,9 +486,20 @@ export const Journal = () => {
                   className="w-full p-4 font-bold text-[15px] outline-none h-32 resize-none bg-transparent text-gray-700 placeholder:text-gray-300 relative z-10"
                 />
                 <div className="bg-gray-50 border-t-2 border-dashed border-gray-200 p-2 flex gap-2 overflow-x-auto hide-scrollbar">
-                  <button onClick={handleMagicRefine} disabled={isAiLoading} className="shrink-0 bg-splat-dark text-white text-[10px] font-black py-1.5 px-3 rounded-lg flex items-center gap-1 active:scale-95 transition-transform">
+                  <button
+                    onClick={async () => {
+                      if (form.content && form.content.length < 20) {
+                        // 觸發 Task 3: AI 味覺描述魔法棒 (Expansion Mode)
+                        await handleMagicRefine();
+                      } else {
+                        await handleMagicRefine();
+                      }
+                    }}
+                    disabled={isAiLoading}
+                    className="shrink-0 bg-splat-dark text-white text-[10px] font-black py-1.5 px-3 rounded-lg flex items-center gap-1 active:scale-95 transition-transform"
+                  >
                     {isAiLoading ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} className="text-splat-yellow" />}
-                    AI 精修食記
+                    {form.content && form.content.length < 20 ? 'AI 魔法擴寫 ✨' : 'AI 精修食記'}
                   </button>
                   <button onClick={handleRecommendDishes} disabled={isAiLoading} className="shrink-0 bg-splat-pink/10 text-splat-pink border border-splat-pink/30 text-[10px] font-black py-1.5 px-3 rounded-lg flex items-center gap-1 active:scale-95 transition-transform">
                     {isAiLoading ? <Loader2 size={12} className="animate-spin" /> : <UtensilsCrossed size={12} />}

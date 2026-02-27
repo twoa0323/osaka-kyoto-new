@@ -198,10 +198,15 @@ export default async function handler(req) {
             paymentMethod: z.string().default('現金'),
             isTaxFree: z.boolean(),
             confidence: z.number(),
-            items: z.array(z.object({ name: z.string(), price: z.number() })).optional()
+            items: z.array(z.object({
+              name: z.string(),
+              price: z.number(),
+              isAlcoholic: z.boolean().optional(),
+              isLuxury: z.boolean().optional()
+            })).optional()
           }),
           messages: [
-            { role: 'system', content: `分析此日文收據提取：商店名稱、類型、消費主題、日期(YYYY-MM-DD)、單純總金額、幣別、分類判斷、免稅狀態與信心值。列出各細項名稱及單價。` },
+            { role: 'system', content: `分析此日文收據提取：商店名稱、類型、消費主題、日期(YYYY-MM-DD)、單純總金額、幣別、分類判斷、免稅狀態與信心值。列出各細項名稱及單價。辨識項目是否為酒類(Alcoholic)或奢侈品(Luxury)。` },
             { role: 'user', content: [{ type: 'image', image: imageBase64, mimeType: 'image/jpeg' }] }
           ]
         });
@@ -327,11 +332,15 @@ export default async function handler(req) {
         break;
       }
 
-      case 'refine-food-review': {
+      case 'refine-food-review':
+      case 'expand-journal': {
+        const isExpansion = payload.content?.length < 20;
         const r = await generateObject({
-          model,
+          model: secondaryModel,
           schema: z.object({ refinedContent: z.string(), tags: z.array(z.string()) }),
-          prompt: `將使用者吃完「${payload.title}」的心得：「${payload.content || '很好吃'}」改寫為 IG 探店風格美食評論（50~100字，繁體中文）。並推薦 2~3 個 Hashtag。`
+          prompt: isExpansion
+            ? `將「${payload.title}」的簡短心得「${payload.content}」擴寫為一段充滿感官描述、令人垂涎欲滴的 IG 探店風評論（80~150字，繁體中文）。描述需包含口感（如：入口即化、層次分明）與香氣。推薦 3 個 Hashtag。`
+            : `將吃完「${payload.title}」的心得：「${payload.content}」改寫為 IG 探店風格美食評論（50~100字，繁體中文）。推薦 2~3 個 Hashtag。`
         });
         finalObject = r.object;
         break;

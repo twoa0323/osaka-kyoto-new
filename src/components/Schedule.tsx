@@ -1089,6 +1089,17 @@ export const Schedule: FC<{ externalDateIdx?: number }> = ({ externalDateIdx = 0
           </div>
         </div>
 
+        {/* 🚀 Task 2: 雨滴墨水動畫 (受 enableWeatherFX 控制) */}
+        {uiSettings.enableWeatherFX && todayWeather.rain > 30 && (
+          <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
+            {[...Array(10)].map((_, i) => (
+              <motion.div key={i} initial={{ y: -100, x: Math.random() * 400, opacity: 0 }} animate={{ y: window.innerHeight + 100, opacity: [0, 0.3, 0] }} transition={{ duration: 3 + Math.random() * 2, repeat: Infinity, delay: Math.random() * 5 }} className="absolute">
+                <svg width="40" height="60" viewBox="0 0 40 60" fill="none"><path d="M20 0C20 0 0 25 0 40C0 51.0457 8.9543 60 20 60C31.0457 60 40 51.0457 40 40C40 25 20 0 20 0Z" fill="currentColor" className="text-splat-blue/10" /></svg>
+              </motion.div>
+            ))}
+          </div>
+        )}
+
         {viewMode === 'list' ? (
           <div className="relative mt-4 space-y-6">
             <Reorder.Group axis="y" values={dayItems} onReorder={onReorder} className="space-y-4">
@@ -1097,20 +1108,33 @@ export const Schedule: FC<{ externalDateIdx?: number }> = ({ externalDateIdx = 0
                   <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center py-20 bg-white border-[3px] border-dashed border-gray-300 rounded-[40px] text-gray-400 font-black italic">今天還沒有計畫，來點冒險吧！🗺️</motion.div>
                 ) : (
                   dayItems.map((item, idx) => (
-                    <ScheduleItemRow
-                      key={item.id}
-                      item={item}
-                      idx={idx}
-                      isEditMode={isEditMode}
-                      dayItems={dayItems}
-                      tripId={trip!.id}
-                      updateScheduleItem={updateScheduleItem}
-                      deleteScheduleItem={deleteScheduleItem}
-                      setEditingItem={setEditingItem}
-                      setIsEditorOpen={setIsEditorOpen}
-                      setDetailItem={setDetailItem}
-                      timeToMins={timeToMins}
-                    />
+                    <div key={item.id}>
+                      <ScheduleItemRow
+                        item={item}
+                        idx={idx}
+                        isEditMode={isEditMode}
+                        dayItems={dayItems}
+                        tripId={trip!.id}
+                        updateScheduleItem={updateScheduleItem}
+                        deleteScheduleItem={deleteScheduleItem}
+                        setEditingItem={setEditingItem}
+                        setIsEditorOpen={setIsEditorOpen}
+                        setDetailItem={setDetailItem}
+                        timeToMins={timeToMins}
+                      />
+                      {/* 🚀 Task 2: 行程間的路徑連接線 */}
+                      {idx < dayItems.length - 1 && (
+                        <div className="flex flex-col items-center py-2 px-10">
+                          <div className="w-[3px] h-8 bg-dashed opacity-20" style={{ backgroundImage: 'linear-gradient(to bottom, #1A1A1A 50%, transparent 50%)', backgroundSize: '1px 8px' }} />
+                          <div className="bg-white border-2 border-splat-dark/10 px-3 py-1 rounded-full -mt-4 mb-2 z-10 flex items-center gap-1.5 shadow-sm">
+                            <Wind size={10} className="text-splat-blue" />
+                            <span className="text-[10px] font-black text-splat-dark/40 uppercase tracking-widest">
+                              {item.transportSuggestion?.split('(')[0] || 'Next Spot'}
+                            </span>
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   ))
                 )}
               </AnimatePresence>
