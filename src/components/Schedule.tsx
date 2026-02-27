@@ -429,10 +429,19 @@ const ScheduleMapView: React.FC<{
 
 
 export const Schedule: React.FC<{ externalDateIdx?: number }> = ({ externalDateIdx = 0 }) => {
-  const {
-    trips, currentTripId, deleteScheduleItem, addScheduleItem, reorderScheduleItems, updateScheduleItem,
-    addBookingItem, addJournalItem, addShoppingItem, addInfoItem, openAiAssistant, showToast
-  } = useTripStore();
+  const trips = useTripStore(s => s.trips);
+  const currentTripId = useTripStore(s => s.currentTripId);
+  const deleteScheduleItem = useTripStore(s => s.deleteScheduleItem);
+  const addScheduleItem = useTripStore(s => s.addScheduleItem);
+  const reorderScheduleItems = useTripStore(s => s.reorderScheduleItems);
+  const updateScheduleItem = useTripStore(s => s.updateScheduleItem);
+  const addBookingItem = useTripStore(s => s.addBookingItem);
+  const addJournalItem = useTripStore(s => s.addJournalItem);
+  const addShoppingItem = useTripStore(s => s.addShoppingItem);
+  const addInfoItem = useTripStore(s => s.addInfoItem);
+  const openAiAssistant = useTripStore(s => s.openAiAssistant);
+  const showToast = useTripStore(s => s.showToast);
+
   const trip = trips.find(t => t.id === currentTripId);
   const isOnline = useNetworkStatus();
   const [isEditorOpen, setIsEditorOpen] = useState(false);
@@ -1024,7 +1033,7 @@ export const Schedule: React.FC<{ externalDateIdx?: number }> = ({ externalDateI
         {viewMode === 'list' ? (
           <div className="relative mt-4 space-y-6">
             <Reorder.Group axis="y" values={dayItems} onReorder={onReorder} className="space-y-4">
-              <AnimatePresence mode="popLayout">
+              <AnimatePresence>
                 {dayItems.length === 0 ? (
                   <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center py-20 bg-white border-[3px] border-dashed border-gray-300 rounded-[40px] text-gray-400 font-black italic">今天還沒有計畫，來點冒險吧！🗺️</motion.div>
                 ) : (
