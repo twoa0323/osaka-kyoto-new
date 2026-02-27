@@ -1,8 +1,5 @@
 import React from 'react';
-import { motion } from 'framer-motion';
-import { ToggleLeft, ToggleRight, Trash2 } from 'lucide-react';
-import { triggerHaptic } from '../utils/haptics';
-import { useAnimate } from 'framer-motion';
+import { motion, useAnimate } from 'framer-motion';
 
 interface SettingToggleProps {
     label: string;
