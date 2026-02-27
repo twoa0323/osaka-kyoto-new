@@ -6,10 +6,24 @@ import { idbStorage } from '../utils/idbStorage';
 import { db, auth } from '../services/firebase'; // 👈 引入 auth 來抓取設備指紋
 import { doc, setDoc, deleteDoc, updateDoc } from 'firebase/firestore';
 
-// 深度淨化：移除所有 undefined，防止 Firebase 寫入失敗導致資料消失
-const deepSanitize = (obj: any): any => {
-  return JSON.parse(JSON.stringify(obj, (k, v) => (v === undefined ? null : v)));
-};
+// Prompt 1: 高效能遞迴版 removeUndefined，取代 JSON.parse/stringify 的深拷貝
+// 避免序列化整個物件造成主執行緒阻塞，只做單次遞迴遍歷
+function removeUndefined(obj: any): any {
+  if (obj === null || obj === undefined) return null;
+  if (Array.isArray(obj)) return obj.map(removeUndefined);
+  if (typeof obj === 'object' && obj.constructor === Object) {
+    const cleaned: Record<string, any> = {};
+    for (const key of Object.keys(obj)) {
+      const val = obj[key];
+      // undefined → null (Firebase 不接受 undefined)
+      cleaned[key] = val === undefined ? null : removeUndefined(val);
+    }
+    return cleaned;
+  }
+  return obj;
+}
+// 向後相容別名
+const deepSanitize = removeUndefined;
 
 // 加入 Debounce (防抖) 寫入，避免頻繁觸發 Firebase 浪費效能
 const syncTimeouts = new Map<string, any>();

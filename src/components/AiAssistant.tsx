@@ -85,7 +85,19 @@ export const AiAssistant: React.FC = () => {
             } else {
                 showToast("未解析到任何有效行程或支出 🥲", "error");
             }
-        } catch (e) { showToast("解析失敗 🥲", "error"); }
+        } catch (e: any) {
+            // Prompt 2: 具體錯誤訊息
+            const msg: string = e?.message || String(e);
+            console.error('[AI Analyze Error]', msg, e);
+            const isBig = msg.includes('413') || msg.toLowerCase().includes('payload') || msg.includes('too large');
+            const isTimeout = e?.name === 'AbortError' || msg.includes('timeout');
+            showToast(
+                isBig ? "圖片過大，請縮小後重試 📦" :
+                    isTimeout ? "AI 回應逾時，請稍後再試 ⏱️" :
+                        "解析失敗，請重試 🥲",
+                "error"
+            );
+        }
         finally { setLoadingAction(null); }
     };
 
@@ -96,7 +108,11 @@ export const AiAssistant: React.FC = () => {
         try {
             const b64 = await compressImageForAI(file);
             setAiImages(prev => [...prev, b64]);
-        } catch (err) { showToast("圖片載入失敗", "error"); }
+        } catch (err: any) {
+            const msg: string = err?.message || String(err);
+            console.error('[AI Image Upload Error]', msg);
+            showToast("圖片載入失敗，請重試 🌊", "error");
+        }
         finally { setIsUploadingImage(false); }
     };
 
@@ -130,9 +146,17 @@ export const AiAssistant: React.FC = () => {
                 itemAssignments: {} // 預設空，由使用者點選
             });
             triggerHaptic('success');
-        } catch (err) {
-            console.error("Receipt Scan Error:", err);
-            showToast("收據辨識失敗 🥲", "error");
+        } catch (err: any) {
+            const msg: string = err?.message || String(err);
+            console.error("Receipt Scan Error:", msg, err);
+            const isBig = msg.includes('413') || msg.toLowerCase().includes('payload') || msg.includes('too large');
+            const isTimeout = err?.name === 'AbortError' || msg.includes('timeout');
+            showToast(
+                isBig ? "圖片過大或網路超時，請重試 📦" :
+                    isTimeout ? "AI 回應逾時，請稍後再試 ⏱️" :
+                        "收據辨識失敗，請重試 🥲",
+                "error"
+            );
         } finally {
             setLoadingAction(null);
             if (e.target) e.target.value = ''; // 清除 input 以便下次選擇

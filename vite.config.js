@@ -79,6 +79,15 @@ export default defineConfig({
       }
     })
   ],
+  // Prompt 3: 本地開發 /api 代理至 Vercel dev server
+  server: {
+    proxy: {
+      '/api': {
+        target: 'http://localhost:3000',
+        changeOrigin: true,
+      }
+    }
+  },
   // Fix 12: 分割大套件為獨立 chunk，減少首次 bundle 解析時間
   build: {
     rollupOptions: {
@@ -88,7 +97,7 @@ export default defineConfig({
           'vendor-firebase': ['firebase/app', 'firebase/auth', 'firebase/firestore'],
           'vendor-map': ['maplibre-gl'],
           'vendor-framer': ['framer-motion'],
-          'vendor-query': ['@tanstack/react-query'],
+          // Prompt 3: 移除未使用的 vendor-query 區塊
         }
       }
     }
