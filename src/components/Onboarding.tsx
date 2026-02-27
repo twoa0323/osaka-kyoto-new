@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useTripStore } from '../store/useTripStore';
 import { getCurrencyByCountry } from '../utils/currencyMapping';
 import { fetchExchangeRate } from '../utils/exchange';
-import { Plane, MapPin, Calendar, Banknote, RefreshCw, Rocket, Loader2, Mail, Lock, Plus } from 'lucide-react';
+import { Plane, MapPin, Calendar, Banknote, RefreshCw, Rocket, Loader2, Mail, Lock, Plus, User } from 'lucide-react';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../services/firebase';
 
@@ -23,7 +23,7 @@ export const Onboarding = ({ onComplete }: { onComplete: () => void }) => {
     end: new Date().toISOString().split('T')[0],
     currency: 'TWD' as any,
     tripPin: '',
-    adminEmail: ''
+    creatorName: '' // 👈 替代 adminEmail
   });
 
   useEffect(() => {
@@ -54,16 +54,27 @@ export const Onboarding = ({ onComplete }: { onComplete: () => void }) => {
   };
 
   const handleFinish = () => {
-    if (!form.adminEmail || form.tripPin.length < 4) return showToast("Email 與 4 位密碼都要填唷！🔒", "info");
+    if (!form.creatorName || form.tripPin.length < 4) return showToast("您的暱稱與 4 位密碼都要填唷！🔒", "info");
+
+    // ✅ 直接建立帶有成員的行程
+    const creatorId = 'm-' + Date.now();
     addTrip({
       id: Date.now().toString(),
-      tripName: form.tripName || form.selectedPlace.display_name.split(',')[0], // 👈 ✅ 關鍵修復：把旅行名稱寫入資料庫
+      tripName: form.tripName || form.selectedPlace.display_name.split(',')[0],
       dest: form.selectedPlace.display_name.split(',')[0],
       destination: form.selectedPlace.display_name,
       lat: parseFloat(form.selectedPlace.lat),
       lng: parseFloat(form.selectedPlace.lon),
       startDate: form.start, endDate: form.end, baseCurrency: form.currency,
-      tripPin: form.tripPin, adminEmail: form.adminEmail, members: [],
+      tripPin: form.tripPin,
+      adminEmail: '', // 不再強制要求 email
+      members: [{
+        id: creatorId,
+        name: form.creatorName || '主揪',
+        avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + (form.creatorName || '主揪'),
+        email: '',
+        pin: form.tripPin // 對齊行程 PIN
+      }],
       items: [], bookings: [], expenses: [], journals: [], shoppingList: [], infoItems: [], packingList: []
     });
     onComplete();
@@ -87,9 +98,25 @@ export const Onboarding = ({ onComplete }: { onComplete: () => void }) => {
         const tripData = docSnap.data() as any;
         const pin = prompt(`找到「${tripData.dest}」！請輸入密碼加入：`);
         if (pin === tripData.tripPin) {
-          addTripLocal(tripData);
-          showToast("成功加入行程！🎉", "success");
-          onComplete(); // 進入主畫面
+          // ✅ 詢問暱稱並同步更新到遠端/本地
+          const nick = prompt("請輸入您在群組中的暱稱：");
+          if (nick) {
+            const newMember = {
+              id: 'm-' + Date.now(),
+              name: nick,
+              avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + nick,
+              email: '',
+              pin: ''
+            };
+            // 加入到成員清單中
+            const updatedMembers = [...(tripData.members || []), newMember];
+            // 更新本地與遠端狀態 (這裡調用 store 內部更新邏輯)
+            useTripStore.getState().updateTripData(shareId, { members: updatedMembers });
+
+            addTripLocal({ ...tripData, members: updatedMembers });
+            showToast(`歡迎加入！${nick} 🎉`, "success");
+            onComplete(); // 進入主畫面
+          }
         } else {
           showToast("密碼錯誤！🔒", "error");
         }
@@ -161,8 +188,14 @@ export const Onboarding = ({ onComplete }: { onComplete: () => void }) => {
                   </div>
                 </div>
 
-                <div className="bg-[#EDF1F7] rounded-2xl p-4 flex items-center gap-4"><Mail className="text-[#5C6B89]" size={20} /><input placeholder="Email (管理員信箱)" className="bg-transparent w-full text-splat-dark font-black outline-none" value={form.adminEmail} onChange={e => setForm({ ...form, adminEmail: e.target.value })} /></div>
-                <div className="bg-[#EDF1F7] rounded-2xl p-4 flex items-center gap-4"><Lock className="text-[#5C6B89]" size={20} /><input type="password" maxLength={4} inputMode="numeric" placeholder="4 位數進入密碼" className="bg-transparent w-full text-splat-dark font-black outline-none text-2xl tracking-[0.5em]" value={form.tripPin} onChange={e => setForm({ ...form, tripPin: e.target.value })} /></div>
+                <div className="bg-[#EDF1F7] rounded-2xl p-4 flex items-center gap-4">
+                  <User className="text-[#5C6B89]" size={20} />
+                  <input placeholder="你的暱稱 (例如: 主揪, 小明...)" className="bg-transparent w-full text-splat-dark font-black outline-none" value={form.creatorName} onChange={e => setForm({ ...form, creatorName: e.target.value })} />
+                </div>
+                <div className="bg-[#EDF1F7] rounded-2xl p-4 flex items-center gap-4">
+                  <Lock className="text-[#5C6B89]" size={20} />
+                  <input type="password" maxLength={4} inputMode="numeric" placeholder="4 位數進入密碼" className="bg-transparent w-full text-splat-dark font-black outline-none text-2xl tracking-[0.5em]" value={form.tripPin} onChange={e => setForm({ ...form, tripPin: e.target.value })} />
+                </div>
               </div>
               {/* ✅ 關鍵修復：更新按鈕的 CSS 樣式，讓它顯現並符合您的 UI 風格 */}
               <div className="flex gap-3 pt-4">

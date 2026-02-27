@@ -164,13 +164,14 @@ export const PersonalSetup: FC<PersonalSetupProps> = ({ onComplete }) => {
                 <div className="w-20 h-20 bg-splat-yellow rounded-full flex items-center justify-center mx-auto border-[4px] border-splat-dark shadow-splat-solid animate-bounce"><User size={40} strokeWidth={3} className="text-splat-dark" /></div>
                 <h2 className="text-3xl font-black italic">WHO ARE YOU?</h2>
                 <div className="bg-white border-[4px] border-splat-dark rounded-[2.5rem] shadow-splat-solid p-8 space-y-6">
-                    <div className="space-y-1 text-left"><label className="text-[10px] font-black opacity-30 uppercase tracking-widest pl-1">Nickname</label><input placeholder="您的暱稱" className="w-full p-4 bg-gray-50 rounded-xl border-[3px] border-splat-dark font-black outline-none focus:bg-white" value={setupForm.name} onChange={e => setSetupForm({ ...setupForm, name: e.target.value })} /></div>
-                    <div className="space-y-1 text-left"><label className="text-[10px] font-black opacity-30 uppercase tracking-widest pl-1">Recovery Email</label><input type="email" placeholder="信箱" className="w-full p-4 bg-gray-50 rounded-xl border-[3px] border-splat-dark font-black outline-none focus:bg-white" value={setupForm.email} onChange={e => setSetupForm({ ...setupForm, email: e.target.value })} /></div>
-                    <div className="space-y-1 text-left"><label className="text-[10px] font-black opacity-30 uppercase tracking-widest pl-1">Personal PIN</label><input type="password" maxLength={4} inputMode="numeric" placeholder="****" className="w-full p-4 bg-gray-50 rounded-xl border-[3px] border-splat-dark font-black outline-none text-2xl tracking-[0.5em] focus:bg-white" value={setupForm.pin} onChange={e => setSetupForm({ ...setupForm, pin: e.target.value })} /></div>
+                    <div className="space-y-1 text-left">
+                        <label className="text-[10px] font-black opacity-30 uppercase tracking-widest pl-1">Nickname / 你的暱稱</label>
+                        <input placeholder="如何稱呼您？" className="w-full p-4 bg-gray-50 rounded-xl border-[3px] border-splat-dark font-black outline-none focus:bg-white" value={setupForm.name} onChange={e => setSetupForm({ ...setupForm, name: e.target.value })} />
+                    </div>
                     <button onClick={() => {
-                        if (!setupForm.name || !setupForm.email || setupForm.pin.length < 4) return showToast("資訊要填完整唷！🦑", "info");
-                        onComplete(setupForm);
-                    }} className="btn-splat w-full py-5 text-xl bg-splat-blue text-white">READY GO! ➔</button>
+                        if (!setupForm.name) return showToast("請告訴我們您的暱稱唷！🦑", "info");
+                        onComplete({ name: setupForm.name, email: '', pin: '' });
+                    }} className="btn-splat w-full py-5 text-xl bg-splat-green text-white uppercase tracking-widest">加入旅程 ➔</button>
                 </div>
             </div>
         </div>
