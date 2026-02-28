@@ -5,13 +5,14 @@ import {
     CreditCard, Calendar, Star, MapPin,
     Plus, ChevronRight, Share2, Heart, X,
     Edit2, Trash2, CheckCircle2, Info, Receipt,
-    ChevronDown, ChevronUp, ExternalLink, Image as ImageIcon
+    ChevronDown, ChevronUp, ExternalLink, Image as ImageIcon, Loader2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { format, parseISO } from 'date-fns';
 import { JournalItem, ShoppingItem, ExpenseItem } from '../types';
 import { triggerHaptic } from '../utils/haptics';
 import { useTranslation } from '../hooks/useTranslation';
+import { uploadImage } from '../utils/imageUtils';
 
 // --- Types ---
 type MemoryGroup = {
@@ -42,6 +43,7 @@ export const Memories = () => {
     const [selectedGroup, setSelectedGroup] = useState<MemoryGroup | null>(null);
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [activeEditor, setActiveEditor] = useState<'food' | 'purchase' | null>(null);
+    const [isUploadingImg, setIsUploadingImg] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     // 1. Data Aggregation Logic (Auto-Grouping)
@@ -114,11 +116,24 @@ export const Memories = () => {
         fileInputRef.current?.click();
     };
 
-    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const files = e.target.files;
         if (files && files.length > 0) {
-            showToast(`Received ${files.length} images. Processing... 📸`, 'info');
-            // AI batch-parse integration point
+            setIsUploadingImg(true);
+            showToast(`Processing ${files.length} images... 📸`, 'info');
+            try {
+                // For Memories main camera, we just log the URLs or we could potentially add them to a "ghost" journal
+                for (const file of Array.from(files)) {
+                    const url = await uploadImage(file);
+                    console.log("Uploaded memory image:", url);
+                }
+                showToast(`Success! Images uploaded to Cloudinary.`, 'success');
+            } catch (err) {
+                console.error("Multi-upload failed", err);
+                showToast("Upload failed", "error");
+            } finally {
+                setIsUploadingImg(false);
+            }
         }
     };
 
@@ -143,9 +158,10 @@ export const Memories = () => {
                     />
                     <button
                         onClick={handleCameraClick}
-                        className="w-12 h-12 rounded-2xl bg-white border-[0.5px] border-p3-navy shadow-glass-deep-sm flex items-center justify-center text-p3-navy active:translate-y-1 transition-all"
+                        disabled={isUploadingImg}
+                        className="w-12 h-12 rounded-2xl bg-white border-[0.5px] border-p3-navy shadow-glass-deep-sm flex items-center justify-center text-p3-navy active:translate-y-1 transition-all disabled:opacity-50"
                     >
-                        <Camera size={24} strokeWidth={2.5} />
+                        {isUploadingImg ? <Loader2 size={24} className="animate-spin" /> : <Camera size={24} strokeWidth={2.5} />}
                     </button>
                 </div>
             </div>
@@ -161,8 +177,8 @@ export const Memories = () => {
                         key={btn.id}
                         onClick={() => { setFilter(btn.id as any); triggerHaptic('light'); }}
                         className={`flex items-center gap-2 px-5 py-2.5 rounded-full text-[11px] font-black uppercase tracking-widest transition-all ${filter === btn.id
-                                ? 'bg-p3-navy text-white shadow-xl scale-105'
-                                : 'bg-white/50 text-gray-400 border border-black/5 hover:bg-white'
+                            ? 'bg-p3-navy text-white shadow-xl scale-105'
+                            : 'bg-white/50 text-gray-400 border border-black/5 hover:bg-white'
                             }`}
                     >
                         {btn.icon}
@@ -560,6 +576,7 @@ const MenuOption = ({ icon, label, color, onClick, delay }: any) => (
 
 const QuickEditor = ({ type, onClose, tripId, t }: any) => {
     const [title, setTitle] = useState('');
+    const [isUploadingImg, setIsUploadingImg] = useState(false);
     const { addJournalItem, addShoppingItem, showToast } = useTripStore();
 
     const handleSave = () => {
@@ -635,9 +652,10 @@ const QuickEditor = ({ type, onClose, tripId, t }: any) => {
 
                     <button
                         onClick={handleSave}
-                        className="w-full py-5 bg-p3-navy text-white rounded-3xl font-black uppercase tracking-widest text-sm shadow-xl active:scale-95 transition-all"
+                        disabled={isUploadingImg}
+                        className="w-full py-5 bg-p3-navy text-white rounded-3xl font-black uppercase tracking-widest text-sm shadow-xl active:scale-95 transition-all disabled:opacity-50"
                     >
-                        {t('common.saveConfirm')}
+                        {isUploadingImg ? <div className="flex items-center justify-center gap-2"><Loader2 className="animate-spin" size={16} /> 上傳中...</div> : t('common.saveConfirm')}
                     </button>
                 </div>
             </motion.div>

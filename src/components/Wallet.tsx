@@ -5,7 +5,7 @@ import {
     Store, X, Edit3, ArrowLeft, Info, TrendingUp, Sparkles,
     Repeat, Banknote, CreditCard, PieChart, Plus, Utensils,
     ShoppingBag, Car, Pill, ShoppingCart, Calendar, Home,
-    ChevronRight, MapPin, Receipt, Wallet2, CheckCircle2
+    ChevronRight, MapPin, Receipt, Wallet2, CheckCircle2, Loader2
 } from 'lucide-react';
 import { ExpenseItem, CurrencyCode } from '../types';
 import { triggerHaptic } from '../utils/haptics';
@@ -13,6 +13,7 @@ import { format, parseISO } from 'date-fns';
 import { motion, AnimatePresence } from 'framer-motion';
 import { SwipeableItem } from './Common';
 import { useTranslation } from '../hooks/useTranslation';
+import { uploadImage } from '../utils/imageUtils';
 
 // --- Constants ---
 const CURRENCY_SYMBOLS: Record<string, string> = {
@@ -45,6 +46,7 @@ export const Wallet = () => {
     const [converterValue, setConverterValue] = useState<string>('');
     const [converterMode, setConverterMode] = useState<'JPY2TWD' | 'TWD2JPY'>('JPY2TWD');
     const [showFoodiePrompt, setShowFoodiePrompt] = useState(false);
+    const [isUploadingImg, setIsUploadingImg] = useState(false);
 
     const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -404,12 +406,18 @@ export const Wallet = () => {
                                     <div className="col-span-3 relative">
                                         <input type="number" inputMode="decimal" placeholder="0.00" value={form.amount || ''} onChange={e => setForm({ ...form, amount: Number(e.target.value) })} className="w-full h-16 bg-gray-50 border-[0.5px] border-p3-navy rounded-2xl p-5 font-black text-3xl outline-none" />
                                         <button onClick={() => fileInputRef.current?.click()} className="absolute right-3 top-1/2 -translate-y-1/2 w-10 h-10 bg-p3-navy text-white rounded-xl flex items-center justify-center active:scale-90 transition-all shadow-sm"><Camera size={18} /></button>
-                                        <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={(e) => {
+                                        <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={async (e) => {
                                             const file = e.target.files?.[0];
                                             if (file) {
-                                                const reader = new FileReader();
-                                                reader.onloadend = () => setForm({ ...form, images: [...(form.images || []), reader.result as string] });
-                                                reader.readAsDataURL(file);
+                                                setIsUploadingImg(true);
+                                                try {
+                                                    const imageUrl = await uploadImage(file);
+                                                    setForm({ ...form, images: [...(form.images || []), imageUrl] });
+                                                } catch (error) {
+                                                    console.error("Upload failed", error);
+                                                } finally {
+                                                    setIsUploadingImg(false);
+                                                }
                                             }
                                         }} />
                                     </div>
@@ -474,8 +482,12 @@ export const Wallet = () => {
                                 </div>
                             </div>
 
-                            <button onClick={handleSave} className="w-full py-6 bg-p3-navy text-white rounded-[40px] font-black uppercase tracking-[0.3em] text-sm shadow-glass-deep active:scale-95 transition-all mb-10">
-                                {editingId ? 'Update Record' : 'Commit Expense'}
+                            <button
+                                onClick={handleSave}
+                                disabled={isUploadingImg}
+                                className="w-full py-6 bg-p3-navy text-white rounded-[40px] font-black uppercase tracking-[0.3em] text-sm shadow-glass-deep active:scale-95 transition-all mb-10 disabled:opacity-50"
+                            >
+                                {isUploadingImg ? <div className="flex items-center justify-center gap-2"><Loader2 className="animate-spin" size={16} /> 上傳中...</div> : (editingId ? 'Update Record' : 'Commit Expense')}
                             </button>
                         </div>
                     </motion.div>

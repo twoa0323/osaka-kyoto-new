@@ -5,13 +5,14 @@ import {
     ExternalLink, Search, Plus, X, Eye,
     CreditCard, Plane, HardDrive, ShieldCheck, ChevronRight, Trash2, Edit3,
     Briefcase,
-    Globe
+    Globe, Loader2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { InfoItem } from '../types';
 import { triggerHaptic } from '../utils/haptics';
 import { useTranslation } from '../hooks/useTranslation';
 import { PackingList } from './PackingList';
+import { uploadImage } from '../utils/imageUtils';
 
 export const Vault = () => {
     const { t } = useTranslation();
@@ -24,6 +25,7 @@ export const Vault = () => {
     const [isAdding, setIsAdding] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
     const [showPacking, setShowPacking] = useState(false);
+    const [isUploadingImg, setIsUploadingImg] = useState(false);
     const [form, setForm] = useState<Partial<InfoItem>>({ title: '', content: '', images: [], type: 'document' });
 
     // 智慧目的地判斷
@@ -292,17 +294,23 @@ export const Vault = () => {
                         <div className="flex-1 glass-card border-[0.5px] border-white/40 shadow-glass-deep overflow-hidden relative flex flex-col mt-4">
                             <div
                                 className={`flex-1 overflow-y-auto scrollbar-hide p-8 flex items-center justify-center relative ${isEditing ? 'cursor-pointer group' : 'bg-gray-100'}`}
-                                onClick={() => {
+                                onClick={async () => {
                                     if (isEditing) {
                                         const input = document.createElement('input');
                                         input.type = 'file';
                                         input.accept = 'image/*';
-                                        input.onchange = (e) => {
+                                        input.onchange = async (e) => {
                                             const file = (e.target as HTMLInputElement).files?.[0];
                                             if (file) {
-                                                const reader = new FileReader();
-                                                reader.onloadend = () => setForm({ ...form, images: [reader.result as string] });
-                                                reader.readAsDataURL(file);
+                                                setIsUploadingImg(true);
+                                                try {
+                                                    const imageUrl = await uploadImage(file);
+                                                    setForm({ ...form, images: [imageUrl] });
+                                                } catch (error) {
+                                                    console.error("Upload failed", error);
+                                                } finally {
+                                                    setIsUploadingImg(false);
+                                                }
                                             }
                                         };
                                         input.click();
@@ -473,12 +481,18 @@ export const Vault = () => {
                                                 const input = document.createElement('input');
                                                 input.type = 'file';
                                                 input.accept = 'image/*';
-                                                input.onchange = (e) => {
+                                                input.onchange = async (e) => {
                                                     const file = (e.target as HTMLInputElement).files?.[0];
                                                     if (file) {
-                                                        const reader = new FileReader();
-                                                        reader.onloadend = () => setForm({ ...form, images: [reader.result as string] });
-                                                        reader.readAsDataURL(file);
+                                                        setIsUploadingImg(true);
+                                                        try {
+                                                            const imageUrl = await uploadImage(file);
+                                                            setForm({ ...form, images: [imageUrl] });
+                                                        } catch (error) {
+                                                            console.error("Upload failed", error);
+                                                        } finally {
+                                                            setIsUploadingImg(false);
+                                                        }
                                                     }
                                                 };
                                                 input.click();
