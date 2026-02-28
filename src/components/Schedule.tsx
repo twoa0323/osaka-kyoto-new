@@ -691,6 +691,21 @@ export const Schedule: FC<{ externalDateIdx?: number }> = ({ externalDateIdx = 0
     return tl;
   }, [dayItems, trip, externalDateIdx, dateRange]);
 
+  // 🗳 智慧地點推算：若 activeDayItem 無經緯度，從 CITY_DB 關鍵字匹配
+  const computedActiveItem = useMemo(() => {
+    if (activeDayItem?.lat && activeDayItem?.lng) return activeDayItem;
+    const searchText = activeDayItem ? `${activeDayItem.title || ''} ${(activeDayItem as any).location || ''}` : '';
+    const foundCity = (searchText.trim()
+      ? CITY_DB.find(c => c.keys.some(k => searchText.includes(k)))
+      : null) || timeline[0]?.city;
+    return {
+      ...activeDayItem,
+      lat: (foundCity as any)?.lat || trip?.lat || 34.6937,
+      lng: (foundCity as any)?.lng || trip?.lng || 135.5023,
+      title: activeDayItem?.title || (foundCity as any)?.name || trip?.dest || 'City'
+    };
+  }, [activeDayItem, timeline, trip]);
+
   const uniqueCities = useMemo(() => {
     const cityMap = new globalThis.Map<string, any>();
     timeline.forEach(t => cityMap.set(t.city.name, t.city));
@@ -933,6 +948,22 @@ export const Schedule: FC<{ externalDateIdx?: number }> = ({ externalDateIdx = 0
   const handleAiAnalyze = async (text: string) => {
     if (!isOnline) return showToast(t('schedule.ai.spotNetErr'), "info");
     setIsAiLoading(true);
+
+    // 🧹 Firebase 資料淨化：移除 undefined、修正日期格式
+    const sanitizeForFirebase = (obj: any, targetDate: string): any => {
+      const cleanStr = JSON.stringify(obj, (_, v) => (v === undefined ? null : v));
+      const clean = JSON.parse(cleanStr);
+      // 修正 2026/04/29 → 2026-04-29
+      if (clean.date && typeof clean.date === 'string') {
+        clean.date = clean.date.replace(/\//g, '-');
+      }
+      // 若日期無效或缺少，補上目標日期
+      if (!clean.date || !/^\d{4}-\d{2}-\d{2}/.test(clean.date)) {
+        clean.date = targetDate;
+      }
+      return clean;
+    };
+
     try {
       const res = await fetch('/api/ai', {
         method: 'POST',
@@ -950,31 +981,31 @@ export const Schedule: FC<{ externalDateIdx?: number }> = ({ externalDateIdx = 0
       const data = await res.json();
       if (data && !data.error) {
         if (Array.isArray(data.schedule)) {
-          data.schedule.forEach((i: any) => addScheduleItem(trip!.id, {
+          data.schedule.forEach((i: any) => addScheduleItem(trip!.id, sanitizeForFirebase({
             ...i,
             id: `ai-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
             date: i.date || selectedDateStr,
             images: i.images || []
-          }));
+          }, selectedDateStr)));
         }
         if (Array.isArray(data.booking)) {
-          data.booking.forEach((i: any) => addBookingItem(trip!.id, {
+          data.booking.forEach((i: any) => addBookingItem(trip!.id, sanitizeForFirebase({
             ...i,
             id: `ai-bk-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
             date: i.date || selectedDateStr,
             images: i.images || []
-          }));
+          }, selectedDateStr)));
         }
         if (Array.isArray(data.journal)) {
-          data.journal.forEach((i: any) => addJournalItem(trip!.id, {
+          data.journal.forEach((i: any) => addJournalItem(trip!.id, sanitizeForFirebase({
             ...i,
             id: `ai-jr-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
             date: i.date || selectedDateStr,
             images: i.images || []
-          }));
+          }, selectedDateStr)));
         }
         if (Array.isArray(data.shopping)) {
-          data.shopping.forEach((i: any) => addShoppingItem(trip!.id, {
+          data.shopping.forEach((i: any) => addShoppingItem(trip!.id, sanitizeForFirebase({
             ...i,
             id: `ai-sh-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
             price: 0,
@@ -982,14 +1013,14 @@ export const Schedule: FC<{ externalDateIdx?: number }> = ({ externalDateIdx = 0
             isBought: false,
             images: [],
             category: i.category || '未分類'
-          }));
+          }, selectedDateStr)));
         }
         if (Array.isArray(data.info)) {
-          data.info.forEach((i: any) => addInfoItem(trip!.id, {
+          data.info.forEach((i: any) => addInfoItem(trip!.id, sanitizeForFirebase({
             ...i,
             id: `ai-if-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
             images: []
-          }));
+          }, selectedDateStr)));
         }
         triggerHaptic('success');
         showToast(t('schedule.ai.batchSuccess'), "success");
@@ -1188,86 +1219,85 @@ export const Schedule: FC<{ externalDateIdx?: number }> = ({ externalDateIdx = 0
 
   return (
     <div className="flex flex-col h-full relative text-p3-navy">
-      <div ref={scrollContainerRef} className="flex-1 overflow-y-auto hide-scrollbar p-6 space-y-8 pb-32">
-        <div className="mb-2">
-          <SpatialMapHeader trip={trip!} activeItem={activeDayItem} t={t} enable3DMap={uiSettings.enable3DMap} />
-        </div>
-        <div className="sticky top-0 z-50 bg-[#F4F5F7]/80 backdrop-blur-md pt-2 pb-6">
-          <div className="flex items-center justify-between mt-2 px-4">
-            <div className="flex gap-4">
-              <div onClick={() => setShowFullWeather(true)} className="bg-blue-50/80 border border-blue-100 rounded-2xl p-2.5 shadow-sm flex items-center gap-3 cursor-pointer group">
-                <div className="text-3xl font-black text-p3-navy">{currentTempStr}°</div>
-                <div>
-                  <div className="boutique-tag text-p3-navy/40 uppercase tracking-widest">{weatherInfo.t}</div>
-                  <div className="flex items-center gap-1 text-[10px] font-bold text-splat-blue">
-                    <CloudRain size={10} /> {todayWeather.rain}%
-                    <div className="flex items-center gap-2 text-[10px] font-bold text-gray-500 ml-2 border-l border-gray-300 pl-2">
-                      <span className="text-p3-ruby">H: {todayWeather.max}°</span>
-                      <span className="text-p3-navy">L: {todayWeather.min}°</span>
-                    </div>
-                  </div>
-                </div>
+
+      {/* ═ 固定頭部：天氣 + 地圖 + 操作按鈕 ═ */}
+      <div className="sticky top-0 z-50 bg-[#F4F5F7]/95 backdrop-blur-md shadow-sm border-b border-gray-200/50 pb-2">
+
+        {/* 1. 天氣模組 */}
+        <div className="px-4 pt-3 pb-1">
+          <div onClick={() => setShowFullWeather(true)} className="bg-white border-[0.5px] border-gray-200 shadow-sm rounded-[18px] p-3 flex items-center justify-between cursor-pointer active:scale-[0.98] transition-all">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 flex items-center justify-center bg-blue-50 text-xl rounded-xl border border-blue-100">{weatherInfo.e}</div>
+              <div>
+                <div className="text-xs font-black text-p3-navy">{weatherInfo.t}</div>
+                <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Tap for forecast</div>
               </div>
             </div>
-
-            <div className="flex gap-2">
-              <motion.button whileTap={{ scale: 0.95, transition: { type: 'spring', stiffness: 500, damping: 20 } }} onClick={() => setViewMode(viewMode === 'list' ? 'map' : 'list')} className={`w-10 h-10 rounded-2xl flex items-center justify-center border-[1px] border-p3-navy/10 ${viewMode === 'map' ? 'bg-splat-blue text-white' : 'bg-white text-p3-navy shadow-xl shadow-black/5'}`}>
-                {viewMode === 'list' ? <MapIcon size={18} /> : <Camera size={18} />}
-              </motion.button>
-              <motion.button whileTap={{ scale: 0.95, transition: { type: 'spring', stiffness: 500, damping: 20 } }} onClick={() => setIsEditMode(!isEditMode)} className={`w-10 h-10 rounded-2xl flex items-center justify-center border-[1px] border-p3-navy/10 ${isEditMode ? 'bg-splat-yellow text-p3-navy' : 'bg-white text-gray-400 shadow-xl shadow-black/5'}`}>
-                <Edit3 size={18} />
-              </motion.button>
-              <div className="relative">
-                <motion.button
-                  whileTap={{ scale: 0.95 }}
-                  onClick={() => setShowAddMenu(!showAddMenu)}
-                  className={`w-12 h-12 rounded-2xl flex items-center justify-center shadow-xl transition-all duration-300 ${showAddMenu ? 'bg-p3-ruby text-white rotate-[135deg]' : 'bg-p3-navy text-white shadow-p3-navy/20'}`}
-                >
-                  <Plus size={18} strokeWidth={2.5} />
-                </motion.button>
-
-                <AnimatePresence>
-                  {showAddMenu && (
-                    <motion.div
-                      initial={{ opacity: 0, scale: 0.8, y: 10 }}
-                      animate={{ opacity: 1, scale: 1, y: 0 }}
-                      exit={{ opacity: 0, scale: 0.8, y: 10 }}
-                      className="absolute top-14 right-0 w-48 bg-white/90 backdrop-blur-md border-[0.5px] border-p3-navy rounded-[24px] shadow-glass-deep p-2 z-[60] flex flex-col gap-1"
-                    >
-                      <button
-                        onClick={() => { setEditingItem(undefined); setIsEditorOpen(true); setShowAddMenu(false); }}
-                        className="flex items-center gap-3 p-3 hover:bg-p3-navy/5 rounded-xl transition-colors text-left text-sm font-black text-p3-navy"
-                      >
-                        <div className="w-8 h-8 rounded-lg bg-p3-gold/10 flex items-center justify-center text-p3-gold shrink-0">
-                          <MapPin size={16} strokeWidth={3} />
-                        </div>
-                        📍 新增行程景點
-                      </button>
-                      <button
-                        onClick={() => { showToast("BookingEditor 下一階段對接... ✈️", "info"); setShowAddMenu(false); }}
-                        className="flex items-center gap-3 p-3 hover:bg-p3-navy/5 rounded-xl transition-colors text-left text-sm font-black text-p3-navy"
-                      >
-                        <div className="w-8 h-8 rounded-lg bg-p3-navy/10 flex items-center justify-center text-p3-navy shrink-0">
-                          <Plane size={16} strokeWidth={3} />
-                        </div>
-                        ✈️ 新增航班/飯店
-                      </button>
-                      <button
-                        onClick={() => { showToast("PackingListModal 開發中... 🧳", "info"); setShowAddMenu(false); }}
-                        className="flex items-center gap-3 p-3 hover:bg-p3-navy/5 rounded-xl transition-colors text-left text-sm font-black text-p3-navy"
-                      >
-                        <div className="w-8 h-8 rounded-lg bg-p3-ruby/10 flex items-center justify-center text-p3-ruby shrink-0">
-                          <Luggage size={16} strokeWidth={3} />
-                        </div>
-                        🧳 行李清單
-                      </button>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
+            <div className="flex items-center gap-3">
+              <div className="text-center">
+                <div className="text-xl font-black text-p3-navy leading-none">{currentTempStr}°</div>
+                <div className="text-[9px] font-bold text-gray-400 mt-0.5">
+                  <span className="text-p3-ruby">H:{todayWeather.max}°</span>{' '}
+                  <span className="text-p3-navy">L:{todayWeather.min}°</span>
+                </div>
+              </div>
+              <div className="h-7 w-px bg-gray-200" />
+              <div className="flex flex-col items-center min-w-[28px]">
+                <CloudRain size={13} className="text-splat-blue mb-0.5" />
+                <span className="text-[10px] font-black text-splat-blue">{todayWeather.rain}%</span>
               </div>
             </div>
           </div>
         </div>
+
+        {/* 2. 3D 地圖模組 */}
+        <div className="px-4 py-1">
+          <div className="h-28 rounded-[18px] overflow-hidden border-[0.5px] border-black/10 shadow-sm relative">
+            <SpatialMapHeader trip={trip!} activeItem={computedActiveItem} t={t} enable3DMap={uiSettings.enable3DMap} />
+            <div className="absolute bottom-2 right-2 bg-black/60 backdrop-blur-sm text-white text-[9px] px-2.5 py-1 rounded-full font-black tracking-widest pointer-events-none z-10 flex items-center gap-1">
+              <MapPin size={9} className="text-p3-gold" />
+              {(computedActiveItem as any)?.title || trip?.dest}
+            </div>
+          </div>
+        </div>
+
+        {/* 3. 操作按鈕列 */}
+        <div className="flex justify-end items-center px-4 pt-1 gap-2">
+          <motion.button whileTap={{ scale: 0.95 }} onClick={() => setViewMode(viewMode === 'list' ? 'map' : 'list')} className={`w-10 h-10 rounded-2xl flex items-center justify-center border border-gray-200 shadow-sm transition-all ${viewMode === 'map' ? 'bg-splat-blue text-white border-splat-blue' : 'bg-white text-p3-navy'}`}>
+            {viewMode === 'list' ? <MapIcon size={16} /> : <Camera size={16} />}
+          </motion.button>
+          <motion.button whileTap={{ scale: 0.95 }} onClick={() => setIsEditMode(!isEditMode)} className={`w-10 h-10 rounded-2xl flex items-center justify-center border border-gray-200 shadow-sm transition-all ${isEditMode ? 'bg-splat-yellow text-p3-navy border-splat-yellow' : 'bg-white text-gray-400'}`}>
+            <Edit3 size={16} />
+          </motion.button>
+          <div className="relative">
+            <motion.button whileTap={{ scale: 0.95 }} onClick={() => setShowAddMenu(!showAddMenu)} className={`w-10 h-10 rounded-2xl flex items-center justify-center shadow-sm transition-all duration-300 ${showAddMenu ? 'bg-p3-ruby text-white rotate-[135deg]' : 'bg-p3-navy text-white'}`}>
+              <Plus size={16} strokeWidth={2.5} />
+            </motion.button>
+            <AnimatePresence>
+              {showAddMenu && (
+                <motion.div initial={{ opacity: 0, scale: 0.8, y: 8 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.8, y: 8 }} className="absolute top-12 right-0 w-48 bg-white/95 backdrop-blur-md border border-gray-200 rounded-[22px] shadow-2xl p-2 z-[60] flex flex-col gap-1">
+                  <button onClick={() => { setEditingItem(undefined); setIsEditorOpen(true); setShowAddMenu(false); }} className="flex items-center gap-3 p-3 hover:bg-gray-50 rounded-xl text-left text-sm font-black text-p3-navy">
+                    <div className="w-7 h-7 rounded-lg bg-p3-gold/15 flex items-center justify-center text-p3-gold shrink-0"><MapPin size={14} strokeWidth={3} /></div>
+                    📍 新增景點
+                  </button>
+                  <button onClick={() => { showToast("BookingEditor 下一階段對接... ✈️", "info"); setShowAddMenu(false); }} className="flex items-center gap-3 p-3 hover:bg-gray-50 rounded-xl text-left text-sm font-black text-p3-navy">
+                    <div className="w-7 h-7 rounded-lg bg-p3-navy/10 flex items-center justify-center text-p3-navy shrink-0"><Plane size={14} strokeWidth={3} /></div>
+                    ✈️ 新增航班/飯店
+                  </button>
+                  <button onClick={() => { showToast("PackingListModal 開發中... 🧳", "info"); setShowAddMenu(false); }} className="flex items-center gap-3 p-3 hover:bg-gray-50 rounded-xl text-left text-sm font-black text-p3-navy">
+                    <div className="w-7 h-7 rounded-lg bg-p3-ruby/10 flex items-center justify-center text-p3-ruby shrink-0"><Luggage size={14} strokeWidth={3} /></div>
+                    🧳 行李清單
+                  </button>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        </div>
+      </div>
+
+      {/* ═ 可滾動內容區塊 ═ */}
+      <div ref={scrollContainerRef} className="flex-1 overflow-y-auto hide-scrollbar px-4 pt-4 space-y-4 pb-32">
+
 
         {/* 🚀 Task 2: 雨滴墨水動畫 (受 enableWeatherFX 控制) */}
         {uiSettings.enableWeatherFX && todayWeather.rain > 30 && (
@@ -1281,67 +1311,116 @@ export const Schedule: FC<{ externalDateIdx?: number }> = ({ externalDateIdx = 0
         )}
 
         {viewMode === 'list' ? (
-          <div className="relative mt-4">
-            <AnimatePresence mode="popLayout">
-              {dayItems.length === 0 ? (
-                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center py-20 bg-white border-[1px] border-dashed border-gray-300 rounded-[40px] text-gray-400 font-black italic">{t('schedule.noPlans')}</motion.div>
-              ) : (
-                dayItems.map((item, idx) => (
-                  <div key={item.id} data-id={item.id} className="timeline-item">
-                    {item.__type === 'schedule' ? (
-                      <SwipeableItem id={item.id} onDelete={() => deleteScheduleItem(trip!.id, item.id)}>
-                        <ScheduleItemRow
-                          item={item as any}
-                          idx={idx}
-                          isEditMode={isEditMode}
-                          dayItems={dayItems}
-                          tripId={trip!.id}
-                          updateScheduleItem={updateScheduleItem}
-                          deleteScheduleItem={deleteScheduleItem}
-                          setEditingItem={setEditingItem}
-                          setIsEditorOpen={setIsEditorOpen}
-                          setDetailItem={(it: any) => {
-                            // 🚀 自動將點擊的項目置中
-                            const element = document.querySelector(`[data-id="${it.id}"]`);
-                            if (element) {
-                              element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                            }
-                            setDetailItem(it);
-                          }}
-                          timeToMins={timeToMins}
-                        />
-                      </SwipeableItem>
-                    ) : (
-                      item.type === 'flight' ? (
-                        <SwipeableItem id={item.id} onDelete={() => deleteBookingItem(trip!.id, item.id)}>
-                          <TimelineFlightCard
-                            item={item as any}
-                            onClick={() => {
-                              const element = document.querySelector(`[data-id="${item.id}"]`);
-                              if (element) element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                              setDetailItem(item as any);
-                            }}
-                          />
-                        </SwipeableItem>
-                      ) : (
-                        <SwipeableItem id={item.id} onDelete={() => deleteBookingItem(trip!.id, item.id)}>
-                          <TimelineHotelCard
-                            item={item as any}
-                            onClick={() => {
-                              const element = document.querySelector(`[data-id="${item.id}"]`);
-                              if (element) element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                              setDetailItem(item as any);
-                            }}
-                            t={t}
-                          />
-                        </SwipeableItem>
-                      )
-                    )}
+          <>
+            {/* 🎫 預訂與憑證 — 橫向快速滾動 */}
+            {(() => {
+              const dayBookings = dayItems.filter((i: any) => i.__type === 'booking');
+              const daySchedules = dayItems.filter((i: any) => i.__type === 'schedule');
+              return (
+                <>
+                  {dayBookings.length > 0 && (
+                    <div className="mb-2">
+                      <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 flex items-center gap-2">
+                        <div className="w-2 h-4 bg-splat-blue rounded-full" />
+                        預訂與憑證
+                      </h3>
+                      <div className="flex overflow-x-auto gap-3 pb-2 hide-scrollbar snap-x snap-mandatory -mx-4 px-4">
+                        {dayBookings.map((item: any) => (
+                          <div key={item.id} data-id={item.id} className="timeline-item shrink-0 w-[280px] snap-center">
+                            <SwipeableItem id={item.id} onDelete={() => deleteBookingItem(trip!.id, item.id)}>
+                              {item.type === 'flight' ? (
+                                <TimelineFlightCard
+                                  item={item}
+                                  onClick={() => {
+                                    const el = document.querySelector(`[data-id="${item.id}"]`);
+                                    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                    setDetailItem(item);
+                                  }}
+                                />
+                              ) : (
+                                <TimelineHotelCard
+                                  item={item}
+                                  onClick={() => {
+                                    const el = document.querySelector(`[data-id="${item.id}"]`);
+                                    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                    setDetailItem(item);
+                                  }}
+                                  t={t}
+                                />
+                              )}
+                            </SwipeableItem>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 📍 行程時間軸 */}
+                  <div className="relative">
+                    <AnimatePresence mode="popLayout">
+                      {daySchedules.length === 0 && dayBookings.length === 0 ? (
+                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center py-20 bg-white border-[1px] border-dashed border-gray-300 rounded-[40px] text-gray-400 font-black italic">{t('schedule.noPlans')}</motion.div>
+                      ) : daySchedules.length === 0 ? null : (
+                        daySchedules.map((item: any, idx: number) => (
+                          <div key={item.id} data-id={item.id} className="timeline-item">
+                            {item.__type === 'schedule' ? (
+                              <SwipeableItem id={item.id} onDelete={() => deleteScheduleItem(trip!.id, item.id)}>
+                                <ScheduleItemRow
+                                  item={item as any}
+                                  idx={idx}
+                                  isEditMode={isEditMode}
+                                  dayItems={dayItems}
+                                  tripId={trip!.id}
+                                  updateScheduleItem={updateScheduleItem}
+                                  deleteScheduleItem={deleteScheduleItem}
+                                  setEditingItem={setEditingItem}
+                                  setIsEditorOpen={setIsEditorOpen}
+                                  setDetailItem={(it: any) => {
+                                    // 🚀 自動將點擊的項目置中
+                                    const element = document.querySelector(`[data-id="${it.id}"]`);
+                                    if (element) {
+                                      element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                    }
+                                    setDetailItem(it);
+                                  }}
+                                  timeToMins={timeToMins}
+                                />
+                              </SwipeableItem>
+                            ) : (
+                              item.type === 'flight' ? (
+                                <SwipeableItem id={item.id} onDelete={() => deleteBookingItem(trip!.id, item.id)}>
+                                  <TimelineFlightCard
+                                    item={item as any}
+                                    onClick={() => {
+                                      const element = document.querySelector(`[data-id="${item.id}"]`);
+                                      if (element) element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                      setDetailItem(item as any);
+                                    }}
+                                  />
+                                </SwipeableItem>
+                              ) : (
+                                <SwipeableItem id={item.id} onDelete={() => deleteBookingItem(trip!.id, item.id)}>
+                                  <TimelineHotelCard
+                                    item={item as any}
+                                    onClick={() => {
+                                      const element = document.querySelector(`[data-id="${item.id}"]`);
+                                      if (element) element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                      setDetailItem(item as any);
+                                    }}
+                                    t={t}
+                                  />
+                                </SwipeableItem>
+                              )
+                            )}
+                          </div>
+                        ))
+                      )}
+                    </AnimatePresence>
                   </div>
-                ))
-              )}
-            </AnimatePresence>
-          </div>
+                </>
+              );
+            })()}
+          </>
         ) : (
           <div className="relative h-[65vh] mt-4 flex flex-col gap-4">
             <ScheduleMapView
@@ -1354,215 +1433,214 @@ export const Schedule: FC<{ externalDateIdx?: number }> = ({ externalDateIdx = 0
             />
           </div>
         )}
-      </div>
 
-      {showFullWeather && <WeatherReportModal onClose={() => setShowFullWeather(false)} todayHourly={todayHourly} getWeatherDesc={(code) => getWeatherDesc(code, t)} />}
+        {showFullWeather && <WeatherReportModal onClose={() => setShowFullWeather(false)} todayHourly={todayHourly} getWeatherDesc={(code) => getWeatherDesc(code, t)} />}
 
-      {/* --- 🚀 Command Center (Detail View with Shared Element Transition) --- */}
-      <AnimatePresence>
-        {detailItem && (
-          <div
-            className="fixed inset-0 bg-p3-navy/60 backdrop-blur-xl z-[600] flex items-center justify-center p-0 sm:p-4"
-            onClick={() => setDetailItem(undefined)}
-          >
-            <motion.div
-              layoutId={`card-${detailItem.id}`}
-              className="bg-[#F4F5F7] w-[92%] max-h-[85vh] sm:max-w-md rounded-[40px] border-[4px] border-p3-navy shadow-2xl flex flex-col overflow-hidden relative"
-              onClick={e => e.stopPropagation()}
+        {/* --- 🚀 Command Center (Detail View with Shared Element Transition) --- */}
+        <AnimatePresence>
+          {detailItem && (
+            <div
+              className="fixed inset-0 bg-p3-navy/60 backdrop-blur-xl z-[600] flex items-center justify-center p-0 sm:p-4"
+              onClick={() => setDetailItem(undefined)}
             >
+              <motion.div
+                layoutId={`card-${detailItem.id}`}
+                className="bg-[#F4F5F7] w-[92%] max-h-[85vh] sm:max-w-md rounded-[40px] border-[4px] border-p3-navy shadow-2xl flex flex-col overflow-hidden relative"
+                onClick={e => e.stopPropagation()}
+              >
 
-              <div className="absolute top-6 right-6 z-[700] flex gap-2">
-                <button
-                  onClick={() => {
-                    if (detailItem.__type === 'schedule') {
-                      setEditingItem(detailItem);
-                      setIsEditorOpen(true);
+                <div className="absolute top-6 right-6 z-[700] flex gap-2">
+                  <button
+                    onClick={() => {
+                      if (detailItem.__type === 'schedule') {
+                        setEditingItem(detailItem);
+                        setIsEditorOpen(true);
+                        setDetailItem(undefined);
+                        triggerHaptic('light');
+                      } else {
+                        showToast("Booking 編輯功能開發中... ✈️", "info");
+                      }
+                    }}
+                    className="bg-white/80 backdrop-blur-sm border-[0.5px] border-p3-navy p-2 rounded-full shadow-glass-deep-sm active:scale-90 transition-transform"
+                  >
+                    <Edit3 size={20} strokeWidth={3} />
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (detailItem.__type === 'schedule') {
+                        deleteScheduleItem(trip!.id, detailItem.id);
+                      } else {
+                        deleteBookingItem(trip!.id, detailItem.id);
+                      }
                       setDetailItem(undefined);
-                      triggerHaptic('light');
-                    } else {
-                      showToast("Booking 編輯功能開發中... ✈️", "info");
-                    }
-                  }}
-                  className="bg-white/80 backdrop-blur-sm border-[0.5px] border-p3-navy p-2 rounded-full shadow-glass-deep-sm active:scale-90 transition-transform"
-                >
-                  <Edit3 size={20} strokeWidth={3} />
-                </button>
-                <button
-                  onClick={() => {
-                    if (detailItem.__type === 'schedule') {
-                      deleteScheduleItem(trip!.id, detailItem.id);
-                    } else {
-                      deleteBookingItem(trip!.id, detailItem.id);
-                    }
-                    setDetailItem(undefined);
-                    showToast(detailItem.__type === 'schedule' ? "行程已刪除" : "預訂已刪除", "success");
-                    triggerHaptic('medium');
-                  }}
-                  className="bg-white/80 backdrop-blur-sm border-[0.5px] border-p3-navy p-2 rounded-full shadow-glass-deep-sm active:scale-90 transition-transform text-p3-ruby"
-                >
-                  <Trash2 size={20} strokeWidth={3} />
-                </button>
-                <button
-                  onClick={() => setDetailItem(undefined)}
-                  className="bg-white/80 backdrop-blur-sm border-[0.5px] border-p3-navy p-2 rounded-full shadow-glass-deep-sm active:scale-90 transition-transform"
-                >
-                  <X size={20} strokeWidth={3} />
-                </button>
-              </div>
+                      showToast(detailItem.__type === 'schedule' ? "行程已刪除" : "預訂已刪除", "success");
+                      triggerHaptic('medium');
+                    }}
+                    className="bg-white/80 backdrop-blur-sm border-[0.5px] border-p3-navy p-2 rounded-full shadow-glass-deep-sm active:scale-90 transition-transform text-p3-ruby"
+                  >
+                    <Trash2 size={20} strokeWidth={3} />
+                  </button>
+                  <button
+                    onClick={() => setDetailItem(undefined)}
+                    className="bg-white/80 backdrop-blur-sm border-[0.5px] border-p3-navy p-2 rounded-full shadow-glass-deep-sm active:scale-90 transition-transform"
+                  >
+                    <X size={20} strokeWidth={3} />
+                  </button>
+                </div>
 
-              <div className="flex-1 overflow-y-auto hide-scrollbar">
-                {/* --- 1. Header (Image or Theme) --- */}
-                {detailItem.__type === 'booking' && detailItem.type === 'flight' ? (
-                  <div className={`${getAirlineTheme(detailItem.airline).bgClass} h-40 flex items-center justify-center border-b-[4px] border-p3-navy relative overflow-hidden`}>
-                    <div className="absolute inset-0 opacity-10 flex flex-wrap gap-4 p-4 pointer-events-none">
-                      {Array.from({ length: 20 }).map((_, i) => <Plane key={i} size={40} className="rotate-45" />)}
+                <div className="flex-1 overflow-y-auto hide-scrollbar">
+                  {/* --- 1. Header (Image or Theme) --- */}
+                  {detailItem.__type === 'booking' && detailItem.type === 'flight' ? (
+                    <div className={`${getAirlineTheme(detailItem.airline).bgClass} h-40 flex items-center justify-center border-b-[4px] border-p3-navy relative overflow-hidden`}>
+                      <div className="absolute inset-0 opacity-10 flex flex-wrap gap-4 p-4 pointer-events-none">
+                        {Array.from({ length: 20 }).map((_, i) => <Plane key={i} size={40} className="rotate-45" />)}
+                      </div>
+                      <span className={`text-4xl font-black uppercase tracking-[0.4em] drop-shadow-lg ${getAirlineTheme(detailItem.airline).textClass}`}>
+                        {getAirlineTheme(detailItem.airline).logo}
+                      </span>
                     </div>
-                    <span className={`text-4xl font-black uppercase tracking-[0.4em] drop-shadow-lg ${getAirlineTheme(detailItem.airline).textClass}`}>
-                      {getAirlineTheme(detailItem.airline).logo}
-                    </span>
-                  </div>
-                ) : (
-                  <div className="h-64 bg-gray-200 relative border-b-[4px] border-p3-navy shrink-0">
-                    <LazyImage
-                      src={detailItem.images?.[0] || ''}
-                      containerClassName="w-full h-full"
-                      alt="hero"
-                    />
-                    {!detailItem.images?.[0] && (
-                      <div className="w-full h-full flex items-center justify-center bg-p3-navy/5">
-                        {detailItem.type === 'hotel' ? <Home size={64} className="text-p3-navy/10" /> : <MapPin size={64} className="text-p3-navy/10" />}
+                  ) : (
+                    <div className="h-64 bg-gray-200 relative border-b-[4px] border-p3-navy shrink-0">
+                      <LazyImage
+                        src={detailItem.images?.[0] || ''}
+                        containerClassName="w-full h-full"
+                        alt="hero"
+                      />
+                      {!detailItem.images?.[0] && (
+                        <div className="w-full h-full flex items-center justify-center bg-p3-navy/5">
+                          {detailItem.type === 'hotel' ? <Home size={64} className="text-p3-navy/10" /> : <MapPin size={64} className="text-p3-navy/10" />}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* --- 2. Content Area --- */}
+                  <div className="p-8 space-y-6">
+                    {/* Title & Badge */}
+                    <div>
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className={`text-[9px] font-black px-3 py-1 rounded-full border-[2px] border-p3-navy uppercase tracking-widest ${detailItem.__type === 'booking' ? 'bg-splat-yellow text-p3-navy' : 'bg-white text-p3-navy'}`}>
+                          {detailItem.category || detailItem.type}
+                        </span>
+                      </div>
+                      <h2 className="text-3xl font-black text-p3-navy italic tracking-tighter leading-none">{detailItem.title}</h2>
+                    </div>
+
+                    {/* Flight Special Details */}
+                    {detailItem.__type === 'booking' && detailItem.type === 'flight' && (
+                      <div className="space-y-4">
+                        {detailItem.pnr && (
+                          <div className="bg-white border-[0.5px] border-p3-navy rounded-2xl p-5 shadow-glass-deep-sm flex justify-between items-center group active:scale-[0.98] transition-all" onClick={() => { navigator.clipboard.writeText(detailItem.pnr); triggerHaptic('success'); showToast("PNR 已複製！🦑", "success"); }}>
+                            <div>
+                              <p className="boutique-tag text-gray-400 uppercase tracking-widest mb-1">{t('schedule.pnr')}</p>
+                              <p className="text-3xl font-black text-p3-navy tracking-[0.2em]">{detailItem.pnr}</p>
+                            </div>
+                            <div className="w-12 h-12 rounded-xl bg-splat-yellow border-[0.5px] border-p3-navy flex items-center justify-center text-p3-navy group-hover:bg-p3-navy group-hover:text-white transition-colors">
+                              <Copy size={20} />
+                            </div>
+                          </div>
+                        )}
+                        <div className="grid grid-cols-3 gap-3">
+                          <div className="bg-white border-[2px] border-p3-navy/10 rounded-xl p-3 text-center">
+                            <span className="text-[9px] font-black text-gray-400 block uppercase mb-1">{t('schedule.terminal')}</span>
+                            <span className="text-xl font-black text-p3-navy">{detailItem.terminal || '--'}</span>
+                          </div>
+                          <div className="bg-white border-[2px] border-p3-navy/10 rounded-xl p-3 text-center">
+                            <span className="text-[9px] font-black text-gray-400 block uppercase mb-1">{t('schedule.gate')}</span>
+                            <span className="text-xl font-black text-p3-navy">{detailItem.gate || '--'}</span>
+                          </div>
+                          <div className="bg-white border-[2px] border-p3-navy/10 rounded-xl p-3 text-center">
+                            <span className="text-[9px] font-black text-gray-400 block uppercase mb-1">{t('schedule.boarding')}</span>
+                            <span className="text-xl font-black text-splat-pink">{detailItem.boardingTime || '--:--'}</span>
+                          </div>
+                        </div>
+                        <a
+                          href={`https://www.google.com/search?q=Flight+Status+${detailItem.flightNo}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="w-full py-4 bg-p3-navy text-white rounded-2xl font-black uppercase tracking-widest text-center flex items-center justify-center gap-3 shadow-glass-deep active:translate-y-1 transition-all"
+                        >
+                          <Plane size={18} /> {t('schedule.liveStatus')}
+                        </a>
+                      </div>
+                    )}
+
+                    {/* Hotel Special Details */}
+                    {detailItem.__type === 'booking' && detailItem.type === 'hotel' && (
+                      <div className="space-y-8">
+                        <div className="glass-card bg-white/20 backdrop-blur-3xl border-[0.5px] border-white/40 p-10 space-y-8 shadow-glass-deep">
+                          <div className="flex justify-between border-b-[0.5px] border-p3-navy/5 pb-8">
+                            <div>
+                              <span className="boutique-tag text-p3-navy/30 block mb-2">{t('schedule.checkIn')}</span>
+                              <span className="text-3xl boutique-h1 text-p3-navy">{detailItem.checkInTime || '15:00'}</span>
+                            </div>
+                            <div className="text-right">
+                              <span className="boutique-tag text-p3-navy/30 block mb-2">{t('schedule.checkOut')}</span>
+                              <span className="text-3xl boutique-h1 text-p3-navy">{detailItem.checkOutTime || '11:00'}</span>
+                            </div>
+                          </div>
+                          {detailItem.confirmationNo && (
+                            <div className="flex justify-between items-center pt-2">
+                              <span className="boutique-tag text-p3-navy/30">{t('schedule.roomType')}</span>
+                              <span className="boutique-h2 text-p3-navy">{detailItem.roomType || 'Standard Room'}</span>
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex gap-3">
+                          <button
+                            className="flex-1 py-4 bg-white border-[0.5px] border-p3-navy rounded-2xl font-black uppercase text-xs flex items-center justify-center gap-2 shadow-glass-deep-sm active:translate-y-1 transition-all"
+                            onClick={() => window.open(`tel:${detailItem.phone || ''}`)}
+                          >
+                            <Phone size={16} /> {t('schedule.contact')}
+                          </button>
+                          <button
+                            className="flex-1 py-4 bg-splat-green text-white border-[0.5px] border-p3-navy rounded-2xl font-black uppercase text-xs flex items-center justify-center gap-2 shadow-glass-deep-sm active:translate-y-1 transition-all"
+                            onClick={() => window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(detailItem.location || "")}`, '_blank')}
+                          >
+                            <MapPin size={16} /> {t('schedule.map')}
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Regular Schedule Details */}
+                    {detailItem.__type === 'schedule' && (
+                      <div className="space-y-10">
+                        <div className="p-10 glass-card bg-white/20 backdrop-blur-3xl border-[0.5px] border-white/40 shadow-glass-deep">
+                          <h4 className="boutique-tag text-p3-navy/30 mb-6 flex items-center gap-3">
+                            <Sparkles size={16} strokeWidth={2.5} className="text-p3-gold" /> {t('schedule.spotInsight')}
+                          </h4>
+                          {detailItem.spotGuide ? (
+                            <div className="boutique-body text-p3-navy/80 whitespace-pre-wrap">{detailItem.spotGuide.background}</div>
+                          ) : spotAiLoading === detailItem.id && completion ? (
+                            <div className="boutique-body text-p3-navy/40 whitespace-pre-wrap animate-pulse">{completion}</div>
+                          ) : (
+                            <button onClick={() => handleFetchSpotGuide(detailItem)} disabled={!!spotAiLoading} className="w-full py-6 border-[0.5px] border-dashed border-p3-navy/20 rounded-[22px] boutique-tag text-p3-navy/40 hover:text-p3-navy hover:bg-white/40 transition-all">
+                              {spotAiLoading === detailItem.id ? <Loader2 size={20} className="animate-spin" /> : t('schedule.getSpotGuide')}
+                            </button>
+                          )}
+                        </div>
+
+                        <button onClick={() => window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(detailItem.location || "")}`, '_blank')} className="w-full py-5 bg-p3-navy text-white rounded-[22px] shadow-glass-deep flex items-center justify-center gap-3 text-lg font-black active:scale-95 transition-all border-[0.5px] border-white/20">
+                          <MapPin size={24} strokeWidth={3} /> {t('schedule.openGoogleMaps')}
+                        </button>
                       </div>
                     )}
                   </div>
-                )}
-
-                {/* --- 2. Content Area --- */}
-                <div className="p-8 space-y-6">
-                  {/* Title & Badge */}
-                  <div>
-                    <div className="flex items-center gap-2 mb-2">
-                      <span className={`text-[9px] font-black px-3 py-1 rounded-full border-[2px] border-p3-navy uppercase tracking-widest ${detailItem.__type === 'booking' ? 'bg-splat-yellow text-p3-navy' : 'bg-white text-p3-navy'}`}>
-                        {detailItem.category || detailItem.type}
-                      </span>
-                    </div>
-                    <h2 className="text-3xl font-black text-p3-navy italic tracking-tighter leading-none">{detailItem.title}</h2>
-                  </div>
-
-                  {/* Flight Special Details */}
-                  {detailItem.__type === 'booking' && detailItem.type === 'flight' && (
-                    <div className="space-y-4">
-                      {detailItem.pnr && (
-                        <div className="bg-white border-[0.5px] border-p3-navy rounded-2xl p-5 shadow-glass-deep-sm flex justify-between items-center group active:scale-[0.98] transition-all" onClick={() => { navigator.clipboard.writeText(detailItem.pnr); triggerHaptic('success'); showToast("PNR 已複製！🦑", "success"); }}>
-                          <div>
-                            <p className="boutique-tag text-gray-400 uppercase tracking-widest mb-1">{t('schedule.pnr')}</p>
-                            <p className="text-3xl font-black text-p3-navy tracking-[0.2em]">{detailItem.pnr}</p>
-                          </div>
-                          <div className="w-12 h-12 rounded-xl bg-splat-yellow border-[0.5px] border-p3-navy flex items-center justify-center text-p3-navy group-hover:bg-p3-navy group-hover:text-white transition-colors">
-                            <Copy size={20} />
-                          </div>
-                        </div>
-                      )}
-                      <div className="grid grid-cols-3 gap-3">
-                        <div className="bg-white border-[2px] border-p3-navy/10 rounded-xl p-3 text-center">
-                          <span className="text-[9px] font-black text-gray-400 block uppercase mb-1">{t('schedule.terminal')}</span>
-                          <span className="text-xl font-black text-p3-navy">{detailItem.terminal || '--'}</span>
-                        </div>
-                        <div className="bg-white border-[2px] border-p3-navy/10 rounded-xl p-3 text-center">
-                          <span className="text-[9px] font-black text-gray-400 block uppercase mb-1">{t('schedule.gate')}</span>
-                          <span className="text-xl font-black text-p3-navy">{detailItem.gate || '--'}</span>
-                        </div>
-                        <div className="bg-white border-[2px] border-p3-navy/10 rounded-xl p-3 text-center">
-                          <span className="text-[9px] font-black text-gray-400 block uppercase mb-1">{t('schedule.boarding')}</span>
-                          <span className="text-xl font-black text-splat-pink">{detailItem.boardingTime || '--:--'}</span>
-                        </div>
-                      </div>
-                      <a
-                        href={`https://www.google.com/search?q=Flight+Status+${detailItem.flightNo}`}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="w-full py-4 bg-p3-navy text-white rounded-2xl font-black uppercase tracking-widest text-center flex items-center justify-center gap-3 shadow-glass-deep active:translate-y-1 transition-all"
-                      >
-                        <Plane size={18} /> {t('schedule.liveStatus')}
-                      </a>
-                    </div>
-                  )}
-
-                  {/* Hotel Special Details */}
-                  {detailItem.__type === 'booking' && detailItem.type === 'hotel' && (
-                    <div className="space-y-8">
-                      <div className="glass-card bg-white/20 backdrop-blur-3xl border-[0.5px] border-white/40 p-10 space-y-8 shadow-glass-deep">
-                        <div className="flex justify-between border-b-[0.5px] border-p3-navy/5 pb-8">
-                          <div>
-                            <span className="boutique-tag text-p3-navy/30 block mb-2">{t('schedule.checkIn')}</span>
-                            <span className="text-3xl boutique-h1 text-p3-navy">{detailItem.checkInTime || '15:00'}</span>
-                          </div>
-                          <div className="text-right">
-                            <span className="boutique-tag text-p3-navy/30 block mb-2">{t('schedule.checkOut')}</span>
-                            <span className="text-3xl boutique-h1 text-p3-navy">{detailItem.checkOutTime || '11:00'}</span>
-                          </div>
-                        </div>
-                        {detailItem.confirmationNo && (
-                          <div className="flex justify-between items-center pt-2">
-                            <span className="boutique-tag text-p3-navy/30">{t('schedule.roomType')}</span>
-                            <span className="boutique-h2 text-p3-navy">{detailItem.roomType || 'Standard Room'}</span>
-                          </div>
-                        )}
-                      </div>
-                      <div className="flex gap-3">
-                        <button
-                          className="flex-1 py-4 bg-white border-[0.5px] border-p3-navy rounded-2xl font-black uppercase text-xs flex items-center justify-center gap-2 shadow-glass-deep-sm active:translate-y-1 transition-all"
-                          onClick={() => window.open(`tel:${detailItem.phone || ''}`)}
-                        >
-                          <Phone size={16} /> {t('schedule.contact')}
-                        </button>
-                        <button
-                          className="flex-1 py-4 bg-splat-green text-white border-[0.5px] border-p3-navy rounded-2xl font-black uppercase text-xs flex items-center justify-center gap-2 shadow-glass-deep-sm active:translate-y-1 transition-all"
-                          onClick={() => window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(detailItem.location || "")}`, '_blank')}
-                        >
-                          <MapPin size={16} /> {t('schedule.map')}
-                        </button>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Regular Schedule Details */}
-                  {detailItem.__type === 'schedule' && (
-                    <div className="space-y-10">
-                      <div className="p-10 glass-card bg-white/20 backdrop-blur-3xl border-[0.5px] border-white/40 shadow-glass-deep">
-                        <h4 className="boutique-tag text-p3-navy/30 mb-6 flex items-center gap-3">
-                          <Sparkles size={16} strokeWidth={2.5} className="text-p3-gold" /> {t('schedule.spotInsight')}
-                        </h4>
-                        {detailItem.spotGuide ? (
-                          <div className="boutique-body text-p3-navy/80 whitespace-pre-wrap">{detailItem.spotGuide.background}</div>
-                        ) : spotAiLoading === detailItem.id && completion ? (
-                          <div className="boutique-body text-p3-navy/40 whitespace-pre-wrap animate-pulse">{completion}</div>
-                        ) : (
-                          <button onClick={() => handleFetchSpotGuide(detailItem)} disabled={!!spotAiLoading} className="w-full py-6 border-[0.5px] border-dashed border-p3-navy/20 rounded-[22px] boutique-tag text-p3-navy/40 hover:text-p3-navy hover:bg-white/40 transition-all">
-                            {spotAiLoading === detailItem.id ? <Loader2 size={20} className="animate-spin" /> : t('schedule.getSpotGuide')}
-                          </button>
-                        )}
-                      </div>
-
-                      <button onClick={() => window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(detailItem.location || "")}`, '_blank')} className="w-full py-5 bg-p3-navy text-white rounded-[22px] shadow-glass-deep flex items-center justify-center gap-3 text-lg font-black active:scale-95 transition-all border-[0.5px] border-white/20">
-                        <MapPin size={24} strokeWidth={3} /> {t('schedule.openGoogleMaps')}
-                      </button>
-                    </div>
-                  )}
                 </div>
-              </div>
-            </motion.div>
-          </div>
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>
+
+        {isEditorOpen && <ScheduleEditor tripId={trip!.id} date={selectedDateStr} item={editingItem} onClose={() => setIsEditorOpen(false)} />}
+
+        {showTransportModal && selectedTransportSuggestion && (
+          <TransportAiModal
+            suggestion={selectedTransportSuggestion}
+            onClose={() => setShowTransportModal(false)}
+          />
         )}
-      </AnimatePresence>
-
-      {isEditorOpen && <ScheduleEditor tripId={trip!.id} date={selectedDateStr} item={editingItem} onClose={() => setIsEditorOpen(false)} />}
-
-      {showTransportModal && selectedTransportSuggestion && (
-        <TransportAiModal
-          suggestion={selectedTransportSuggestion}
-          onClose={() => setShowTransportModal(false)}
-        />
-      )}
-    </div>
-  );
+      </div>
+      );
 };
