@@ -48,14 +48,12 @@ export const Wallet = () => {
         method: '現金', amount: 0, storeName: '', title: '', location: '', images: [], category: '餐飲', items: []
     });
 
-    if (!trip) return null;
-
-    const expenses = trip.expenses || [];
+    const expenses = trip?.expenses || [];
     const rate = exchangeRate || 0.21;
 
     const stats = useMemo(() => {
         const totalTwd = expenses.reduce((s, e) => s + (e.currency === 'TWD' ? e.amount : e.amount * rate), 0);
-        const totalForeign = expenses.filter(e => e.currency === trip.baseCurrency).reduce((s, e) => s + e.amount, 0);
+        const totalForeign = expenses.filter(e => e.currency === (trip?.baseCurrency || 'JPY')).reduce((s, e) => s + e.amount, 0);
         const taxFreeTotal = expenses.filter(e => e.isTaxFree).reduce((s, e) => s + e.amount, 0);
 
         const catStats = expenses.reduce((acc, curr) => {
@@ -70,7 +68,7 @@ export const Wallet = () => {
         })).sort((a, b) => b.value - a.value);
 
         return { totalTwd, totalForeign, taxFreeTotal, pieData };
-    }, [expenses, rate, trip.baseCurrency]);
+    }, [expenses, rate, trip?.baseCurrency]);
 
     const convertedValue = useMemo(() => {
         const val = parseFloat(converterValue) || 0;
@@ -103,6 +101,8 @@ export const Wallet = () => {
             }
         }, 800);
     };
+
+    if (!trip) return null;
 
     return (
         <div className="px-5 space-y-6 pb-32 pt-4 bg-[#F4F5F7] h-full overflow-y-auto hide-scrollbar">
