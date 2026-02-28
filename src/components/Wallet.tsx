@@ -5,7 +5,8 @@ import {
     LayoutList, Settings, CheckCircle, Image as ImageIcon,
     Loader2, Store, Search, X, ChevronRight, Edit3, ArrowLeft,
     Info, ArrowRight, TrendingDown, Sparkles, AlertTriangle, AlertOctagon,
-    RefreshCw, Repeat, ArrowUpDown, Banknote, CreditCard, PieChart, Plus, Utensils
+    RefreshCw, Repeat, ArrowUpDown, Banknote, CreditCard, PieChart, Plus, Utensils,
+    ShoppingBag, Car, Pill, ShoppingCart, Calendar, Home
 } from 'lucide-react';
 import { ExpenseItem, CurrencyCode, Member } from '../types';
 import { triggerHaptic } from '../utils/haptics';
@@ -21,6 +22,11 @@ const CURRENCY_SYMBOLS: Record<string, string> = {
 
 const CATEGORIES = ['餐飲', '購物', '交通', '住宿', '娛樂', '藥妝', '便利商店', '超市', '其他'];
 const METHODS = ['現金', '信用卡', '行動支付', 'IC卡', '其他'];
+
+const CATEGORY_ICONS: Record<string, any> = {
+    '餐飲': Utensils, '購物': ShoppingBag, '交通': Car, '住宿': Home,
+    '娛樂': Sparkles, '藥妝': Pill, '便利商店': Store, '超市': ShoppingCart, '其他': Coins
+};
 
 export const Wallet = () => {
     const { t } = useTranslation();
@@ -229,6 +235,61 @@ export const Wallet = () => {
                 </div>
             </div>
 
+            {/* --- Section 5: Recent Transactions --- */}
+            <div className="space-y-4">
+                <h3 className="text-sm font-black text-p3-navy flex justify-between items-center uppercase tracking-widest pl-2">
+                    <div className="flex items-center gap-2">
+                        <div className="w-2 h-5 bg-p3-ruby rounded-full" /> {t('wallet.recentTx')}
+                    </div>
+                </h3>
+                <div className="space-y-3">
+                    {expenses.length === 0 ? (
+                        <div className="bg-white/40 border-[0.5px] border-dashed border-gray-300 rounded-3xl py-12 text-center text-gray-400 font-black italic uppercase tracking-widest">
+                            {t('wallet.noTransactions')}
+                        </div>
+                    ) : (
+                        expenses
+                            .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+                            .map(item => {
+                                const Icon = CATEGORY_ICONS[item.category] || Coins;
+                                return (
+                                    <SwipeableItem key={item.id} id={item.id} onDelete={() => handleDelete(item.id)}>
+                                        <motion.div
+                                            whileTap={{ scale: 0.98 }}
+                                            onClick={() => {
+                                                setEditingId(item.id);
+                                                setForm({ ...item });
+                                                setActiveTab('record');
+                                            }}
+                                            className="bg-white border-[0.5px] border-p3-navy rounded-[28px] p-5 shadow-glass-soft flex items-center justify-between group active:bg-gray-50 transition-colors"
+                                        >
+                                            <div className="flex items-center gap-4">
+                                                <div className="w-12 h-12 rounded-2xl bg-gray-50 border-[0.5px] border-p3-navy/10 flex items-center justify-center text-p3-navy">
+                                                    <Icon size={24} strokeWidth={2.5} />
+                                                </div>
+                                                <div>
+                                                    <h4 className="font-black text-p3-navy leading-tight truncate w-32">{item.title || item.storeName}</h4>
+                                                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-1">{item.date} • {item.method}</p>
+                                                </div>
+                                            </div>
+                                            <div className="text-right">
+                                                <div className="text-lg font-black text-p3-navy tabular-nums">
+                                                    {CURRENCY_SYMBOLS[item.currency] || ''}{item.amount.toLocaleString()}
+                                                </div>
+                                                {item.currency !== 'TWD' && (
+                                                    <p className="text-[10px] font-black text-p3-ruby/60 uppercase">
+                                                        ≈ NT$ {Math.round(item.amount * rate).toLocaleString()}
+                                                    </p>
+                                                )}
+                                            </div>
+                                        </motion.div>
+                                    </SwipeableItem>
+                                );
+                            })
+                    )}
+                </div>
+            </div>
+
             <button onClick={() => setActiveTab('record')} className="w-full py-5 bg-p3-navy border-[0.5px] border-white/20 rounded-[24px] shadow-glass-deep text-white font-black uppercase tracking-[0.2em] flex items-center justify-center gap-3 active:scale-95 transition-all">
                 <Plus size={20} strokeWidth={4} /> {t('wallet.addNew')}
             </button>
@@ -247,21 +308,84 @@ export const Wallet = () => {
                             <button onClick={() => setActiveTab('list')} className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-p3-navy"><X size={20} /></button>
                         </div>
                         <div className="flex-1 overflow-y-auto p-6 space-y-6 bg-[#F4F5F7]">
-                            <div className="bg-white p-6 rounded-3xl border-[0.5px] border-p3-navy shadow-glass-deep-sm space-y-4">
-                                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{t('wallet.txDetails')}</label>
-                                <input placeholder={t('wallet.storeName')} value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} className="w-full bg-gray-50 border-[0.5px] border-p3-navy rounded-xl p-4 font-black outline-none focus:border-splat-blue/50 transition-colors" />
+                            <div className="bg-white p-6 rounded-3xl border-[0.5px] border-p3-navy shadow-glass-deep-sm space-y-6">
+                                <div>
+                                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-2">{t('wallet.txDate')}</label>
+                                    <div className="relative">
+                                        <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 text-p3-navy/30" size={18} />
+                                        <input type="date" value={form.date} onChange={e => setForm({ ...form, date: e.target.value })} className="w-full bg-gray-50 border-[0.5px] border-p3-navy rounded-xl p-4 pl-12 font-black outline-none" />
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-2">{t('wallet.txDetails')}</label>
+                                    <input placeholder={t('wallet.storeName')} value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} className="w-full bg-gray-50 border-[0.5px] border-p3-navy rounded-xl p-4 font-black outline-none focus:border-splat-blue/50 transition-colors" />
+                                </div>
+
                                 <div className="grid grid-cols-2 gap-4">
-                                    <input type="number" placeholder={t('wallet.amount')} value={form.amount || ''} onChange={e => setForm({ ...form, amount: Number(e.target.value) })} className="bg-gray-50 border-[0.5px] border-p3-navy rounded-xl p-4 font-black text-2xl outline-none" />
+                                    <div className="relative">
+                                        <input type="number" placeholder={t('wallet.amount')} value={form.amount || ''} onChange={e => setForm({ ...form, amount: Number(e.target.value) })} className="w-full bg-gray-50 border-[0.5px] border-p3-navy rounded-xl p-4 font-black text-2xl outline-none" />
+                                        <button
+                                            onClick={() => fileInputRef.current?.click()}
+                                            className="absolute right-2 top-1/2 -translate-y-1/2 w-10 h-10 bg-p3-navy text-white rounded-lg flex items-center justify-center active:scale-90 transition-transform shadow-sm"
+                                        >
+                                            <Camera size={20} />
+                                        </button>
+                                        <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={(e) => {
+                                            const file = e.target.files?.[0];
+                                            if (file) {
+                                                const reader = new FileReader();
+                                                reader.onloadend = () => setForm({ ...form, images: [...(form.images || []), reader.result as string] });
+                                                reader.readAsDataURL(file);
+                                            }
+                                        }} />
+                                    </div>
                                     <div className="flex bg-gray-100 p-1 rounded-xl border-[0.5px] border-p3-navy">
                                         <button onClick={() => setForm({ ...form, currency: 'JPY' })} className={`flex-1 rounded-lg font-black text-xs transition-colors ${form.currency === 'JPY' ? 'bg-splat-green text-white shadow-sm' : 'text-gray-400'}`}>JPY</button>
                                         <button onClick={() => setForm({ ...form, currency: 'TWD' })} className={`flex-1 rounded-lg font-black text-xs transition-colors ${form.currency === 'TWD' ? 'bg-splat-green text-white shadow-sm' : 'text-gray-400'}`}>TWD</button>
                                     </div>
                                 </div>
-                                <div className="flex items-center gap-3 p-4 bg-splat-yellow/10 border-2 border-dashed border-splat-yellow rounded-xl">
+
+                                {(form.images?.length ?? 0) > 0 && (
+                                    <div className="flex gap-2 overflow-x-auto py-2">
+                                        {form.images?.map((img, i) => (
+                                            <div key={i} className="relative w-20 h-20 shrink-0 rounded-xl overflow-hidden border-[0.5px] border-p3-navy shadow-sm">
+                                                <img src={img} className="w-full h-full object-cover" alt="receipt" />
+                                                <button onClick={() => setForm({ ...form, images: form.images?.filter((_, idx) => idx !== i) })} className="absolute top-1 right-1 bg-p3-ruby text-white rounded-full p-1 shadow-sm"><X size={10} /></button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+
+                                <div>
+                                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-2">{t('wallet.category')}</label>
+                                    <div className="grid grid-cols-3 gap-2">
+                                        {CATEGORIES.map(cat => (
+                                            <button key={cat} onClick={() => setForm({ ...form, category: cat as any })} className={`py-2 px-1 rounded-xl border-[0.5px] font-black text-[10px] transition-all ${form.category === cat ? 'bg-p3-navy text-white border-p3-navy shadow-md' : 'bg-white text-gray-400 border-gray-200 hover:border-p3-navy/30'}`}>
+                                                {cat}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-2">{t('wallet.payMethod')}</label>
+                                    <div className="flex flex-wrap gap-2">
+                                        {METHODS.map(m => (
+                                            <button key={m} onClick={() => setForm({ ...form, method: m as any })} className={`py-2 px-4 rounded-xl border-[0.5px] font-black text-[10px] transition-all ${form.method === m ? 'bg-splat-blue text-white border-splat-blue shadow-md' : 'bg-white text-gray-400 border-gray-200 hover:border-splat-blue/30'}`}>
+                                                {m}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                <div className="flex items-center gap-3 p-4 bg-splat-yellow/10 border-2 border-dashed border-splat-yellow rounded-xl cursor-pointer" onClick={() => setForm({ ...form, isTaxFree: !form.isTaxFree })}>
                                     <Sparkles size={18} className="text-splat-yellow" />
                                     <div className="flex-1 flex items-center justify-between">
                                         <span className="text-[10px] font-black text-p3-navy uppercase">{t('wallet.applyTaxFree')}</span>
-                                        <input type="checkbox" checked={!!form.isTaxFree} onChange={e => setForm({ ...form, isTaxFree: e.target.checked })} className="w-6 h-6 rounded-lg accent-p3-navy" />
+                                        <div className={`w-12 h-6 rounded-full p-1 transition-colors ${form.isTaxFree ? 'bg-p3-gold' : 'bg-gray-200'}`}>
+                                            <motion.div animate={{ x: form.isTaxFree ? 24 : 0 }} className="w-4 h-4 bg-white rounded-full shadow-sm" />
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -292,6 +416,6 @@ export const Wallet = () => {
                     </div>
                 )}
             </AnimatePresence>
-        </div>
+        </div >
     );
 };
