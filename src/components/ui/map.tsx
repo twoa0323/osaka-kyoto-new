@@ -1526,7 +1526,7 @@ function Map3DBuildings({ enabled = true }: { enabled?: boolean }) {
                         "fill-extrusion-base": ["get", "min_height"],
                         "fill-extrusion-opacity": 0.6
                     }
-                }, "waterway-name");
+                }, style.layers?.find(l => l.type === 'symbol' && l.id.includes('label'))?.id);
             } catch (e) {
                 console.warn('[Map3D] addLayer error:', e);
             }

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { messaging, db, auth } from '../services/firebase';
 import { getToken, onMessage } from 'firebase/messaging';
-import { doc, updateDoc, arrayUnion } from 'firebase/firestore';
+import { doc, setDoc, arrayUnion } from 'firebase/firestore';
 
 export const usePushNotifications = (tripId: string) => {
     const [permission, setPermission] = useState<NotificationPermission>('default');
@@ -28,8 +28,8 @@ export const usePushNotifications = (tripId: string) => {
                 }
 
                 // VAPID Key 通常來自 Firebase Console -> Project Settings -> Cloud Messaging -> Web Push certificate
-                // @ts-ignore - 略過 TypeScript 對 Vite import.meta.env 的型別檢查警告
                 const token = await getToken(messaging, {
+                    // @ts-ignore - 略過 TypeScript 對 Vite import.meta.env 的型別檢查警告
                     vapidKey: import.meta.env.VITE_FIREBASE_VAPID_KEY,
                     serviceWorkerRegistration: registration
                 });
@@ -39,11 +39,11 @@ export const usePushNotifications = (tripId: string) => {
                     const uid = auth.currentUser?.uid;
                     if (uid && tripId) {
                         // 儲存 Token 到旅程中的成員資料或全域用戶 Profile
-                        // 這裡我們先存入 trip 的成員白名單資訊中 (假設有一個 fcmTokens 欄位)
+                        // 改用 setDoc 搭配 merge: true，避免在 Trip 剛建立還未同步時發生 No document to update 錯誤
                         const tripRef = doc(db, 'trips', tripId);
-                        await updateDoc(tripRef, {
+                        await setDoc(tripRef, {
                             [`memberFcmTokens.${uid}`]: token
-                        });
+                        }, { merge: true });
                     }
                 }
             }
