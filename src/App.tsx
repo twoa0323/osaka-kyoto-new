@@ -293,6 +293,9 @@ const App: FC = () => {
   // 移除本地 state，改用 Zustand uiSettings
   useHapticShake();
 
+  // 供內部滾動區域使用的 Ref (解決 React hook 規則問題，必須置於 early return 之前)
+  const contentRef = useRef<HTMLDivElement>(null);
+
   // 物理互動感知層：監聽裝置陀螺儀
   const gyroData = useGyroscope(uiSettings.enableHaptics ? 0.8 : 0); // Use haptic setting to control gyroscope sensitivity
 
@@ -399,8 +402,6 @@ const App: FC = () => {
       setVerifyPin('');
     }
   };
-
-  const contentRef = useRef<HTMLDivElement>(null);
 
   return (
     <div className="relative min-h-[100dvh] w-full max-w-md mx-auto bg-[#F4F5F7] overflow-hidden drop-shadow-2xl sm:rounded-[40px] sm:my-8 sm:h-[844px] flex flex-col font-sans">
