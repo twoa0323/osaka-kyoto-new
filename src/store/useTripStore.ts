@@ -5,6 +5,7 @@ import { Trip, ScheduleItem, BookingItem, ExpenseItem, JournalItem, ShoppingItem
 import { idbStorage } from '../utils/idbStorage';
 import { db, auth } from '../services/firebase'; // 👈 引入 auth 來抓取設備指紋
 import { doc, setDoc, deleteDoc, updateDoc } from 'firebase/firestore';
+import i18n from '../i18n';
 
 // Prompt 1: 高效能遞迴版 removeUndefined，取代 JSON.parse/stringify 的深拷貝
 // 避免序列化整個物件造成主執行緒阻塞，只做單次遞迴遍歷
@@ -220,9 +221,14 @@ export const useTripStore = create<TripState>()(
         enableGlassmorphism: true,
         language: 'zh-TW', // 預設使用繁體中文
       },
-      setUISettings: (newSettings) => set((s) => ({
-        uiSettings: { ...s.uiSettings, ...newSettings }
-      })),
+      setUISettings: (newSettings) => {
+        if (newSettings.language) {
+          i18n.changeLanguage(newSettings.language);
+        }
+        set((s) => ({
+          uiSettings: { ...s.uiSettings, ...newSettings }
+        }));
+      },
       setIsSyncing: (isSyncing) => set({ isSyncing }),
       // 智慧模型路由器：偵測 AI 降級並提示使用者
       checkAiFallback: (data) => {
