@@ -1,8 +1,15 @@
-import 'dotenv/config';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { GoogleGenerativeAI } from '@google/generative-ai';
+
+// Try to load dotenv, but don't fail if it's missing (might be in environment already)
+try {
+    const { config } = await import('dotenv');
+    config();
+} catch (e) {
+    // Silently ignore if dotenv can't be loaded
+}
 
 // 模擬 ES Module 中的 __dirname
 const __filename = fileURLToPath(import.meta.url);
@@ -10,7 +17,7 @@ const __dirname = path.dirname(__filename);
 
 const apiKey = process.env.GEMINI_API_KEY || process.env.VITE_GEMINI_API_KEY;
 if (!apiKey) {
-    console.error('Error: GEMINI_API_KEY is not defined in .env');
+    console.error('Error: GEMINI_API_KEY is not defined in environment or .env');
     process.exit(1);
 }
 

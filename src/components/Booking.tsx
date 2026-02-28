@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useTripStore } from '../store/useTripStore';
 import {
-  Plane, Home, MapPin, Plus, Edit3, Globe, QrCode,
+  Plane, Home, MapPin, Plus, Edit3, Globe, QrCode, ChevronDown,
   ArrowRight, X, Luggage, Phone, Camera, Ticket, Download, CheckCircle2, Calendar, Clock, Trash2
 } from 'lucide-react';
 import { cacheAsset, isAssetCached } from '../utils/offlineCache';
@@ -430,186 +430,228 @@ const FlightCard = ({ item, t, language, onEdit, onViewDetails, onQrClick }: any
   return (
     <motion.div
       whileTap={{ scale: 0.98 }}
-      className="relative glass-card overflow-hidden shadow-glass-deep group cursor-pointer border-[0.5px] border-white/40"
+      className="relative bg-white rounded-[2.5rem] shadow-glass-deep overflow-hidden group cursor-pointer"
       onClick={handleCardClick}
     >
       {/* 編輯按鈕 */}
       <div className={`absolute top-4 right-4 z-40 transition-opacity duration-300 ${showActions ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
-        <button onClick={onEdit} className="p-2.5 bg-p3-gold border-[0.5px] border-white/20 rounded-full text-white shadow-glass-soft hover:scale-110 transition-transform">
+        <button onClick={(e) => { e.stopPropagation(); onEdit(e); }} className="p-2.5 bg-p3-gold border-[0.5px] border-white/20 rounded-full text-white shadow-glass-soft hover:scale-110 transition-transform">
           <Edit3 size={18} strokeWidth={3} />
         </button>
       </div>
 
-      {/* 倒數計時標籤 (微型斜向徽章) */}
-      {(() => {
-        const cd = getCountdown(item.date, item.depTime, t, language);
-        return cd && (
-          <div className={`absolute top-2 left-2 z-50 px-2.5 py-0.5 rounded-lg border-2 border-p3-navy text-[8px] font-black text-white shadow-glass-deep-sm -rotate-6 ${cd.color}`}>
-            {cd.text}
-          </div>
-        );
-      })()}
-
+      {/* 1. Header (Dark Section) */}
       <div
-        className={`relative h-[93px] w-full flex items-center justify-center border-b-[0.5px] border-white/20 ${theme.bgClass}`}
+        className="h-[80px] w-full flex items-center justify-center relative overflow-hidden bg-[#181B26]"
         style={{
-          backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.1) 1px, transparent 1px)',
-          backgroundSize: '12px 12px'
+          backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.15) 1.2px, transparent 1.2px)',
+          backgroundSize: '16px 16px'
         }}
       >
-        <div className="drop-shadow-sm scale-100">
+        <div className="drop-shadow-sm scale-110">
           {theme.logoHtml}
         </div>
       </div>
 
-      <div className="absolute top-[75px] left-1/2 -translate-x-1/2 bg-white/80 backdrop-blur-md px-8 py-1.5 rounded-full border-[0.5px] border-black/5 shadow-sm z-30 flex items-center justify-center">
-        <span className="text-base font-bold font-['Barlow'] text-p3-navy tracking-[0.2em] outline-none opacity-80">{item.flightNo || '---'}</span>
+      {/* 2. Overlapping Flight Number Pill */}
+      <div className="absolute top-[65px] left-1/2 -translate-x-1/2 bg-white px-6 py-1.5 rounded-full border-[0.5px] border-black/5 shadow-sm z-30 flex items-center justify-center min-w-[100px]">
+        <span className="text-sm font-black text-gray-400 tracking-[0.1em] uppercase">{item.flightNo || '---'}</span>
       </div>
 
-      <div className="relative p-3.5 pt-8 pb-3.5 font-['Barlow']">
-        <div className="absolute top-0 bottom-0 left-4 w-0 border-l-[3px] border-dashed border-gray-100 opacity-20" />
+      {/* 3. Body Content */}
+      <div className="relative p-5 pt-10 pb-4">
+        {/* Left Perforation Line */}
+        <div className="absolute top-0 bottom-0 left-0 w-0 border-l-[2.5px] border-dashed border-gray-100" />
 
-        <div className="grid grid-cols-3 gap-0 mb-4 items-center">
+        <div className="grid grid-cols-3 gap-0 mb-6 items-center">
+          {/* Departure */}
           <div className="flex flex-col items-center">
-            <span className="text-[24px] font-black text-gray-400 tracking-tight uppercase mb-0">{item.depIata || 'TPE'}</span>
-            <span className="text-[44px] leading-tight font-bold text-[#1A1A1A] tracking-tighter tabular-nums">{item.depTime || '--:--'}</span>
-            <div className="mt-2 bg-p3-navy/10 text-p3-navy px-3.5 py-0.5 rounded-full text-[10px] font-bold tracking-widest whitespace-nowrap border-[0.5px] border-p3-navy/20 shadow-sm">
-              {item.depCity || t('booking.depCity')}
+            <span className="text-[26px] font-black text-gray-400 tracking-widest uppercase leading-none mb-1">{item.depIata || 'TPE'}</span>
+            <span className="text-[44px] font-black text-[#1A1A1A] tabular-nums leading-none mb-3">{item.depTime || '08:30'}</span>
+            <div className="bg-[#2D7A4D] text-white px-4 py-1 rounded-full text-[10px] font-black tracking-widest uppercase">
+              {item.depCity || 'Taipei'}
             </div>
           </div>
 
-          <div className="flex flex-col items-center justify-center px-1">
-            <span className="text-[12px] font-black text-gray-500 mb-1 tabular-nums">{formatDurationDisplay(item.duration)}</span>
-            <div className="w-full flex items-center text-splat-blue">
-              <div className="h-[2px] flex-1 bg-gray-100 border-dashed border-t-[2.5px]"></div>
-              <Plane size={16} className="mx-1.5 fill-current rotate-45 shrink-0" />
-              <div className="h-[2px] flex-1 bg-gray-100 border-dashed border-t-[2.5px]"></div>
+          {/* Center Flight Art */}
+          <div className="flex flex-col items-center justify-center px-2">
+            <span className="text-[11px] font-black text-gray-400 mb-2 tabular-nums tracking-widest">
+              {formatDurationDisplay(item.duration)}
+            </span>
+            <div className="w-full flex items-center text-[#2D32CF]">
+              <div className="h-[1.5px] flex-1 border-t-[2px] border-dashed border-gray-200"></div>
+              <Plane size={18} className="mx-2 rotate-45 shrink-0 fill-current" />
+              <div className="h-[1.5px] flex-1 border-t-[2px] border-dashed border-gray-200"></div>
             </div>
-            <span className="text-[13px] font-black text-gray-400 mt-1.5 tracking-wide">{item.date?.replace(/-/g, '/')}</span>
+            <span className="text-[11px] font-black text-gray-300 mt-2 tracking-widest uppercase">
+              {item.date?.replace(/-/g, '/')}
+            </span>
           </div>
 
+          {/* Arrival */}
           <div className="flex flex-col items-center">
-            <span className="text-[24px] font-black text-gray-400 tracking-tight uppercase mb-0">{item.arrIata || 'KIX'}</span>
-            <span className="text-[44px] leading-tight font-bold text-[#1A1A1A] tracking-tighter tabular-nums">{item.arrTime || '--:--'}</span>
-            <div className="mt-2 bg-p3-ruby/10 text-p3-ruby px-3.5 py-0.5 rounded-full text-[10px] font-bold tracking-widest whitespace-nowrap border-[0.5px] border-p3-ruby/20 shadow-sm">
-              {item.arrCity || t('booking.arrCity')}
+            <span className="text-[26px] font-black text-gray-400 tracking-widest uppercase leading-none mb-1">{item.arrIata || 'KIX'}</span>
+            <span className="text-[44px] font-black text-[#1A1A1A] tabular-nums leading-none mb-3">{item.arrTime || '12:15'}</span>
+            <div className="bg-[#B3936E] text-white px-4 py-1 rounded-full text-[10px] font-black tracking-widest uppercase">
+              {item.arrCity || 'Osaka'}
             </div>
           </div>
         </div>
 
-        <div className="bg-[#F1F3F5] rounded-[1.2rem] border-2 border-gray-100/50 p-3 grid grid-cols-3 divide-x-2 divide-white/60">
+        {/* 4. Footer (Three Equal Columns) */}
+        <div className="bg-[#F8F9FA] rounded-[1.5rem] p-4 grid grid-cols-3 divide-x divide-gray-200/60 mt-2 border-[0.5px] border-gray-100">
           <div className="flex flex-col items-center">
-            <span className="text-[9px] font-bold text-gray-500 uppercase tracking-[0.15em] mb-1.5">BAGGAGE</span>
-            <div className="flex items-center gap-1 font-bold text-[#1A1A1A] text-sm">
-              <Luggage size={12} className="text-[#447A5A] opacity-80" strokeWidth={3} />
-              {item.baggage || '---'}
+            <span className="text-[8px] font-black text-gray-400 uppercase tracking-[0.2em] mb-2">Baggage</span>
+            <div className="flex items-center gap-1.5 font-black text-[#1A1A1A] text-xs">
+              <Luggage size={12} className="text-gray-400 opacity-60" strokeWidth={3} />
+              {item.baggage || '23kg'}
             </div>
           </div>
           <div className="flex flex-col items-center">
-            <span className="text-[9px] font-bold text-gray-500 uppercase tracking-[0.15em] mb-1.5">SEAT</span>
-            <div className="font-bold text-[#1A1A1A] text-sm">{item.seat || '---'}</div>
+            <span className="text-[8px] font-black text-gray-400 uppercase tracking-[0.2em] mb-2">Seat</span>
+            <div className="flex items-center gap-1.5 font-black text-[#1A1A1A] text-xs">
+              <span className="text-gray-400 opacity-60 font-serif">💺</span>
+              {item.seat || '22K'}
+            </div>
           </div>
-          <div className="flex flex-col items-center overflow-hidden">
-            <span className="text-[9px] font-bold text-gray-500 uppercase tracking-[0.15em] mb-1.5 text-center">AIRCRAFT</span>
-            <div className="flex items-center gap-1 font-bold text-[#1A1A1A] truncate w-full justify-center text-sm">
-              <Plane size={12} className="text-[#B3936E] rotate-45 shrink-0 opacity-80" strokeWidth={3} />
-              <span className="truncate">{item.aircraft || '---'}</span>
+          <div className="flex flex-col items-center">
+            <span className="text-[8px] font-black text-gray-400 uppercase tracking-[0.2em] mb-2">Aircraft</span>
+            <div className="flex items-center gap-1.5 font-black text-[#1A1A1A] text-xs truncate w-full justify-center">
+              <Plane size={12} className="text-gray-400 opacity-60 rotate-45 shrink-0" strokeWidth={3} />
+              <span className="truncate">{item.aircraft || 'A359'}</span>
             </div>
           </div>
         </div>
       </div>
 
+      {/* QR Shortcut */}
       {item.qrCode && (
-        <div className="absolute right-5 top-[115px] z-[25]">
+        <div className="absolute right-6 top-[110px] z-[25]">
           <motion.div
             whileHover={{ scale: 1.1 }}
             onClick={(e) => { e.stopPropagation(); onQrClick(item.qrCode!); }}
-            className="cursor-zoom-in bg-white p-1.5 border-2 border-gray-100 rounded-xl shadow-md"
+            className="cursor-zoom-in bg-white p-1 rounded-xl shadow-md border-[0.5px] border-gray-100 rotate-3"
           >
-            <LazyImage src={item.qrCode} containerClassName="w-11 h-11" alt="QR" />
+            <LazyImage src={item.qrCode} containerClassName="w-12 h-12" alt="QR" />
           </motion.div>
         </div>
       )}
-
-      <div className="absolute top-[80px] -left-3.5 w-7 h-7 bg-white/40 backdrop-blur-md rounded-full border-[0.5px] border-white/40 z-30" />
-      <div className="absolute top-[80px] -right-3.5 w-7 h-7 bg-white/40 backdrop-blur-md rounded-full border-[0.5px] border-white/40 z-30" />
     </motion.div>
   );
 };
 
 const HotelCard = ({ item, t, language, onEdit, onViewDetails, onQrClick, onCopy }: any) => {
   const [showActions, setShowActions] = useState(false);
-  const handleCardClick = () => { if (!showActions) { setShowActions(true); setTimeout(() => setShowActions(false), 3000); } else { onViewDetails(); setShowActions(false); } };
+  const handleCardClick = () => {
+    if (!showActions) {
+      setShowActions(true);
+      setTimeout(() => setShowActions(false), 3000);
+    } else {
+      onViewDetails();
+      setShowActions(false);
+    }
+  };
 
   return (
-    <motion.div whileTap={{ scale: 0.98 }} className="glass-card shadow-glass-soft overflow-hidden relative cursor-pointer border-[0.5px] border-white/40" onClick={handleCardClick}>
-      <div className={`absolute top-4 right-4 z-20 transition-opacity duration-300 ${showActions ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
-        <button onClick={onEdit} className="p-2.5 bg-p3-gold border-[0.5px] border-white/20 rounded-full text-white shadow-glass-soft active:scale-90 transition-transform"><Edit3 size={18} strokeWidth={3} /></button>
+    <motion.div
+      whileTap={{ scale: 0.98 }}
+      className="relative bg-[#0A142E] rounded-[2.5rem] shadow-glass-deep overflow-hidden cursor-pointer aspect-[3/4] group flex flex-col"
+      onClick={handleCardClick}
+    >
+      {/* 編輯按鈕 */}
+      <div className={`absolute top-6 right-6 z-50 transition-opacity duration-300 ${showActions ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
+        <button onClick={(e) => { e.stopPropagation(); onEdit(e); }} className="p-3 bg-white/20 backdrop-blur-md border border-white/30 rounded-full text-white shadow-lg active:scale-90 transition-transform">
+          <Edit3 size={20} strokeWidth={2.5} />
+        </button>
       </div>
 
-      <div className="aspect-video bg-gray-200 relative border-b-[3px] border-p3-navy overflow-hidden">
-        {item.images?.[0] ? (<LazyImage src={item.images[0]} containerClassName="absolute inset-0 w-full h-full object-cover" />) : (<div className="absolute inset-0 w-full h-full flex items-center justify-center bg-splat-pink/10"><Home size={40} className="text-splat-pink/40" /></div>)}
+      {/* 1. Full-Bleed Hero Image */}
+      <div className="absolute inset-0 z-0">
+        {item.images?.[0] ? (
+          <LazyImage src={item.images[0]} containerClassName="w-full h-full object-cover" />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center bg-p3-navy">
+            <Home size={64} className="text-white/10" />
+          </div>
+        )}
+        {/* Apple-style Vertical Gradient Overlay */}
+        <div className="absolute inset-0 bg-gradient-to-t from-[#0A142E] via-[#0A142E]/70 to-transparent z-10" />
+      </div>
 
-        {/* 倒數計時標籤改放在圖片左上角，並加上陰影分離 */}
+      {/* 2. Top Branding / Status */}
+      <div className="relative z-20 p-8 flex justify-between items-start">
+        <div className="flex flex-col">
+          <span className="text-[10px] font-black tracking-[0.3em] text-white/60 uppercase">Digital Key</span>
+          <div className="flex items-center gap-2 mt-1">
+            <div className="w-2 h-2 rounded-full bg-splat-green animate-pulse" />
+            <span className="text-[11px] font-bold text-white uppercase tracking-widest leading-none">Verified Stay</span>
+          </div>
+        </div>
+        {/* 倒數計時 */}
         {(() => {
           const cd = getCountdown(item.date, undefined, t, language);
           return cd && (
-            <div className={`absolute top-4 left-4 z-30 px-3 py-1 rounded-xl border-[0.5px] border-p3-navy text-[10px] font-black text-white shadow-glass-deep-sm -rotate-3 ${cd.color}`}>
+            <div className={`px-3 py-1 rounded-xl border border-white/30 text-[9px] font-black text-white shadow-lg backdrop-blur-md ${cd.color} opacity-90`}>
               {cd.text}
             </div>
           );
         })()}
+      </div>
 
-        <div className="absolute top-4 right-4 bg-white border-2 border-p3-navy px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest text-p3-navy shadow-[2px_2px_0px_#1A1A1A]">HOTEL</div>
+      {/* 3. Middle Section: Title & Content */}
+      <div className="relative z-20 flex-1 flex flex-col justify-end px-8 pb-4">
+        <div className="flex items-center gap-3 mb-2">
+          <h3 className="font-extrabold text-3xl text-white leading-tight font-['Barlow'] tracking-tight drop-shadow-md">
+            {item.title}
+          </h3>
+          <div className="bg-white/10 backdrop-blur-md border border-white/20 px-3 py-1 rounded-full shrink-0">
+            <span className="text-[10px] font-black text-white uppercase tracking-widest tabular-nums">
+              {item.nights || 1} {t('booking.nights')}
+            </span>
+          </div>
+        </div>
+        <div className="flex items-center gap-2 opacity-70">
+          <MapPin size={12} className="text-white shrink-0" />
+          <span className="text-xs font-medium text-white/90 truncate max-w-[200px]">{item.location || t('booking.addressTbc')}</span>
+        </div>
+      </div>
 
-        {/* Check-in Time Overlay */}
-        <div className="absolute bottom-0 left-0 right-0 bg-p3-navy/60 backdrop-blur-md px-4 py-2 flex justify-between items-center text-white border-t-2 border-white/20">
+      {/* 4. The "Check-in" Console (Bottom Frosted Glass) */}
+      <div className="relative z-30 m-4 p-5 bg-white/10 backdrop-blur-2xl border border-white/20 rounded-[2rem] shadow-2xl flex flex-col gap-4">
+        <div className="flex justify-between items-center relative">
           <div className="flex flex-col">
-            <span className="text-[8px] font-black uppercase tracking-[0.2em] opacity-80">Check-in</span>
-            <span className="text-lg font-black tracking-tight">{item.checkInTime || '15:00'}</span>
+            <span className="text-[8px] font-black text-white/40 uppercase tracking-[0.2em] mb-1">Check-in</span>
+            <div className="text-xl font-extrabold text-white tabular-nums tracking-tight">{item.checkInTime || '15:00'}</div>
+            <div className="text-[9px] font-bold text-white/60 mt-0.5">{item.date?.replace(/-/g, '/')}</div>
           </div>
-          <div className="h-6 w-[2px] bg-white/30 rounded-full" />
-          <div className="flex flex-col items-end">
-            <span className="text-[8px] font-black uppercase tracking-[0.2em] opacity-80">Check-out</span>
-            <span className="text-lg font-black tracking-tight">{item.checkOutTime || '11:00'}</span>
+
+          {/* Subtle separator */}
+          <div className="h-8 w-[1px] bg-white/10 rounded-full" />
+
+          <div className="flex flex-col items-end text-right">
+            <span className="text-[8px] font-black text-white/40 uppercase tracking-[0.2em] mb-1">Check-out</span>
+            <div className="text-xl font-extrabold text-white tabular-nums tracking-tight">{item.checkOutTime || '11:00'}</div>
+            <div className="text-[9px] font-bold text-white/60 mt-0.5">{item.checkOutDate?.replace(/-/g, '/') || '---'}</div>
+          </div>
+        </div>
+
+        {/* Action / QR Indicator */}
+        <div className="flex items-center justify-between pt-1 border-t border-white/5">
+          <div className="flex items-center gap-3">
+            <div onClick={(e) => { e.stopPropagation(); onCopy('#FFFFFF'); }} className="p-2 bg-white/5 rounded-xl border border-white/10 active:scale-90 transition-transform">
+              <Copy size={14} className="text-white/80" />
+            </div>
+            {item.qrCode && (
+              <div onClick={(e) => { e.stopPropagation(); onQrClick(item.qrCode!); }} className="p-2 bg-white/5 rounded-xl border border-white/10 active:scale-90 transition-transform">
+                <QrCode size={14} className="text-white/80" />
+              </div>
+            )}
+          </div>
+          <div className="flex flex-col items-center opacity-40">
+            <ChevronDown size={18} className="text-white animate-bounce" />
           </div>
         </div>
       </div>
-
-      <div className="p-5 space-y-4">
-        <div className="flex justify-between items-start gap-3">
-          <div className="flex-1 min-w-0">
-            <h3 className="font-black text-xl text-p3-navy leading-tight font-['Barlow'] truncate">{item.title}</h3>
-            {/* 日期區塊強化 */}
-            <div className="flex gap-2 items-center mt-1.5">
-              <span className="inline-flex items-center gap-1.5 text-sm font-black text-p3-navy font-['Barlow'] tabular-nums tracking-wide">
-                {item.date?.replace(/-/g, '/')} <ArrowRight size={12} className="text-gray-400" /> {item.checkOutDate ? item.checkOutDate.replace(/-/g, '/') : '---'}
-              </span>
-              <span className="text-[10px] font-black text-white bg-splat-pink px-2 py-0.5 rounded-lg transform -rotate-2">
-                {item.nights || 1} {t('booking.nights')}
-              </span>
-            </div>
-
-            <div className="flex items-center gap-1.5 mt-2">
-              <MapPin size={12} className="text-splat-pink shrink-0" />
-              <span className="text-[11px] font-bold text-gray-500 truncate">{item.location || t('booking.addressTbc')}</span>
-            </div>
-          </div>
-        </div>
-
-        <div className="flex justify-between items-end">
-          <CopyableField label="CONFIRMATION NO." value={item.confirmationNo} onCopy={() => onCopy('#F03C69')} />
-          {item.qrCode && (
-            <motion.div whileHover={{ scale: 1.1 }} onClick={(e) => { e.stopPropagation(); onQrClick(item.qrCode!); }} className="cursor-zoom-in bg-white p-1 border-2 border-gray-100 rounded-xl shadow-inner relative group">
-              <LazyImage src={item.qrCode} containerClassName="w-14 h-14" alt="QR" />
-              <div className="absolute inset-0 bg-splat-blue/10 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded-xl"><Plus size={16} className="text-splat-blue" strokeWidth={4} /></div>
-            </motion.div>
-          )}
-        </div>
-      </div>
-
-      <div className="absolute top-[144px] -left-3 w-6 h-6 bg-white/40 backdrop-blur-md rounded-full border-[0.5px] border-white/40 z-10" />
-      <div className="absolute top-[144px] -right-3 w-6 h-6 bg-white/40 backdrop-blur-md rounded-full border-[0.5px] border-white/40 z-10" />
     </motion.div>
   );
 };
