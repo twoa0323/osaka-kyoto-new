@@ -50,14 +50,14 @@
 
 @layer components {
 
-  /* 斯普拉遁風格通用卡片 */
+  /* 斯普拉遁風格通用卡片 (Legacy fallback) */
   .card-splat {
-    @apply bg-white border-[3px] border-splat-dark rounded-[20px] shadow-splat-solid transition-transform;
+    @apply bg-white border-[0.5px] border-p3-navy/20 rounded-[20px] shadow-glass-soft transition-transform;
   }
 
-  /* 斯普拉遁風格通用按鈕 */
+  /* 斯普拉遁風格通用按鈕 (Legacy fallback) */
   .btn-splat {
-    @apply font-black uppercase tracking-widest border-[3px] border-splat-dark shadow-splat-solid active:shadow-splat-active active:translate-x-1 active:translate-y-1 transition-all rounded-full;
+    @apply font-black uppercase tracking-widest border-[0.5px] border-p3-navy/20 shadow-glass-soft active:shadow-inner active:bg-gray-50 active:scale-95 transition-all rounded-full;
   }
 
   /* 💎 玻璃擬態 2.0 (Liquid Glass Luxury) */
