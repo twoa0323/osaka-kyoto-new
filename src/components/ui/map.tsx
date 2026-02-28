@@ -1483,38 +1483,48 @@ function Map3DBuildings({ enabled = true }: { enabled?: boolean }) {
         const layerId = "3d-buildings";
 
         if (!enabled) {
-            if (map.getLayer(layerId)) {
-                map.removeLayer(layerId);
+            try {
+                if (map.getLayer(layerId)) {
+                    map.removeLayer(layerId);
+                }
+            } catch (e) {
+                console.warn('[Map3D] removeLayer (disabled) skipped:', e);
             }
             return;
         }
 
         const addLayer = () => {
-            if (map.getLayer(layerId)) return;
+            try {
+                if (map.getLayer(layerId)) return;
 
-            const sources = map.getStyle().sources;
-            const sourceId = Object.keys(sources).find(id => id === 'composite' || id === 'openmaptiles') || 'composite';
+                const style = map.getStyle();
+                if (!style || !style.sources) return;
+                const sources = style.sources;
+                const sourceId = Object.keys(sources).find(id => id === 'composite' || id === 'openmaptiles') || 'composite';
 
-            map.addLayer({
-                id: layerId,
-                source: sourceId,
-                "source-layer": "building",
-                filter: ["==", "extrude", "true"],
-                type: "fill-extrusion",
-                minzoom: 13,
-                paint: {
-                    "fill-extrusion-color": [
-                        "interpolate", ["linear"], ["get", "height"],
-                        0, "#eef2f6",
-                        20, "#cbd5e1",
-                        50, "rgba(50, 131, 131, 0.6)",
-                        100, "rgba(26, 26, 26, 0.6)"
-                    ],
-                    "fill-extrusion-height": ["get", "height"],
-                    "fill-extrusion-base": ["get", "min_height"],
-                    "fill-extrusion-opacity": 0.6
-                }
-            }, "waterway-name");
+                map.addLayer({
+                    id: layerId,
+                    source: sourceId,
+                    "source-layer": "building",
+                    filter: ["==", "extrude", "true"],
+                    type: "fill-extrusion",
+                    minzoom: 13,
+                    paint: {
+                        "fill-extrusion-color": [
+                            "interpolate", ["linear"], ["get", "height"],
+                            0, "#eef2f6",
+                            20, "#cbd5e1",
+                            50, "rgba(50, 131, 131, 0.6)",
+                            100, "rgba(26, 26, 26, 0.6)"
+                        ],
+                        "fill-extrusion-height": ["get", "height"],
+                        "fill-extrusion-base": ["get", "min_height"],
+                        "fill-extrusion-opacity": 0.6
+                    }
+                }, "waterway-name");
+            } catch (e) {
+                console.warn('[Map3D] addLayer error:', e);
+            }
         };
 
         if (map.isStyleLoaded()) {
@@ -1524,7 +1534,11 @@ function Map3DBuildings({ enabled = true }: { enabled?: boolean }) {
         }
 
         return () => {
-            if (map.getLayer(layerId)) map.removeLayer(layerId);
+            try {
+                if (map.getLayer(layerId)) map.removeLayer(layerId);
+            } catch (e) {
+                console.warn('[Map3D] removeLayer cleanup skipped:', e);
+            }
         };
     }, [map, isLoaded, enabled]);
 

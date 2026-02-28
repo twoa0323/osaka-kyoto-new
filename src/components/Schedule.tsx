@@ -201,6 +201,15 @@ const ScheduleMapView: FC<{
   const mapRef = useRef<MapLibreGLType.Map | null>(null);
   const activeCardIdRef = useRef<string | null>(null);
   const activeTab = useTripStore(s => s.activeTab);
+  const isMountedRef = useRef(true);
+
+  // 🛡️ 追蹤組件生命週期，防止卸載後的 WebGL 操作導致白畫面
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
 
   // 📍 魔法雷達狀態
   const [aiPlaces, setAiPlaces] = useState<any[]>([]);
@@ -228,25 +237,39 @@ const ScheduleMapView: FC<{
   }, [points, trip]);
 
   useEffect(() => {
-    if (!mapRef.current || points.length === 0) return;
-    const bounds = new LngLatBounds();
-    points.forEach(p => bounds.extend(p));
-    mapRef.current.fitBounds(bounds, { padding: 80, duration: 1000, maxZoom: 16 });
+    if (!mapRef.current || points.length === 0 || !isMountedRef.current) return;
+    try {
+      const bounds = new LngLatBounds();
+      points.forEach(p => bounds.extend(p));
+      mapRef.current.fitBounds(bounds, { padding: 80, duration: 0, maxZoom: 16 });
+    } catch (e) {
+      console.warn('[Map] fitBounds skipped (context lost):', e);
+    }
   }, [points]);
 
   const handleCardClick = (item: ScheduleItem) => {
-    if (item.lat && item.lng && mapRef.current) {
-      mapRef.current.flyTo({ center: [item.lng, item.lat], zoom: 16, duration: 1200, essential: true });
-      triggerHaptic('medium');
+    if (item.lat && item.lng && mapRef.current && isMountedRef.current) {
+      try {
+        mapRef.current.flyTo({ center: [item.lng, item.lat], zoom: 16, duration: 1200, essential: true });
+        triggerHaptic('medium');
+      } catch (e) {
+        console.warn('[Map] flyTo skipped (context lost):', e);
+      }
     }
   };
 
   // 📍 觸發魔法雷達 API
   const handleExploreNearby = async () => {
-    if (!mapRef.current) return;
+    if (!mapRef.current || !isMountedRef.current) return;
     if (!navigator.onLine) return showToast("請先連上網路才能開啟魔法雷達唷！📡", "info");
 
-    const center = mapRef.current.getCenter();
+    let center;
+    try {
+      center = mapRef.current.getCenter();
+    } catch (e) {
+      console.warn('[Map] getCenter failed:', e);
+      return;
+    }
     setIsExploring(true);
     triggerHaptic('heavy');
 

@@ -540,7 +540,7 @@ const App: FC = () => {
           />
         )
       }
-      <AIStatusCapsule />
+      {isSyncing && <AIStatusCapsule />}
       <AiAssistant />
       <SplatToast />
     </div>
