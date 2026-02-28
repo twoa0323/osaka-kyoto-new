@@ -24,7 +24,7 @@
   }
 
   body {
-    background-color: #F4F5F7;
+    background-color: #F1F5F9;
     color: #1A1A1A;
     font-family: 'Noto Sans TC', sans-serif;
 
@@ -219,5 +219,11 @@ textarea {
 @keyframes slide-to-bottom {
   to {
     transform: translateY(-10px);
+  }
+}
+
+@layer utilities {
+  .shadow-glass-deep {
+    box-shadow: 0 10px 40px -10px rgba(0, 0, 0, 0.08), 0 0 0 1px rgba(0, 0, 0, 0.02);
   }
 }

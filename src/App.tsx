@@ -449,7 +449,7 @@ const App: FC = () => {
   };
 
   return (
-    <div className="relative h-[100dvh] w-full max-w-md mx-auto bg-[#F4F5F7] overflow-hidden drop-shadow-2xl sm:rounded-[40px] sm:my-8 sm:h-[844px] flex flex-col font-sans">
+    <div className="relative h-[100dvh] w-full max-w-md mx-auto bg-slate-100 overflow-hidden drop-shadow-2xl sm:rounded-[40px] sm:my-8 sm:h-[844px] flex flex-col font-sans">
       {/* 動態材質疊層 (Dynamic Material Overlay) */}
       <div
         className="absolute inset-0 pointer-events-none opacity-[0.03] mix-blend-color-burn"
@@ -501,7 +501,7 @@ const App: FC = () => {
       </AnimatePresence>
 
       {activeTab === 'timeline' && (
-        <header className="p-4 sticky top-0 z-[100] w-full max-w-md mx-auto animate-fade-in bg-[#F4F5F7]/95 backdrop-blur-sm border-b-[1px] border-black/5 shadow-sm">
+        <header className="p-4 sticky top-0 z-[100] w-full max-w-md mx-auto animate-fade-in bg-slate-100/95 backdrop-blur-sm border-b-[1px] border-black/5 shadow-sm">
           <div className="bg-splat-yellow border-[3px] border-splat-dark rounded-[24px] shadow-splat-solid p-4 flex justify-between items-center relative z-20">
             <div className="relative text-left min-w-0">
               <h2 className="boutique-tag text-splat-dark uppercase tracking-widest mb-0.5 bg-white inline-block px-2 border-2 border-splat-dark rounded-full shadow-splat-solid-sm -rotate-2">
