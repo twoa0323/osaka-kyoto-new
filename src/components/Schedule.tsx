@@ -1435,212 +1435,213 @@ export const Schedule: FC<{ externalDateIdx?: number }> = ({ externalDateIdx = 0
         )}
 
         {showFullWeather && <WeatherReportModal onClose={() => setShowFullWeather(false)} todayHourly={todayHourly} getWeatherDesc={(code) => getWeatherDesc(code, t)} />}
+      </div>
 
-        {/* --- 🚀 Command Center (Detail View with Shared Element Transition) --- */}
-        <AnimatePresence>
-          {detailItem && (
-            <div
-              className="fixed inset-0 bg-p3-navy/60 backdrop-blur-xl z-[600] flex items-center justify-center p-0 sm:p-4"
-              onClick={() => setDetailItem(undefined)}
+      {/* --- 🚀 Command Center (Detail View with Shared Element Transition) --- */}
+      <AnimatePresence>
+        {detailItem && (
+          <div
+            className="fixed inset-0 bg-p3-navy/60 backdrop-blur-xl z-[600] flex items-center justify-center p-0 sm:p-4"
+            onClick={() => setDetailItem(undefined)}
+          >
+            <motion.div
+              layoutId={`card-${detailItem.id}`}
+              className="bg-[#F4F5F7] w-[92%] max-h-[85vh] sm:max-w-md rounded-[40px] border-[4px] border-p3-navy shadow-2xl flex flex-col overflow-hidden relative"
+              onClick={e => e.stopPropagation()}
             >
-              <motion.div
-                layoutId={`card-${detailItem.id}`}
-                className="bg-[#F4F5F7] w-[92%] max-h-[85vh] sm:max-w-md rounded-[40px] border-[4px] border-p3-navy shadow-2xl flex flex-col overflow-hidden relative"
-                onClick={e => e.stopPropagation()}
-              >
 
-                <div className="absolute top-6 right-6 z-[700] flex gap-2">
-                  <button
-                    onClick={() => {
-                      if (detailItem.__type === 'schedule') {
-                        setEditingItem(detailItem);
-                        setIsEditorOpen(true);
-                        setDetailItem(undefined);
-                        triggerHaptic('light');
-                      } else {
-                        showToast("Booking 編輯功能開發中... ✈️", "info");
-                      }
-                    }}
-                    className="bg-white/80 backdrop-blur-sm border-[0.5px] border-p3-navy p-2 rounded-full shadow-glass-deep-sm active:scale-90 transition-transform"
-                  >
-                    <Edit3 size={20} strokeWidth={3} />
-                  </button>
-                  <button
-                    onClick={() => {
-                      if (detailItem.__type === 'schedule') {
-                        deleteScheduleItem(trip!.id, detailItem.id);
-                      } else {
-                        deleteBookingItem(trip!.id, detailItem.id);
-                      }
+              <div className="absolute top-6 right-6 z-[700] flex gap-2">
+                <button
+                  onClick={() => {
+                    if (detailItem.__type === 'schedule') {
+                      setEditingItem(detailItem);
+                      setIsEditorOpen(true);
                       setDetailItem(undefined);
-                      showToast(detailItem.__type === 'schedule' ? "行程已刪除" : "預訂已刪除", "success");
-                      triggerHaptic('medium');
-                    }}
-                    className="bg-white/80 backdrop-blur-sm border-[0.5px] border-p3-navy p-2 rounded-full shadow-glass-deep-sm active:scale-90 transition-transform text-p3-ruby"
-                  >
-                    <Trash2 size={20} strokeWidth={3} />
-                  </button>
-                  <button
-                    onClick={() => setDetailItem(undefined)}
-                    className="bg-white/80 backdrop-blur-sm border-[0.5px] border-p3-navy p-2 rounded-full shadow-glass-deep-sm active:scale-90 transition-transform"
-                  >
-                    <X size={20} strokeWidth={3} />
-                  </button>
-                </div>
+                      triggerHaptic('light');
+                    } else {
+                      showToast("Booking 編輯功能開發中... ✈️", "info");
+                    }
+                  }}
+                  className="bg-white/80 backdrop-blur-sm border-[0.5px] border-p3-navy p-2 rounded-full shadow-glass-deep-sm active:scale-90 transition-transform"
+                >
+                  <Edit3 size={20} strokeWidth={3} />
+                </button>
+                <button
+                  onClick={() => {
+                    if (detailItem.__type === 'schedule') {
+                      deleteScheduleItem(trip!.id, detailItem.id);
+                    } else {
+                      deleteBookingItem(trip!.id, detailItem.id);
+                    }
+                    setDetailItem(undefined);
+                    showToast(detailItem.__type === 'schedule' ? "行程已刪除" : "預訂已刪除", "success");
+                    triggerHaptic('medium');
+                  }}
+                  className="bg-white/80 backdrop-blur-sm border-[0.5px] border-p3-navy p-2 rounded-full shadow-glass-deep-sm active:scale-90 transition-transform text-p3-ruby"
+                >
+                  <Trash2 size={20} strokeWidth={3} />
+                </button>
+                <button
+                  onClick={() => setDetailItem(undefined)}
+                  className="bg-white/80 backdrop-blur-sm border-[0.5px] border-p3-navy p-2 rounded-full shadow-glass-deep-sm active:scale-90 transition-transform"
+                >
+                  <X size={20} strokeWidth={3} />
+                </button>
+              </div>
 
-                <div className="flex-1 overflow-y-auto hide-scrollbar">
-                  {/* --- 1. Header (Image or Theme) --- */}
-                  {detailItem.__type === 'booking' && detailItem.type === 'flight' ? (
-                    <div className={`${getAirlineTheme(detailItem.airline).bgClass} h-40 flex items-center justify-center border-b-[4px] border-p3-navy relative overflow-hidden`}>
-                      <div className="absolute inset-0 opacity-10 flex flex-wrap gap-4 p-4 pointer-events-none">
-                        {Array.from({ length: 20 }).map((_, i) => <Plane key={i} size={40} className="rotate-45" />)}
-                      </div>
-                      <span className={`text-4xl font-black uppercase tracking-[0.4em] drop-shadow-lg ${getAirlineTheme(detailItem.airline).textClass}`}>
-                        {getAirlineTheme(detailItem.airline).logo}
-                      </span>
+              <div className="flex-1 overflow-y-auto hide-scrollbar">
+                {/* --- 1. Header (Image or Theme) --- */}
+                {detailItem.__type === 'booking' && detailItem.type === 'flight' ? (
+                  <div className={`${getAirlineTheme(detailItem.airline).bgClass} h-40 flex items-center justify-center border-b-[4px] border-p3-navy relative overflow-hidden`}>
+                    <div className="absolute inset-0 opacity-10 flex flex-wrap gap-4 p-4 pointer-events-none">
+                      {Array.from({ length: 20 }).map((_, i) => <Plane key={i} size={40} className="rotate-45" />)}
                     </div>
-                  ) : (
-                    <div className="h-64 bg-gray-200 relative border-b-[4px] border-p3-navy shrink-0">
-                      <LazyImage
-                        src={detailItem.images?.[0] || ''}
-                        containerClassName="w-full h-full"
-                        alt="hero"
-                      />
-                      {!detailItem.images?.[0] && (
-                        <div className="w-full h-full flex items-center justify-center bg-p3-navy/5">
-                          {detailItem.type === 'hotel' ? <Home size={64} className="text-p3-navy/10" /> : <MapPin size={64} className="text-p3-navy/10" />}
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {/* --- 2. Content Area --- */}
-                  <div className="p-8 space-y-6">
-                    {/* Title & Badge */}
-                    <div>
-                      <div className="flex items-center gap-2 mb-2">
-                        <span className={`text-[9px] font-black px-3 py-1 rounded-full border-[2px] border-p3-navy uppercase tracking-widest ${detailItem.__type === 'booking' ? 'bg-splat-yellow text-p3-navy' : 'bg-white text-p3-navy'}`}>
-                          {detailItem.category || detailItem.type}
-                        </span>
-                      </div>
-                      <h2 className="text-3xl font-black text-p3-navy italic tracking-tighter leading-none">{detailItem.title}</h2>
-                    </div>
-
-                    {/* Flight Special Details */}
-                    {detailItem.__type === 'booking' && detailItem.type === 'flight' && (
-                      <div className="space-y-4">
-                        {detailItem.pnr && (
-                          <div className="bg-white border-[0.5px] border-p3-navy rounded-2xl p-5 shadow-glass-deep-sm flex justify-between items-center group active:scale-[0.98] transition-all" onClick={() => { navigator.clipboard.writeText(detailItem.pnr); triggerHaptic('success'); showToast("PNR 已複製！🦑", "success"); }}>
-                            <div>
-                              <p className="boutique-tag text-gray-400 uppercase tracking-widest mb-1">{t('schedule.pnr')}</p>
-                              <p className="text-3xl font-black text-p3-navy tracking-[0.2em]">{detailItem.pnr}</p>
-                            </div>
-                            <div className="w-12 h-12 rounded-xl bg-splat-yellow border-[0.5px] border-p3-navy flex items-center justify-center text-p3-navy group-hover:bg-p3-navy group-hover:text-white transition-colors">
-                              <Copy size={20} />
-                            </div>
-                          </div>
-                        )}
-                        <div className="grid grid-cols-3 gap-3">
-                          <div className="bg-white border-[2px] border-p3-navy/10 rounded-xl p-3 text-center">
-                            <span className="text-[9px] font-black text-gray-400 block uppercase mb-1">{t('schedule.terminal')}</span>
-                            <span className="text-xl font-black text-p3-navy">{detailItem.terminal || '--'}</span>
-                          </div>
-                          <div className="bg-white border-[2px] border-p3-navy/10 rounded-xl p-3 text-center">
-                            <span className="text-[9px] font-black text-gray-400 block uppercase mb-1">{t('schedule.gate')}</span>
-                            <span className="text-xl font-black text-p3-navy">{detailItem.gate || '--'}</span>
-                          </div>
-                          <div className="bg-white border-[2px] border-p3-navy/10 rounded-xl p-3 text-center">
-                            <span className="text-[9px] font-black text-gray-400 block uppercase mb-1">{t('schedule.boarding')}</span>
-                            <span className="text-xl font-black text-splat-pink">{detailItem.boardingTime || '--:--'}</span>
-                          </div>
-                        </div>
-                        <a
-                          href={`https://www.google.com/search?q=Flight+Status+${detailItem.flightNo}`}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="w-full py-4 bg-p3-navy text-white rounded-2xl font-black uppercase tracking-widest text-center flex items-center justify-center gap-3 shadow-glass-deep active:translate-y-1 transition-all"
-                        >
-                          <Plane size={18} /> {t('schedule.liveStatus')}
-                        </a>
-                      </div>
-                    )}
-
-                    {/* Hotel Special Details */}
-                    {detailItem.__type === 'booking' && detailItem.type === 'hotel' && (
-                      <div className="space-y-8">
-                        <div className="glass-card bg-white/20 backdrop-blur-3xl border-[0.5px] border-white/40 p-10 space-y-8 shadow-glass-deep">
-                          <div className="flex justify-between border-b-[0.5px] border-p3-navy/5 pb-8">
-                            <div>
-                              <span className="boutique-tag text-p3-navy/30 block mb-2">{t('schedule.checkIn')}</span>
-                              <span className="text-3xl boutique-h1 text-p3-navy">{detailItem.checkInTime || '15:00'}</span>
-                            </div>
-                            <div className="text-right">
-                              <span className="boutique-tag text-p3-navy/30 block mb-2">{t('schedule.checkOut')}</span>
-                              <span className="text-3xl boutique-h1 text-p3-navy">{detailItem.checkOutTime || '11:00'}</span>
-                            </div>
-                          </div>
-                          {detailItem.confirmationNo && (
-                            <div className="flex justify-between items-center pt-2">
-                              <span className="boutique-tag text-p3-navy/30">{t('schedule.roomType')}</span>
-                              <span className="boutique-h2 text-p3-navy">{detailItem.roomType || 'Standard Room'}</span>
-                            </div>
-                          )}
-                        </div>
-                        <div className="flex gap-3">
-                          <button
-                            className="flex-1 py-4 bg-white border-[0.5px] border-p3-navy rounded-2xl font-black uppercase text-xs flex items-center justify-center gap-2 shadow-glass-deep-sm active:translate-y-1 transition-all"
-                            onClick={() => window.open(`tel:${detailItem.phone || ''}`)}
-                          >
-                            <Phone size={16} /> {t('schedule.contact')}
-                          </button>
-                          <button
-                            className="flex-1 py-4 bg-splat-green text-white border-[0.5px] border-p3-navy rounded-2xl font-black uppercase text-xs flex items-center justify-center gap-2 shadow-glass-deep-sm active:translate-y-1 transition-all"
-                            onClick={() => window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(detailItem.location || "")}`, '_blank')}
-                          >
-                            <MapPin size={16} /> {t('schedule.map')}
-                          </button>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Regular Schedule Details */}
-                    {detailItem.__type === 'schedule' && (
-                      <div className="space-y-10">
-                        <div className="p-10 glass-card bg-white/20 backdrop-blur-3xl border-[0.5px] border-white/40 shadow-glass-deep">
-                          <h4 className="boutique-tag text-p3-navy/30 mb-6 flex items-center gap-3">
-                            <Sparkles size={16} strokeWidth={2.5} className="text-p3-gold" /> {t('schedule.spotInsight')}
-                          </h4>
-                          {detailItem.spotGuide ? (
-                            <div className="boutique-body text-p3-navy/80 whitespace-pre-wrap">{detailItem.spotGuide.background}</div>
-                          ) : spotAiLoading === detailItem.id && completion ? (
-                            <div className="boutique-body text-p3-navy/40 whitespace-pre-wrap animate-pulse">{completion}</div>
-                          ) : (
-                            <button onClick={() => handleFetchSpotGuide(detailItem)} disabled={!!spotAiLoading} className="w-full py-6 border-[0.5px] border-dashed border-p3-navy/20 rounded-[22px] boutique-tag text-p3-navy/40 hover:text-p3-navy hover:bg-white/40 transition-all">
-                              {spotAiLoading === detailItem.id ? <Loader2 size={20} className="animate-spin" /> : t('schedule.getSpotGuide')}
-                            </button>
-                          )}
-                        </div>
-
-                        <button onClick={() => window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(detailItem.location || "")}`, '_blank')} className="w-full py-5 bg-p3-navy text-white rounded-[22px] shadow-glass-deep flex items-center justify-center gap-3 text-lg font-black active:scale-95 transition-all border-[0.5px] border-white/20">
-                          <MapPin size={24} strokeWidth={3} /> {t('schedule.openGoogleMaps')}
-                        </button>
+                    <span className={`text-4xl font-black uppercase tracking-[0.4em] drop-shadow-lg ${getAirlineTheme(detailItem.airline).textClass}`}>
+                      {getAirlineTheme(detailItem.airline).logo}
+                    </span>
+                  </div>
+                ) : (
+                  <div className="h-64 bg-gray-200 relative border-b-[4px] border-p3-navy shrink-0">
+                    <LazyImage
+                      src={detailItem.images?.[0] || ''}
+                      containerClassName="w-full h-full"
+                      alt="hero"
+                    />
+                    {!detailItem.images?.[0] && (
+                      <div className="w-full h-full flex items-center justify-center bg-p3-navy/5">
+                        {detailItem.type === 'hotel' ? <Home size={64} className="text-p3-navy/10" /> : <MapPin size={64} className="text-p3-navy/10" />}
                       </div>
                     )}
                   </div>
+                )}
+
+                {/* --- 2. Content Area --- */}
+                <div className="p-8 space-y-6">
+                  {/* Title & Badge */}
+                  <div>
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className={`text-[9px] font-black px-3 py-1 rounded-full border-[2px] border-p3-navy uppercase tracking-widest ${detailItem.__type === 'booking' ? 'bg-splat-yellow text-p3-navy' : 'bg-white text-p3-navy'}`}>
+                        {detailItem.category || detailItem.type}
+                      </span>
+                    </div>
+                    <h2 className="text-3xl font-black text-p3-navy italic tracking-tighter leading-none">{detailItem.title}</h2>
+                  </div>
+
+                  {/* Flight Special Details */}
+                  {detailItem.__type === 'booking' && detailItem.type === 'flight' && (
+                    <div className="space-y-4">
+                      {detailItem.pnr && (
+                        <div className="bg-white border-[0.5px] border-p3-navy rounded-2xl p-5 shadow-glass-deep-sm flex justify-between items-center group active:scale-[0.98] transition-all" onClick={() => { navigator.clipboard.writeText(detailItem.pnr); triggerHaptic('success'); showToast("PNR 已複製！🦑", "success"); }}>
+                          <div>
+                            <p className="boutique-tag text-gray-400 uppercase tracking-widest mb-1">{t('schedule.pnr')}</p>
+                            <p className="text-3xl font-black text-p3-navy tracking-[0.2em]">{detailItem.pnr}</p>
+                          </div>
+                          <div className="w-12 h-12 rounded-xl bg-splat-yellow border-[0.5px] border-p3-navy flex items-center justify-center text-p3-navy group-hover:bg-p3-navy group-hover:text-white transition-colors">
+                            <Copy size={20} />
+                          </div>
+                        </div>
+                      )}
+                      <div className="grid grid-cols-3 gap-3">
+                        <div className="bg-white border-[2px] border-p3-navy/10 rounded-xl p-3 text-center">
+                          <span className="text-[9px] font-black text-gray-400 block uppercase mb-1">{t('schedule.terminal')}</span>
+                          <span className="text-xl font-black text-p3-navy">{detailItem.terminal || '--'}</span>
+                        </div>
+                        <div className="bg-white border-[2px] border-p3-navy/10 rounded-xl p-3 text-center">
+                          <span className="text-[9px] font-black text-gray-400 block uppercase mb-1">{t('schedule.gate')}</span>
+                          <span className="text-xl font-black text-p3-navy">{detailItem.gate || '--'}</span>
+                        </div>
+                        <div className="bg-white border-[2px] border-p3-navy/10 rounded-xl p-3 text-center">
+                          <span className="text-[9px] font-black text-gray-400 block uppercase mb-1">{t('schedule.boarding')}</span>
+                          <span className="text-xl font-black text-splat-pink">{detailItem.boardingTime || '--:--'}</span>
+                        </div>
+                      </div>
+                      <a
+                        href={`https://www.google.com/search?q=Flight+Status+${detailItem.flightNo}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="w-full py-4 bg-p3-navy text-white rounded-2xl font-black uppercase tracking-widest text-center flex items-center justify-center gap-3 shadow-glass-deep active:translate-y-1 transition-all"
+                      >
+                        <Plane size={18} /> {t('schedule.liveStatus')}
+                      </a>
+                    </div>
+                  )}
+
+                  {/* Hotel Special Details */}
+                  {detailItem.__type === 'booking' && detailItem.type === 'hotel' && (
+                    <div className="space-y-8">
+                      <div className="glass-card bg-white/20 backdrop-blur-3xl border-[0.5px] border-white/40 p-10 space-y-8 shadow-glass-deep">
+                        <div className="flex justify-between border-b-[0.5px] border-p3-navy/5 pb-8">
+                          <div>
+                            <span className="boutique-tag text-p3-navy/30 block mb-2">{t('schedule.checkIn')}</span>
+                            <span className="text-3xl boutique-h1 text-p3-navy">{detailItem.checkInTime || '15:00'}</span>
+                          </div>
+                          <div className="text-right">
+                            <span className="boutique-tag text-p3-navy/30 block mb-2">{t('schedule.checkOut')}</span>
+                            <span className="text-3xl boutique-h1 text-p3-navy">{detailItem.checkOutTime || '11:00'}</span>
+                          </div>
+                        </div>
+                        {detailItem.confirmationNo && (
+                          <div className="flex justify-between items-center pt-2">
+                            <span className="boutique-tag text-p3-navy/30">{t('schedule.roomType')}</span>
+                            <span className="boutique-h2 text-p3-navy">{detailItem.roomType || 'Standard Room'}</span>
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex gap-3">
+                        <button
+                          className="flex-1 py-4 bg-white border-[0.5px] border-p3-navy rounded-2xl font-black uppercase text-xs flex items-center justify-center gap-2 shadow-glass-deep-sm active:translate-y-1 transition-all"
+                          onClick={() => window.open(`tel:${detailItem.phone || ''}`)}
+                        >
+                          <Phone size={16} /> {t('schedule.contact')}
+                        </button>
+                        <button
+                          className="flex-1 py-4 bg-splat-green text-white border-[0.5px] border-p3-navy rounded-2xl font-black uppercase text-xs flex items-center justify-center gap-2 shadow-glass-deep-sm active:translate-y-1 transition-all"
+                          onClick={() => window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(detailItem.location || "")}`, '_blank')}
+                        >
+                          <MapPin size={16} /> {t('schedule.map')}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Regular Schedule Details */}
+                  {detailItem.__type === 'schedule' && (
+                    <div className="space-y-10">
+                      <div className="p-10 glass-card bg-white/20 backdrop-blur-3xl border-[0.5px] border-white/40 shadow-glass-deep">
+                        <h4 className="boutique-tag text-p3-navy/30 mb-6 flex items-center gap-3">
+                          <Sparkles size={16} strokeWidth={2.5} className="text-p3-gold" /> {t('schedule.spotInsight')}
+                        </h4>
+                        {detailItem.spotGuide ? (
+                          <div className="boutique-body text-p3-navy/80 whitespace-pre-wrap">{detailItem.spotGuide.background}</div>
+                        ) : spotAiLoading === detailItem.id && completion ? (
+                          <div className="boutique-body text-p3-navy/40 whitespace-pre-wrap animate-pulse">{completion}</div>
+                        ) : (
+                          <button onClick={() => handleFetchSpotGuide(detailItem)} disabled={!!spotAiLoading} className="w-full py-6 border-[0.5px] border-dashed border-p3-navy/20 rounded-[22px] boutique-tag text-p3-navy/40 hover:text-p3-navy hover:bg-white/40 transition-all">
+                            {spotAiLoading === detailItem.id ? <Loader2 size={20} className="animate-spin" /> : t('schedule.getSpotGuide')}
+                          </button>
+                        )}
+                      </div>
+
+                      <button onClick={() => window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(detailItem.location || "")}`, '_blank')} className="w-full py-5 bg-p3-navy text-white rounded-[22px] shadow-glass-deep flex items-center justify-center gap-3 text-lg font-black active:scale-95 transition-all border-[0.5px] border-white/20">
+                        <MapPin size={24} strokeWidth={3} /> {t('schedule.openGoogleMaps')}
+                      </button>
+                    </div>
+                  )}
                 </div>
-              </motion.div>
-            </div>
-          )}
-        </AnimatePresence>
-
-        {isEditorOpen && <ScheduleEditor tripId={trip!.id} date={selectedDateStr} item={editingItem} onClose={() => setIsEditorOpen(false)} />}
-
-        {showTransportModal && selectedTransportSuggestion && (
-          <TransportAiModal
-            suggestion={selectedTransportSuggestion}
-            onClose={() => setShowTransportModal(false)}
-          />
+              </div>
+            </motion.div>
+          </div>
         )}
-      </div>
-      );
+      </AnimatePresence>
+
+      {isEditorOpen && <ScheduleEditor tripId={trip!.id} date={selectedDateStr} item={editingItem} onClose={() => setIsEditorOpen(false)} />}
+
+      {showTransportModal && selectedTransportSuggestion && (
+        <TransportAiModal
+          suggestion={selectedTransportSuggestion}
+          onClose={() => setShowTransportModal(false)}
+        />
+      )}
+    </div>
+  );
 };
