@@ -21,9 +21,9 @@ import {
     List as ListIcon
 } from 'lucide-react';
 import { useTripStore } from '../store/useTripStore';
-import { PackingItem } from '../types';
 import { triggerHaptic } from '../utils/haptics';
 import { SwipeableItem } from './Common';
+import { useTranslation } from '../hooks/useTranslation';
 
 const CATEGORY_ICONS: Record<string, any> = {
     'Clothing': Shirt,
@@ -56,6 +56,7 @@ const CATEGORY_COLORS: Record<string, string> = {
 };
 
 export const PackingList = ({ className = "" }: { className?: string }) => {
+    const { t } = useTranslation();
     const { trips, currentTripId, addPackingItem, togglePackingItem, deletePackingItem, clearPackingList, updatePackingItem, showToast } = useTripStore();
     const trip = trips.find(t => t.id === currentTripId);
     const packingList = trip?.packingList || [];
@@ -67,7 +68,7 @@ export const PackingList = ({ className = "" }: { className?: string }) => {
 
     const [newItem, setNewItem] = useState({
         title: '',
-        category: '衣物',
+        category: 'Clothing',
         quantity: 1,
         note: ''
     });
@@ -90,7 +91,7 @@ export const PackingList = ({ className = "" }: { className?: string }) => {
             updatedAt: Date.now()
         };
         addPackingItem(currentTripId, item);
-        setNewItem({ title: '', category: '衣物', quantity: 1, note: '' });
+        setNewItem({ title: '', category: 'Clothing', quantity: 1, note: '' });
         setShowAddModal(false);
         triggerHaptic('success');
     };
@@ -107,7 +108,7 @@ export const PackingList = ({ className = "" }: { className?: string }) => {
                 <div className="relative z-10 flex justify-between items-end mb-4">
                     <div>
                         <h2 className="text-3xl font-black text-splat-dark italic uppercase tracking-tighter leading-none">Gear Up!</h2>
-                        <p className="text-[10px] font-black text-gray-400 mt-2 uppercase tracking-widest">打包進度 {packedCount} / {packingList.length}</p>
+                        <p className="text-[10px] font-black text-gray-400 mt-2 uppercase tracking-widest">{t('packing.progress')} {packedCount} / {packingList.length}</p>
                     </div>
                     <div className="text-right">
                         <p className="text-4xl font-black text-splat-blue tabular-nums leading-none">{Math.round(progress)}%</p>
@@ -135,16 +136,16 @@ export const PackingList = ({ className = "" }: { className?: string }) => {
                     onClick={() => setShowAddModal(true)}
                     className="shrink-0 flex items-center gap-2 px-5 py-3 bg-splat-orange text-white border-[3px] border-splat-dark rounded-2xl font-black text-sm shadow-splat-solid-sm active:translate-y-0.5 active:shadow-none transition-all"
                 >
-                    <Plus size={18} strokeWidth={3} /> 手動新增
+                    <Plus size={18} strokeWidth={3} /> {t('packing.addManual')}
                 </button>
                 <button
                     onClick={handleAiSuggest}
                     className={`shrink-0 flex items-center gap-2 px-5 py-3 bg-white text-splat-blue border-[3px] border-splat-dark rounded-2xl font-black text-sm shadow-splat-solid-sm active:translate-y-0.5 active:shadow-none transition-all`}
                 >
-                    <Sparkles size={18} /> AI 推薦
+                    <Sparkles size={18} /> {t('packing.aiSuggest')}
                 </button>
                 <button
-                    onClick={() => { clearPackingList(currentTripId!); showToast("清單已清空 🧳", "info"); }}
+                    onClick={() => { clearPackingList(currentTripId!); showToast(t('packing.cleared'), "info"); }}
                     className="shrink-0 flex items-center justify-center w-12 h-12 bg-white text-splat-pink border-[3px] border-splat-dark rounded-2xl font-black shadow-splat-solid-sm active:translate-y-0.5 active:shadow-none transition-all"
                 >
                     <Trash2 size={20} />
@@ -160,7 +161,7 @@ export const PackingList = ({ className = "" }: { className?: string }) => {
                             onClick={() => setFilter(f)}
                             className={`px-4 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${filter === f ? 'bg-splat-dark text-white' : 'text-gray-400'}`}
                         >
-                            {f === 'all' ? '全部' : f === 'packed' ? '已打包' : '未打包'}
+                            {f === 'all' ? t('packing.all') : f === 'packed' ? t('packing.packed') : t('packing.unpacked')}
                         </button>
                     ))}
                 </div>
@@ -220,7 +221,7 @@ export const PackingList = ({ className = "" }: { className?: string }) => {
             {packingList.length === 0 && !isAiLoading && (
                 <div className="py-20 flex flex-col items-center justify-center border-[3px] border-dashed border-gray-300 rounded-[40px] bg-gray-50/50">
                     <Package size={64} className="text-gray-200 mb-4" />
-                    <p className="text-xs font-black text-gray-400 uppercase tracking-widest text-center">Empty Suitcase 🧳<br />Try AI Suggestions!</p>
+                    <p className="text-xs font-black text-gray-400 uppercase tracking-widest text-center">{t('packing.emptySuitcase')}<br />{t('packing.tryAi')}</p>
                 </div>
             )}
 
@@ -234,32 +235,32 @@ export const PackingList = ({ className = "" }: { className?: string }) => {
                             onClick={e => e.stopPropagation()}
                         >
                             <div className="flex justify-between items-center mb-6">
-                                <h3 className="text-2xl font-black italic text-splat-orange uppercase tracking-tighter">New Gear</h3>
+                                <h3 className="text-2xl font-black italic text-splat-orange uppercase tracking-tighter">{t('packing.newGear')}</h3>
                                 <button onClick={() => setShowAddModal(false)} className="p-1 bg-gray-100 rounded-full border-2 border-splat-dark"><X size={20} /></button>
                             </div>
 
                             <div className="space-y-4">
                                 <div className="space-y-1">
-                                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2">Item Name</label>
+                                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2">{t('packing.itemName')}</label>
                                     <input
                                         type="text" value={newItem.title} onChange={e => setNewItem({ ...newItem, title: e.target.value })}
-                                        placeholder="e.g. Nintendo Switch"
+                                        placeholder={t('packing.itemExample')}
                                         className="w-full bg-gray-50 border-[3px] border-splat-dark rounded-2xl px-5 py-3 font-black text-splat-dark focus:ring-0 focus:outline-none placeholder:text-gray-300"
                                     />
                                 </div>
 
                                 <div className="grid grid-cols-2 gap-4">
                                     <div className="space-y-1">
-                                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2">Category</label>
+                                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2">{t('packing.category')}</label>
                                         <select
                                             value={newItem.category} onChange={e => setNewItem({ ...newItem, category: e.target.value })}
                                             className="w-full bg-gray-50 border-[3px] border-splat-dark rounded-2xl px-5 py-3 font-black text-splat-dark focus:ring-0 focus:outline-none appearance-none"
                                         >
-                                            {['衣物', '洗漱用品', '電子產品', '重要證件', '藥品', '其他'].map(c => <option key={c} value={c}>{c}</option>)}
+                                            {['Clothing', 'Toiletries', 'Electronics', 'Documents', 'Medicine', 'Others'].map(c => <option key={c} value={c}>{t(`packing.cat${c}` as any)}</option>)}
                                         </select>
                                     </div>
                                     <div className="space-y-1">
-                                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2">Quantity</label>
+                                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2">{t('packing.quantity')}</label>
                                         <input
                                             type="number" value={newItem.quantity} onChange={e => setNewItem({ ...newItem, quantity: parseInt(e.target.value) || 1 })} min="1"
                                             className="w-full bg-gray-50 border-[3px] border-splat-dark rounded-2xl px-5 py-3 font-black text-splat-dark focus:ring-0 focus:outline-none"
@@ -268,10 +269,10 @@ export const PackingList = ({ className = "" }: { className?: string }) => {
                                 </div>
 
                                 <div className="space-y-1">
-                                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2">Note (Optional)</label>
+                                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-2">{t('packing.noteOpt')}</label>
                                     <input
                                         type="text" value={newItem.note} onChange={e => setNewItem({ ...newItem, note: e.target.value })}
-                                        placeholder="e.g. charger & pro controller"
+                                        placeholder={t('packing.noteExample')}
                                         className="w-full bg-gray-50 border-[3px] border-splat-dark rounded-2xl px-5 py-3 font-black text-splat-dark focus:ring-0 focus:outline-none placeholder:text-gray-300"
                                     />
                                 </div>
@@ -280,7 +281,7 @@ export const PackingList = ({ className = "" }: { className?: string }) => {
                                     onClick={handleAddCustom}
                                     className="w-full py-4 bg-splat-orange text-white border-[3px] border-splat-dark rounded-2xl font-black text-sm shadow-splat-solid-sm active:translate-y-1 active:shadow-none transition-all mt-4"
                                 >
-                                    ADD TO LIST ➔
+                                    {t('packing.addToList')}
                                 </button>
                             </div>
                         </motion.div>

@@ -23,6 +23,7 @@ import { useHapticShake } from './hooks/useHapticShake';
 import { useGyroscope } from './hooks/useGyroscope';
 import { AiAssistant } from './components/AiAssistant';
 import { SplatToast } from './components/ui/SplatToast';
+import { useTranslation } from './hooks/useTranslation';
 
 // 🚀 Lazy Load 各分頁組件，大幅減少首次載入 bundle 體積
 const Schedule = lazy(() => import('./components/Schedule').then(m => ({ default: m.Schedule })));
@@ -109,6 +110,8 @@ const UISettingsContainer = memo(({
   updateTripData,
   onClose
 }: any) => {
+  const { t } = useTranslation();
+
   return (
     <motion.div
       initial={{ scale: 0.9, y: 20 }}
@@ -120,7 +123,7 @@ const UISettingsContainer = memo(({
 
       <div className="flex justify-between items-center mb-10">
         <h2 className="text-2xl boutique-h1 flex items-center gap-3 text-p3-navy">
-          <SettingsIcon size={24} strokeWidth={2.5} className="text-p3-navy" /> Control HQ
+          <SettingsIcon size={24} strokeWidth={2.5} className="text-p3-navy" /> {t('settings.controlHq')}
         </h2>
         <button onClick={onClose} className="w-12 h-12 rounded-full border-[0.5px] border-black/10 flex items-center justify-center active:scale-95 transition-transform bg-white/40 backdrop-blur-md">
           <X size={20} strokeWidth={2.5} />
@@ -132,7 +135,7 @@ const UISettingsContainer = memo(({
         <div className="bg-p3-navy rounded-[32px] p-8 text-white shadow-glass-deep relative overflow-hidden group border-[0.5px] border-white/10">
           <div className="relative z-10 flex justify-between items-start">
             <div>
-              <p className="boutique-tag text-white/30 mb-2">Traveler ID / Base</p>
+              <p className="boutique-tag text-white/30 mb-2">{t('settings.baseCurrency')}</p>
               <h3 className="text-3xl boutique-h1 flex items-center gap-3 text-p3-gold">
                 {currentTrip.baseCurrency} <Sparkline />
               </h3>
@@ -151,35 +154,52 @@ const UISettingsContainer = memo(({
             </div>
           </div>
           <div className="mt-6 pt-6 border-t border-white/10 flex justify-between items-end">
-            <div className="boutique-tag text-white/40">Current Exchange Rate Active</div>
+            <div className="boutique-tag text-white/40">{t('settings.travelerIdActive')}</div>
             <Fingerprint size={16} className="text-splat-yellow opacity-50" />
           </div>
         </div>
 
+        {/* --- 🌐 系統語言 (System Language) --- */}
+        <div className="bg-white/40 backdrop-blur-md rounded-[32px] p-6 shadow-glass-soft border-[0.5px] border-white/40 flex justify-between items-center">
+          <div>
+            <h4 className="font-black text-p3-navy">{t('settings.language')}</h4>
+            <p className="text-xs text-gray-400 font-medium">Auto-translation</p>
+          </div>
+          <select
+            value={uiSettings.language || 'zh-TW'}
+            onChange={e => setUISettings({ language: e.target.value as any })}
+            className="bg-white/60 backdrop-blur-md border border-white/50 rounded-xl p-2.5 px-4 text-sm font-black text-p3-navy outline-none shadow-sm cursor-pointer"
+          >
+            <option value="zh-TW">繁體中文</option>
+            <option value="en">English</option>
+            <option value="ja">日本語</option>
+          </select>
+        </div>
+
         {/* --- 🎨 Visual Vibe (2x2 Grid) --- */}
         <div className="space-y-3">
-          <h4 className="boutique-tag text-gray-400 uppercase tracking-widest pl-2">Visual Vibe</h4>
+          <h4 className="boutique-tag text-gray-400 uppercase tracking-widest pl-2">{t('settings.visualVibe')}</h4>
           <div className="grid grid-cols-2 gap-3">
             <GridToggle
-              label="Liquid Ink"
+              label={t('settings.liquidInk')}
               icon={<Zap size={20} strokeWidth={2.5} />}
               enabled={uiSettings.enableSplatter}
               onChange={(v) => setUISettings({ enableSplatter: v })}
             />
             <GridToggle
-              label="Motion"
+              label={t('settings.motion')}
               icon={<Activity size={20} strokeWidth={2.5} />}
               enabled={uiSettings.enableMotionDepth}
               onChange={(v) => setUISettings({ enableMotionDepth: v })}
             />
             <GridToggle
-              label="Weather FX"
+              label={t('settings.weatherFx')}
               icon={<Cloud size={20} strokeWidth={2.5} />}
               enabled={uiSettings.enableWeatherFX}
               onChange={(v) => setUISettings({ enableWeatherFX: v })}
             />
             <GridToggle
-              label="Glass 2.0"
+              label={t('settings.glass2')}
               icon={<SparklesIcon size={20} strokeWidth={2.5} />}
               enabled={uiSettings.enableGlassmorphism}
               onChange={(v) => setUISettings({ enableGlassmorphism: v })}
@@ -189,15 +209,15 @@ const UISettingsContainer = memo(({
 
         {/* --- 🧠 Intelligence --- */}
         <div className="space-y-3">
-          <h4 className="boutique-tag text-gray-400 uppercase tracking-widest pl-2">Intelligence</h4>
+          <h4 className="boutique-tag text-gray-400 uppercase tracking-widest pl-2">{t('settings.intelligence')}</h4>
           <div className="space-y-3">
             <SettingToggle
-              label="AI Stream"
+              label={t('settings.aiStream')}
               enabled={uiSettings.enableAiStreaming}
               onChange={(v) => setUISettings({ enableAiStreaming: v })}
             />
             <SettingToggle
-              label="3D Maps"
+              label={t('settings.3dMaps')}
               enabled={uiSettings.enable3DMap}
               onChange={(v) => setUISettings({ enable3DMap: v })}
             />
@@ -206,28 +226,30 @@ const UISettingsContainer = memo(({
 
         {/* --- ⚙️ System --- */}
         <div className="space-y-3">
-          <h4 className="boutique-tag text-gray-400 uppercase tracking-widest pl-2">System Performance</h4>
-          <SystemSlider
-            label="Haptic"
-            icon={<Cpu size={14} />}
-            value={uiSettings.enableHaptics ? 80 : 0}
-            onChange={(v) => setUISettings({ enableHaptics: v > 30 })}
-          />
-          <SystemSlider
-            label="Budget"
-            icon={<Bell size={14} />}
-            value={uiSettings.showBudgetAlert ? 90 : 0}
-            onChange={(v) => setUISettings({ showBudgetAlert: v > 30 })}
-          />
+          <h4 className="boutique-tag text-gray-400 uppercase tracking-widest pl-2">{t('settings.system')}</h4>
+          <div className="glass-card p-6 shadow-glass-soft rounded-[24px]">
+            <SystemSlider
+              label={t('settings.haptic')}
+              icon={<Activity size={18} />}
+              value={uiSettings.enableHaptics ? 80 : 0}
+              onChange={(v) => setUISettings({ enableHaptics: v > 30 })}
+            />
+            <SystemSlider
+              label={t('settings.budgetAlert')}
+              icon={<Bell size={14} />}
+              value={uiSettings.showBudgetAlert ? 90 : 0}
+              onChange={(v) => setUISettings({ showBudgetAlert: v > 30 })}
+            />
+          </div>
         </div>
-      </div>
 
+      </div>
       <motion.button
         whileTap={{ scale: 0.98, y: 1 }}
         onClick={onClose}
         className="w-full py-4 mt-8 bg-p3-navy text-white font-black uppercase tracking-widest rounded-[22px] shadow-glass-deep border-[0.5px] border-white/20 active:shadow-none transition-all"
       >
-        Confirm Setup ➔
+        {t('settings.confirm')} ➔
       </motion.button>
     </motion.div>
   );
@@ -253,6 +275,8 @@ const App: FC = () => {
   const setUISettings = useTripStore(s => s.setUISettings);
   const showToast = useTripStore(s => s.showToast);
   const isSyncing = useTripStore(s => s.isSyncing);
+
+  const { t } = useTranslation();
 
   // 狀態管理
   const [menuOpen, setMenuOpen] = useState(false);
@@ -537,10 +561,10 @@ const App: FC = () => {
                       }}
                       className="w-full p-3 bg-white text-splat-blue text-sm font-black rounded-xl border-2 border-splat-dark shadow-sm flex items-center justify-center gap-2 active:scale-95 transition-all"
                     >
-                      🤝 加入好友行程
+                      🤝 {t('common.joinTrip')}
                     </button>
                     <button onClick={() => { setMenuOpen(false); setShowOnboarding(true); }} className="w-full p-3 bg-splat-green text-white text-sm font-black rounded-xl border-2 border-splat-dark shadow-[2px_2px_0px_#1A1A1A] flex items-center justify-center gap-2 active:translate-y-0.5 active:shadow-none transition-all">
-                      <Plus strokeWidth={3} size={16} /> 建立新行程
+                      <Plus strokeWidth={3} size={16} /> {t('common.createTrip')}
                     </button>
                   </div>
                 </motion.div>
@@ -612,24 +636,27 @@ const App: FC = () => {
         )}
       </main>
 
-      {/* 🧭 Bottom Navigation — 4 Unified Modules */}
-      <nav className="fixed bottom-6 left-1/2 -translate-x-1/2 w-[88%] max-w-sm glass-card px-8 py-5 flex justify-between items-center z-50 shadow-glass-deep border-[0.5px] border-white/40">
-        <NavIcon icon={<Calendar />} label="Timeline" id="timeline" active={activeTab} onClick={handleTabChange} color="text-p3-navy" />
-        <NavIcon icon={<Lock />} label="Vault" id="vault" active={activeTab} onClick={handleTabChange} color="text-p3-ruby" />
-        <NavIcon icon={<WalletIcon />} label="Wallet" id="wallet" active={activeTab} onClick={handleTabChange} color="text-p3-gold" />
-        <NavIcon icon={<SparklesIcon />} label="Memories" id="memories" active={activeTab} onClick={handleTabChange} color="text-p3-ruby" />
-      </nav>
+      {/* 🧭 Bottom Navigation — 5 Unified Modules */}
+      <nav className="fixed bottom-6 left-1/2 -translate-x-1/2 w-[92%] max-w-sm glass-card px-4 py-4 flex justify-between items-center z-50 shadow-glass-deep border-[0.5px] border-white/40 rounded-[32px]">
+        <NavIcon icon={<Calendar />} label={t('nav.timeline')} id="timeline" active={activeTab} onClick={handleTabChange} color="text-p3-navy" />
+        <NavIcon icon={<Lock />} label={t('nav.vault')} id="vault" active={activeTab} onClick={handleTabChange} color="text-p3-ruby" />
 
-      {/* 🤖 AI FAB — Glassmorphism 浮動按鈕 */}
-      <motion.button
-        whileTap={{ scale: 0.9, y: 2 }}
-        whileHover={{ scale: 1.05 }}
-        onClick={() => openAiAssistant()}
-        className="fixed bottom-[110px] right-6 z-50 w-16 h-16 rounded-full flex items-center justify-center bg-white/40 backdrop-blur-2xl border-[0.5px] border-white/50 shadow-glass-deep"
-      >
-        <div className="absolute inset-0 bg-p3-ruby opacity-10 blur-xl rounded-full" />
-        <SparklesIcon size={28} strokeWidth={2.5} className="text-p3-ruby drop-shadow-[0_0_10px_var(--p3-ruby-fallback)]" />
-      </motion.button>
+        {/* 🤖 Magic Assistant 置中浮動按鈕 */}
+        <div className="flex-1 flex justify-center -translate-y-5">
+          <motion.button
+            whileTap={{ scale: 0.9, y: 2 }}
+            whileHover={{ scale: 1.05 }}
+            onClick={() => openAiAssistant()}
+            className="w-16 h-16 rounded-full flex items-center justify-center bg-white/90 backdrop-blur-2xl border-[0.5px] border-white/50 shadow-glass-deep relative"
+          >
+            <div className="absolute inset-0 bg-p3-ruby opacity-10 blur-xl rounded-full pointer-events-none" />
+            <SparklesIcon size={28} strokeWidth={2.5} className="text-p3-ruby drop-shadow-[0_0_10px_var(--p3-ruby-fallback)]" />
+          </motion.button>
+        </div>
+
+        <NavIcon icon={<WalletIcon />} label={t('nav.wallet')} id="wallet" active={activeTab} onClick={handleTabChange} color="text-p3-gold" />
+        <NavIcon icon={<Camera />} label={t('nav.memories')} id="memories" active={activeTab} onClick={handleTabChange} color="text-p3-green" />
+      </nav>
 
       {
         lockedTripId && (
@@ -638,11 +665,11 @@ const App: FC = () => {
               <div className="w-20 h-20 bg-p3-ruby/10 rounded-full flex items-center justify-center mx-auto mb-2">
                 <Lock size={40} className="text-p3-ruby" strokeWidth={2.5} />
               </div>
-              <h3 className="text-2xl font-black text-p3-navy uppercase tracking-tight">行前認證</h3>
+              <h3 className="text-2xl font-black text-p3-navy uppercase tracking-tight">{t('common.verifyBeforeTrip')}</h3>
               <input type="password" maxLength={4} inputMode="numeric" placeholder="••••" className="w-full bg-white/40 backdrop-blur-md text-p3-navy font-black p-5 rounded-[22px] text-center text-4xl tracking-[0.5em] outline-none border-[0.5px] border-white/50 focus:bg-white/60 transition-all shadow-inner" value={verifyPin} onChange={(e) => setVerifyPin(e.target.value)} />
               <div className="flex gap-4 mt-6">
-                <button onClick={() => { setLockedTripId(null); setVerifyPin(''); }} className="flex-1 py-4 bg-white/20 backdrop-blur-md text-slate-500 font-black rounded-2xl border-[0.5px] border-white/30 active:scale-95 transition-all">取消</button>
-                <button onClick={confirmTripSwitch} className="flex-[2] py-4 bg-p3-navy text-white font-black rounded-2xl shadow-glass-deep border-[0.5px] border-white/20 active:scale-95 transition-all">解鎖 ➔</button>
+                <button onClick={() => { setLockedTripId(null); setVerifyPin(''); }} className="flex-1 py-4 bg-white/20 backdrop-blur-md text-slate-500 font-black rounded-2xl border-[0.5px] border-white/30 active:scale-95 transition-all">{t('common.cancel')}</button>
+                <button onClick={confirmTripSwitch} className="flex-[2] py-4 bg-p3-navy text-white font-black rounded-2xl shadow-glass-deep border-[0.5px] border-white/20 active:scale-95 transition-all">{t('common.unlock')} ➔</button>
               </div>
             </div>
           </div>

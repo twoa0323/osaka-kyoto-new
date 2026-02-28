@@ -12,6 +12,7 @@ import { BookingItem } from '../types';
 import { BookingEditor } from './BookingEditor';
 import { motion, AnimatePresence } from 'framer-motion';
 import { LazyImage } from './LazyImage';
+import { useTranslation } from '../hooks/useTranslation';
 import { triggerHaptic } from '../utils/haptics';
 import { SwipeableItem, InkSplat } from './Common';
 import { Copy, Check } from 'lucide-react';
@@ -40,27 +41,33 @@ const SUBTAB_COLORS: Record<string, string> = {
 };
 
 // --- 倒數計時輔助函數 ---
-const getCountdown = (dateStr: string, timeStr?: string) => {
+const getCountdown = (dateStr: string, timeStr?: string, t?: any, lang?: string) => {
   try {
     const target = parseISO(timeStr ? `${dateStr}T${timeStr}` : dateStr);
-    if (isPast(target) && !isToday(target)) return { text: '已結束', color: 'bg-gray-400' };
+    if (isPast(target) && !isToday(target)) return { text: t ? t('booking.ended') : '已結束', color: 'bg-gray-400' };
 
     const diffMins = differenceInMinutes(target, new Date());
     if (isToday(target)) {
       if (diffMins > 0 && diffMins <= 60) {
-        return { text: `${diffMins} 分鐘後`, color: 'bg-[#F03C69] animate-[pulse_0.8s_infinite] shadow-[0_0_15px_#F03C69]' };
+        return { text: t ? `${diffMins} ${t('booking.minsLater')}` : `${diffMins} 分鐘後`, color: 'bg-[#F03C69] animate-[pulse_0.8s_infinite] shadow-[0_0_15px_#F03C69]' };
       }
-      return { text: '今天', color: 'bg-splat-orange animate-pulse' };
+      return { text: t ? t('booking.today') : '今天', color: 'bg-splat-orange animate-pulse' };
     }
 
-    const dist = formatDistanceToNow(target, { locale: zhTW, addSuffix: true });
-    return { text: dist.replace('約 ', '').replace('內', ''), color: 'bg-splat-blue' };
+    let dist = '';
+    if (lang === 'zh-TW') {
+      dist = formatDistanceToNow(target, { locale: zhTW, addSuffix: true }).replace('約 ', '').replace('內', '');
+    } else {
+      dist = formatDistanceToNow(target, { addSuffix: true }).replace('about ', '').replace('less than a minute ', '');
+    }
+    return { text: dist, color: 'bg-splat-blue' };
   } catch (e) {
     return null;
   }
 };
 
 export const Booking = () => {
+  const { t, language } = useTranslation();
   const { trips, currentTripId, deleteBookingItem, showToast } = useTripStore();
   const trip = trips.find(t => t.id === currentTripId);
   const [activeSubTab, setActiveSubTab] = useState<'flight' | 'hotel' | 'spot' | 'voucher'>('flight');
@@ -125,7 +132,7 @@ export const Booking = () => {
                 <div className={`relative z-20 flex flex-col items-center transition-colors duration-300 ${isActive ? 'text-white' : 'text-gray-400'}`}>
                   {t === 'flight' ? <Plane size={18} /> : t === 'hotel' ? <Home size={18} /> : t === 'spot' ? <MapPin size={18} /> : <QrCode size={18} />}
                   <span className="text-[10px] mt-1 uppercase font-black tracking-widest opacity-80 scale-90">
-                    {t}
+                    {t(`booking.${t}` as any) || t}
                   </span>
                 </div>
               </button>
@@ -147,7 +154,7 @@ export const Booking = () => {
           >
             {bookings.length === 0 ? (
               <div className="text-center py-16 bg-white border-[0.5px] border-dashed border-gray-400 glass-card text-gray-500 font-black italic shadow-sm uppercase">
-                Empty Pocket 🏮
+                {t('booking.emptyPocket')}
               </div>
             ) : (
               bookings.map(item => (
@@ -157,10 +164,10 @@ export const Booking = () => {
                   onDelete={() => deleteBookingItem(trip.id, item.id)}
                   className="rounded-[2.5rem]"
                 >
-                  {item.type === 'flight' && <FlightCard item={item} onEdit={(e: any) => { e.stopPropagation(); setEditingItem(item); setIsEditorOpen(true); }} onViewDetails={() => setDetailItem(item)} onQrClick={setFocusedQr} onCopy={(color: string) => { setSplatColor(color); setTimeout(() => setSplatColor(null), 1000); triggerHaptic('success'); }} />}
-                  {item.type === 'hotel' && <HotelCard item={item} onEdit={(e: any) => { e.stopPropagation(); setEditingItem(item); setIsEditorOpen(true); }} onViewDetails={() => setDetailItem(item)} onQrClick={setFocusedQr} onCopy={(color: string) => { setSplatColor(color); setTimeout(() => setSplatColor(null), 1000); triggerHaptic('success'); }} />}
-                  {item.type === 'spot' && <SpotCard item={item} onEdit={(e: any) => { e.stopPropagation(); setEditingItem(item); setIsEditorOpen(true); }} onViewDetails={() => setDetailItem(item)} onQrClick={setFocusedQr} onCopy={(color: string) => { setSplatColor(color); setTimeout(() => setSplatColor(null), 1000); triggerHaptic('success'); }} />}
-                  {item.type === 'voucher' && <VoucherCard item={item} onEdit={(e: any) => { e.stopPropagation(); setEditingItem(item); setIsEditorOpen(true); }} onViewDetails={() => setDetailItem(item)} onQrClick={setFocusedQr} onCopy={(color: string) => { setSplatColor(color); setTimeout(() => setSplatColor(null), 1000); triggerHaptic('success'); }} />}
+                  {item.type === 'flight' && <FlightCard item={item} t={t} language={language} onEdit={(e: any) => { e.stopPropagation(); setEditingItem(item); setIsEditorOpen(true); }} onViewDetails={() => setDetailItem(item)} onQrClick={setFocusedQr} onCopy={(color: string) => { setSplatColor(color); setTimeout(() => setSplatColor(null), 1000); triggerHaptic('success'); }} />}
+                  {item.type === 'hotel' && <HotelCard item={item} t={t} language={language} onEdit={(e: any) => { e.stopPropagation(); setEditingItem(item); setIsEditorOpen(true); }} onViewDetails={() => setDetailItem(item)} onQrClick={setFocusedQr} onCopy={(color: string) => { setSplatColor(color); setTimeout(() => setSplatColor(null), 1000); triggerHaptic('success'); }} />}
+                  {item.type === 'spot' && <SpotCard item={item} t={t} language={language} onEdit={(e: any) => { e.stopPropagation(); setEditingItem(item); setIsEditorOpen(true); }} onViewDetails={() => setDetailItem(item)} onQrClick={setFocusedQr} onCopy={(color: string) => { setSplatColor(color); setTimeout(() => setSplatColor(null), 1000); triggerHaptic('success'); }} />}
+                  {item.type === 'voucher' && <VoucherCard item={item} t={t} language={language} onEdit={(e: any) => { e.stopPropagation(); setEditingItem(item); setIsEditorOpen(true); }} onViewDetails={() => setDetailItem(item)} onQrClick={setFocusedQr} onCopy={(color: string) => { setSplatColor(color); setTimeout(() => setSplatColor(null), 1000); triggerHaptic('success'); }} />}
                 </SwipeableItem>
               ))
             )}
@@ -172,7 +179,7 @@ export const Booking = () => {
           onClick={() => { setEditingItem(undefined); setIsEditorOpen(true); }}
           className="w-full py-5 bg-white/40 backdrop-blur-md border-[0.5px] border-dashed border-black/20 shadow-glass-soft glass-card text-p3-navy font-black flex items-center justify-center gap-2 active:scale-98 transition-all"
         >
-          <Plus strokeWidth={3} /> 新增{activeSubTab === 'flight' ? '航班' : '預訂'}
+          <Plus strokeWidth={3} /> <span className="uppercase">{activeSubTab === 'flight' ? t('booking.addFlight') : t('booking.addBooking')}</span>
         </motion.button>
       </div>
 
@@ -194,7 +201,7 @@ export const Booking = () => {
                 {detailItem.images?.[0] && <LazyImage src={detailItem.images[0]} containerClassName="w-full aspect-video rounded-2xl object-cover border-[0.5px] border-p3-navy shadow-glass-deep-sm" />}
 
                 <div className="bg-white p-4 border-[0.5px] border-p3-navy rounded-xl shadow-sm">
-                  <p className="text-sm text-gray-700 font-bold whitespace-pre-wrap leading-relaxed">{detailItem.note || "尚無備註資訊"}</p>
+                  <p className="text-sm text-gray-700 font-bold whitespace-pre-wrap leading-relaxed">{detailItem.note || t('booking.noNotes')}</p>
                 </div>
 
                 {/* --- ✈️ 特製 Flight 專屬區塊 --- */}
@@ -212,7 +219,7 @@ export const Booking = () => {
                       }}
                     >
                       <div>
-                        <div className="text-[10px] font-black text-p3-navy/60 uppercase tracking-[0.2em] mb-1">PNR 確認碼</div>
+                        <div className="text-[10px] font-black text-p3-navy/60 uppercase tracking-[0.2em] mb-1">{t('booking.pnrLabel')}</div>
                         <div className="text-3xl font-black text-p3-navy font-['Barlow'] tracking-widest">{detailItem.pnr}</div>
                       </div>
                       <div className="w-12 h-12 bg-white/60 backdrop-blur-md rounded-xl border-[0.5px] border-p3-gold/30 flex items-center justify-center shadow-sm">
@@ -223,11 +230,11 @@ export const Booking = () => {
                     {/* 航廈與登機門卡片 */}
                     <div className="grid grid-cols-2 gap-3">
                       <div className="bg-white border-[0.5px] border-p3-navy rounded-xl p-3 shadow-glass-deep-sm flex flex-col items-center justify-center">
-                        <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">Terminal</span>
+                        <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">{t('booking.terminal')}</span>
                         <span className="text-2xl font-black text-p3-navy tabular-nums">{detailItem.terminal || '--'}</span>
                       </div>
                       <div className="bg-white border-[0.5px] border-p3-navy rounded-xl p-3 shadow-glass-deep-sm flex flex-col items-center justify-center">
-                        <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">Gate</span>
+                        <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">{t('booking.gate')}</span>
                         <span className="text-2xl font-black text-p3-navy tabular-nums">{detailItem.gate || '--'}</span>
                       </div>
                     </div>
@@ -237,7 +244,7 @@ export const Booking = () => {
                       <div className="bg-splat-pink/10 border-2 border-splat-pink rounded-xl p-3 flex justify-between items-center">
                         <div className="flex items-center gap-2 text-splat-pink">
                           <Clock size={18} strokeWidth={3} />
-                          <span className="text-[10px] font-black uppercase tracking-widest">Boarding Time</span>
+                          <span className="text-[10px] font-black uppercase tracking-widest">{t('booking.boardingTime')}</span>
                         </div>
                         <span className="text-xl font-black text-splat-pink tabular-nums">{detailItem.boardingTime}</span>
                       </div>
@@ -246,16 +253,16 @@ export const Booking = () => {
                     {/* 行李清單 */}
                     <div className="bg-[#F4F5F7] border-2 border-dashed border-gray-300 rounded-xl p-4">
                       <div className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-3 flex items-center gap-2">
-                        <Luggage size={14} /> Baggage Details
+                        <Luggage size={14} /> {t('booking.baggageDetails')}
                       </div>
                       <div className="space-y-2">
                         <div className="flex justify-between items-center bg-white px-3 py-2 rounded-lg border border-gray-200">
-                          <span className="text-xs font-bold text-gray-600">托運行李</span>
-                          <span className="text-sm font-black text-p3-navy">{detailItem.baggage || '無 / 未知'}</span>
+                          <span className="text-xs font-bold text-gray-600">{t('booking.checkedBaggage')}</span>
+                          <span className="text-sm font-black text-p3-navy">{detailItem.baggage || t('booking.unknown')}</span>
                         </div>
                         {detailItem.baggageAllowance && (
                           <div className="flex justify-between items-center bg-white px-3 py-2 rounded-lg border border-gray-200">
-                            <span className="text-xs font-bold text-gray-600">手提行李</span>
+                            <span className="text-xs font-bold text-gray-600">{t('booking.carryOnBaggage')}</span>
                             <span className="text-sm font-black text-p3-navy">{detailItem.baggageAllowance}</span>
                           </div>
                         )}
@@ -268,7 +275,7 @@ export const Booking = () => {
                 {detailItem.qrCode && (
                   <div onClick={() => setFocusedQr(detailItem.qrCode!)} className="bg-white p-4 rounded-2xl flex flex-col items-center gap-2 border-[0.5px] border-p3-navy shadow-glass-deep-sm cursor-zoom-in active:scale-95 transition-transform">
                     <img src={detailItem.qrCode} className="w-40 h-40 object-contain" alt="QR" />
-                    <span className="text-[10px] font-black text-splat-pink uppercase tracking-widest bg-gray-100 px-3 py-1 rounded-md">Tap to Scan</span>
+                    <span className="text-[10px] font-black text-splat-pink uppercase tracking-widest bg-gray-100 px-3 py-1 rounded-md">{t('booking.tapToScan')}</span>
                   </div>
                 )}
 
@@ -278,11 +285,11 @@ export const Booking = () => {
                     onClick={() => { downloadIcs(detailItem!); triggerHaptic('medium'); }}
                     className="btn-splat py-4 bg-white text-p3-navy flex items-center justify-center gap-2 font-black"
                   >
-                    <Calendar size={18} /> 加入行事曆
+                    <Calendar size={18} /> {t('booking.addToCalendar')}
                   </button>
                   {detailItem.website && (
                     <a href={detailItem.website} target="_blank" rel="noreferrer" className="btn-splat py-4 bg-splat-blue text-white flex items-center justify-center gap-2 font-black">
-                      <Globe size={18} /> 官方網站
+                      <Globe size={18} /> {t('booking.officialWebsite')}
                     </a>
                   )}
                 </div>
@@ -295,14 +302,14 @@ export const Booking = () => {
                       target="_blank" rel="noreferrer"
                       className="w-full py-3 bg-p3-navy text-white border-[0.5px] border-p3-navy rounded-xl font-black text-xs text-center shadow-glass-deep-sm flex items-center justify-center gap-2 active:translate-y-1 transition-all"
                     >
-                      <Plane size={14} /> 航班即時動態
+                      <Plane size={14} /> {t('booking.liveFlightStatus')}
                     </a>
                     <a
                       href={detailItem.depIata ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${detailItem.depIata} 機場 航廈${detailItem.terminal || ''}`)}` : '#'}
                       target="_blank" rel="noreferrer"
                       className="w-full py-3 bg-splat-green text-white border-[0.5px] border-p3-navy rounded-xl font-black text-xs text-center shadow-glass-deep-sm flex items-center justify-center gap-2 active:translate-y-1 transition-all"
                     >
-                      <MapPin size={14} /> 導航至航廈
+                      <MapPin size={14} /> {t('booking.navToTerminal')}
                     </a>
                   </div>
                 )}
@@ -316,7 +323,7 @@ export const Booking = () => {
                     className="w-full py-4 bg-splat-green text-white border-[0.5px] border-p3-navy rounded-2xl font-black text-center shadow-glass-deep-sm flex items-center justify-center gap-2 active:translate-y-1 active:shadow-none transition-all"
                   >
                     <MapPin size={18} strokeWidth={3} />
-                    開啟地圖導航
+                    {t('booking.openMapNav')}
                   </a>
                 )}
 
@@ -326,7 +333,7 @@ export const Booking = () => {
                     className={`w-full py-3 rounded-2xl border-[0.5px] border-p3-navy font-black flex items-center justify-center gap-2 transition-all ${detailItem.qrCode && cachedUrls.has(detailItem.qrCode) ? 'bg-gray-100 text-gray-400' : 'bg-white text-p3-navy shadow-glass-deep-sm active:translate-y-1 active:shadow-none'}`}
                   >
                     {detailItem.qrCode && cachedUrls.has(detailItem.qrCode) ? <CheckCircle2 size={18} /> : <Download size={18} />}
-                    {detailItem.qrCode && cachedUrls.has(detailItem.qrCode) ? '已快取離線資源' : '下載離線憑證'}
+                    {detailItem.qrCode && cachedUrls.has(detailItem.qrCode) ? t('booking.cached') : t('booking.downloadOffline')}
                   </button>
                 )}
               </div>
@@ -366,7 +373,7 @@ export const Booking = () => {
               exit={{ scale: 0, opacity: 0 }}
               className="bg-white border-[4px] border-p3-navy px-6 py-2 rounded-2xl shadow-glass-deep transform -rotate-3"
             >
-              <span className="text-2xl font-black text-p3-navy italic">COPIED! 🦑</span>
+              <span className="text-2xl font-black text-p3-navy italic">{t('booking.copied')}</span>
             </motion.div>
           </div>
         )}
@@ -401,7 +408,7 @@ const CopyableField = ({ label, value, onCopy }: any) => {
 // 各類型獨立卡片組件
 // ============================================================================
 
-const FlightCard = ({ item, onEdit, onViewDetails, onQrClick }: any) => {
+const FlightCard = ({ item, t, language, onEdit, onViewDetails, onQrClick }: any) => {
   const theme = getTheme(item.airline);
   const [showActions, setShowActions] = useState(false);
 
@@ -435,7 +442,7 @@ const FlightCard = ({ item, onEdit, onViewDetails, onQrClick }: any) => {
 
       {/* 倒數計時標籤 (微型斜向徽章) */}
       {(() => {
-        const cd = getCountdown(item.date, item.depTime);
+        const cd = getCountdown(item.date, item.depTime, t, language);
         return cd && (
           <div className={`absolute top-2 left-2 z-50 px-2.5 py-0.5 rounded-lg border-2 border-p3-navy text-[8px] font-black text-white shadow-glass-deep-sm -rotate-6 ${cd.color}`}>
             {cd.text}
@@ -467,7 +474,7 @@ const FlightCard = ({ item, onEdit, onViewDetails, onQrClick }: any) => {
             <span className="text-[24px] font-black text-gray-400 tracking-tight uppercase mb-0">{item.depIata || 'TPE'}</span>
             <span className="text-[44px] leading-tight font-bold text-[#1A1A1A] tracking-tighter tabular-nums">{item.depTime || '--:--'}</span>
             <div className="mt-2 bg-p3-navy/10 text-p3-navy px-3.5 py-0.5 rounded-full text-[10px] font-bold tracking-widest whitespace-nowrap border-[0.5px] border-p3-navy/20 shadow-sm">
-              {item.depCity || '出發地'}
+              {item.depCity || t('booking.depCity')}
             </div>
           </div>
 
@@ -485,7 +492,7 @@ const FlightCard = ({ item, onEdit, onViewDetails, onQrClick }: any) => {
             <span className="text-[24px] font-black text-gray-400 tracking-tight uppercase mb-0">{item.arrIata || 'KIX'}</span>
             <span className="text-[44px] leading-tight font-bold text-[#1A1A1A] tracking-tighter tabular-nums">{item.arrTime || '--:--'}</span>
             <div className="mt-2 bg-p3-ruby/10 text-p3-ruby px-3.5 py-0.5 rounded-full text-[10px] font-bold tracking-widest whitespace-nowrap border-[0.5px] border-p3-ruby/20 shadow-sm">
-              {item.arrCity || '目的地'}
+              {item.arrCity || t('booking.arrCity')}
             </div>
           </div>
         </div>
@@ -530,7 +537,7 @@ const FlightCard = ({ item, onEdit, onViewDetails, onQrClick }: any) => {
   );
 };
 
-const HotelCard = ({ item, onEdit, onViewDetails, onQrClick, onCopy }: any) => {
+const HotelCard = ({ item, t, language, onEdit, onViewDetails, onQrClick, onCopy }: any) => {
   const [showActions, setShowActions] = useState(false);
   const handleCardClick = () => { if (!showActions) { setShowActions(true); setTimeout(() => setShowActions(false), 3000); } else { onViewDetails(); setShowActions(false); } };
 
@@ -545,7 +552,7 @@ const HotelCard = ({ item, onEdit, onViewDetails, onQrClick, onCopy }: any) => {
 
         {/* 倒數計時標籤改放在圖片左上角，並加上陰影分離 */}
         {(() => {
-          const cd = getCountdown(item.date);
+          const cd = getCountdown(item.date, undefined, t, language);
           return cd && (
             <div className={`absolute top-4 left-4 z-30 px-3 py-1 rounded-xl border-[0.5px] border-p3-navy text-[10px] font-black text-white shadow-glass-deep-sm -rotate-3 ${cd.color}`}>
               {cd.text}
@@ -579,13 +586,13 @@ const HotelCard = ({ item, onEdit, onViewDetails, onQrClick, onCopy }: any) => {
                 {item.date?.replace(/-/g, '/')} <ArrowRight size={12} className="text-gray-400" /> {item.checkOutDate ? item.checkOutDate.replace(/-/g, '/') : '---'}
               </span>
               <span className="text-[10px] font-black text-white bg-splat-pink px-2 py-0.5 rounded-lg transform -rotate-2">
-                {item.nights || 1} 晚
+                {item.nights || 1} {t('booking.nights')}
               </span>
             </div>
 
             <div className="flex items-center gap-1.5 mt-2">
               <MapPin size={12} className="text-splat-pink shrink-0" />
-              <span className="text-[11px] font-bold text-gray-500 truncate">{item.location || '地址待確認'}</span>
+              <span className="text-[11px] font-bold text-gray-500 truncate">{item.location || t('booking.addressTbc')}</span>
             </div>
           </div>
         </div>
@@ -607,7 +614,7 @@ const HotelCard = ({ item, onEdit, onViewDetails, onQrClick, onCopy }: any) => {
   );
 };
 
-const SpotCard = ({ item, onEdit, onViewDetails, onQrClick, onCopy }: any) => {
+const SpotCard = ({ item, t, language, onEdit, onViewDetails, onQrClick, onCopy }: any) => {
   const [showActions, setShowActions] = useState(false);
   const handleCardClick = () => { if (!showActions) { setShowActions(true); setTimeout(() => setShowActions(false), 3000); } else { onViewDetails(); setShowActions(false); } };
 
@@ -619,7 +626,7 @@ const SpotCard = ({ item, onEdit, onViewDetails, onQrClick, onCopy }: any) => {
 
       {/* 倒數計時標籤 */}
       {(() => {
-        const cd = getCountdown(item.date, item.entryTime);
+        const cd = getCountdown(item.date, item.entryTime, t, language);
         return cd && (
           <div className={`absolute top-2 left-2 z-30 px-2.5 py-0.5 rounded-lg border-2 border-p3-navy text-[8px] font-black text-white shadow-glass-deep-sm -rotate-3 ${cd.color}`}>
             {cd.text}
@@ -681,7 +688,7 @@ const SpotCard = ({ item, onEdit, onViewDetails, onQrClick, onCopy }: any) => {
   );
 };
 
-const VoucherCard = ({ item, onEdit, onViewDetails, onQrClick, onCopy }: any) => {
+const VoucherCard = ({ item, t, language, onEdit, onViewDetails, onQrClick, onCopy }: any) => {
   const [showActions, setShowActions] = useState(false);
   const handleCardClick = () => { if (!showActions) { setShowActions(true); setTimeout(() => setShowActions(false), 3000); } else { onViewDetails(); setShowActions(false); } };
 
@@ -693,7 +700,7 @@ const VoucherCard = ({ item, onEdit, onViewDetails, onQrClick, onCopy }: any) =>
 
       {/* 倒數計時標籤 */}
       {(() => {
-        const cd = getCountdown(item.date);
+        const cd = getCountdown(item.date, undefined, t, language);
         return cd && (
           <div className={`absolute top-2 left-2 z-40 px-2.5 py-0.5 rounded-lg border-2 border-p3-navy text-[8px] font-black text-white shadow-glass-deep-sm -rotate-3 ${cd.color}`}>
             {cd.text}

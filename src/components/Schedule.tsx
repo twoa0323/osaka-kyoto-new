@@ -10,6 +10,7 @@ import { motion, AnimatePresence, Reorder } from 'framer-motion';
 import { LazyImage } from './LazyImage';
 import { SwipeableItem } from './Common';
 import { useNetworkStatus } from '../hooks/useNetworkStatus';
+import { useTranslation } from '../hooks/useTranslation';
 import { triggerHaptic } from '../utils/haptics';
 import { ARCompass } from './ui/ARCompass';
 
@@ -41,28 +42,28 @@ const getAirlineTheme = (airline?: string) => {
   return key ? AIRLINE_THEMES[key] : AIRLINE_THEMES.other;
 };
 
-const getWeatherDesc = (code: number) => {
-  if (code === undefined || code === -1) return { t: '等待載入', e: '☁️', color: 'bg-[#F4F5F7]', splat: '#F4F5F7' };
-  if (code === 0) return { t: '晴朗無雲', e: '☀️', color: 'bg-[#FFF9C4]', splat: '#FFEB3B' }; // 淺黃色
-  if (code === 1) return { t: '大致晴朗', e: '🌤️', color: 'bg-[#FFFDE7]', splat: '#FFEB3B' };
-  if (code === 2) return { t: '多雲時晴', e: '⛅', color: 'bg-[#E3F2FD]', splat: '#64B5F6' };
-  if (code === 3) return { t: '陰天多雲', e: '☁️', color: 'bg-[#F1F5F9]', splat: '#94A3B8' };
-  if ([45, 48].includes(code)) return { t: '霧氣瀰漫', e: '🌫️', color: 'bg-[#F1F5F9]', splat: '#94A3B8' };
-  if ([51, 53, 55, 56, 57].includes(code)) return { t: '毛毛細雨', e: '🌦️', color: 'bg-[#E0F2FE]', splat: '#38BDF8' };
-  if ([61, 63, 65, 66, 67, 80, 81, 82].includes(code)) return { t: '陣雨綿綿', e: '🌧️', color: 'bg-[#DBEAFE]', splat: '#3B82F6' }; // 淺藍色
-  if ([71, 73, 75, 77, 85, 86].includes(code)) return { t: '降雪紛飛', e: '🌨️', color: 'bg-[#F8FAFC]', splat: '#E2E8F0' };
-  if ([95, 96, 99].includes(code)) return { t: '雷雨交加', e: '⛈️', color: 'bg-[#F3E8FF]', splat: '#A855F7' };
-  return { t: '晴朗無雲', e: '☀️', color: 'bg-[#FFF9C4]', splat: '#FFEB3B' };
+const getWeatherDesc = (code: number, t: (key: string) => string) => {
+  if (code === undefined || code === -1) return { t: t('schedule.weather.loading'), e: '☁️', color: 'bg-[#F4F5F7]', splat: '#F4F5F7' };
+  if (code === 0) return { t: t('schedule.weather.sunny'), e: '☀️', color: 'bg-[#FFF9C4]', splat: '#FFEB3B' }; // 淺黃色
+  if (code === 1) return { t: t('schedule.weather.mostlyClear'), e: '🌤️', color: 'bg-[#FFFDE7]', splat: '#FFEB3B' };
+  if (code === 2) return { t: t('schedule.weather.partlyCloudy'), e: '⛅', color: 'bg-[#E3F2FD]', splat: '#64B5F6' };
+  if (code === 3) return { t: t('schedule.weather.cloudy'), e: '☁️', color: 'bg-[#F1F5F9]', splat: '#94A3B8' };
+  if ([45, 48].includes(code)) return { t: t('schedule.weather.foggy'), e: '🌫️', color: 'bg-[#F1F5F9]', splat: '#94A3B8' };
+  if ([51, 53, 55, 56, 57].includes(code)) return { t: t('schedule.weather.drizzle'), e: '🌦️', color: 'bg-[#E0F2FE]', splat: '#38BDF8' };
+  if ([61, 63, 65, 66, 67, 80, 81, 82].includes(code)) return { t: t('schedule.weather.showers'), e: '🌧️', color: 'bg-[#DBEAFE]', splat: '#3B82F6' }; // 淺藍色
+  if ([71, 73, 75, 77, 85, 86].includes(code)) return { t: t('schedule.weather.snow'), e: '🌨️', color: 'bg-[#F8FAFC]', splat: '#E2E8F0' };
+  if ([95, 96, 99].includes(code)) return { t: t('schedule.weather.thunderstorm'), e: '⛈️', color: 'bg-[#F3E8FF]', splat: '#A855F7' };
+  return { t: t('schedule.weather.sunny'), e: '☀️', color: 'bg-[#FFF9C4]', splat: '#FFEB3B' };
 };
 
-const getWindLevel = (speed: number) => {
-  if (speed < 2) return '0級';
-  if (speed < 6) return '1級';
-  if (speed < 12) return '2級';
-  if (speed < 20) return '3級';
-  if (speed < 29) return '4級';
-  if (speed < 39) return '5級';
-  return '6級+';
+const getWindLevel = (speed: number, t: (key: string) => string) => {
+  if (speed < 2) return `0${t('schedule.wind.level')}`;
+  if (speed < 6) return `1${t('schedule.wind.level')}`;
+  if (speed < 12) return `2${t('schedule.wind.level')}`;
+  if (speed < 20) return `3${t('schedule.wind.level')}`;
+  if (speed < 29) return `4${t('schedule.wind.level')}`;
+  if (speed < 39) return `5${t('schedule.wind.level')}`;
+  return `6${t('schedule.wind.level')}+`;
 };
 
 const CITY_DB = [
@@ -135,7 +136,8 @@ const TimelineFlightCard: FC<{
 const TimelineHotelCard: FC<{
   item: BookingItem;
   onClick: () => void;
-}> = ({ item, onClick }) => {
+  t: (key: string) => string;
+}> = ({ item, onClick, t }) => {
   return (
     <motion.div
       layoutId={`card-${item.id}`}
@@ -155,7 +157,7 @@ const TimelineHotelCard: FC<{
           )}
         </div>
         <div className="flex-1 p-6 flex flex-col justify-center bg-white/20 backdrop-blur-md">
-          <div className="boutique-tag text-p3-navy opacity-60 mb-2">Verified Stay</div>
+          <div className="boutique-tag text-p3-navy opacity-60 mb-2">{t('schedule.verifiedStay')}</div>
           <h4 className="boutique-h2 text-xl text-p3-navy truncate">{item.title}</h4>
           <div className="flex items-center gap-4 mt-4 boutique-tag text-gray-400">
             <div className="flex items-center gap-1.5"><Clock size={14} strokeWidth={2.5} className="text-p3-ruby" /> {item.checkInTime || '15:00'}</div>
@@ -174,7 +176,8 @@ const TimelineHotelCard: FC<{
 const SpatialMapHeader: FC<{
   trip: Trip;
   activeItem?: any;
-}> = ({ trip, activeItem }) => {
+  t: (key: string) => string;
+}> = ({ trip, activeItem, t }) => {
   const mapRef = useRef<MapLibreGLType.Map | null>(null);
   const MAPTILER_KEY = (import.meta as any).env.VITE_MAPTILER_API_KEY;
 
@@ -220,10 +223,10 @@ const SpatialMapHeader: FC<{
           <h2 className="text-4xl boutique-h1 text-p3-navy drop-shadow-sm">
             {trip.dest} <span className="text-p3-ruby">EXPRESS</span>
           </h2>
-          <p className="boutique-tag text-p3-navy/30 mt-2">SPATIAL TIMELINE v3.0</p>
+          <p className="boutique-tag text-p3-navy/30 mt-2">{t('schedule.spatialTimeline')}</p>
         </div>
         <div className="px-6 py-2 bg-p3-navy text-white rounded-full boutique-tag">
-          Live Tracking
+          {t('schedule.liveTracking')}
         </div>
       </div>
     </div>
@@ -320,8 +323,9 @@ const ScheduleMapView: FC<{
   trip?: Trip,
   setDetailItem: any,
   addScheduleItem: any,
-  selectedDateStr: string
-}> = ({ items, trip, setDetailItem, addScheduleItem, selectedDateStr }) => {
+  selectedDateStr: string,
+  t: (key: string) => string
+}> = ({ items, trip, setDetailItem, addScheduleItem, selectedDateStr, t }) => {
   const { showToast } = useTripStore();
   const MAPTILER_KEY = (import.meta as any).env.VITE_MAPTILER_API_KEY;
   const mapRef = useRef<MapLibreGLType.Map | null>(null);
@@ -387,7 +391,7 @@ const ScheduleMapView: FC<{
   // 📍 觸發魔法雷達 API
   const handleExploreNearby = async () => {
     if (!mapRef.current || !isMountedRef.current) return;
-    if (!navigator.onLine) return showToast("請先連上網路才能開啟魔法雷達唷！📡", "info");
+    if (!navigator.onLine) return showToast(t('schedule.radarOffline'), "info");
 
     let center;
     try {
@@ -416,10 +420,10 @@ const ScheduleMapView: FC<{
         setAiPlaces(data.places);
         triggerHaptic('success');
       } else {
-        showToast("這附近好像沒有特別的推薦點，試著拖動地圖到別的地方看看！🦑", "info");
+        showToast(t('schedule.ai.noRecommendation'), "info");
       }
     } catch (e) {
-      showToast("魔法雷達暫時失效，請稍後再試！🪄", "error");
+      showToast(t('schedule.ai.radarFailed'), "error");
     } finally {
       setIsExploring(false);
     }
@@ -495,14 +499,14 @@ const ScheduleMapView: FC<{
             >
               <div className="pt-2">
                 <div className="text-[9px] font-black bg-splat-pink text-white px-2 py-0.5 rounded-full inline-block mb-1 tracking-widest">
-                  AI DISCOVERY
+                  {t('schedule.ai.discovery')}
                 </div>
                 <h4 className="font-black text-p3-navy text-base leading-tight mb-1">{selectedAiPlace.name}</h4>
                 <p className="text-xs font-bold text-gray-600 leading-snug mb-3">
                   {selectedAiPlace.reason}
                 </p>
                 <p className="boutique-tag text-gray-400 mb-3 flex items-center gap-1">
-                  <Clock size={12} /> 建議停留: {selectedAiPlace.estimatedTime}
+                  <Clock size={12} /> {t('schedule.ai.estimatedTime')} {selectedAiPlace.estimatedTime}
                 </p>
                 <button
                   className="w-full bg-splat-green text-white boutique-tag py-2.5 rounded-xl border-2 border-p3-navy shadow-sm active:translate-y-0.5 transition-transform flex items-center justify-center gap-2"
@@ -515,7 +519,7 @@ const ScheduleMapView: FC<{
                       lng: selectedAiPlace.lng,
                       category: selectedAiPlace.category === 'food' ? 'food' : 'sightseeing',
                       time: '12:00', // 預設時間，使用者稍後可改
-                      note: `[AI 推薦] ${selectedAiPlace.reason}`,
+                      note: `${t('schedule.ai.spotNotePrefix')} ${selectedAiPlace.reason}`,
                       date: selectedDateStr,
                       images: []
                     });
@@ -524,7 +528,7 @@ const ScheduleMapView: FC<{
                     triggerHaptic('success');
                   }}
                 >
-                  <Plus size={14} strokeWidth={3} /> 加入今日行程
+                  <Plus size={14} strokeWidth={3} /> {t('schedule.ai.addToToday')}
                 </button>
               </div>
             </MapPopup>
@@ -537,7 +541,7 @@ const ScheduleMapView: FC<{
         <div className="absolute top-4 left-4 right-4 z-20 flex justify-between items-start pointer-events-none">
           <div className="bg-white/90 backdrop-blur px-3 py-1.5 rounded-full border-2 border-p3-navy boutique-tag flex items-center gap-2 shadow-sm">
             <MapIcon size={12} className="text-splat-blue" />
-            {items.length} SPOTS
+            {items.length} {t('schedule.ai.spots')}
           </div>
 
           <button
@@ -546,7 +550,7 @@ const ScheduleMapView: FC<{
             className="pointer-events-auto bg-p3-navy text-splat-yellow border-[0.5px] border-p3-navy px-4 py-2 rounded-2xl boutique-tag flex items-center gap-2 shadow-glass-deep-sm active:translate-y-1 transition-all disabled:opacity-70"
           >
             {isExploring ? <Loader2 size={16} className="animate-spin text-white" /> : <Sparkles size={16} />}
-            {isExploring ? "掃描中..." : "探索此區"}
+            {isExploring ? t('schedule.ai.scanning') : t('schedule.ai.exploreArea')}
           </button>
         </div>
       </div>
@@ -604,6 +608,7 @@ const ScheduleMapView: FC<{
 
 
 export const Schedule: FC<{ externalDateIdx?: number }> = ({ externalDateIdx = 0 }) => {
+  const { t } = useTranslation();
   const { trips, currentTripId, updateTripData, addScheduleItem, updateScheduleItem, deleteScheduleItem, showToast, checkAiFallback, uiSettings, addBookingItem, addJournalItem, addShoppingItem, addInfoItem, reorderScheduleItems } = useTripStore();
   const trip = trips.find(t => t.id === currentTripId);
   const isOnline = useNetworkStatus();
@@ -771,11 +776,11 @@ export const Schedule: FC<{ externalDateIdx?: number }> = ({ externalDateIdx = 0
       code: mainCityData.daily.weathercode[dailyIdx],
       rain: mainCityData.daily.precipitation_probability_max[dailyIdx] || 0,
       sunrise: format(parseISO(mainCityData.daily.sunrise[dailyIdx]), 'HH:mm'),
-      wind: getWindLevel(mainCityData.daily.windspeed_10m_max[dailyIdx] || 0)
+      wind: getWindLevel(mainCityData.daily.windspeed_10m_max[dailyIdx] || 0, t)
     };
     currentTempStr = mainCityData.current_weather?.temperature !== undefined ? Math.round(mainCityData.current_weather.temperature).toString() : todayWeather.max;
   }
-  const weatherInfo = getWeatherDesc(todayWeather.code);
+  const weatherInfo = getWeatherDesc(todayWeather.code, t);
 
   let todayHourly: any[] = [];
   if (timeline.length > 0 && weatherCache[timeline[0].city.name]) {
@@ -817,7 +822,7 @@ export const Schedule: FC<{ externalDateIdx?: number }> = ({ externalDateIdx = 0
   const [spotAiLoading, setSpotAiLoading] = useState<string | null>(null);
 
   const handleGapAiSuggest = async (prevItem: ScheduleItem, nextItem: ScheduleItem) => {
-    if (!isOnline) return showToast("請檢查網路連線才能使用魔法唷！✨", "info");
+    if (!isOnline) return showToast(t('schedule.ai.networkError'), "info");
     setGapAiLoading(prevItem.id);
 
     const prefs = [
@@ -846,15 +851,16 @@ export const Schedule: FC<{ externalDateIdx?: number }> = ({ externalDateIdx = 0
           ...data,
           id: `ai-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
           date: selectedDateStr,
-          images: []
+          images: [],
+          note: `${t('schedule.ai.spotNotePrefix')} ${data.reason || ''}`
         });
         triggerHaptic('light');
-        showToast("✨ 成功發掘順遊好去處！", "success");
+        showToast(t('schedule.ai.successExplore'), "success");
       }
     } catch (e: any) {
       clearTimeout(timeout);
-      if (e?.name === 'AbortError') showToast("AI 回應逾時，請稍後再試！⏱️", "error");
-      else showToast("AI 目前想不出好點子，換個時間再試試吧！🤔", "error");
+      if (e?.name === 'AbortError') showToast(t('schedule.ai.timeout'), "error");
+      else showToast(t('schedule.ai.noIdea'), "error");
     } finally {
       setGapAiLoading(null);
     }
@@ -875,12 +881,12 @@ export const Schedule: FC<{ externalDateIdx?: number }> = ({ externalDateIdx = 0
     if (foundGap) {
       await handleGapAiSuggest(foundGap.prev, foundGap.curr);
     } else {
-      showToast("目前行程很滿，沒有大於2小時的長空檔唷！🦑", "info");
+      showToast(t('schedule.ai.noGap'), "info");
     }
   };
 
   const handleTransportAiSuggest = async (currentItem: ScheduleItem) => {
-    if (!isOnline) return showToast("請檢查網路連線才能使用魔法唷！✨", "info");
+    if (!isOnline) return showToast(t('schedule.ai.networkError'), "info");
     setTransportAiLoading(currentItem.id);
 
     const items = trip?.items || [];
@@ -947,7 +953,7 @@ export const Schedule: FC<{ externalDateIdx?: number }> = ({ externalDateIdx = 0
 
       // Smart Router Meta: 讀取 Header 並處理 (從 fetch 回傳的 res 中讀取)
       const modelUsed = res.headers.get('X-AI-Model-Used');
-      if (modelUsed === 'flash-fallback') showToast("系統繁忙，已切換至標準閃電模式 ⚡️", "info");
+      if (modelUsed === 'flash-fallback') showToast(t('schedule.ai.fallbackModel'), "info");
 
       const updatedItem = { ...currentItem, transportSuggestion: JSON.stringify(lastResult) };
       updateScheduleItem(trip!.id, currentItem.id, updatedItem);
@@ -955,15 +961,15 @@ export const Schedule: FC<{ externalDateIdx?: number }> = ({ externalDateIdx = 0
     } catch (e: any) {
       clearTimeout(timeout);
       console.error(e);
-      if (e?.name === 'AbortError') showToast("AI 回應逾時，請稍後再試！⏱️", "error");
-      else showToast("AI 目前想不出好點子，請稍後再試！🤔", "error");
+      if (e?.name === 'AbortError') showToast(t('schedule.ai.timeout'), "error");
+      else showToast(t('schedule.ai.noIdea'), "error");
     } finally {
       setTransportAiLoading(null);
     }
   };
 
   const handleAiAnalyze = async (text: string) => {
-    if (!isOnline) return showToast("請檢查網路連線", "info");
+    if (!isOnline) return showToast(t('schedule.ai.spotNetErr'), "info");
     setIsAiLoading(true);
     try {
       const res = await fetch('/api/ai', {
@@ -1024,15 +1030,15 @@ export const Schedule: FC<{ externalDateIdx?: number }> = ({ externalDateIdx = 0
           }));
         }
         triggerHaptic('success');
-        showToast("✨ 智慧分析完成！已將資訊自動分類。", "success");
+        showToast(t('schedule.ai.batchSuccess'), "success");
       }
     } catch (e) {
-      showToast("AI 解析失敗，請嘗試更具體的描述。", "error");
+      showToast(t('schedule.ai.batchFailed'), "error");
     } finally { setIsAiLoading(false); }
   };
 
   const handleWeatherMagic = async () => {
-    if (!isOnline) return showToast("連線後才能施展天氣魔法唷！🦑", "info");
+    if (!isOnline) return showToast(t('schedule.ai.weatherNetErr'), "info");
     setIsWizardLoading(true);
     triggerHaptic('success');
 
@@ -1068,8 +1074,8 @@ export const Schedule: FC<{ externalDateIdx?: number }> = ({ externalDateIdx = 0
       }
     } catch (e: any) {
       clearTimeout(timeout);
-      if (e?.name === 'AbortError') showToast("AI 回應逾時！🪄", "error");
-      else showToast("天氣巫師目前魔力不足，請稍後再試！🪄", "error");
+      if (e?.name === 'AbortError') showToast(t('schedule.ai.weatherTimeout'), "error");
+      else showToast(t('schedule.ai.weatherFailed'), "error");
     } finally {
       setIsWizardLoading(false);
     }
@@ -1084,7 +1090,7 @@ export const Schedule: FC<{ externalDateIdx?: number }> = ({ externalDateIdx = 0
       title: recommendation.newTitle,
       location: recommendation.newLocation,
       category: recommendation.newCategory || 'sightseeing',
-      note: `[AI 天氣對策] ${recommendation.newNote}`,
+      note: `${t('schedule.ai.weatherNotePrefix')} ${recommendation.newNote}`,
       lat: recommendation.newLat,
       lng: recommendation.newLng,
       updatedAt: Date.now()
@@ -1108,7 +1114,7 @@ export const Schedule: FC<{ externalDateIdx?: number }> = ({ externalDateIdx = 0
 
   // AI 景點導覽 (純文字串流接收）
   const handleFetchSpotGuide = async (item: ScheduleItem) => {
-    if (!isOnline) return showToast("請檢查網路連線", "info");
+    if (!isOnline) return showToast(t('schedule.ai.spotNetErr'), "info");
     activeSpotIdRef.current = item.id;
     setSpotAiLoading(item.id);
     setCompletion("");
@@ -1153,8 +1159,8 @@ export const Schedule: FC<{ externalDateIdx?: number }> = ({ externalDateIdx = 0
     } catch (err: any) {
       clearTimeout(timeout);
       console.error("Spot Guide Error:", err);
-      if (err?.name === 'AbortError') showToast("取得景點導覽逾時，請稍後再試。⏱️", "error");
-      else showToast("取得景點導覽失敗，請稍後再試。", "error");
+      if (err?.name === 'AbortError') showToast(t('schedule.ai.spotTimeout'), "error");
+      else showToast(t('schedule.ai.spotFailed'), "error");
     } finally {
       activeSpotIdRef.current = null;
       setSpotAiLoading(null);
@@ -1166,8 +1172,8 @@ export const Schedule: FC<{ externalDateIdx?: number }> = ({ externalDateIdx = 0
   const [isOptimizing, setIsOptimizing] = useState(false);
 
   const handleOptimizeRoute = async () => {
-    if (dayItems.length <= 2) return showToast("行程太少，不需要優化唷！🦑", "info");
-    if (!isOnline) return showToast("優化路徑需要連線。", "info");
+    if (dayItems.length <= 2) return showToast(t('schedule.ai.routeTooFew'), "info");
+    if (!isOnline) return showToast(t('schedule.ai.routeNetErr'), "info");
     setIsOptimizing(true);
     triggerHaptic('light');
 
@@ -1198,12 +1204,12 @@ export const Schedule: FC<{ externalDateIdx?: number }> = ({ externalDateIdx = 0
         const missing = dayItems.filter(i => !optimizedIds.includes(i.id));
         reorderScheduleItems(trip!.id, [...newOrder, ...missing] as any);
         triggerHaptic('success');
-        showToast("✨ AI 路徑優化成功！", "success");
+        showToast(t('schedule.ai.routeSuccess'), "success");
       }
     } catch (e: any) {
       clearTimeout(timeout);
-      if (e?.name === 'AbortError') showToast("AI 回應逾時！⏱️", "error");
-      else showToast("優化失敗，請稍後再試。", "error");
+      if (e?.name === 'AbortError') showToast(t('schedule.ai.routeTimeout'), "error");
+      else showToast(t('schedule.ai.routeFailed'), "error");
     } finally {
       setIsOptimizing(false);
     }
@@ -1222,7 +1228,7 @@ export const Schedule: FC<{ externalDateIdx?: number }> = ({ externalDateIdx = 0
     <div className="flex flex-col h-full relative text-p3-navy">
       <div className="flex-1 overflow-y-auto hide-scrollbar p-6 space-y-8 pb-32">
         <div className="sticky top-0 z-50 bg-[#F4F5F7]/80 backdrop-blur-md pt-2 pb-6">
-          <SpatialMapHeader trip={trip!} activeItem={activeDayItem} />
+          <SpatialMapHeader trip={trip!} activeItem={activeDayItem} t={t} />
 
           <div className="flex items-center justify-between mt-6 px-4">
             <div className="flex gap-4">
@@ -1261,7 +1267,7 @@ export const Schedule: FC<{ externalDateIdx?: number }> = ({ externalDateIdx = 0
           <div className="relative mt-4">
             <AnimatePresence mode="popLayout">
               {dayItems.length === 0 ? (
-                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center py-20 bg-white border-[1px] border-dashed border-gray-300 rounded-[40px] text-gray-400 font-black italic">No plans yet. Adventure awaits! 🗺️</motion.div>
+                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center py-20 bg-white border-[1px] border-dashed border-gray-300 rounded-[40px] text-gray-400 font-black italic">{t('schedule.noPlans')}</motion.div>
               ) : (
                 dayItems.map((item, idx) => (
                   <div key={item.id} data-id={item.id} className="timeline-item">
@@ -1289,6 +1295,7 @@ export const Schedule: FC<{ externalDateIdx?: number }> = ({ externalDateIdx = 0
                         <TimelineHotelCard
                           item={item as any}
                           onClick={() => setDetailItem(item as any)}
+                          t={t}
                         />
                       )
                     )}
@@ -1305,12 +1312,13 @@ export const Schedule: FC<{ externalDateIdx?: number }> = ({ externalDateIdx = 0
               setDetailItem={setDetailItem as any}
               addScheduleItem={addScheduleItem}
               selectedDateStr={selectedDateStr}
+              t={t}
             />
           </div>
         )}
       </div>
 
-      {showFullWeather && <WeatherReportModal onClose={() => setShowFullWeather(false)} todayHourly={todayHourly} getWeatherDesc={getWeatherDesc} />}
+      {showFullWeather && <WeatherReportModal onClose={() => setShowFullWeather(false)} todayHourly={todayHourly} getWeatherDesc={(code) => getWeatherDesc(code, t)} />}
 
       {/* --- 🚀 Command Center (Detail View with Shared Element Transition) --- */}
       <AnimatePresence>
@@ -1375,7 +1383,7 @@ export const Schedule: FC<{ externalDateIdx?: number }> = ({ externalDateIdx = 0
                       {detailItem.pnr && (
                         <div className="bg-white border-[0.5px] border-p3-navy rounded-2xl p-5 shadow-glass-deep-sm flex justify-between items-center group active:scale-[0.98] transition-all" onClick={() => { navigator.clipboard.writeText(detailItem.pnr); triggerHaptic('success'); showToast("PNR 已複製！🦑", "success"); }}>
                           <div>
-                            <p className="boutique-tag text-gray-400 uppercase tracking-widest mb-1">Confirmation PNR</p>
+                            <p className="boutique-tag text-gray-400 uppercase tracking-widest mb-1">{t('schedule.pnr')}</p>
                             <p className="text-3xl font-black text-p3-navy tracking-[0.2em]">{detailItem.pnr}</p>
                           </div>
                           <div className="w-12 h-12 rounded-xl bg-splat-yellow border-[0.5px] border-p3-navy flex items-center justify-center text-p3-navy group-hover:bg-p3-navy group-hover:text-white transition-colors">
@@ -1385,15 +1393,15 @@ export const Schedule: FC<{ externalDateIdx?: number }> = ({ externalDateIdx = 0
                       )}
                       <div className="grid grid-cols-3 gap-3">
                         <div className="bg-white border-[2px] border-p3-navy/10 rounded-xl p-3 text-center">
-                          <span className="text-[9px] font-black text-gray-400 block uppercase mb-1">Terminal</span>
+                          <span className="text-[9px] font-black text-gray-400 block uppercase mb-1">{t('schedule.terminal')}</span>
                           <span className="text-xl font-black text-p3-navy">{detailItem.terminal || '--'}</span>
                         </div>
                         <div className="bg-white border-[2px] border-p3-navy/10 rounded-xl p-3 text-center">
-                          <span className="text-[9px] font-black text-gray-400 block uppercase mb-1">Gate</span>
+                          <span className="text-[9px] font-black text-gray-400 block uppercase mb-1">{t('schedule.gate')}</span>
                           <span className="text-xl font-black text-p3-navy">{detailItem.gate || '--'}</span>
                         </div>
                         <div className="bg-white border-[2px] border-p3-navy/10 rounded-xl p-3 text-center">
-                          <span className="text-[9px] font-black text-gray-400 block uppercase mb-1">Boarding</span>
+                          <span className="text-[9px] font-black text-gray-400 block uppercase mb-1">{t('schedule.boarding')}</span>
                           <span className="text-xl font-black text-splat-pink">{detailItem.boardingTime || '--:--'}</span>
                         </div>
                       </div>
@@ -1403,7 +1411,7 @@ export const Schedule: FC<{ externalDateIdx?: number }> = ({ externalDateIdx = 0
                         rel="noreferrer"
                         className="w-full py-4 bg-p3-navy text-white rounded-2xl font-black uppercase tracking-widest text-center flex items-center justify-center gap-3 shadow-glass-deep active:translate-y-1 transition-all"
                       >
-                        <Plane size={18} /> Live Status ➔
+                        <Plane size={18} /> {t('schedule.liveStatus')}
                       </a>
                     </div>
                   )}
@@ -1414,17 +1422,17 @@ export const Schedule: FC<{ externalDateIdx?: number }> = ({ externalDateIdx = 0
                       <div className="glass-card bg-white/20 backdrop-blur-3xl border-[0.5px] border-white/40 p-10 space-y-8 shadow-glass-deep">
                         <div className="flex justify-between border-b-[0.5px] border-p3-navy/5 pb-8">
                           <div>
-                            <span className="boutique-tag text-p3-navy/30 block mb-2">Check-In</span>
+                            <span className="boutique-tag text-p3-navy/30 block mb-2">{t('schedule.checkIn')}</span>
                             <span className="text-3xl boutique-h1 text-p3-navy">{detailItem.checkInTime || '15:00'}</span>
                           </div>
                           <div className="text-right">
-                            <span className="boutique-tag text-p3-navy/30 block mb-2">Check-Out</span>
+                            <span className="boutique-tag text-p3-navy/30 block mb-2">{t('schedule.checkOut')}</span>
                             <span className="text-3xl boutique-h1 text-p3-navy">{detailItem.checkOutTime || '11:00'}</span>
                           </div>
                         </div>
                         {detailItem.confirmationNo && (
                           <div className="flex justify-between items-center pt-2">
-                            <span className="boutique-tag text-p3-navy/30">Room Type</span>
+                            <span className="boutique-tag text-p3-navy/30">{t('schedule.roomType')}</span>
                             <span className="boutique-h2 text-p3-navy">{detailItem.roomType || 'Standard Room'}</span>
                           </div>
                         )}
@@ -1434,13 +1442,13 @@ export const Schedule: FC<{ externalDateIdx?: number }> = ({ externalDateIdx = 0
                           className="flex-1 py-4 bg-white border-[0.5px] border-p3-navy rounded-2xl font-black uppercase text-xs flex items-center justify-center gap-2 shadow-glass-deep-sm active:translate-y-1 transition-all"
                           onClick={() => window.open(`tel:${detailItem.phone || ''}`)}
                         >
-                          <Phone size={16} /> Contact
+                          <Phone size={16} /> {t('schedule.contact')}
                         </button>
                         <button
                           className="flex-1 py-4 bg-splat-green text-white border-[0.5px] border-p3-navy rounded-2xl font-black uppercase text-xs flex items-center justify-center gap-2 shadow-glass-deep-sm active:translate-y-1 transition-all"
                           onClick={() => window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(detailItem.location || "")}`, '_blank')}
                         >
-                          <MapPin size={16} /> Map
+                          <MapPin size={16} /> {t('schedule.map')}
                         </button>
                       </div>
                     </div>
@@ -1451,7 +1459,7 @@ export const Schedule: FC<{ externalDateIdx?: number }> = ({ externalDateIdx = 0
                     <div className="space-y-10">
                       <div className="p-10 glass-card bg-white/20 backdrop-blur-3xl border-[0.5px] border-white/40 shadow-glass-deep">
                         <h4 className="boutique-tag text-p3-navy/30 mb-6 flex items-center gap-3">
-                          <Sparkles size={16} strokeWidth={2.5} className="text-p3-gold" /> AI Spot Insight
+                          <Sparkles size={16} strokeWidth={2.5} className="text-p3-gold" /> {t('schedule.spotInsight')}
                         </h4>
                         {detailItem.spotGuide ? (
                           <div className="boutique-body text-p3-navy/80 whitespace-pre-wrap">{detailItem.spotGuide.background}</div>
@@ -1459,13 +1467,13 @@ export const Schedule: FC<{ externalDateIdx?: number }> = ({ externalDateIdx = 0
                           <div className="boutique-body text-p3-navy/40 whitespace-pre-wrap animate-pulse">{completion}</div>
                         ) : (
                           <button onClick={() => handleFetchSpotGuide(detailItem)} disabled={!!spotAiLoading} className="w-full py-6 border-[0.5px] border-dashed border-p3-navy/20 rounded-[22px] boutique-tag text-p3-navy/40 hover:text-p3-navy hover:bg-white/40 transition-all">
-                            {spotAiLoading === detailItem.id ? <Loader2 size={20} className="animate-spin" /> : '取得 AI 景點智慧導覽'}
+                            {spotAiLoading === detailItem.id ? <Loader2 size={20} className="animate-spin" /> : t('schedule.getSpotGuide')}
                           </button>
                         )}
                       </div>
 
                       <button onClick={() => window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(detailItem.location || "")}`, '_blank')} className="w-full py-5 bg-p3-navy text-white rounded-[22px] shadow-glass-deep flex items-center justify-center gap-3 text-lg font-black active:scale-95 transition-all border-[0.5px] border-white/20">
-                        <MapPin size={24} strokeWidth={3} /> 開啟 Google Maps
+                        <MapPin size={24} strokeWidth={3} /> {t('schedule.openGoogleMaps')}
                       </button>
                     </div>
                   )}

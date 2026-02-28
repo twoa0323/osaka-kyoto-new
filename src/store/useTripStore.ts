@@ -1,7 +1,7 @@
 // filepath: src/store/useTripStore.ts
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import { Trip, ScheduleItem, BookingItem, ExpenseItem, JournalItem, ShoppingItem, InfoItem, PackingItem } from '../types';
+import { Trip, ScheduleItem, BookingItem, ExpenseItem, JournalItem, ShoppingItem, InfoItem, PackingItem, AppLanguage } from '../types';
 import { idbStorage } from '../utils/idbStorage';
 import { db, auth } from '../services/firebase'; // 👈 引入 auth 來抓取設備指紋
 import { doc, setDoc, deleteDoc, updateDoc } from 'firebase/firestore';
@@ -179,6 +179,7 @@ interface TripState {
     enableAiStreaming: boolean; // AI 串流模式
     enable3DMap: boolean; // 3D 地圖模式
     enableGlassmorphism: boolean; // 玻璃擬態 2.0
+    language: AppLanguage; // 👈 新增：全域語系設定
   };
   setUISettings: (settings: Partial<TripState['uiSettings']>) => void;
   isSyncing: boolean;
@@ -213,6 +214,7 @@ export const useTripStore = create<TripState>()(
         enableAiStreaming: true,
         enable3DMap: true,
         enableGlassmorphism: true,
+        language: 'zh-TW', // 預設使用繁體中文
       },
       setUISettings: (newSettings) => set((s) => ({
         uiSettings: { ...s.uiSettings, ...newSettings }

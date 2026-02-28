@@ -3,6 +3,9 @@
 // --- 貨幣代碼列舉 ---
 export type CurrencyCode = 'TWD' | 'JPY' | 'KRW' | 'USD' | 'EUR' | 'THB' | 'GBP' | 'CNY' | 'HKD' | 'SGD' | 'VND';
 
+// --- 介面語言型別 ---
+export type AppLanguage = 'zh-TW' | 'en' | 'ja';
+
 // --- 成員個人定義 ---
 export interface Member {
   id: string;

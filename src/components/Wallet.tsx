@@ -9,10 +9,10 @@ import {
 } from 'lucide-react';
 import { ExpenseItem, CurrencyCode, Member } from '../types';
 import { triggerHaptic } from '../utils/haptics';
-import { uploadImage } from '../utils/imageUtils';
 import { format } from 'date-fns';
 import { motion, AnimatePresence } from 'framer-motion';
 import { SwipeableItem } from './Common';
+import { useTranslation } from '../hooks/useTranslation';
 
 // --- 常數配置 ---
 const CURRENCY_SYMBOLS: Record<string, string> = {
@@ -23,6 +23,7 @@ const CATEGORIES = ['餐飲', '購物', '交通', '住宿', '娛樂', '藥妝', 
 const METHODS = ['現金', '信用卡', '行動支付', 'IC卡', '其他'];
 
 export const Wallet = () => {
+    const { t } = useTranslation();
     const { trips, currentTripId, exchangeRate, addExpenseItem, deleteExpenseItem, updateExpenseItem, updateTripData, setExchangeRate, showToast, setActiveTab: setGlobalActiveTab } = useTripStore();
     const trip = trips.find(t => t.id === currentTripId);
 
@@ -78,7 +79,7 @@ export const Wallet = () => {
     }, [converterValue, converterMode, rate]);
 
     const handleSave = () => {
-        if (!form.amount || !form.title) return showToast("資訊不完整唷！💰", "error");
+        if (!form.amount || !form.title) return showToast(t('wallet.incompleteInfo'), "error");
         const item: ExpenseItem = {
             id: editingId || Date.now().toString(), date: form.date!, storeName: form.storeName || '', title: form.title!, amount: Number(form.amount),
             currency: form.currency as CurrencyCode, method: form.method as any, location: form.location || '',
@@ -112,7 +113,7 @@ export const Wallet = () => {
                     <div>
                         <div className="flex items-center gap-2 mb-2">
                             <Banknote size={16} className="text-p3-navy" />
-                            <p className="text-[10px] font-black uppercase text-p3-navy tracking-widest italic">Current Expenditure</p>
+                            <p className="text-[10px] font-black uppercase text-p3-navy tracking-widest italic">{t('wallet.currentExp')}</p>
                         </div>
                         <h2 className="text-4xl font-black text-p3-navy tracking-tighter">
                             NT$ {Math.round(stats.totalTwd).toLocaleString()}
@@ -122,7 +123,7 @@ export const Wallet = () => {
                                 {trip.baseCurrency} {Math.round(stats.totalForeign).toLocaleString()}
                             </div>
                             <div className="text-[10px] font-black text-p3-navy/40 italic uppercase tracking-widest">
-                                Rate: {rate.toFixed(4)}
+                                {t('wallet.rate')}: {rate.toFixed(4)}
                             </div>
                         </div>
                     </div>
@@ -140,10 +141,10 @@ export const Wallet = () => {
             <div className="glass-card p-5 shadow-glass-soft relative overflow-hidden group border-[0.5px] border-white/40">
                 <div className="flex justify-between items-end mb-4">
                     <div className="space-y-1">
-                        <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-p3-navy/30">Tax-Free Sentinel</h4>
+                        <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-p3-navy/30">{t('wallet.taxFreeSentinel')}</h4>
                         <div className="flex items-center gap-2">
                             <Sparkles size={16} className="text-splat-yellow" />
-                            <span className="text-xl font-black text-p3-navy italic uppercase">Power Up!</span>
+                            <span className="text-xl font-black text-p3-navy italic uppercase">{t('wallet.powerUp')}</span>
                         </div>
                     </div>
                     <div className="text-right">
@@ -167,7 +168,7 @@ export const Wallet = () => {
                     </motion.div>
                 </div>
                 {stats.taxFreeTotal >= 5000 && (
-                    <motion.p animate={{ opacity: [0.4, 1, 0.4] }} transition={{ repeat: Infinity, duration: 1 }} className="text-center text-[9px] font-black uppercase text-splat-orange mt-3 tracking-widest">✨ Tax-Free Target Achieved! ✨</motion.p>
+                    <motion.p animate={{ opacity: [0.4, 1, 0.4] }} transition={{ repeat: Infinity, duration: 1 }} className="text-center text-[9px] font-black uppercase text-splat-orange mt-3 tracking-widest">{t('wallet.taxFreeAchieved')}</motion.p>
                 )}
             </div>
 
@@ -175,11 +176,11 @@ export const Wallet = () => {
             <div className="bg-p3-navy border-[0.5px] border-p3-navy rounded-[24px] p-4 shadow-glass-deep relative">
                 <div className="flex items-center gap-4">
                     <div className="flex-1 relative">
-                        <input type="text" inputMode="decimal" placeholder={converterMode === 'JPY2TWD' ? '¥ JPY AMOUNT' : 'NT$ TWD AMOUNT'} value={converterValue} onChange={(e) => setConverterValue(e.target.value)} className="w-full bg-white/10 border-[0.5px] border-white/20 rounded-xl py-3 px-4 text-white font-black placeholder:text-white/20 outline-none focus:border-p3-gold/50 transition-colors text-sm" />
+                        <input type="text" inputMode="decimal" placeholder={converterMode === 'JPY2TWD' ? t('wallet.jpyAmount') : t('wallet.twdAmount')} value={converterValue} onChange={(e) => setConverterValue(e.target.value)} className="w-full bg-white/10 border-[0.5px] border-white/20 rounded-xl py-3 px-4 text-white font-black placeholder:text-white/20 outline-none focus:border-p3-gold/50 transition-colors text-sm" />
                     </div>
                     <motion.button whileTap={{ rotate: 180 }} onClick={() => { setConverterMode(m => m === 'JPY2TWD' ? 'TWD2JPY' : 'JPY2TWD'); triggerHaptic('light'); }} className="w-10 h-10 rounded-full bg-p3-gold flex items-center justify-center text-p3-navy border-[0.5px] border-white/20 shadow-sm"><Repeat size={20} strokeWidth={3} /></motion.button>
                     <div className="flex-1 text-right">
-                        <div className="text-[10px] font-black text-white/40 uppercase tracking-widest mb-1">Result ({converterMode === 'JPY2TWD' ? 'TWD' : 'JPY'})</div>
+                        <div className="text-[10px] font-black text-white/40 uppercase tracking-widest mb-1">{t('wallet.result')} ({converterMode === 'JPY2TWD' ? 'TWD' : 'JPY'})</div>
                         <div className="text-xl font-black text-p3-gold tabular-nums">{converterMode === 'JPY2TWD' ? 'NT$ ' : '¥ '}{Math.round(parseFloat(convertedValue) || 0).toLocaleString()}</div>
                     </div>
                 </div>
@@ -188,7 +189,7 @@ export const Wallet = () => {
             {/* --- Section 4: Grid Analytics --- */}
             <div className="space-y-4">
                 <h3 className="text-sm font-black text-p3-navy flex items-center gap-2 uppercase tracking-widest pl-2">
-                    <div className="w-2 h-5 bg-p3-navy rounded-full" /> Spend Analytics
+                    <div className="w-2 h-5 bg-p3-navy rounded-full" /> {t('wallet.spendAnalytics')}
                 </h3>
                 <div className="grid grid-cols-2 gap-4">
                     {stats.pieData.slice(0, 4).map((d) => (
@@ -208,7 +209,7 @@ export const Wallet = () => {
             </div>
 
             <button onClick={() => setActiveTab('record')} className="w-full py-5 bg-p3-navy border-[0.5px] border-white/20 rounded-[24px] shadow-glass-deep text-white font-black uppercase tracking-[0.2em] flex items-center justify-center gap-3 active:scale-95 transition-all">
-                <Plus size={20} strokeWidth={4} /> Add New Entry
+                <Plus size={20} strokeWidth={4} /> {t('wallet.addNew')}
             </button>
 
             {/* --- Detail/Record Overlay --- */}
@@ -221,15 +222,15 @@ export const Wallet = () => {
                         className="fixed inset-0 z-[1100] bg-white flex flex-col"
                     >
                         <div className="p-6 flex justify-between items-center border-b-[3px] border-p3-navy">
-                            <h2 className="text-xl font-black italic uppercase tracking-tighter text-p3-navy">Expenditure Entry</h2>
+                            <h2 className="text-xl font-black italic uppercase tracking-tighter text-p3-navy">{t('wallet.entryTitle')}</h2>
                             <button onClick={() => setActiveTab('list')} className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-p3-navy"><X size={20} /></button>
                         </div>
                         <div className="flex-1 overflow-y-auto p-6 space-y-6 bg-[#F4F5F7]">
                             <div className="bg-white p-6 rounded-3xl border-[0.5px] border-p3-navy shadow-glass-deep-sm space-y-4">
-                                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Transaction Details</label>
-                                <input placeholder="STORE NAME / TITLE" value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} className="w-full bg-gray-50 border-[0.5px] border-p3-navy rounded-xl p-4 font-black outline-none focus:border-splat-blue/50 transition-colors" />
+                                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{t('wallet.txDetails')}</label>
+                                <input placeholder={t('wallet.storeName')} value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} className="w-full bg-gray-50 border-[0.5px] border-p3-navy rounded-xl p-4 font-black outline-none focus:border-splat-blue/50 transition-colors" />
                                 <div className="grid grid-cols-2 gap-4">
-                                    <input type="number" placeholder="AMOUNT" value={form.amount || ''} onChange={e => setForm({ ...form, amount: Number(e.target.value) })} className="bg-gray-50 border-[0.5px] border-p3-navy rounded-xl p-4 font-black text-2xl outline-none" />
+                                    <input type="number" placeholder={t('wallet.amount')} value={form.amount || ''} onChange={e => setForm({ ...form, amount: Number(e.target.value) })} className="bg-gray-50 border-[0.5px] border-p3-navy rounded-xl p-4 font-black text-2xl outline-none" />
                                     <div className="flex bg-gray-100 p-1 rounded-xl border-[0.5px] border-p3-navy">
                                         <button onClick={() => setForm({ ...form, currency: 'JPY' })} className={`flex-1 rounded-lg font-black text-xs transition-colors ${form.currency === 'JPY' ? 'bg-splat-green text-white shadow-sm' : 'text-gray-400'}`}>JPY</button>
                                         <button onClick={() => setForm({ ...form, currency: 'TWD' })} className={`flex-1 rounded-lg font-black text-xs transition-colors ${form.currency === 'TWD' ? 'bg-splat-green text-white shadow-sm' : 'text-gray-400'}`}>TWD</button>
@@ -238,13 +239,13 @@ export const Wallet = () => {
                                 <div className="flex items-center gap-3 p-4 bg-splat-yellow/10 border-2 border-dashed border-splat-yellow rounded-xl">
                                     <Sparkles size={18} className="text-splat-yellow" />
                                     <div className="flex-1 flex items-center justify-between">
-                                        <span className="text-[10px] font-black text-p3-navy uppercase">Apply Tax-Free (5,000¥ Target)</span>
+                                        <span className="text-[10px] font-black text-p3-navy uppercase">{t('wallet.applyTaxFree')}</span>
                                         <input type="checkbox" checked={!!form.isTaxFree} onChange={e => setForm({ ...form, isTaxFree: e.target.checked })} className="w-6 h-6 rounded-lg accent-p3-navy" />
                                     </div>
                                 </div>
                             </div>
                             <button onClick={handleSave} className="w-full py-5 bg-p3-navy text-white rounded-2xl font-black uppercase tracking-widest shadow-glass-deep active:translate-y-1 active:shadow-none transition-all">
-                                Save Transaction ➔
+                                {t('wallet.saveTx')}
                             </button>
                         </div>
                     </motion.div>
@@ -260,11 +261,11 @@ export const Wallet = () => {
                             <div className="w-20 h-20 bg-splat-orange text-white rounded-3xl border-[0.5px] border-p3-navy shadow-glass-deep-sm flex items-center justify-center mx-auto mb-6 rotate-[-6deg]">
                                 <Utensils size={40} strokeWidth={3} />
                             </div>
-                            <h3 className="text-2xl font-black text-p3-navy tracking-tighter italic uppercase mb-2">Foodie Alert! 🦑</h3>
-                            <p className="text-gray-500 font-bold leading-tight mb-8">這頓美食看起來很讚唷！<br />要順便寫入回憶日誌嗎？</p>
+                            <h3 className="text-2xl font-black text-p3-navy tracking-tighter italic uppercase mb-2">{t('wallet.foodieAlert')}</h3>
+                            <p className="text-gray-500 font-bold leading-tight mb-8">{t('wallet.foodieMsg1')}<br />{t('wallet.foodieMsg2')}</p>
                             <div className="space-y-3">
-                                <button onClick={() => { setShowFoodiePrompt(false); setGlobalActiveTab('memories'); triggerHaptic('success'); }} className="w-full py-4 bg-splat-orange text-white rounded-2xl border-[0.5px] border-p3-navy shadow-glass-deep-sm font-black uppercase tracking-widest active:translate-y-1 active:shadow-none transition-all">Yes, Add Memory!</button>
-                                <button onClick={() => setShowFoodiePrompt(false)} className="w-full py-3 text-gray-400 font-black text-xs uppercase tracking-widest hover:text-p3-navy transition-colors">Maybe Later</button>
+                                <button onClick={() => { setShowFoodiePrompt(false); setGlobalActiveTab('memories'); triggerHaptic('success'); }} className="w-full py-4 bg-splat-orange text-white rounded-2xl border-[0.5px] border-p3-navy shadow-glass-deep-sm font-black uppercase tracking-widest active:translate-y-1 active:shadow-none transition-all">{t('wallet.yesAddMemory')}</button>
+                                <button onClick={() => setShowFoodiePrompt(false)} className="w-full py-3 text-gray-400 font-black text-xs uppercase tracking-widest hover:text-p3-navy transition-colors">{t('wallet.maybeLater')}</button>
                             </div>
                         </motion.div>
                     </div>

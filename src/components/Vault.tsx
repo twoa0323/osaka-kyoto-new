@@ -8,8 +8,10 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { InfoItem } from '../types';
 import { triggerHaptic } from '../utils/haptics';
+import { useTranslation } from '../hooks/useTranslation';
 
 export const Vault = () => {
+    const { t } = useTranslation();
     const { trips, currentTripId, updateInfoItem, deleteInfoItem, addInfoItem } = useTripStore();
     const trip = trips.find(t => t.id === currentTripId);
     const infoItems = trip?.infoItems || [];
@@ -59,8 +61,8 @@ export const Vault = () => {
                         <ShieldCheck size={32} strokeWidth={2.5} />
                     </div>
                     <div>
-                        <h2 className="text-2xl font-black text-white italic tracking-tighter uppercase">The Vault</h2>
-                        <p className="text-[10px] font-black text-white/40 tracking-[0.2em] uppercase">Secure Document Hub v2.1</p>
+                        <h2 className="text-2xl font-black text-white italic tracking-tighter uppercase">{t('vault.title')}</h2>
+                        <p className="text-[10px] font-black text-white/40 tracking-[0.2em] uppercase">{t('vault.subtitle')}</p>
                     </div>
                 </div>
             </div>
@@ -69,7 +71,7 @@ export const Vault = () => {
             <div className="space-y-4">
                 <h3 className="text-sm font-black text-p3-navy flex items-center gap-2 uppercase tracking-widest pl-2">
                     <div className="w-2 h-5 bg-p3-navy rounded-full" />
-                    Master Documents
+                    {t('vault.masterDocs')}
                 </h3>
                 <div className="grid grid-cols-2 gap-3">
                     {masterDocs.length > 0 ? (
@@ -84,14 +86,14 @@ export const Vault = () => {
                                     {doc.title.includes('護照') ? <CreditCard size={20} /> : <Shield size={20} />}
                                 </div>
                                 <div className="flex-1 min-w-0">
-                                    <div className="text-[9px] font-black text-p3-gold uppercase tracking-widest opacity-60">Essential</div>
+                                    <div className="text-[9px] font-black text-p3-gold uppercase tracking-widest opacity-60">{t('vault.essential')}</div>
                                     <div className="text-xs font-black text-p3-navy truncate">{doc.title}</div>
                                 </div>
                             </motion.button>
                         ))
                     ) : (
                         <div className="col-span-2 p-6 bg-white/50 border-2 border-dashed border-gray-300 rounded-3xl text-center">
-                            <p className="text-[10px] font-black text-gray-400 uppercase">護照、保險掃描件尚未加入</p>
+                            <p className="text-[10px] font-black text-gray-400 uppercase">{t('vault.emptyMasterDocs')}</p>
                         </div>
                     )}
                 </div>
@@ -102,9 +104,9 @@ export const Vault = () => {
                 <div className="flex justify-between items-end px-2">
                     <h3 className="text-sm font-black text-p3-navy flex items-center gap-2 uppercase tracking-widest">
                         <div className="w-2 h-5 bg-splat-pink rounded-full" />
-                        Quick Scan Grid
+                        {t('vault.quickScan')}
                     </h3>
-                    <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest">{qrItems.length} ITEMS</span>
+                    <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest">{qrItems.length} {t('vault.items')}</span>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
@@ -128,7 +130,7 @@ export const Vault = () => {
                                 </div>
                             </div>
                             <div className="p-4 bg-white/80">
-                                <div className="text-[9px] font-black text-splat-pink uppercase tracking-widest mb-1">Pass / Ticket</div>
+                                <div className="text-[9px] font-black text-splat-pink uppercase tracking-widest mb-1">{t('vault.passTicket')}</div>
                                 <div className="text-xs font-black text-p3-navy truncate">{item.title}</div>
                             </div>
                         </motion.div>
@@ -142,7 +144,7 @@ export const Vault = () => {
                         <div className="w-12 h-12 rounded-full border-2 border-current flex items-center justify-center">
                             <Plus size={24} strokeWidth={3} />
                         </div>
-                        <span className="text-[10px] font-black uppercase tracking-[0.2em]">Add Scan</span>
+                        <span className="text-[10px] font-black uppercase tracking-[0.2em]">{t('vault.addScan')}</span>
                     </motion.div>
                 </div>
             </div>
@@ -151,7 +153,7 @@ export const Vault = () => {
             <div className="space-y-4">
                 <h3 className="text-sm font-black text-p3-navy flex items-center gap-2 uppercase tracking-widest pl-2">
                     <div className="w-2 h-5 bg-splat-yellow rounded-full" />
-                    General Docs
+                    {t('vault.generalDocs')}
                 </h3>
 
                 {/* Search Bar */}
@@ -159,7 +161,7 @@ export const Vault = () => {
                     <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
                     <input
                         type="text"
-                        placeholder="SEARCH VAULT..."
+                        placeholder={t('vault.searchPlaceholder')}
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                         className="w-full bg-white border-[0.5px] border-p3-navy rounded-2xl py-4 pl-12 pr-4 font-black placeholder:text-gray-300 outline-none focus:bg-white text-xs"
@@ -202,7 +204,7 @@ export const Vault = () => {
                                 </div>
                                 <div>
                                     <h4 className="text-white font-black text-lg uppercase italic">{selectedDoc.title}</h4>
-                                    <p className="text-white/40 text-[10px] uppercase font-black">Vault Encrypted Document</p>
+                                    <p className="text-white/40 text-[10px] uppercase font-black">{t('vault.encryptedDoc')}</p>
                                 </div>
                             </div>
                             <button
@@ -220,24 +222,24 @@ export const Vault = () => {
                                 ) : (
                                     <div className="text-center space-y-4">
                                         <HardDrive size={64} className="text-gray-200 mx-auto" strokeWidth={1} />
-                                        <p className="text-xs font-black text-gray-400 uppercase tracking-widest">No Image Preview Available</p>
+                                        <p className="text-xs font-black text-gray-400 uppercase tracking-widest">{t('vault.noPreview')}</p>
                                     </div>
                                 )}
                             </div>
                             <div className="p-8 bg-white border-t-[3px] border-p3-navy space-y-6">
                                 <div className="space-y-2">
-                                    <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Description</div>
+                                    <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{t('vault.description')}</div>
                                     <p className="text-sm font-bold text-p3-navy leading-relaxed h-24 overflow-y-auto">
-                                        {selectedDoc.content || '無備註資訊。'}
+                                        {selectedDoc.content || t('vault.noNotes')}
                                     </p>
                                 </div>
 
                                 <div className="flex gap-4">
                                     <button className="flex-1 py-4 bg-p3-navy text-white rounded-xl shadow-glass-soft flex items-center justify-center gap-2 font-black active:scale-95 transition-all border-[0.5px] border-white/20">
-                                        <ExternalLink size={18} /> OPEN FULL
+                                        <ExternalLink size={18} /> {t('vault.openFull')}
                                     </button>
                                     <button className="flex-1 py-4 bg-white/60 backdrop-blur-md text-p3-navy rounded-xl border-[0.5px] border-black/5 flex items-center justify-center gap-2 font-black active:scale-95 transition-all shadow-glass-soft">
-                                        <Plus size={18} /> SHARE
+                                        <Plus size={18} /> {t('vault.share')}
                                     </button>
                                 </div>
                             </div>

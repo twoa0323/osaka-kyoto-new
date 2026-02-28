@@ -9,6 +9,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { format, parseISO } from 'date-fns';
 import { JournalItem, ShoppingItem, ExpenseItem } from '../types';
 import { triggerHaptic } from '../utils/haptics';
+import { useTranslation } from '../hooks/useTranslation';
 
 // --- 動態郵戳圖示映射 ---
 const CATEGORY_STAMPS: Record<string, string> = {
@@ -29,6 +30,7 @@ type StreamItem =
     | (ExpenseItem & { _type: 'expense' });
 
 export const Memories = () => {
+    const { t } = useTranslation();
     const { trips, currentTripId, addJournalItem } = useTripStore();
     const trip = trips.find(t => t.id === currentTripId);
 
@@ -84,8 +86,8 @@ export const Memories = () => {
             {/* Header */}
             <div className="flex justify-between items-end mb-10 pl-2 relative z-10">
                 <div>
-                    <h2 className="text-3xl font-black text-p3-navy italic tracking-tighter uppercase leading-none">The Stream</h2>
-                    <p className="text-[10px] font-black text-gray-400 mt-2 tracking-[0.2em] uppercase">Life Chronicles v1.0</p>
+                    <h2 className="text-3xl font-black text-p3-navy italic tracking-tighter uppercase leading-none">{t('memories.title')}</h2>
+                    <p className="text-[10px] font-black text-gray-400 mt-2 tracking-[0.2em] uppercase">{t('memories.subtitle')}</p>
                 </div>
                 <button
                     onClick={() => triggerHaptic('medium')}
@@ -99,11 +101,11 @@ export const Memories = () => {
             <div className="space-y-12 relative z-10">
                 {stream.length > 0 ? (
                     stream.map((item, idx) => (
-                        <MemoryCard key={item.id} item={item} index={idx} />
+                        <MemoryCard key={item.id} item={item} index={idx} t={t} />
                     ))
                 ) : (
                     <div className="py-20 text-center bg-white border-[0.5px] border-dashed border-gray-300 rounded-[40px] text-gray-400 font-bold italic">
-                        開始記錄旅行中的點滴吧... ✨
+                        {t('memories.emptyStream')}
                     </div>
                 )}
             </div>
@@ -112,7 +114,7 @@ export const Memories = () => {
 };
 
 // --- 子組件: Polaroid Card ---
-const MemoryCard = ({ item, index }: { item: StreamItem, index: number }) => {
+const MemoryCard = ({ item, index, t }: { item: StreamItem, index: number, t: (key: string) => string }) => {
     const isJournal = item._type === 'journal';
     const isShopping = item._type === 'shopping';
     const isExpense = item._type === 'expense';
@@ -162,14 +164,14 @@ const MemoryCard = ({ item, index }: { item: StreamItem, index: number }) => {
                     ) : (
                         <div className="w-full h-full flex flex-col items-center justify-center bg-[radial-gradient(#e5e7eb_1px,transparent_1px)] [background-size:16px_16px]">
                             <div className="text-[60px] opacity-10 filter grayscale select-none">{emblem}</div>
-                            <p className="text-[10px] font-black text-gray-200 uppercase tracking-widest mt-2 italic">Captured Moment</p>
+                            <p className="text-[10px] font-black text-gray-200 uppercase tracking-widest mt-2 italic">{t('memories.capturedMoment')}</p>
                         </div>
                     )}
 
                     {/* Post-it Note Badge */}
                     <div className="absolute top-2 right-2 px-2 py-1 bg-white/90 backdrop-blur-md rounded border border-gray-200 shadow-sm">
                         <span className="text-[9px] font-black text-gray-500 uppercase tracking-widest">
-                            {isJournal ? 'Journal' : isShopping ? 'Purchase' : 'Expense'}
+                            {isJournal ? t('memories.journal') : isShopping ? t('memories.purchase') : t('memories.expense')}
                         </span>
                     </div>
                 </div>
@@ -194,17 +196,17 @@ const MemoryCard = ({ item, index }: { item: StreamItem, index: number }) => {
                             )}
                             {isExpense && (
                                 <p className="text-[10px] font-black text-p3-navy/80 uppercase">
-                                    Cash Flow: ¥{(item as any).displayAmount?.toLocaleString()}
+                                    {t('memories.cashFlow')}: ¥{(item as any).displayAmount?.toLocaleString()}
                                 </p>
                             )}
                             {isShopping && (
                                 <p className="text-[10px] font-black text-p3-ruby uppercase">
-                                    Picked up at {(item as any).storeName || 'Store'} (¥{(item as any).displayAmount?.toLocaleString()})
+                                    {t('memories.pickedUpAt')} {(item as any).storeName || t('memories.store')} (¥{(item as any).displayAmount?.toLocaleString()})
                                 </p>
                             )}
                             {isJournal && (item as any).displayAmount && (
                                 <p className="text-[10px] font-black text-p3-gold uppercase">
-                                    Cost: ¥{(item as any).displayAmount?.toLocaleString()}
+                                    {t('memories.cost')}: ¥{(item as any).displayAmount?.toLocaleString()}
                                 </p>
                             )}
                         </div>
@@ -226,7 +228,7 @@ const MemoryCard = ({ item, index }: { item: StreamItem, index: number }) => {
                         className="mt-6 w-full py-2 bg-p3-navy/5 border-[0.5px] border-dashed border-p3-navy/20 rounded-xl flex items-center justify-center gap-2 group/btn"
                     >
                         <Sparkles size={12} className="text-p3-navy group-hover/btn:animate-spin" />
-                        <span className="text-[10px] font-black text-p3-navy uppercase tracking-wider">Add foodie memory for this?</span>
+                        <span className="text-[10px] font-black text-p3-navy uppercase tracking-wider">{t('memories.addFoodie')}</span>
                     </motion.button>
                 )}
             </motion.div>
