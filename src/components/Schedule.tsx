@@ -13,7 +13,7 @@ import { useNetworkStatus } from '../hooks/useNetworkStatus';
 import { useTranslation } from '../hooks/useTranslation';
 import { triggerHaptic } from '../utils/haptics';
 import { ARCompass } from './ui/ARCompass';
-import { SpatialMapHeader } from './SpatialHeader';
+// 移除 SpatialMapHeader
 
 // 移除受限制的前端 API Key 引進
 // const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY || "";
@@ -1221,76 +1221,96 @@ export const Schedule: FC<{ externalDateIdx?: number }> = ({ externalDateIdx = 0
     <div className="flex flex-col h-full relative text-p3-navy">
 
       {/* ═ 固定頭部：天氣 + 地圖 + 操作按鈕 ═ */}
-      <div className="sticky top-0 z-50 bg-[#F4F5F7]/95 backdrop-blur-md shadow-sm border-b border-gray-200/50 pb-2">
 
-        {/* 1. 天氣模組 */}
-        <div className="px-4 pt-3 pb-1">
-          <div onClick={() => setShowFullWeather(true)} className="bg-white border-[0.5px] border-gray-200 shadow-sm rounded-[18px] p-3 flex items-center justify-between cursor-pointer active:scale-[0.98] transition-all">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 flex items-center justify-center bg-blue-50 text-xl rounded-xl border border-blue-100">{weatherInfo.e}</div>
-              <div>
-                <div className="text-xs font-black text-p3-navy">{weatherInfo.t}</div>
-                <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Tap for forecast</div>
-              </div>
+      {/* 🚀 置頂固定控制台 (大天氣卡片 + 操作按鈕) */}
+      <div className="sticky top-0 z-50 bg-[#F4F5F7]/95 backdrop-blur-2xl pt-2 pb-4 -mx-6 px-6 shadow-sm border-b border-gray-200/50 space-y-4">
+
+        {/* 🌤️ 強化擴大的天氣模板 */}
+        <div onClick={() => setShowFullWeather(true)} className="w-full bg-gradient-to-br from-white to-blue-50/60 border-[0.5px] border-blue-200/50 shadow-glass-soft rounded-[32px] p-5 cursor-pointer active:scale-95 transition-all flex justify-between items-center relative overflow-hidden group">
+          {/* 背景裝飾浮水印 */}
+          <div className="absolute -right-4 -top-6 text-8xl opacity-[0.03] group-hover:scale-110 transition-transform pointer-events-none">
+            {weatherInfo.e}
+          </div>
+
+          <div className="flex items-center gap-5 relative z-10">
+            {/* 大尺寸天氣 Emoji 區塊 */}
+            <div className="w-16 h-16 bg-white rounded-2xl shadow-sm border-[0.5px] border-blue-100 flex items-center justify-center text-4xl shrink-0">
+              {weatherInfo.e}
             </div>
-            <div className="flex items-center gap-3">
-              <div className="text-center">
-                <div className="text-xl font-black text-p3-navy leading-none">{currentTempStr}°</div>
-                <div className="text-[9px] font-bold text-gray-400 mt-0.5">
-                  <span className="text-p3-ruby">H:{todayWeather.max}°</span>{' '}
-                  <span className="text-p3-navy">L:{todayWeather.min}°</span>
+
+            {/* 核心溫度與城市資訊 */}
+            <div className="flex flex-col justify-center">
+              <span className="text-[10px] font-black text-blue-400 tracking-widest uppercase mb-1">
+                {todayWeather.cityName}
+              </span>
+              <div className="flex items-baseline gap-2">
+                <span className="text-5xl font-black text-p3-navy leading-none tracking-tighter">
+                  {currentTempStr}°
+                </span>
+                <div className="flex flex-col text-[10px] font-bold pb-1 border-l border-blue-200/50 pl-2">
+                  <span className="text-p3-ruby">H: {todayWeather.max}°</span>
+                  <span className="text-p3-navy">L: {todayWeather.min}°</span>
                 </div>
               </div>
-              <div className="h-7 w-px bg-gray-200" />
-              <div className="flex flex-col items-center min-w-[28px]">
-                <CloudRain size={13} className="text-splat-blue mb-0.5" />
-                <span className="text-[10px] font-black text-splat-blue">{todayWeather.rain}%</span>
-              </div>
+            </div>
+          </div>
+
+          {/* 右側附加氣象資訊 (降雨 & 風速) */}
+          <div className="flex flex-col items-end gap-2 relative z-10 shrink-0">
+            <div className="bg-white px-3 py-1.5 rounded-full border-[0.5px] border-blue-100 shadow-sm flex items-center gap-1.5">
+              <CloudRain size={12} className="text-splat-blue" strokeWidth={3} />
+              <span className="text-[11px] font-black text-splat-blue">{todayWeather.rain}%</span>
+            </div>
+            <div className="bg-white px-3 py-1.5 rounded-full border-[0.5px] border-gray-200 shadow-sm flex items-center gap-1.5">
+              <Wind size={12} className="text-gray-400" strokeWidth={3} />
+              <span className="text-[11px] font-black text-gray-500">{todayWeather.wind}</span>
             </div>
           </div>
         </div>
 
-        {/* 2. 3D 地圖模組 */}
-        <div className="px-4 py-1">
-          <div className="h-28 rounded-[18px] overflow-hidden border-[0.5px] border-black/10 shadow-sm relative">
-            <SpatialMapHeader trip={trip!} activeItem={computedActiveItem} t={t} enable3DMap={uiSettings.enable3DMap} />
-            <div className="absolute bottom-2 right-2 bg-black/60 backdrop-blur-sm text-white text-[9px] px-2.5 py-1 rounded-full font-black tracking-widest pointer-events-none z-10 flex items-center gap-1">
-              <MapPin size={9} className="text-p3-gold" />
-              {(computedActiveItem as any)?.title || trip?.dest}
-            </div>
-          </div>
-        </div>
-
-        {/* 3. 操作按鈕列 */}
-        <div className="flex justify-end items-center px-4 pt-1 gap-2">
-          <motion.button whileTap={{ scale: 0.95 }} onClick={() => setViewMode(viewMode === 'list' ? 'map' : 'list')} className={`w-10 h-10 rounded-2xl flex items-center justify-center border border-gray-200 shadow-sm transition-all ${viewMode === 'map' ? 'bg-splat-blue text-white border-splat-blue' : 'bg-white text-p3-navy'}`}>
-            {viewMode === 'list' ? <MapIcon size={16} /> : <Camera size={16} />}
-          </motion.button>
-          <motion.button whileTap={{ scale: 0.95 }} onClick={() => setIsEditMode(!isEditMode)} className={`w-10 h-10 rounded-2xl flex items-center justify-center border border-gray-200 shadow-sm transition-all ${isEditMode ? 'bg-splat-yellow text-p3-navy border-splat-yellow' : 'bg-white text-gray-400'}`}>
-            <Edit3 size={16} />
-          </motion.button>
-          <div className="relative">
-            <motion.button whileTap={{ scale: 0.95 }} onClick={() => setShowAddMenu(!showAddMenu)} className={`w-10 h-10 rounded-2xl flex items-center justify-center shadow-sm transition-all duration-300 ${showAddMenu ? 'bg-p3-ruby text-white rotate-[135deg]' : 'bg-p3-navy text-white'}`}>
-              <Plus size={16} strokeWidth={2.5} />
+        {/* 🛠️ 操作按鈕列 (保留原本功能，優化排版) */}
+        <div className="flex items-center justify-between px-2">
+          <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
+            {dayItems.length} {t('schedule.ai.spots')}
+          </span>
+          <div className="flex gap-2">
+            <motion.button whileTap={{ scale: 0.95, transition: { type: 'spring', stiffness: 500, damping: 20 } }} onClick={() => setViewMode(viewMode === 'list' ? 'map' : 'list')} className={`w-10 h-10 rounded-2xl flex items-center justify-center border-[1px] border-p3-navy/10 ${viewMode === 'map' ? 'bg-splat-blue text-white' : 'bg-white text-p3-navy shadow-xl shadow-black/5'}`}>
+              {viewMode === 'list' ? <MapIcon size={18} /> : <Camera size={18} />}
             </motion.button>
-            <AnimatePresence>
-              {showAddMenu && (
-                <motion.div initial={{ opacity: 0, scale: 0.8, y: 8 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.8, y: 8 }} className="absolute top-12 right-0 w-48 bg-white/95 backdrop-blur-md border border-gray-200 rounded-[22px] shadow-2xl p-2 z-[60] flex flex-col gap-1">
-                  <button onClick={() => { setEditingItem(undefined); setIsEditorOpen(true); setShowAddMenu(false); }} className="flex items-center gap-3 p-3 hover:bg-gray-50 rounded-xl text-left text-sm font-black text-p3-navy">
-                    <div className="w-7 h-7 rounded-lg bg-p3-gold/15 flex items-center justify-center text-p3-gold shrink-0"><MapPin size={14} strokeWidth={3} /></div>
-                    📍 新增景點
-                  </button>
-                  <button onClick={() => { showToast("BookingEditor 下一階段對接... ✈️", "info"); setShowAddMenu(false); }} className="flex items-center gap-3 p-3 hover:bg-gray-50 rounded-xl text-left text-sm font-black text-p3-navy">
-                    <div className="w-7 h-7 rounded-lg bg-p3-navy/10 flex items-center justify-center text-p3-navy shrink-0"><Plane size={14} strokeWidth={3} /></div>
-                    ✈️ 新增航班/飯店
-                  </button>
-                  <button onClick={() => { showToast("PackingListModal 開發中... 🧳", "info"); setShowAddMenu(false); }} className="flex items-center gap-3 p-3 hover:bg-gray-50 rounded-xl text-left text-sm font-black text-p3-navy">
-                    <div className="w-7 h-7 rounded-lg bg-p3-ruby/10 flex items-center justify-center text-p3-ruby shrink-0"><Luggage size={14} strokeWidth={3} /></div>
-                    🧳 行李清單
-                  </button>
-                </motion.div>
-              )}
-            </AnimatePresence>
+            <motion.button whileTap={{ scale: 0.95, transition: { type: 'spring', stiffness: 500, damping: 20 } }} onClick={() => setIsEditMode(!isEditMode)} className={`w-10 h-10 rounded-2xl flex items-center justify-center border-[1px] border-p3-navy/10 ${isEditMode ? 'bg-splat-yellow text-p3-navy' : 'bg-white text-gray-400 shadow-xl shadow-black/5'}`}>
+              <Edit3 size={18} />
+            </motion.button>
+
+            <div className="relative">
+              <motion.button
+                whileTap={{ scale: 0.95 }}
+                onClick={() => setShowAddMenu(!showAddMenu)}
+                className={`w-12 h-12 rounded-2xl flex items-center justify-center shadow-xl transition-all duration-300 ${showAddMenu ? 'bg-p3-ruby text-white rotate-[135deg]' : 'bg-p3-navy text-white shadow-p3-navy/20'}`}
+              >
+                <Plus size={18} strokeWidth={2.5} />
+              </motion.button>
+
+              <AnimatePresence>
+                {showAddMenu && (
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.8, y: 10 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.8, y: 10 }}
+                    className="absolute top-14 right-0 w-48 bg-white/90 backdrop-blur-md border-[0.5px] border-p3-navy rounded-[24px] shadow-glass-deep p-2 z-[60] flex flex-col gap-1"
+                  >
+                    <button onClick={() => { setEditingItem(undefined); setIsEditorOpen(true); setShowAddMenu(false); }} className="flex items-center gap-3 p-3 hover:bg-p3-navy/5 rounded-xl transition-colors text-left text-sm font-black text-p3-navy">
+                      <div className="w-8 h-8 rounded-lg bg-p3-gold/10 flex items-center justify-center text-p3-gold shrink-0"><MapPin size={16} strokeWidth={3} /></div>📍 新增行程景點
+                    </button>
+                    <button onClick={() => { showToast("BookingEditor 下一階段對接... ✈️", "info"); setShowAddMenu(false); }} className="flex items-center gap-3 p-3 hover:bg-p3-navy/5 rounded-xl transition-colors text-left text-sm font-black text-p3-navy">
+                      <div className="w-8 h-8 rounded-lg bg-p3-navy/10 flex items-center justify-center text-p3-navy shrink-0"><Plane size={16} strokeWidth={3} /></div>✈️ 新增航班/飯店
+                    </button>
+                    <button onClick={() => { showToast("PackingListModal 開發中... 🧳", "info"); setShowAddMenu(false); }} className="flex items-center gap-3 p-3 hover:bg-p3-navy/5 rounded-xl transition-colors text-left text-sm font-black text-p3-navy">
+                      <div className="w-8 h-8 rounded-lg bg-p3-ruby/10 flex items-center justify-center text-p3-ruby shrink-0"><Luggage size={16} strokeWidth={3} /></div>🧳 行李清單
+                    </button>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
           </div>
         </div>
       </div>
