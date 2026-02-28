@@ -454,6 +454,65 @@ export default async function handler(req) {
         break;
       }
 
+      // 🤖 Agentic AI 全能管家：結構化行程解析
+      case 'analyze-itinerary': {
+        const { result: aiResult, modelUsed } = await callAiWithFallback({
+          schema: z.object({
+            schedules: z.array(z.object({
+              title: z.string(),
+              date: z.string().describe('YYYY-MM-DD'),
+              startTime: z.string().describe('HH:mm'),
+              type: z.enum(['attraction', 'transit', 'hotel', 'food', 'other']),
+              location: z.string().optional(),
+              note: z.string().optional()
+            })).optional().default([]),
+            bookings: z.array(z.object({
+              title: z.string(),
+              type: z.enum(['flight', 'hotel', 'spot', 'voucher']),
+              provider: z.string().optional(),
+              bookingRef: z.string().optional(),
+              date: z.string().describe('YYYY-MM-DD'),
+              endDate: z.string().optional(),
+              note: z.string().optional()
+            })).optional().default([]),
+            shoppingList: z.array(z.object({
+              itemName: z.string(),
+              quantity: z.number().default(1),
+              category: z.string().optional(),
+              note: z.string().optional()
+            })).optional().default([]),
+            journals: z.array(z.object({
+              title: z.string(),
+              type: z.enum(['food', 'experience', 'other']),
+              content: z.string(),
+              location: z.string().optional()
+            })).optional().default([]),
+            summary: z.string().describe('用繁體中文簡述解析結果')
+          }),
+          prompt: `你是一位專業的旅遊管家 AI。請將以下使用者貼上的文字嚴格拆解為結構化 JSON。
+
+使用者文字：
+---
+${payload.text}
+---
+
+行程基準日期：${payload.startDate || '未指定'}（若文字中沒有明確日期，請以此日期為起點自行推算）
+
+規則：
+1. 機票、飯店確認信 → bookings
+2. 想去的景點、餐廳 → schedules（餐廳 type 為 food）
+3. 想買的商品 → shoppingList
+4. 美食筆記、餐廳評價 → journals（AI 預先擴寫精彩期待評論）
+5. 時間格式固定為 HH:mm（24 小時制）
+6. 日期格式固定為 YYYY-MM-DD
+7. 全部使用繁體中文回答`
+        }, google, true);
+
+        _modelUsed = modelUsed;
+        finalObject = aiResult;
+        break;
+      }
+
       default:
         return jsonResponse({ error: `Invalid action: ${action}` }, 400);
     }

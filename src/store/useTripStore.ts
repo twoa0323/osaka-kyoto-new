@@ -165,6 +165,9 @@ interface TripState {
   deletePackingItem: (tid: string, iid: string) => void;
   clearPackingList: (tid: string) => void;
 
+  // 🤖 Agentic AI 全能管家：批量匯入
+  applyAiImport: (tripId: string, aiData: any) => void;
+
   uiSettings: {
     showSplash: boolean;    // 潑墨特效開關
     enableHaptics: boolean; // 觸覺回饋開關
@@ -572,6 +575,81 @@ export const useTripStore = create<TripState>()(
           trips: s.trips.map(t => t.id === tid ? { ...t, packingList: [] } : t)
         }));
         ids.forEach(id => deleteItemFromCloud(tid, "packing", id));
+      },
+
+      // 🤖 Agentic AI 全能管家：批量匯入 AI 解析結果
+      applyAiImport: (tripId, aiData) => {
+        if (!aiData) return;
+        const uid = () => `ai-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
+
+        set(s => ({
+          trips: s.trips.map(t => {
+            if (t.id !== tripId) return t;
+            const updated = { ...t };
+
+            // 1. Schedules → items
+            if (aiData.schedules?.length) {
+              const newItems = aiData.schedules.map((s: any) => ({
+                id: uid(),
+                title: s.title || '未命名行程',
+                date: s.date || t.startDate,
+                time: s.startTime || '09:00',
+                type: s.type || 'attraction',
+                location: s.location || '',
+                cost: 0,
+                note: s.note || '',
+                category: s.type === 'food' ? 'food' : 'attraction',
+              }));
+              updated.items = [...(t.items || []), ...newItems];
+            }
+
+            // 2. Bookings → bookings
+            if (aiData.bookings?.length) {
+              const newBookings = aiData.bookings.map((b: any) => ({
+                id: uid(),
+                title: b.title || '未命名預訂',
+                type: b.type || 'spot',
+                provider: b.provider || '',
+                bookingRef: b.bookingRef || '',
+                date: b.date || t.startDate,
+                endDate: b.endDate || '',
+                note: b.note || '',
+                status: 'confirmed' as const,
+              }));
+              updated.bookings = [...(t.bookings || []), ...newBookings];
+            }
+
+            // 3. ShoppingList → shoppingList
+            if (aiData.shoppingList?.length) {
+              const newShopping = aiData.shoppingList.map((s: any) => ({
+                id: uid(),
+                title: s.itemName || '未命名商品',
+                quantity: s.quantity || 1,
+                category: s.category || '其他',
+                note: s.note || '',
+                isBought: false,
+                currency: t.baseCurrency || 'JPY',
+              }));
+              updated.shoppingList = [...(t.shoppingList || []), ...newShopping];
+            }
+
+            // 4. Journals → journals
+            if (aiData.journals?.length) {
+              const newJournals = aiData.journals.map((j: any) => ({
+                id: uid(),
+                title: j.title || '未命名日誌',
+                type: j.type || 'food',
+                content: j.content || '',
+                location: j.location || '',
+                date: t.startDate,
+                mood: '🍽️',
+              }));
+              updated.journals = [...(t.journals || []), ...newJournals];
+            }
+
+            return updated;
+          })
+        }));
       },
     }),
     {

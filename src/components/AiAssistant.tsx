@@ -21,7 +21,8 @@ export const AiAssistant: FC = () => {
     const {
         isAiModalOpen, setAiModalOpen, aiContext, activeTab,
         trips, currentTripId, addScheduleItem, updateTripData,
-        addExpenseItem, exchangeRate, addPackingItem, showToast, setAiMetadata
+        addExpenseItem, exchangeRate, addPackingItem, showToast, setAiMetadata,
+        applyAiImport
     } = useTripStore();
     const trip = trips.find(t => t.id === currentTripId);
 
@@ -33,6 +34,10 @@ export const AiAssistant: FC = () => {
 
     const [loadingStage, setLoadingStage] = useState(0);
     const LOADING_TEXTS = ["正在噴灑墨水...", "正在詢問當地大師...", "規劃最佳塗地路徑..."];
+
+    // 🤖 AI 模式標籤狀態
+    const [aiMode, setAiMode] = useState<'chat' | 'import'>('chat');
+    const [importResult, setImportResult] = useState<string | null>(null);
 
     // [Task 2] AI 串流生成 (useObject)
     const { object: transportObj, submit: submitTransport, isLoading: isStreamingTransport } = useObject({
@@ -395,16 +400,47 @@ export const AiAssistant: FC = () => {
                         {currentContext === 'schedule' && (
                             <motion.div key="sched" initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -10 }} className="space-y-4">
                                 <div className="bg-gray-50 border-[3px] border-splat-dark rounded-2xl p-4">
-                                    <div className="flex justify-between items-center mb-3 pr-1">
-                                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest pl-1">Magic Import 多模態導入</p>
-                                        <label className="flex items-center gap-1 text-[10px] font-black text-splat-blue cursor-pointer bg-splat-blue/10 px-2 py-1 rounded-lg hover:bg-splat-blue/20 transition-colors">
-                                            {isUploadingImage ? <Loader2 size={12} className="animate-spin" /> : <Camera size={12} strokeWidth={3} />}
-                                            <span>附加截圖</span>
-                                            <input type="file" accept="image/*" className="hidden" onChange={handleAiImageUpload} />
-                                        </label>
+                                    {/* 🤖 AI 模式標籤 Chips */}
+                                    <div className="flex gap-2 mb-3">
+                                        {[
+                                            { id: 'chat' as const, label: '💬 聊天問答', color: 'bg-splat-blue' },
+                                            { id: 'import' as const, label: '✨ 智慧匯入', color: 'bg-splat-yellow' },
+                                        ].map(mode => (
+                                            <button
+                                                key={mode.id}
+                                                onClick={() => { setAiMode(mode.id); setImportResult(null); }}
+                                                className={`flex-1 py-2 rounded-xl text-[11px] font-black uppercase tracking-wider border-2 transition-all ${aiMode === mode.id
+                                                        ? `${mode.color} text-white border-splat-dark shadow-splat-solid-xs`
+                                                        : 'bg-white text-gray-400 border-gray-200'
+                                                    }`}
+                                            >
+                                                {mode.label}
+                                            </button>
+                                        ))}
                                     </div>
 
-                                    {aiImages.length > 0 && (
+                                    {/* 匯入成功結果顯示 */}
+                                    {importResult && (
+                                        <div className="bg-splat-green/10 border-2 border-splat-green rounded-xl p-3 mb-3">
+                                            <p className="text-[11px] font-black text-splat-green uppercase italic mb-1">🎉 魔法完成！</p>
+                                            <p className="text-[10px] font-bold text-gray-600 leading-relaxed">{importResult}</p>
+                                        </div>
+                                    )}
+
+                                    <div className="flex justify-between items-center mb-3 pr-1">
+                                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest pl-1">
+                                            {aiMode === 'import' ? 'Agentic Import 全能管家' : 'Magic Import 多模態導入'}
+                                        </p>
+                                        {aiMode === 'chat' && (
+                                            <label className="flex items-center gap-1 text-[10px] font-black text-splat-blue cursor-pointer bg-splat-blue/10 px-2 py-1 rounded-lg hover:bg-splat-blue/20 transition-colors">
+                                                {isUploadingImage ? <Loader2 size={12} className="animate-spin" /> : <Camera size={12} strokeWidth={3} />}
+                                                <span>附加截圖</span>
+                                                <input type="file" accept="image/*" className="hidden" onChange={handleAiImageUpload} />
+                                            </label>
+                                        )}
+                                    </div>
+
+                                    {aiMode === 'chat' && aiImages.length > 0 && (
                                         <div className="flex gap-2 mb-3 overflow-x-auto hide-scrollbar">
                                             {aiImages.map((img, idx) => (
                                                 <div key={idx} className="relative w-16 h-16 shrink-0 rounded-xl border-2 border-splat-dark overflow-hidden shadow-sm">
@@ -418,17 +454,66 @@ export const AiAssistant: FC = () => {
                                     )}
 
                                     <textarea
-                                        placeholder={aiImages.length > 0 ? "請描述圖片內容或附加更多行程細節..." : "貼上你的行程備忘錄或上傳飯店截圖..."}
+                                        placeholder={aiMode === 'import'
+                                            ? '請貼上機票確認信、飯店預訂、想去的景點或購物清單...\n\nAI 管家將自動分類匯入對應模組'
+                                            : aiImages.length > 0 ? '請描述圖片內容或附加更多行程細節...' : '貼上你的行程備忘錄或上傳飯店截圖...'}
                                         className="w-full h-24 bg-white border-[2px] border-gray-300 rounded-xl p-3 font-bold text-splat-dark outline-none focus:border-splat-blue resize-none shadow-inner text-sm"
                                         value={aiText}
                                         onChange={e => setAiText(e.target.value)}
                                     />
                                     <button
-                                        onClick={handleAnalyzeTrip}
-                                        disabled={loadingAction === 'analyze' || (!aiText.trim() && aiImages.length === 0)}
-                                        className="btn-splat w-full py-3 mt-3 bg-splat-yellow text-splat-dark text-sm flex items-center justify-center gap-2 disabled:opacity-50 disabled:active:translate-y-0"
+                                        onClick={async () => {
+                                            if (aiMode === 'import') {
+                                                // ✨ 智慧匯入模式
+                                                if (!aiText.trim()) return;
+                                                setLoadingAction('import');
+                                                setImportResult(null);
+                                                try {
+                                                    const res = await fetch('/api/ai', {
+                                                        method: 'POST',
+                                                        headers: { 'Content-Type': 'application/json' },
+                                                        body: JSON.stringify({
+                                                            action: 'analyze-itinerary',
+                                                            payload: { text: aiText, startDate: trip.startDate }
+                                                        })
+                                                    });
+                                                    if (!res.ok) throw new Error('解析失敗');
+                                                    trackAiMeta(res);
+                                                    const result = await res.json();
+                                                    applyAiImport(trip.id, result);
+
+                                                    // 計算匯入數量
+                                                    const counts = [
+                                                        result.schedules?.length && `${result.schedules.length} 筆行程`,
+                                                        result.bookings?.length && `${result.bookings.length} 筆預訂`,
+                                                        result.shoppingList?.length && `${result.shoppingList.length} 項購物`,
+                                                        result.journals?.length && `${result.journals.length} 篇日誌`,
+                                                    ].filter(Boolean).join('、');
+
+                                                    setImportResult(
+                                                        `${result.summary || '已成功匯入行程與預訂'}\n\n📊 匯入統計：${counts || '無資料匯入'}。請至對應分頁查看！`
+                                                    );
+                                                    setAiText('');
+                                                    setAiMode('chat');
+                                                    triggerHaptic('success');
+                                                    showToast('🎉 魔法完成！已為您匯入所有資料！', 'success');
+                                                } catch (e) {
+                                                    showToast('解析失敗，請重試 🥲', 'error');
+                                                } finally {
+                                                    setLoadingAction(null);
+                                                }
+                                            } else {
+                                                // 💬 聊天模式 — 走原本邏輯
+                                                handleAnalyzeTrip();
+                                            }
+                                        }}
+                                        disabled={(loadingAction === 'analyze' || loadingAction === 'import') || (!aiText.trim() && aiImages.length === 0)}
+                                        className={`btn-splat w-full py-3 mt-3 text-sm flex items-center justify-center gap-2 disabled:opacity-50 disabled:active:translate-y-0 ${aiMode === 'import' ? 'bg-splat-yellow text-splat-dark' : 'bg-splat-yellow text-splat-dark'
+                                            }`}
                                     >
-                                        {loadingAction === 'analyze' ? <><Loader2 className="animate-spin" size={18} /> {LOADING_TEXTS[loadingStage]}</> : "開始魔法解析 ➔"}
+                                        {(loadingAction === 'analyze' || loadingAction === 'import')
+                                            ? <><Loader2 className="animate-spin" size={18} /> {aiMode === 'import' ? '✨ 正在為您拆解並安排行程...' : LOADING_TEXTS[loadingStage]}</>
+                                            : aiMode === 'import' ? '✨ 全能管家解析 ➔' : '開始魔法解析 ➔'}
                                     </button>
                                 </div>
 
