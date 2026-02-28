@@ -68,7 +68,7 @@ export const Memories = () => {
             if (dateA !== dateB) return dateB - dateA;
             return (b.updatedAt || 0) - (a.updatedAt || 0);
         });
-    }, [trip]);
+    }, [trip?.journals, trip?.items, trip?.expenses, trip?.startDate]);
 
     if (!trip) return null;
 

@@ -288,10 +288,7 @@ export const Expense = () => {
     } else if (trip?.baseCurrency === 'TWD') { setExchangeRate(1); }
   }, [globalActiveTab, trip?.id, trip?.baseCurrency, setExchangeRate]);
 
-  if (!trip) return null;
-
-  // Fix 13: useMemo 包裹所有 O(n) 統計計算，避免每次 re-render 都重跑
-  const expenses = trip.expenses || [];
+  const expenses = trip?.expenses || [];
 
   const { totalTwd, totalForeign, dailyData, pieData, methodData, grouped } = useMemo(() => {
     const exps = trip.expenses || [];
@@ -331,7 +328,9 @@ export const Expense = () => {
     }, {} as Record<string, ExpenseItem[]>);
 
     return { totalTwd, totalForeign, dailyData, pieData, methodData, grouped };
-  }, [trip.expenses, exchangeRate, trip.baseCurrency]);
+  }, [trip?.expenses, exchangeRate, trip?.baseCurrency]);
+
+  if (!trip) return null;
 
   const budget = trip.budget || 0;
   const percent = budget ? Math.min(100, Math.round((totalTwd / budget) * 100)) : 0;

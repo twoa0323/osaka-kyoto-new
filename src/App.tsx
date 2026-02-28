@@ -7,7 +7,7 @@ import {
   Plus, ChevronDown, Trash2, Calendar, CreditCard, Wallet as WalletIcon,
   Utensils, ShoppingBag, Info as InfoIcon, Lock, User,
   Camera, X, Edit3, RefreshCcw, Settings as SettingsIcon,
-  ToggleLeft, ToggleRight, Luggage, PenTool, Sparkles as SparklesIcon, Loader2, MapPinOff, Activity, LineChart, Cpu, Zap, Fingerprint, Bell, Cloud
+  ToggleLeft, ToggleRight, Luggage, PenTool, Sparkles as SparklesIcon, Loader2, MapPinOff, Activity, LineChart, Cpu, Zap, Fingerprint, Bell, Cloud, History, Languages
 } from 'lucide-react';
 import { format, addDays, differenceInDays, parseISO } from 'date-fns';
 import { compressImage, uploadImage } from './utils/imageUtils';
@@ -159,21 +159,29 @@ const UISettingsContainer = memo(({
           </div>
         </div>
 
-        {/* --- 🌐 系統語言 (System Language) --- */}
-        <div className="bg-white/40 backdrop-blur-md rounded-[32px] p-6 shadow-glass-soft border-[0.5px] border-white/40 flex justify-between items-center">
-          <div>
-            <h4 className="font-black text-p3-navy">{t('settings.language')}</h4>
-            <p className="text-xs text-gray-400 font-medium">Auto-translation</p>
+        {/* --- 🌍 Language Selection (Premium Buttons) --- */}
+        <div className="space-y-4">
+          <p className="boutique-tag text-p3-navy/30 flex items-center gap-2">
+            <Languages size={14} /> {t('settings.language')}
+          </p>
+          <div className="grid grid-cols-3 gap-3">
+            {[
+              { id: 'zh-TW', label: '繁體中文' },
+              { id: 'en', label: 'English' },
+              { id: 'ja', label: '日本語' }
+            ].map(lang => (
+              <button
+                key={lang.id}
+                onClick={() => setUISettings({ ...uiSettings, language: lang.id })}
+                className={`py-3 rounded-2xl text-[10px] font-black transition-all border-[0.5px] ${uiSettings.language === lang.id
+                    ? 'bg-p3-navy text-white border-p3-navy shadow-glass-deep'
+                    : 'bg-white/40 text-p3-navy border-black/10'
+                  }`}
+              >
+                {lang.label}
+              </button>
+            ))}
           </div>
-          <select
-            value={uiSettings.language || 'zh-TW'}
-            onChange={e => setUISettings({ language: e.target.value as any })}
-            className="bg-white/60 backdrop-blur-md border border-white/50 rounded-xl p-2.5 px-4 text-sm font-black text-p3-navy outline-none shadow-sm cursor-pointer"
-          >
-            <option value="zh-TW">繁體中文</option>
-            <option value="en">English</option>
-            <option value="ja">日本語</option>
-          </select>
         </div>
 
         {/* --- 🎨 Visual Vibe (2x2 Grid) --- */}
@@ -641,25 +649,19 @@ const App: FC = () => {
 
       {/* 🧭 Bottom Navigation — 5 Unified Modules */}
       <LayoutGroup>
-        <nav className="fixed bottom-6 left-1/2 -translate-x-1/2 w-[92%] max-w-sm glass-card px-4 py-4 flex justify-between items-center z-50 shadow-glass-deep border-[0.5px] border-white/40 rounded-[32px]">
+        <nav className="fixed bottom-6 left-1/2 -translate-x-1/2 w-[95%] max-w-md glass-card px-2 py-4 flex justify-around items-center z-50 shadow-glass-deep border-[0.5px] border-white/40 rounded-[32px]">
           <NavIcon icon={<Calendar />} label={t('nav.timeline')} id="timeline" active={activeTab} onClick={handleTabChange} color="text-p3-navy" />
           <NavIcon icon={<Lock />} label={t('nav.vault')} id="vault" active={activeTab} onClick={handleTabChange} color="text-p3-ruby" />
-
-          {/* 🤖 Magic Assistant 置中浮動按鈕 */}
-          <div className="flex-1 flex justify-center -translate-y-5">
-            <motion.button
-              whileTap={{ scale: 0.9, y: 2 }}
-              whileHover={{ scale: 1.05 }}
-              onClick={() => openAiAssistant()}
-              className="w-16 h-16 rounded-full flex items-center justify-center bg-white/90 backdrop-blur-2xl border-[0.5px] border-white/50 shadow-glass-deep relative"
-            >
-              <div className="absolute inset-0 bg-p3-ruby opacity-10 blur-xl rounded-full pointer-events-none" />
-              <SparklesIcon size={28} strokeWidth={2.5} className="text-p3-ruby drop-shadow-[0_0_10px_var(--p3-ruby-fallback)]" />
-            </motion.button>
-          </div>
-
           <NavIcon icon={<WalletIcon />} label={t('nav.wallet')} id="wallet" active={activeTab} onClick={handleTabChange} color="text-p3-gold" />
-          <NavIcon icon={<Camera />} label={t('nav.memories')} id="memories" active={activeTab} onClick={handleTabChange} color="text-p3-green" />
+          <NavIcon icon={<History />} label={t('nav.memories')} id="memories" active={activeTab} onClick={handleTabChange} color="text-p3-green" />
+          <NavIcon
+            icon={<SparklesIcon />}
+            label={t('nav.ai')}
+            id="ai"
+            active={isAiModalOpen ? 'ai' : activeTab}
+            onClick={() => openAiAssistant()}
+            color="text-p3-ruby"
+          />
         </nav>
       </LayoutGroup>
 

@@ -43,9 +43,7 @@ export const Info = () => {
     category: 'Other', priority: false
   });
 
-  if (!trip) return null;
-
-  const list = trip.infoItems || [];
+  const list = trip?.infoItems || [];
 
   const filteredList = useMemo(() => {
     return list.filter(i => {
@@ -81,6 +79,7 @@ export const Info = () => {
       return;
     }
     if (editingItemId) {
+      if (!trip) return;
       updateInfoItem(trip.id, editingItemId, form);
       if (viewingItem && viewingItem.id === editingItemId) {
         setViewingItem({ ...viewingItem, ...form } as InfoItem);
@@ -96,7 +95,7 @@ export const Info = () => {
         category: form.category as any || 'Other',
         priority: form.priority || false
       };
-      addInfoItem(trip.id, newItem);
+      if (trip) addInfoItem(trip.id, newItem);
     }
     setIsAdding(false);
     setEditingItemId(null);
@@ -163,14 +162,14 @@ export const Info = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           action: 'cultural-taboos',
-          payload: { dest: trip.destination }
+          payload: { dest: trip?.destination || '' }
         })
       });
       const data = await res.json();
       if (data && data.taboos) {
         // Auto save the generated content into this item
         const newContent = `${item.content}\n\n✨ AI 避坑指南：\n${data.taboos.map((t: string) => `• ${t}`).join('\n')}`;
-        updateInfoItem(trip.id, item.id, { content: newContent });
+        if (trip) updateInfoItem(trip.id, item.id, { content: newContent });
         setViewingItem({ ...item, content: newContent });
         showToast("✨ 當地生存法則已載入！", "success");
       }
@@ -181,6 +180,8 @@ export const Info = () => {
     }
   };
 
+
+  if (!trip) return null;
 
   return (
     <div className="px-4 pb-32 animate-fade-in text-left font-sans">

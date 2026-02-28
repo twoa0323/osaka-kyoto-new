@@ -86,7 +86,7 @@ export const Wallet = () => {
         if (!trip) return;
         const wishItem = {
             id: Date.now().toString(), title: form.storeName || '想吃', location: form.location || '',
-            date: form.date || '', category: 'dining' as any, images: form.images || []
+            date: form.date || '', category: 'dining' as any, images: form.images || [], time: '12:00', note: '', cost: 0
         };
         updateTripData(trip.id, { items: [...(trip.items || []), wishItem] });
     };

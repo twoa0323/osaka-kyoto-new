@@ -10,6 +10,7 @@ export const dictionaries: Record<AppLanguage, Dictionary> = {
         'nav.vault': '寶庫',
         'nav.wallet': '錢包',
         'nav.memories': '回憶',
+        'nav.ai': 'AI 助手',
 
         // Settings
         'settings.controlHq': '控制中心',
@@ -320,6 +321,7 @@ export const dictionaries: Record<AppLanguage, Dictionary> = {
         'nav.vault': 'Vault',
         'nav.wallet': 'Wallet',
         'nav.memories': 'Memories',
+        'nav.ai': 'Magic Assistant',
 
         // Settings
         'settings.controlHq': 'Control HQ',
@@ -629,7 +631,8 @@ export const dictionaries: Record<AppLanguage, Dictionary> = {
         'nav.timeline': 'タイムライン',
         'nav.vault': '宝庫',
         'nav.wallet': 'ウォレット',
-        'nav.memories': '思い出',
+        'nav.memories': '記録',
+        'nav.ai': 'AI アシスタント',
 
         // Settings
         'settings.controlHq': 'コントロール',
