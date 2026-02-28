@@ -342,47 +342,74 @@ export const Vault = () => {
                                         )}
                                     </div>
 
-                                    <div className="flex gap-4">
-                                        {isEditing ? (
+                                    {/* 🔗 App URL / Deep Link Field */}
+                                    {isEditing ? (
+                                        <div className="space-y-1.5 mt-4">
+                                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest pl-1">連結 (Klook/KKday/Trip.com App URL)</label>
+                                            <input
+                                                value={form.url || ''}
+                                                onChange={e => setForm({ ...form, url: e.target.value })}
+                                                placeholder="貼上訂單網址 (e.g. https://www.klook.com/...)"
+                                                className="w-full bg-gray-50 border-[0.5px] border-p3-navy rounded-xl p-3 text-sm font-bold outline-none focus:bg-white transition-colors"
+                                            />
+                                        </div>
+                                    ) : (
+                                        selectedDoc.url && (
+                                            <button
+                                                onClick={() => { window.open(selectedDoc.url, '_blank'); triggerHaptic('success'); }}
+                                                className="w-full py-4 bg-gradient-to-r from-splat-blue to-p3-navy text-white rounded-xl shadow-glass-soft flex items-center justify-center gap-2 font-black active:scale-95 transition-all border-[0.5px] border-white/20"
+                                            >
+                                                <ExternalLink size={18} />
+                                                {selectedDoc.url.includes('klook') ? '打開 KLOOK App 查看' :
+                                                    selectedDoc.url.includes('kkday') ? '打開 KKday App 查看' :
+                                                        selectedDoc.url.includes('trip.com') ? '打開 Trip.com 查看' :
+                                                            '開啟外部連結 / App'}
+                                            </button>
+                                        )
+                                    )}
+                                </div>
+
+                                <div className="flex gap-4">
+                                    {isEditing ? (
+                                        <button
+                                            onClick={() => {
+                                                updateInfoItem(trip.id, selectedDoc.id, {
+                                                    ...selectedDoc,
+                                                    title: form.title || selectedDoc.title,
+                                                    content: form.content || '',
+                                                    url: form.url || '',
+                                                    images: form.images || selectedDoc.images
+                                                });
+                                                setSelectedDoc(null);
+                                                setIsEditing(false);
+                                                triggerHaptic('success');
+                                            }}
+                                            className="flex-1 py-4 bg-splat-green text-white rounded-xl shadow-glass-soft flex items-center justify-center gap-2 font-black active:scale-95 transition-all border-[0.5px] border-white/20"
+                                        >
+                                            {t('common.saveConfirm')}
+                                        </button>
+                                    ) : (
+                                        <>
+                                            <button className="flex-1 py-4 bg-p3-navy text-white rounded-xl shadow-glass-soft flex items-center justify-center gap-2 font-black active:scale-95 transition-all border-[0.5px] border-white/20">
+                                                <ExternalLink size={18} /> {t('vault.openFull')}
+                                            </button>
                                             <button
                                                 onClick={() => {
-                                                    updateInfoItem(trip.id, selectedDoc.id, {
-                                                        ...selectedDoc,
-                                                        title: form.title || selectedDoc.title,
-                                                        content: form.content || '',
-                                                        images: form.images || selectedDoc.images
-                                                    });
-                                                    setSelectedDoc(null);
-                                                    setIsEditing(false);
-                                                    triggerHaptic('success');
+                                                    setForm({ ...selectedDoc });
+                                                    setIsEditing(true);
+                                                    triggerHaptic('light');
                                                 }}
-                                                className="flex-1 py-4 bg-splat-green text-white rounded-xl shadow-glass-soft flex items-center justify-center gap-2 font-black active:scale-95 transition-all border-[0.5px] border-white/20"
+                                                className="flex-1 py-4 bg-white/60 backdrop-blur-md text-p3-navy rounded-xl border-[0.5px] border-black/5 flex items-center justify-center gap-2 font-black active:scale-95 transition-all shadow-glass-soft"
                                             >
-                                                {t('common.saveConfirm')}
+                                                <Edit3 size={18} /> {t('common.edit')}
                                             </button>
-                                        ) : (
-                                            <>
-                                                <button className="flex-1 py-4 bg-p3-navy text-white rounded-xl shadow-glass-soft flex items-center justify-center gap-2 font-black active:scale-95 transition-all border-[0.5px] border-white/20">
-                                                    <ExternalLink size={18} /> {t('vault.openFull')}
-                                                </button>
-                                                <button
-                                                    onClick={() => {
-                                                        setForm({ ...selectedDoc });
-                                                        setIsEditing(true);
-                                                        triggerHaptic('light');
-                                                    }}
-                                                    className="flex-1 py-4 bg-white/60 backdrop-blur-md text-p3-navy rounded-xl border-[0.5px] border-black/5 flex items-center justify-center gap-2 font-black active:scale-95 transition-all shadow-glass-soft"
-                                                >
-                                                    <Edit3 size={18} /> {t('common.edit')}
-                                                </button>
-                                            </>
-                                        )}
-                                        {!isEditing && (
-                                            <button onClick={() => { deleteInfoItem(trip.id, selectedDoc.id); setSelectedDoc(null); triggerHaptic('light'); }} className="shrink-0 w-14 h-14 bg-red-50 text-red-500 rounded-xl border-[0.5px] border-red-200 flex items-center justify-center font-black active:scale-95 transition-all shadow-glass-soft">
-                                                <Trash2 size={24} />
-                                            </button>
-                                        )}
-                                    </div>
+                                        </>
+                                    )}
+                                    {!isEditing && (
+                                        <button onClick={() => { deleteInfoItem(trip.id, selectedDoc.id); setSelectedDoc(null); triggerHaptic('light'); }} className="shrink-0 w-14 h-14 bg-red-50 text-red-500 rounded-xl border-[0.5px] border-red-200 flex items-center justify-center font-black active:scale-95 transition-all shadow-glass-soft">
+                                            <Trash2 size={24} />
+                                        </button>
+                                    )}
                                 </div>
                             </div>
                         </div>
@@ -430,6 +457,16 @@ export const Vault = () => {
                                     </div>
 
                                     <div className="space-y-1.5">
+                                        <label className="text-[10px] font-black text-p3-navy/30 uppercase tracking-widest pl-1">連結 (KLOOK/KKday App URL)</label>
+                                        <input
+                                            value={form.url || ''}
+                                            onChange={e => setForm({ ...form, url: e.target.value })}
+                                            placeholder="貼上訂單網址 (e.g. https://www.klook.com/...)"
+                                            className="w-full bg-gray-50 border-[0.5px] border-p3-navy rounded-xl p-4 font-black outline-none focus:bg-white transition-colors"
+                                        />
+                                    </div>
+
+                                    <div className="space-y-1.5">
                                         <label className="text-[10px] font-black text-p3-navy/30 uppercase tracking-widest pl-1">Image / Photo</label>
                                         <div
                                             onClick={() => {
@@ -469,7 +506,7 @@ export const Vault = () => {
                                             content: form.content || '',
                                             images: form.images || [],
                                             type: form.type || 'document',
-                                            url: ''
+                                            url: form.url || ''
                                         });
                                         setIsAdding(false);
                                         triggerHaptic('success');

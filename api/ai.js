@@ -240,7 +240,7 @@ export default async function handler(req) {
               role: 'system', content: `分析圖片/文字並嚴格歸類。旅程：${payload.startDate}至${payload.endDate}。參考日：${payload.date}。
 規則：
 1. 機票/住宿歸類為 bookings。
-2. 凡是涉及「門票、交通憑證、eSIM、展覽 QR Code、保險」的項目，必須獨立歸類到 info (寶庫 Vault) 中，type 設為 ticket 或 qr。
+2. 凡是涉及「門票、交通憑證、eSIM、展覽 QR Code、保險」的項目，必須獨立歸類到 info (寶庫 Vault) 中，type 設為 ticket 或 qr。如果貼文中有 Klook, KKday, Trip.com 等平台的訂單或跳轉連結，請務必放入 url 欄位。
 3. 行程景點歸類為 schedules。
 精確識別金額不含逗號。嚴格遵守 Schema。` },
             { role: 'user', content: magicContent }
@@ -515,7 +515,7 @@ ${payload.text}
 2. 景點、餐廳、交通行動 → schedules（餐廳 type 為 food）
 3. 購物清單 → shoppingList
 4. 美食筆記 → journals
-5. 【重要】通關憑證與身分文件 → info (寶庫 Vault)。請自動判讀文字，若行程包含需要「門票、QR Code、憑證、實體卡、網卡」的項目（例如：eSIM、HARUKA、新幹線車票、環球影城、任天堂博物館、周遊券等），請務必自動在 info 中建立對應的資料，content 欄位可以寫「請在此上傳憑證截圖或條碼」，方便使用者後續極速掃描。
+5. 【重要】通關憑證與身分文件 → info (寶庫 Vault)。請自動判讀文字，若行程包含需要「門票、QR Code、憑證、實體卡、網卡」的項目（例如：eSIM、HARUKA、新幹線車票、環球影城、任天堂博物館、周遊券等），請務必自動在 info 中建立對應的資料，content 欄位可以寫「請在此上傳憑證截圖或條碼」，並且如果文字包含 Klook, KKday, Trip.com 等平台的訂單網址，請務必擷取並放入 url 欄位中，方便使用者一鍵跳轉。
 6. 時間格式固定為 HH:mm，日期格式固定為 YYYY-MM-DD。
 7. 全部使用繁體中文回答。`
         }, google, true);
