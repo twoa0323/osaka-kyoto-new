@@ -397,6 +397,76 @@ export const Wallet = () => {
                 )}
             </AnimatePresence>
 
+            {/* --- Stats Overlay --- */}
+            <AnimatePresence>
+                {activeTab === 'stats' && (
+                    <motion.div
+                        initial={{ y: '100%' }}
+                        animate={{ y: 0 }} exit={{ y: '100%' }}
+                        transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+                        className="fixed inset-0 z-[1100] bg-[#F4F5F7] flex flex-col"
+                    >
+                        <div className="p-6 flex justify-between items-center border-b-[3px] border-p3-navy bg-white">
+                            <h2 className="text-xl font-black italic uppercase tracking-tighter text-p3-navy flex items-center gap-3">
+                                <PieChart size={20} />
+                                {t('wallet.spendAnalytics')}
+                            </h2>
+                            <button onClick={() => setActiveTab('list')} className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-p3-navy"><X size={20} /></button>
+                        </div>
+
+                        <div className="flex-1 overflow-y-auto p-6 space-y-6">
+                            {/* Total */}
+                            <div className="bg-splat-yellow border-[3px] border-p3-navy rounded-[32px] p-6 shadow-glass-deep">
+                                <p className="text-[10px] font-black uppercase tracking-widest text-p3-navy/50 mb-1">{t('wallet.currentExp')}</p>
+                                <h2 className="text-5xl font-black text-p3-navy tracking-tighter">
+                                    NT$ {Math.round(stats.totalTwd).toLocaleString()}
+                                </h2>
+                                <p className="text-sm font-black text-p3-navy/40 mt-2 uppercase">
+                                    {trip.baseCurrency} {Math.round(stats.totalForeign).toLocaleString()} • {expenses.length} {t('wallet.recentTx')}
+                                </p>
+                            </div>
+
+                            {/* Category Breakdown */}
+                            <div className="bg-white border-[0.5px] border-p3-navy rounded-[32px] p-6 shadow-glass-deep-sm space-y-5">
+                                <h3 className="text-[10px] font-black uppercase tracking-widest text-p3-navy/30">{t('wallet.category')} Breakdown</h3>
+                                {stats.pieData.length === 0 ? (
+                                    <p className="text-center text-gray-400 font-black italic py-8">{t('wallet.noTransactions')}</p>
+                                ) : (
+                                    stats.pieData.map(d => {
+                                        const Icon = CATEGORY_ICONS[d.label] || Coins;
+                                        return (
+                                            <div key={d.label} className="space-y-2">
+                                                <div className="flex items-center justify-between">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="w-8 h-8 rounded-xl flex items-center justify-center" style={{ backgroundColor: d.color + '22', color: d.color }}>
+                                                            <Icon size={16} strokeWidth={2.5} />
+                                                        </div>
+                                                        <div>
+                                                            <span className="font-black text-p3-navy text-sm">{d.label}</span>
+                                                            <span className="ml-2 text-[10px] font-black text-gray-400 uppercase">{d.percent}%</span>
+                                                        </div>
+                                                    </div>
+                                                    <span className="font-black text-p3-navy tabular-nums text-sm">NT$ {Math.round(d.value).toLocaleString()}</span>
+                                                </div>
+                                                <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                                                    <motion.div
+                                                        initial={{ width: 0 }}
+                                                        animate={{ width: `${d.percent}%` }}
+                                                        transition={{ duration: 0.6, delay: 0.1 }}
+                                                        className="h-full rounded-full"
+                                                        style={{ backgroundColor: d.color }}
+                                                    />
+                                                </div>
+                                            </div>
+                                        );
+                                    })
+                                )}
+                            </div>
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
             {/* --- Foodie Memory Prompt --- */}
             <AnimatePresence>
                 {showFoodiePrompt && (

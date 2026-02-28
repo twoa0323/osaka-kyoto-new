@@ -151,7 +151,7 @@ export const Vault = () => {
                         <div className="w-12 h-12 rounded-full border-2 border-current flex items-center justify-center">
                             <Plus size={24} strokeWidth={3} />
                         </div>
-                        <span className="text-[10px] font-black uppercase tracking-[0.2em]">{t('vault.addScan')}</span>
+                        <span className="text-[10px] font-black uppercase tracking-[0.2em]">手動新增 / 上傳 (Add)</span>
                     </motion.div>
                 </div>
             </div>
@@ -347,7 +347,7 @@ export const Vault = () => {
                             className="bg-white border-[4px] border-p3-navy rounded-[40px] w-full max-w-sm overflow-hidden flex flex-col shadow-2xl"
                         >
                             <div className="p-6 border-b-[2px] border-p3-navy flex justify-between items-center bg-splat-yellow/10">
-                                <h3 className="text-xl font-black italic uppercase text-p3-navy tracking-tighter">{t('vault.addScan')}</h3>
+                                <h3 className="text-xl font-black italic uppercase text-p3-navy tracking-tighter">建立新項目 (New Item)</h3>
                                 <button onClick={() => setIsAdding(false)} className="w-10 h-10 rounded-full bg-p3-navy text-white flex items-center justify-center active:scale-75 transition-transform"><X size={20} /></button>
                             </div>
 
@@ -358,7 +358,7 @@ export const Vault = () => {
                                         <input
                                             value={form.title}
                                             onChange={e => setForm({ ...form, title: e.target.value })}
-                                            placeholder="Document Title"
+                                            placeholder="輸入文件名稱 (e.g. 護照、e-Ticket...)"
                                             className="w-full bg-gray-50 border-[0.5px] border-p3-navy rounded-xl p-4 font-black outline-none focus:bg-white transition-colors"
                                         />
                                     </div>

@@ -219,7 +219,7 @@ const ScheduleItemRow: FC<{
           <span className="boutique-tag text-p3-navy/30 italic">{item.time}</span>
         </div>
 
-        <div className="flex-1 bg-white/40 backdrop-blur-3xl border-[0.5px] border-black/5 rounded-[32px] p-8 hover:border-black/10 transition-all hover:shadow-glass-deep relative overflow-hidden group/card shadow-sm">
+        <div className="flex-1 bg-white border-[0.5px] border-gray-200 shadow-md rounded-[32px] p-8 hover:shadow-lg transition-all relative overflow-hidden group/card">
           <div className="flex justify-between items-start mb-4">
             <div>
               <div className="flex items-center gap-3 mb-3">
@@ -1176,12 +1176,16 @@ export const Schedule: FC<{ externalDateIdx?: number }> = ({ externalDateIdx = 0
         <div className="sticky top-0 z-50 bg-[#F4F5F7]/80 backdrop-blur-md pt-2 pb-6">
           <div className="flex items-center justify-between mt-2 px-4">
             <div className="flex gap-4">
-              <div onClick={() => setShowFullWeather(true)} className="flex items-center gap-3 cursor-pointer group">
+              <div onClick={() => setShowFullWeather(true)} className="bg-blue-50/80 border border-blue-100 rounded-2xl p-2.5 shadow-sm flex items-center gap-3 cursor-pointer group">
                 <div className="text-3xl font-black text-p3-navy">{currentTempStr}°</div>
                 <div>
                   <div className="boutique-tag text-p3-navy/40 uppercase tracking-widest">{weatherInfo.t}</div>
                   <div className="flex items-center gap-1 text-[10px] font-bold text-splat-blue">
                     <CloudRain size={10} /> {todayWeather.rain}%
+                    <div className="flex items-center gap-2 text-[10px] font-bold text-gray-500 ml-2 border-l border-gray-300 pl-2">
+                      <span className="text-p3-ruby">H: {todayWeather.max}°</span>
+                      <span className="text-p3-navy">L: {todayWeather.min}°</span>
+                    </div>
                   </div>
                 </div>
               </div>

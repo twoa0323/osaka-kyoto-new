@@ -606,7 +606,7 @@ const App: FC = () => {
             className="flex overflow-x-auto gap-3 hide-scrollbar pt-4 px-1 date-btn-container scroll-smooth"
           >
             {dateRange.map((date, i) => (
-              <button key={i} onClick={() => setSelectedDateIdx(i)} className={`flex flex-col items-center min-w-[72px] p-2.5 rounded-[22px] border-[0.5px] transition-all duration-300 font-black ${selectedDateIdx === i ? 'bg-p3-navy text-white shadow-glass-deep border-white/20 -translate-y-1' : 'bg-white/40 backdrop-blur-md border-white/30 text-gray-400 shadow-glass-soft'}`}>
+              <button key={i} onClick={() => setSelectedDateIdx(i)} className={`flex flex-col items-center min-w-[72px] p-2.5 rounded-[22px] border-[0.5px] transition-all duration-300 font-black ${selectedDateIdx === i ? 'bg-p3-navy text-white shadow-glass-deep border-white/20 -translate-y-1' : 'bg-white shadow-sm border-gray-200 text-gray-500'}`}>
                 <span className="text-[10px] uppercase opacity-60">DAY {i + 1}</span>
                 <span className="text-lg mt-0.5">{format(date, 'M/d')}</span>
               </button>
@@ -659,7 +659,7 @@ const App: FC = () => {
 
       {/* 🧭 Bottom Navigation — 5 Unified Modules */}
       <LayoutGroup>
-        <nav className="absolute bottom-6 left-1/2 -translate-x-1/2 w-[95%] max-w-md glass-card px-2 py-4 flex justify-around items-center z-50 shadow-glass-deep border-[0.5px] border-white/40 rounded-[32px]">
+        <nav className="absolute bottom-6 left-1/2 -translate-x-1/2 w-[95%] max-w-md bg-white/95 backdrop-blur-xl border border-gray-200 shadow-[0_20px_40px_rgba(0,0,0,0.15)] px-2 py-4 flex justify-around items-center z-50 rounded-[32px]">
           <NavIcon icon={<Calendar />} label={t('nav.timeline')} id="timeline" active={activeTab} onClick={handleTabChange} color="text-p3-navy" />
           <NavIcon icon={<Lock />} label={t('nav.vault')} id="vault" active={activeTab} onClick={handleTabChange} color="text-p3-ruby" />
           <NavIcon icon={<WalletIcon />} label={t('nav.wallet')} id="wallet" active={activeTab} onClick={handleTabChange} color="text-p3-gold" />
