@@ -560,7 +560,7 @@ export const Schedule: FC<{ externalDateIdx?: number }> = ({ externalDateIdx = 0
 
   const [showFullWeather, setShowFullWeather] = useState(false);
   const [isAiLoading, setIsAiLoading] = useState(false);
-  const [isActionMenuOpen, setIsActionMenuOpen] = useState(false);
+  const [showAddMenu, setShowAddMenu] = useState(false);
 
   const [gapAiLoading, setGapAiLoading] = useState<string | null>(null);
   const [transportAiLoading, setTransportAiLoading] = useState<string | null>(null);
@@ -1192,14 +1192,14 @@ export const Schedule: FC<{ externalDateIdx?: number }> = ({ externalDateIdx = 0
               <div className="relative">
                 <motion.button
                   whileTap={{ scale: 0.95 }}
-                  onClick={() => setIsActionMenuOpen(!isActionMenuOpen)}
-                  className={`w-12 h-12 rounded-2xl flex items-center justify-center shadow-xl transition-all duration-300 ${isActionMenuOpen ? 'bg-p3-ruby text-white rotate-[135deg]' : 'bg-p3-navy text-white shadow-p3-navy/20'}`}
+                  onClick={() => setShowAddMenu(!showAddMenu)}
+                  className={`w-12 h-12 rounded-2xl flex items-center justify-center shadow-xl transition-all duration-300 ${showAddMenu ? 'bg-p3-ruby text-white rotate-[135deg]' : 'bg-p3-navy text-white shadow-p3-navy/20'}`}
                 >
                   <Plus size={18} strokeWidth={2.5} />
                 </motion.button>
 
                 <AnimatePresence>
-                  {isActionMenuOpen && (
+                  {showAddMenu && (
                     <motion.div
                       initial={{ opacity: 0, scale: 0.8, y: 10 }}
                       animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -1207,7 +1207,7 @@ export const Schedule: FC<{ externalDateIdx?: number }> = ({ externalDateIdx = 0
                       className="absolute top-14 right-0 w-48 bg-white/90 backdrop-blur-md border-[0.5px] border-p3-navy rounded-[24px] shadow-glass-deep p-2 z-[60] flex flex-col gap-1"
                     >
                       <button
-                        onClick={() => { setEditingItem(undefined); setIsEditorOpen(true); setIsActionMenuOpen(false); }}
+                        onClick={() => { setEditingItem(undefined); setIsEditorOpen(true); setShowAddMenu(false); }}
                         className="flex items-center gap-3 p-3 hover:bg-p3-navy/5 rounded-xl transition-colors text-left text-sm font-black text-p3-navy"
                       >
                         <div className="w-8 h-8 rounded-lg bg-p3-gold/10 flex items-center justify-center text-p3-gold shrink-0">
@@ -1216,7 +1216,7 @@ export const Schedule: FC<{ externalDateIdx?: number }> = ({ externalDateIdx = 0
                         📍 新增行程景點
                       </button>
                       <button
-                        onClick={() => { showToast("BookingEditor 下一階段對接... ✈️", "info"); setIsActionMenuOpen(false); }}
+                        onClick={() => { showToast("BookingEditor 下一階段對接... ✈️", "info"); setShowAddMenu(false); }}
                         className="flex items-center gap-3 p-3 hover:bg-p3-navy/5 rounded-xl transition-colors text-left text-sm font-black text-p3-navy"
                       >
                         <div className="w-8 h-8 rounded-lg bg-p3-navy/10 flex items-center justify-center text-p3-navy shrink-0">
@@ -1225,7 +1225,7 @@ export const Schedule: FC<{ externalDateIdx?: number }> = ({ externalDateIdx = 0
                         ✈️ 新增航班/飯店
                       </button>
                       <button
-                        onClick={() => { showToast("PackingListModal 開發中... 🧳", "info"); setIsActionMenuOpen(false); }}
+                        onClick={() => { showToast("PackingListModal 開發中... 🧳", "info"); setShowAddMenu(false); }}
                         className="flex items-center gap-3 p-3 hover:bg-p3-navy/5 rounded-xl transition-colors text-left text-sm font-black text-p3-navy"
                       >
                         <div className="w-8 h-8 rounded-lg bg-p3-ruby/10 flex items-center justify-center text-p3-ruby shrink-0">
