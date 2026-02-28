@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { useTranslation } from '../../hooks/useTranslation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Navigation, Compass, X, MapPin } from 'lucide-react';
 import { triggerHaptic } from '../../utils/haptics';
@@ -11,6 +12,7 @@ interface ARCompassProps {
 }
 
 export const ARCompass = ({ targetLat, targetLng, targetName, onClose }: ARCompassProps) => {
+    const { t } = useTranslation();
     const [heading, setHeading] = useState<number | null>(null);
     const [bearing, setBearing] = useState<number | null>(null);
     const [distance, setDistance] = useState<number | null>(null);
@@ -54,7 +56,7 @@ export const ARCompass = ({ targetLat, targetLng, targetName, onClose }: ARCompa
                         setBearing(b);
                         setDistance(d);
                     },
-                    (err) => setError("無法取得定位資訊"),
+                    (err) => setError(t('ar.noLocation')),
                     { enableHighAccuracy: true }
                 );
             }
@@ -87,7 +89,7 @@ export const ARCompass = ({ targetLat, targetLng, targetName, onClose }: ARCompa
                     setPermissionGranted(true);
                     triggerHaptic('success');
                 } else {
-                    setError("需要陀螺儀權限才能使用羅盤唷！");
+                    setError(t('ar.gyroPermissionRequired'));
                 }
             } else {
                 // Android / Desktop
@@ -95,7 +97,7 @@ export const ARCompass = ({ targetLat, targetLng, targetName, onClose }: ARCompa
                 triggerHaptic('success');
             }
         } catch (e) {
-            setError("不支援感應器或環境不安全 (需 HTTPS)");
+            setError(t('ar.unsupported'));
         }
     };
 
@@ -117,19 +119,19 @@ export const ARCompass = ({ targetLat, targetLng, targetName, onClose }: ARCompa
                     <Navigation className="text-splat-yellow" /> AR FINDER
                 </h2>
                 <p className="text-white/60 font-bold uppercase text-xs tracking-widest flex items-center justify-center gap-1">
-                    <MapPin size={12} /> Target: {targetName}
+                    <MapPin size={12} /> {t('ar.target')}: {targetName}
                 </p>
             </div>
 
             {!permissionGranted ? (
                 <div className="bg-white/10 p-8 rounded-[40px] border-2 border-dashed border-white/20 text-center space-y-6">
                     <Compass size={64} className="mx-auto text-splat-yellow animate-pulse" />
-                    <p className="font-bold text-sm leading-relaxed">我們需要讀取手機的陀螺儀<br />來為您指引物理方向 🧭</p>
+                    <p className="font-bold text-sm leading-relaxed whitespace-pre-line">{t('ar.gyroscopeNeeded')}</p>
                     <button
                         onClick={requestPermission}
                         className="w-full bg-splat-yellow text-splat-dark font-black py-4 rounded-2xl shadow-lg active:translate-y-1 transition-all"
                     >
-                        開啟羅盤
+                        {t('ar.openCompass')}
                     </button>
                 </div>
             ) : (
@@ -158,7 +160,7 @@ export const ARCompass = ({ targetLat, targetLng, targetName, onClose }: ARCompa
                     <div className="mt-16 text-center">
                         <div className="text-6xl font-black mb-1">{Math.round(distance || 0)}<span className="text-xl ml-1 text-white/50">m</span></div>
                         <div className="bg-splat-yellow/20 text-splat-yellow border border-splat-yellow/30 px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest">
-                            Straight Ahead
+                            {t('ar.straightAhead')}
                         </div>
                     </div>
                 </div>
