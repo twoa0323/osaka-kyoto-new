@@ -605,22 +605,41 @@ export const Schedule: FC<{ externalDateIdx?: number }> = ({ externalDateIdx = 0
   // 🚀 IntersectionObserver 用於空間地圖隨動
   const setActiveDayItem = useTripStore(s => s.setActiveDayItem);
   const activeDayItem = useTripStore(s => s.activeDayItem);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
+    const container = scrollContainerRef.current;
+    if (!container) return;
+
     const observer = new IntersectionObserver(
       (entries) => {
-        const visible = entries.find(e => e.isIntersecting);
-        if (visible) {
-          const id = visible.target.getAttribute('data-id');
+        // 取最多交疊的項目
+        const best = entries
+          .filter(e => e.isIntersecting)
+          .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
+        if (best) {
+          const id = best.target.getAttribute('data-id');
           const item = dayItems.find(i => i.id === id);
           if (item) setActiveDayItem(item);
         }
       },
-      { threshold: 0.5, rootMargin: '-10% 0% -40% 0%' }
+      {
+        root: container,           // 以內部滾動容器為覸發區
+        threshold: [0.3, 0.5, 0.8], // 多個閾値提高敏感度
+        rootMargin: '0px'
+      }
     );
 
-    const elements = document.querySelectorAll('.timeline-item');
-    elements.forEach(el => observer.observe(el));
-    return () => observer.disconnect();
+    // 用 setTimeout 確保 DOM 已渲染
+    const timer = setTimeout(() => {
+      const elements = container.querySelectorAll('.timeline-item');
+      elements.forEach(el => observer.observe(el));
+    }, 100);
+
+    return () => {
+      clearTimeout(timer);
+      observer.disconnect();
+    };
   }, [dayItems, setActiveDayItem]);
 
   const timeline = useMemo(() => {
@@ -1169,7 +1188,7 @@ export const Schedule: FC<{ externalDateIdx?: number }> = ({ externalDateIdx = 0
 
   return (
     <div className="flex flex-col h-full relative text-p3-navy">
-      <div className="flex-1 overflow-y-auto hide-scrollbar p-6 space-y-8 pb-32">
+      <div ref={scrollContainerRef} className="flex-1 overflow-y-auto hide-scrollbar p-6 space-y-8 pb-32">
         <div className="mb-2">
           <SpatialMapHeader trip={trip!} activeItem={activeDayItem} t={t} enable3DMap={uiSettings.enable3DMap} />
         </div>

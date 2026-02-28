@@ -1,7 +1,7 @@
 import { FC, useEffect, useRef } from 'react';
 import { Trip } from '../types';
 import { Map, MapMarker, Map3DBuildings } from './ui/map';
-import type * as MapLibreGLType from 'maplibre-gl';
+import type { MapRef } from './ui/map';
 
 interface SpatialMapHeaderProps {
     trip: Trip;
@@ -11,7 +11,7 @@ interface SpatialMapHeaderProps {
 }
 
 export const SpatialMapHeader: FC<SpatialMapHeaderProps> = ({ trip, activeItem, t, enable3DMap = true }) => {
-    const mapRef = useRef<MapLibreGLType.Map | null>(null);
+    const mapRef = useRef<MapRef | null>(null);
     const MAPTILER_KEY = (import.meta as any).env.VITE_MAPTILER_API_KEY;
 
     useEffect(() => {
