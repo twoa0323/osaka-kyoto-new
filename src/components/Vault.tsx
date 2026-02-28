@@ -3,7 +3,7 @@ import { useTripStore } from '../store/useTripStore';
 import {
     Shield, QrCode, FileText, Image as ImageIcon,
     ExternalLink, Search, Plus, X, Eye,
-    CreditCard, Plane, HardDrive, ShieldCheck, ChevronRight, Trash2
+    CreditCard, Plane, HardDrive, ShieldCheck, ChevronRight, Trash2, Edit3
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { InfoItem } from '../types';
@@ -18,6 +18,9 @@ export const Vault = () => {
 
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedDoc, setSelectedDoc] = useState<InfoItem | null>(null);
+    const [isAdding, setIsAdding] = useState(false);
+    const [isEditing, setIsEditing] = useState(false);
+    const [form, setForm] = useState<Partial<InfoItem>>({ title: '', content: '', images: [], type: 'document' });
 
     // 1. 分類過濾：找出包含 QR Code (或標註為憑證/門票) 的項目
     const qrItems = useMemo(() => {
@@ -139,6 +142,10 @@ export const Vault = () => {
                     {/* Add New Item Card */}
                     <motion.div
                         whileTap={{ scale: 0.95 }}
+                        onClick={() => {
+                            setForm({ title: '', content: '', images: [], type: 'document' });
+                            setIsAdding(true);
+                        }}
                         className="border-[0.5px] border-dashed border-gray-300 rounded-[28px] h-[180px] flex flex-col items-center justify-center gap-2 text-gray-400 hover:border-p3-navy hover:text-p3-navy transition-colors cursor-pointer"
                     >
                         <div className="w-12 h-12 rounded-full border-2 border-current flex items-center justify-center">
@@ -203,12 +210,21 @@ export const Vault = () => {
                                     <Shield size={24} />
                                 </div>
                                 <div>
-                                    <h4 className="text-white font-black text-lg uppercase italic">{selectedDoc.title}</h4>
+                                    {isEditing ? (
+                                        <input
+                                            value={form.title}
+                                            onChange={e => setForm({ ...form, title: e.target.value })}
+                                            className="bg-white/20 border-[0.5px] border-white/40 rounded-lg px-2 py-1 text-white font-black text-lg uppercase italic outline-none w-full"
+                                            autoFocus
+                                        />
+                                    ) : (
+                                        <h4 className="text-white font-black text-lg uppercase italic">{selectedDoc.title}</h4>
+                                    )}
                                     <p className="text-white/40 text-[10px] uppercase font-black">{t('vault.encryptedDoc')}</p>
                                 </div>
                             </div>
                             <button
-                                onClick={() => setSelectedDoc(null)}
+                                onClick={() => { setSelectedDoc(null); setIsEditing(false); }}
                                 className="w-12 h-12 rounded-full bg-white/10 flex items-center justify-center text-white border-2 border-white/20 active:scale-90"
                             >
                                 <X size={24} />
@@ -216,9 +232,34 @@ export const Vault = () => {
                         </div>
 
                         <div className="flex-1 glass-card border-[0.5px] border-white/40 shadow-glass-deep overflow-hidden relative flex flex-col mt-4">
-                            <div className="flex-1 bg-gray-100 overflow-y-auto scrollbar-hide p-8 flex items-center justify-center">
-                                {selectedDoc.images?.[0] ? (
-                                    <img src={selectedDoc.images[0]} className="max-w-full max-h-full object-contain rounded-lg shadow-xl" alt="full document" />
+                            <div
+                                className={`flex-1 overflow-y-auto scrollbar-hide p-8 flex items-center justify-center relative ${isEditing ? 'cursor-pointer group' : 'bg-gray-100'}`}
+                                onClick={() => {
+                                    if (isEditing) {
+                                        const input = document.createElement('input');
+                                        input.type = 'file';
+                                        input.accept = 'image/*';
+                                        input.onchange = (e) => {
+                                            const file = (e.target as HTMLInputElement).files?.[0];
+                                            if (file) {
+                                                const reader = new FileReader();
+                                                reader.onloadend = () => setForm({ ...form, images: [reader.result as string] });
+                                                reader.readAsDataURL(file);
+                                            }
+                                        };
+                                        input.click();
+                                    }
+                                }}
+                            >
+                                {(form.images?.[0] || selectedDoc.images?.[0]) ? (
+                                    <div className="relative w-full h-full flex items-center justify-center">
+                                        <img src={form.images?.[0] || selectedDoc.images?.[0]} className="max-w-full max-h-full object-contain rounded-lg shadow-xl" alt="full document" />
+                                        {isEditing && (
+                                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity rounded-lg">
+                                                <ImageIcon size={48} className="text-white" />
+                                            </div>
+                                        )}
+                                    </div>
                                 ) : (
                                     <div className="text-center space-y-4">
                                         <HardDrive size={64} className="text-gray-200 mx-auto" strokeWidth={1} />
@@ -227,26 +268,162 @@ export const Vault = () => {
                                 )}
                             </div>
                             <div className="p-8 bg-white border-t-[3px] border-p3-navy space-y-6">
-                                <div className="space-y-2">
-                                    <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{t('vault.description')}</div>
-                                    <p className="text-sm font-bold text-p3-navy leading-relaxed h-24 overflow-y-auto">
-                                        {selectedDoc.content || t('vault.noNotes')}
-                                    </p>
-                                </div>
+                                <div className="space-y-4">
+                                    <div className="space-y-2">
+                                        <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{t('vault.description')}</div>
+                                        {isEditing ? (
+                                            <textarea
+                                                value={form.content}
+                                                onChange={e => setForm({ ...form, content: e.target.value })}
+                                                className="w-full bg-gray-50 border-[0.5px] border-p3-navy rounded-xl p-3 text-sm font-bold h-24 outline-none focus:bg-white transition-colors"
+                                            />
+                                        ) : (
+                                            <p className="text-sm font-bold text-p3-navy leading-relaxed h-24 overflow-y-auto">
+                                                {selectedDoc.content || t('vault.noNotes')}
+                                            </p>
+                                        )}
+                                    </div>
 
-                                <div className="flex gap-4">
-                                    <button className="flex-1 py-4 bg-p3-navy text-white rounded-xl shadow-glass-soft flex items-center justify-center gap-2 font-black active:scale-95 transition-all border-[0.5px] border-white/20">
-                                        <ExternalLink size={18} /> {t('vault.openFull')}
-                                    </button>
-                                    <button className="flex-1 py-4 bg-white/60 backdrop-blur-md text-p3-navy rounded-xl border-[0.5px] border-black/5 flex items-center justify-center gap-2 font-black active:scale-95 transition-all shadow-glass-soft">
-                                        <Plus size={18} /> {t('vault.share')}
-                                    </button>
-                                    <button onClick={() => { deleteInfoItem(trip.id, selectedDoc.id); setSelectedDoc(null); triggerHaptic('light'); }} className="shrink-0 w-14 h-14 bg-red-50 text-red-500 rounded-xl border-[0.5px] border-red-200 flex items-center justify-center font-black active:scale-95 transition-all shadow-glass-soft">
-                                        <Trash2 size={24} />
-                                    </button>
+                                    <div className="flex gap-4">
+                                        {isEditing ? (
+                                            <button
+                                                onClick={() => {
+                                                    updateInfoItem(trip.id, selectedDoc.id, {
+                                                        ...selectedDoc,
+                                                        title: form.title || selectedDoc.title,
+                                                        content: form.content || '',
+                                                        images: form.images || selectedDoc.images
+                                                    });
+                                                    setSelectedDoc(null);
+                                                    setIsEditing(false);
+                                                    triggerHaptic('success');
+                                                }}
+                                                className="flex-1 py-4 bg-splat-green text-white rounded-xl shadow-glass-soft flex items-center justify-center gap-2 font-black active:scale-95 transition-all border-[0.5px] border-white/20"
+                                            >
+                                                {t('common.saveConfirm')}
+                                            </button>
+                                        ) : (
+                                            <>
+                                                <button className="flex-1 py-4 bg-p3-navy text-white rounded-xl shadow-glass-soft flex items-center justify-center gap-2 font-black active:scale-95 transition-all border-[0.5px] border-white/20">
+                                                    <ExternalLink size={18} /> {t('vault.openFull')}
+                                                </button>
+                                                <button
+                                                    onClick={() => {
+                                                        setForm({ ...selectedDoc });
+                                                        setIsEditing(true);
+                                                        triggerHaptic('light');
+                                                    }}
+                                                    className="flex-1 py-4 bg-white/60 backdrop-blur-md text-p3-navy rounded-xl border-[0.5px] border-black/5 flex items-center justify-center gap-2 font-black active:scale-95 transition-all shadow-glass-soft"
+                                                >
+                                                    <Edit3 size={18} /> {t('common.edit')}
+                                                </button>
+                                            </>
+                                        )}
+                                        {!isEditing && (
+                                            <button onClick={() => { deleteInfoItem(trip.id, selectedDoc.id); setSelectedDoc(null); triggerHaptic('light'); }} className="shrink-0 w-14 h-14 bg-red-50 text-red-500 rounded-xl border-[0.5px] border-red-200 flex items-center justify-center font-black active:scale-95 transition-all shadow-glass-soft">
+                                                <Trash2 size={24} />
+                                            </button>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
                         </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* --- Add New Document Modal --- */}
+            <AnimatePresence>
+                {isAdding && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-[1200] bg-p3-navy/95 backdrop-blur-2xl flex items-center justify-center p-6"
+                    >
+                        <motion.div
+                            initial={{ scale: 0.9, y: 20 }}
+                            animate={{ scale: 1, y: 0 }}
+                            className="bg-white border-[4px] border-p3-navy rounded-[40px] w-full max-w-sm overflow-hidden flex flex-col shadow-2xl"
+                        >
+                            <div className="p-6 border-b-[2px] border-p3-navy flex justify-between items-center bg-splat-yellow/10">
+                                <h3 className="text-xl font-black italic uppercase text-p3-navy tracking-tighter">{t('vault.addScan')}</h3>
+                                <button onClick={() => setIsAdding(false)} className="w-10 h-10 rounded-full bg-p3-navy text-white flex items-center justify-center active:scale-75 transition-transform"><X size={20} /></button>
+                            </div>
+
+                            <div className="p-8 space-y-6">
+                                <div className="space-y-4">
+                                    <div className="space-y-1.5">
+                                        <label className="text-[10px] font-black text-p3-navy/30 uppercase tracking-widest pl-1">{t('vault.title')}</label>
+                                        <input
+                                            value={form.title}
+                                            onChange={e => setForm({ ...form, title: e.target.value })}
+                                            placeholder="Document Title"
+                                            className="w-full bg-gray-50 border-[0.5px] border-p3-navy rounded-xl p-4 font-black outline-none focus:bg-white transition-colors"
+                                        />
+                                    </div>
+
+                                    <div className="space-y-1.5">
+                                        <label className="text-[10px] font-black text-p3-navy/30 uppercase tracking-widest pl-1">{t('vault.description')}</label>
+                                        <textarea
+                                            value={form.content}
+                                            onChange={e => setForm({ ...form, content: e.target.value })}
+                                            placeholder="Add notes..."
+                                            className="w-full bg-gray-50 border-[0.5px] border-p3-navy rounded-xl p-4 font-black h-24 outline-none focus:bg-white transition-colors text-sm"
+                                        />
+                                    </div>
+
+                                    <div className="space-y-1.5">
+                                        <label className="text-[10px] font-black text-p3-navy/30 uppercase tracking-widest pl-1">Image / Photo</label>
+                                        <div
+                                            onClick={() => {
+                                                const input = document.createElement('input');
+                                                input.type = 'file';
+                                                input.accept = 'image/*';
+                                                input.onchange = (e) => {
+                                                    const file = (e.target as HTMLInputElement).files?.[0];
+                                                    if (file) {
+                                                        const reader = new FileReader();
+                                                        reader.onloadend = () => setForm({ ...form, images: [reader.result as string] });
+                                                        reader.readAsDataURL(file);
+                                                    }
+                                                };
+                                                input.click();
+                                            }}
+                                            className="w-full h-32 border-2 border-dashed border-gray-200 rounded-2xl flex flex-col items-center justify-center gap-2 text-gray-400 hover:border-p3-navy hover:text-p3-navy transition-all cursor-pointer overflow-hidden"
+                                        >
+                                            {form.images?.[0] ? (
+                                                <img src={form.images[0]} className="w-full h-full object-cover" alt="preview" />
+                                            ) : (
+                                                <>
+                                                    <ImageIcon size={32} strokeWidth={1.5} />
+                                                    <span className="text-[10px] font-black uppercase">Upload File</span>
+                                                </>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <button
+                                    onClick={() => {
+                                        if (!form.title) return;
+                                        addInfoItem(trip.id, {
+                                            id: Date.now().toString(),
+                                            title: form.title,
+                                            content: form.content || '',
+                                            images: form.images || [],
+                                            type: form.type || 'document',
+                                            url: ''
+                                        });
+                                        setIsAdding(false);
+                                        triggerHaptic('success');
+                                    }}
+                                    className="w-full py-5 bg-p3-navy text-white rounded-2xl font-black uppercase tracking-widest shadow-glass-deep active:translate-y-1 transition-all"
+                                >
+                                    {t('common.saveConfirm')}
+                                </button>
+                            </div>
+                        </motion.div>
                     </motion.div>
                 )}
             </AnimatePresence>
