@@ -1,7 +1,12 @@
-require('dotenv').config();
-const fs = require('fs');
-const path = require('path');
-const { GoogleGenerativeAI } = require('@google/generative-ai');
+import 'dotenv/config';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import { GoogleGenerativeAI } from '@google/generative-ai';
+
+// 模擬 ES Module 中的 __dirname
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const apiKey = process.env.GEMINI_API_KEY || process.env.VITE_GEMINI_API_KEY;
 if (!apiKey) {

@@ -1,3 +1,4 @@
+import { Suspense } from 'react'
 import { createRoot } from 'react-dom/client'
 import App from './App'
 import './index.css'
@@ -21,6 +22,8 @@ const queryClient = new QueryClient({
 // StrictMode 在 production build 本就不啟用，移除後無副作用
 createRoot(document.getElementById('root')!).render(
   <QueryClientProvider client={queryClient}>
-    <App />
+    <Suspense fallback={<div className="flex h-screen items-center justify-center bg-slate-100 text-p3-navy font-black italic text-2xl">載入中...</div>}>
+      <App />
+    </Suspense>
   </QueryClientProvider>,
 )
