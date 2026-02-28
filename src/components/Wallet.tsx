@@ -76,24 +76,45 @@ export const Wallet = () => {
         return (val / rate).toFixed(0);
     }, [converterValue, converterMode, rate]);
 
+    const handleDelete = (id: string) => {
+        if (!trip) return;
+        deleteExpenseItem(trip.id, id);
+        showToast(t('wallet.delSuccess'), "info");
+    };
+
+    const handleAddFoodieList = () => {
+        if (!trip) return;
+        const wishItem = {
+            id: Date.now().toString(), title: form.storeName || '想吃', location: form.location || '',
+            date: form.date || '', category: 'dining' as any, images: form.images || []
+        };
+        updateTripData(trip.id, { items: [...(trip.items || []), wishItem] });
+    };
+
     const handleSave = () => {
         if (!form.amount || !form.title) return showToast(t('wallet.incompleteInfo'), "error");
         const item: ExpenseItem = {
             id: editingId || Date.now().toString(), date: form.date!, storeName: form.storeName || '', title: form.title!, amount: Number(form.amount),
             currency: form.currency as CurrencyCode, method: form.method as any, location: form.location || '',
-            payerId: form.payerId || trip.members?.[0]?.id || 'Admin',
+            payerId: form.payerId || trip?.members?.[0]?.id || 'Admin',
             splitWith: form.splitWith || [],
-            images: form.images || [], category: form.category as any, items: form.items,
+            images: form.images || [], category: form.category as any, items: form.items || [],
             isTaxFree: !!form.isTaxFree
         };
-        if (editingId) updateExpenseItem(trip.id, editingId, item);
-        else addExpenseItem(trip.id, item);
+        if (editingId) {
+            updateExpenseItem(trip!.id, editingId, item);
+        } else {
+            addExpenseItem(trip!.id, item);
+        }
 
         triggerHaptic('medium');
         setIsSuccess(true);
         setTimeout(() => {
             setIsSuccess(false);
             setEditingId(null);
+            setForm({ date: new Date().toISOString().split('T')[0], currency: trip?.baseCurrency || 'JPY', method: '現金', amount: 0, storeName: '', title: '', location: '', images: [], category: '餐飲', items: [] });
+            setInputMode('manual');
+            showToast(t('wallet.saveSuccess'), "success");
             if (item.category === '餐飲' && !editingId) {
                 setShowFoodiePrompt(true);
             } else {
