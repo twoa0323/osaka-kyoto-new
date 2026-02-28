@@ -21,9 +21,17 @@ export const usePushNotifications = (tripId: string) => {
             setPermission(status);
 
             if (status === 'granted' && messaging) {
+                // 等待 Vite PWA 的 Service Worker 註冊完成
+                let registration = await navigator.serviceWorker.getRegistration();
+                if (!registration) {
+                    registration = await navigator.serviceWorker.register('/sw.js');
+                }
+
                 // VAPID Key 通常來自 Firebase Console -> Project Settings -> Cloud Messaging -> Web Push certificate
+                // @ts-ignore - 略過 TypeScript 對 Vite import.meta.env 的型別檢查警告
                 const token = await getToken(messaging, {
-                    vapidKey: import.meta.env.VITE_FIREBASE_VAPID_KEY
+                    vapidKey: import.meta.env.VITE_FIREBASE_VAPID_KEY,
+                    serviceWorkerRegistration: registration
                 });
 
                 if (token) {

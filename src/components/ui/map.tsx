@@ -1500,7 +1500,12 @@ function Map3DBuildings({ enabled = true }: { enabled?: boolean }) {
                 const style = map.getStyle();
                 if (!style || !style.sources) return;
                 const sources = style.sources;
-                const sourceId = Object.keys(sources).find(id => id === 'composite' || id === 'openmaptiles') || 'composite';
+
+                // 動態找出 Vector 來源。Mapbox 預設為 composite，MapTiler 預設為 maptiler_planet 或 openmaptiles
+                const sourceId = Object.keys(sources).find(id => {
+                    const s = sources[id];
+                    return (s as any).type === 'vector';
+                }) || 'composite';
 
                 map.addLayer({
                     id: layerId,
