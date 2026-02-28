@@ -618,6 +618,91 @@ const InfoBlock = ({ label, value, highlight }: any) => (
   </div>
 );
 
+const AirlineHeaderPattern = ({ airline }: { airline: string }) => {
+    const al = (airline || '').toLowerCase();
+    
+    // 長榮 (EVA): 經典深綠底 + 橘綠色尾翼線條
+    if (al.includes('eva')) {
+        return (
+            <div className="absolute right-0 top-0 bottom-0 w-32 overflow-hidden pointer-events-none">
+                <div className="absolute -right-4 -top-8 w-24 h-32 bg-[#178045] rounded-full transform -rotate-12"></div>
+                <div className="absolute right-8 -top-4 w-12 h-24 bg-[#F58220] rounded-full transform -rotate-45"></div>
+            </div>
+        );
+    }
+    // 星宇 (STARLUX): 北極星芒圖騰
+    if (al.includes('starlux')) {
+        return (
+            <div className="absolute right-5 top-1/2 -translate-y-1/2 pointer-events-none opacity-40">
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="#C4A97A"><path d="M12 0L13.5 10.5L24 12L13.5 13.5L12 24L10.5 13.5L0 12L10.5 10.5L12 0Z"/></svg>
+            </div>
+        );
+    }
+    // 華航 (CHINA AIRLINES): 經典紅粉梅花圖騰
+    if (al.includes('china')) {
+        return (
+            <div className="absolute right-5 top-1/2 -translate-y-1/2 pointer-events-none opacity-90">
+                <div className="relative w-8 h-8">
+                    <div className="absolute top-0 left-1/2 -translate-x-1/2 w-3.5 h-3.5 bg-[#E88CA4] rounded-full"></div>
+                    <div className="absolute top-1.5 right-0.5 w-3.5 h-3.5 bg-[#E88CA4] rounded-full"></div>
+                    <div className="absolute bottom-0.5 right-1 w-3.5 h-3.5 bg-[#E88CA4] rounded-full"></div>
+                    <div className="absolute bottom-0.5 left-1 w-3.5 h-3.5 bg-[#E88CA4] rounded-full"></div>
+                    <div className="absolute top-1.5 left-0.5 w-3.5 h-3.5 bg-[#E88CA4] rounded-full"></div>
+                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-1.5 h-1.5 bg-[#D13C66] rounded-full z-10"></div>
+                </div>
+            </div>
+        );
+    }
+    // 台灣虎航 (TIGERAIR): 虎紋斜線
+    if (al.includes('tiger')) {
+        return (
+            <div className="absolute right-0 top-0 bottom-0 w-32 overflow-hidden pointer-events-none opacity-15">
+                <div className="w-full h-full bg-[repeating-linear-gradient(45deg,transparent,transparent_6px,#000_6px,#000_12px)]"></div>
+            </div>
+        );
+    }
+    // 樂桃 (PEACH): 紫粉色系柔和圓形交疊
+    if (al.includes('peach')) {
+        return (
+            <div className="absolute right-0 top-0 bottom-0 w-32 overflow-hidden pointer-events-none">
+                <div className="absolute -right-6 top-0 bottom-0 w-24 bg-[#B5005A] rounded-l-full opacity-40 blur-[2px]"></div>
+                <div className="absolute right-4 bottom-[-10px] w-16 h-16 bg-[#FFBEE0] rounded-full opacity-30 blur-[2px]"></div>
+            </div>
+        );
+    }
+    // 捷星 (JETSTAR): 黑色五角星
+    if (al.includes('jetstar')) {
+        return (
+            <div className="absolute right-5 top-1/2 -translate-y-1/2 pointer-events-none">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="#000000" className="opacity-80"><path d="M12 0L15.09 8.26L24 9.54L17.54 15.82L19.08 24L12 20.26L4.92 24L6.46 15.82L0 9.54L8.91 8.26L12 0Z"/></svg>
+            </div>
+        );
+    }
+    // ANA: 經典雙色漸層斜線
+    if (al.includes('ana')) {
+        return (
+            <div className="absolute right-0 top-0 bottom-0 w-48 overflow-hidden pointer-events-none">
+                <div className="absolute right-8 top-0 bottom-0 w-8 bg-[#00A0E9] transform skew-x-[-30deg]"></div>
+                <div className="absolute right-[-10px] top-0 bottom-0 w-12 bg-[#00A0E9] transform skew-x-[-30deg]"></div>
+            </div>
+        );
+    }
+    // JAL: 紅鶴 (鶴丸) 幾何意象
+    if (al.includes('jal')) {
+        return (
+            <div className="absolute right-5 top-1/2 -translate-y-1/2 pointer-events-none">
+                <div className="w-8 h-8 rounded-full border-4 border-white opacity-80 relative overflow-hidden">
+                     <div className="w-full h-[40%] bg-white absolute top-0"></div>
+                     <div className="w-2 h-full bg-white absolute left-1/2 -translate-x-1/2"></div>
+                </div>
+            </div>
+        );
+    }
+    
+    // 預設其他航空 (泛用漸層)
+    return <div className="absolute right-0 top-0 bottom-0 w-32 bg-gradient-to-l from-black/10 to-transparent pointer-events-none"></div>;
+};
+
 const FlightDetailModalContent = ({ item, t, showToast }: any) => {
   const [expanded, setExpanded] = useState(false);
   const theme = getAirlineTheme(item.airline);
@@ -628,13 +713,18 @@ const FlightDetailModalContent = ({ item, t, showToast }: any) => {
         {/* 🎟️ 實體登機證主體 */}
         <motion.div layout onClick={() => { setExpanded(!expanded); triggerHaptic('light'); }} className="bg-white rounded-[24px] shadow-glass-deep overflow-hidden cursor-pointer active:scale-[0.98] transition-transform relative">
 
-          {/* 頂部：航空識別色與 Logo */}
-          <div className={`${theme.bgClass} px-6 py-4 flex justify-between items-center`}>
-            <div className="flex items-center gap-2">
-              <Plane size={18} className={`${theme.textClass} -rotate-45`} strokeWidth={2.5} />
-              <span className={`text-sm font-black ${theme.textClass} tracking-widest uppercase`}>{theme.logo}</span>
+          {/* 頂部：航空識別色、Logo 與專屬尾翼圖騰 */}
+          <div className={`${theme.bgClass} px-6 py-4 flex justify-between items-center relative overflow-hidden`}>
+            <div className="relative z-10">
+              <span className={`text-base font-black ${theme.textClass} tracking-widest uppercase`}>{theme.logo}</span>
             </div>
-            <span className={`text-xs font-bold ${theme.textClass} opacity-80 uppercase tracking-widest`}>{item.date}</span>
+            {/* 將日期往左推一點 (mr-10)，避免被右側圖騰擋住 */}
+            <span className={`text-[11px] font-bold ${theme.textClass} opacity-90 uppercase tracking-widest relative z-10 mr-10`}>
+              {item.date}
+            </span>
+
+            {/* ✨ 航空公司專屬視覺圖騰 ✨ */}
+            <AirlineHeaderPattern airline={item.airline} />
           </div>
 
           {/* 中段：起降機場與時間 */}
