@@ -236,7 +236,13 @@ export default async function handler(req) {
             info: z.array(z.object({ type: z.string(), title: z.string(), content: z.string(), url: z.string() })).optional()
           }),
           messages: [
-            { role: 'system', content: `分析圖片/文字並歸類為行程/花費等。旅程區間：${payload.startDate}至${payload.endDate}。參考日：${payload.date}。精確識別總金額不含逗號。嚴格遵守Schema。` },
+            {
+              role: 'system', content: `分析圖片/文字並嚴格歸類。旅程：${payload.startDate}至${payload.endDate}。參考日：${payload.date}。
+規則：
+1. 機票/住宿歸類為 bookings。
+2. 凡是涉及「門票、交通憑證、eSIM、展覽 QR Code、保險」的項目，必須獨立歸類到 info (寶庫 Vault) 中，type 設為 ticket 或 qr。
+3. 行程景點歸類為 schedules。
+精確識別金額不含逗號。嚴格遵守 Schema。` },
             { role: 'user', content: magicContent }
           ]
         });
@@ -487,6 +493,12 @@ export default async function handler(req) {
               content: z.string(),
               location: z.string().optional()
             })).optional().default([]),
+            info: z.array(z.object({
+              type: z.enum(['document', 'ticket', 'qr', 'esim', 'insurance', 'other']).default('ticket'),
+              title: z.string(),
+              content: z.string(),
+              url: z.string().optional()
+            })).optional().default([]),
             summary: z.string().describe('用繁體中文簡述解析結果')
           }),
           prompt: `你是一位專業的旅遊管家 AI。請將以下使用者貼上的文字嚴格拆解為結構化 JSON。
@@ -499,13 +511,13 @@ ${payload.text}
 行程基準日期：${payload.startDate || '未指定'}（若文字中沒有明確日期，請以此日期為起點自行推算）
 
 規則：
-1. 機票、飯店確認信 → bookings
-2. 想去的景點、餐廳 → schedules（餐廳 type 為 food）
-3. 想買的商品 → shoppingList
-4. 美食筆記、餐廳評價 → journals（AI 預先擴寫精彩期待評論）
-5. 時間格式固定為 HH:mm（24 小時制）
-6. 日期格式固定為 YYYY-MM-DD
-7. 全部使用繁體中文回答`
+1. 機票、飯店確認信 → bookings (作為每日頂部的橫向預訂看板)
+2. 景點、餐廳、交通行動 → schedules（餐廳 type 為 food）
+3. 購物清單 → shoppingList
+4. 美食筆記 → journals
+5. 【重要】通關憑證與身分文件 → info (寶庫 Vault)。請自動判讀文字，若行程包含需要「門票、QR Code、憑證、實體卡、網卡」的項目（例如：eSIM、HARUKA、新幹線車票、環球影城、任天堂博物館、周遊券等），請務必自動在 info 中建立對應的資料，content 欄位可以寫「請在此上傳憑證截圖或條碼」，方便使用者後續極速掃描。
+6. 時間格式固定為 HH:mm，日期格式固定為 YYYY-MM-DD。
+7. 全部使用繁體中文回答。`
         }, google, true);
 
         _modelUsed = modelUsed;

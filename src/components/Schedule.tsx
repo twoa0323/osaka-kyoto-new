@@ -602,6 +602,26 @@ export const Schedule: FC<{ externalDateIdx?: number }> = ({ externalDateIdx = 0
     });
   }, [trip, selectedDateStr]);
 
+  const { actionBookings, activeHotel } = useMemo(() => {
+    const bookings = dayItems.filter(i => i.__type === 'booking');
+
+    // B: 靈動膠囊 (只在 Check-in, Check-out, Flight 當天顯示)
+    const actions = bookings.filter(b => {
+      if (b.type === 'flight' && (b as any).date === selectedDateStr) return true;
+      if (b.type === 'hotel' && ((b as any).date === selectedDateStr || (b as any).endDate === selectedDateStr)) return true;
+      return false;
+    });
+
+    // A: 常駐狀態 (當天有涵蓋在飯店住宿期間內)
+    const hotel = bookings.find(b => {
+      const bDate = (b as any).date;
+      const bEndDate = (b as any).endDate;
+      return b.type === 'hotel' && bDate <= selectedDateStr && (!bEndDate || bEndDate >= selectedDateStr);
+    });
+
+    return { actionBookings: actions, activeHotel: hotel };
+  }, [dayItems, selectedDateStr]);
+
   // 🚀 IntersectionObserver 用於空間地圖隨動
   const setActiveDayItem = useTripStore(s => s.setActiveDayItem);
   const activeDayItem = useTripStore(s => s.activeDayItem);
@@ -1270,9 +1290,18 @@ export const Schedule: FC<{ externalDateIdx?: number }> = ({ externalDateIdx = 0
 
         {/* 🛠️ 操作按鈕列 (保留原本功能，優化排版) */}
         <div className="flex items-center justify-between px-2">
-          <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
-            {dayItems.length} {t('schedule.ai.spots')}
-          </span>
+          <div className="flex items-center gap-3">
+            <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest bg-gray-100 px-3 py-1.5 rounded-full">
+              {dayItems.filter(i => i.__type === 'schedule').length} {t('schedule.ai.spots')}
+            </span>
+            {/* 💡 方案 A：常駐住宿按鈕 */}
+            {activeHotel && (
+              <button onClick={() => setDetailItem(activeHotel)} className="flex items-center gap-1.5 text-[10px] font-black text-p3-navy bg-white border-[0.5px] border-blue-200 px-3 py-1.5 rounded-full shadow-sm active:scale-95 transition-all">
+                <Home size={12} className="text-p3-ruby" strokeWidth={3} />
+                <span className="max-w-[80px] truncate">{activeHotel.title}</span>
+              </button>
+            )}
+          </div>
           <div className="flex gap-2">
             <motion.button whileTap={{ scale: 0.95, transition: { type: 'spring', stiffness: 500, damping: 20 } }} onClick={() => setViewMode(viewMode === 'list' ? 'map' : 'list')} className={`w-10 h-10 rounded-2xl flex items-center justify-center border-[1px] border-p3-navy/10 ${viewMode === 'map' ? 'bg-splat-blue text-white' : 'bg-white text-p3-navy shadow-xl shadow-black/5'}`}>
               {viewMode === 'list' ? <MapIcon size={18} /> : <Camera size={18} />}
@@ -1331,116 +1360,75 @@ export const Schedule: FC<{ externalDateIdx?: number }> = ({ externalDateIdx = 0
         )}
 
         {viewMode === 'list' ? (
-          <>
-            {/* 🎫 預訂與憑證 — 橫向快速滾動 */}
-            {(() => {
-              const dayBookings = dayItems.filter((i: any) => i.__type === 'booking');
-              const daySchedules = dayItems.filter((i: any) => i.__type === 'schedule');
-              return (
-                <>
-                  {dayBookings.length > 0 && (
-                    <div className="mb-2">
-                      <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 flex items-center gap-2">
-                        <div className="w-2 h-4 bg-splat-blue rounded-full" />
-                        預訂與憑證
-                      </h3>
-                      <div className="flex overflow-x-auto gap-3 pb-2 hide-scrollbar snap-x snap-mandatory -mx-4 px-4">
-                        {dayBookings.map((item: any) => (
-                          <div key={item.id} data-id={item.id} className="timeline-item shrink-0 w-[280px] snap-center">
-                            <SwipeableItem id={item.id} onDelete={() => deleteBookingItem(trip!.id, item.id)}>
-                              {item.type === 'flight' ? (
-                                <TimelineFlightCard
-                                  item={item}
-                                  onClick={() => {
-                                    const el = document.querySelector(`[data-id="${item.id}"]`);
-                                    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                                    setDetailItem(item);
-                                  }}
-                                />
-                              ) : (
-                                <TimelineHotelCard
-                                  item={item}
-                                  onClick={() => {
-                                    const el = document.querySelector(`[data-id="${item.id}"]`);
-                                    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                                    setDetailItem(item);
-                                  }}
-                                  t={t}
-                                />
-                              )}
-                            </SwipeableItem>
-                          </div>
-                        ))}
+          <div className="relative mt-2">
+            {/* 💡 方案 B：靈動膠囊 (Action Capsules) */}
+            {actionBookings.length > 0 && (
+              <div className="mb-6 space-y-3 px-1">
+                {actionBookings.map((booking: any) => (
+                  <motion.div
+                    key={`capsule-${booking.id}`}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => setDetailItem(booking)}
+                    className="w-full bg-white border-[0.5px] border-black/10 rounded-2xl p-4 shadow-glass-soft flex items-center justify-between cursor-pointer"
+                  >
+                    <div className="flex items-center gap-4">
+                      <div className={`w-10 h-10 rounded-full flex items-center justify-center text-white shadow-sm ${booking.type === 'flight' ? 'bg-p3-navy' : 'bg-p3-ruby'}`}>
+                        {booking.type === 'flight' ? <Plane size={18} /> : <Home size={18} />}
+                      </div>
+                      <div>
+                        <h4 className="text-sm font-black text-p3-navy leading-tight mb-0.5">{booking.title}</h4>
+                        <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">
+                          {booking.type === 'flight'
+                            ? `${booking.depTime || '--:--'} 起飛 🛫`
+                            : (booking.date === selectedDateStr ? `${booking.checkInTime || '15:00'} Check-in 📥` : `${booking.checkOutTime || '11:00'} Check-out 📤`)}
+                        </p>
                       </div>
                     </div>
-                  )}
+                    <ChevronRight size={18} className="text-gray-300" />
+                  </motion.div>
+                ))}
+              </div>
+            )}
 
-                  {/* 📍 行程時間軸 */}
-                  <div className="relative">
-                    <AnimatePresence mode="popLayout">
-                      {daySchedules.length === 0 && dayBookings.length === 0 ? (
-                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center py-20 bg-white border-[1px] border-dashed border-gray-300 rounded-[40px] text-gray-400 font-black italic">{t('schedule.noPlans')}</motion.div>
-                      ) : daySchedules.length === 0 ? null : (
-                        daySchedules.map((item: any, idx: number) => (
-                          <div key={item.id} data-id={item.id} className="timeline-item">
-                            {item.__type === 'schedule' ? (
-                              <SwipeableItem id={item.id} onDelete={() => deleteScheduleItem(trip!.id, item.id)}>
-                                <ScheduleItemRow
-                                  item={item as any}
-                                  idx={idx}
-                                  isEditMode={isEditMode}
-                                  dayItems={dayItems}
-                                  tripId={trip!.id}
-                                  updateScheduleItem={updateScheduleItem}
-                                  deleteScheduleItem={deleteScheduleItem}
-                                  setEditingItem={setEditingItem}
-                                  setIsEditorOpen={setIsEditorOpen}
-                                  setDetailItem={(it: any) => {
-                                    // 🚀 自動將點擊的項目置中
-                                    const element = document.querySelector(`[data-id="${it.id}"]`);
-                                    if (element) {
-                                      element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                                    }
-                                    setDetailItem(it);
-                                  }}
-                                  timeToMins={timeToMins}
-                                />
-                              </SwipeableItem>
-                            ) : (
-                              item.type === 'flight' ? (
-                                <SwipeableItem id={item.id} onDelete={() => deleteBookingItem(trip!.id, item.id)}>
-                                  <TimelineFlightCard
-                                    item={item as any}
-                                    onClick={() => {
-                                      const element = document.querySelector(`[data-id="${item.id}"]`);
-                                      if (element) element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                                      setDetailItem(item as any);
-                                    }}
-                                  />
-                                </SwipeableItem>
-                              ) : (
-                                <SwipeableItem id={item.id} onDelete={() => deleteBookingItem(trip!.id, item.id)}>
-                                  <TimelineHotelCard
-                                    item={item as any}
-                                    onClick={() => {
-                                      const element = document.querySelector(`[data-id="${item.id}"]`);
-                                      if (element) element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                                      setDetailItem(item as any);
-                                    }}
-                                    t={t}
-                                  />
-                                </SwipeableItem>
-                              )
-                            )}
-                          </div>
-                        ))
-                      )}
-                    </AnimatePresence>
-                  </div>
-                </>
-              );
-            })()}
-          </>
+            {/* 📍 行程時間軸 */}
+            <div className="relative">
+              <AnimatePresence mode="popLayout">
+                {(() => {
+                  const daySchedules = dayItems.filter((i: any) => i.__type === 'schedule');
+                  if (daySchedules.length === 0 && actionBookings.length === 0) {
+                    return (
+                      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center py-20 bg-white border-[1px] border-dashed border-gray-300 rounded-[40px] text-gray-400 font-black italic">{t('schedule.noPlans')}</motion.div>
+                    );
+                  }
+                  return daySchedules.map((item: any, idx: number) => (
+                    <div key={item.id} data-id={item.id} className="timeline-item">
+                      <SwipeableItem id={item.id} onDelete={() => deleteScheduleItem(trip!.id, item.id)}>
+                        <ScheduleItemRow
+                          item={item as any}
+                          idx={idx}
+                          isEditMode={isEditMode}
+                          dayItems={dayItems}
+                          tripId={trip!.id}
+                          updateScheduleItem={updateScheduleItem}
+                          deleteScheduleItem={deleteScheduleItem}
+                          setEditingItem={setEditingItem}
+                          setIsEditorOpen={setIsEditorOpen}
+                          setDetailItem={(it: any) => {
+                            const element = document.querySelector(`[data-id="${it.id}"]`);
+                            if (element) {
+                              element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                            }
+                            setDetailItem(it);
+                          }}
+                          timeToMins={timeToMins}
+                        />
+                      </SwipeableItem>
+                    </div>
+                  ));
+                })()}
+              </AnimatePresence>
+            </div>
+          </div>
         ) : (
           <div className="relative h-[65vh] mt-4 flex flex-col gap-4">
             <ScheduleMapView
