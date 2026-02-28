@@ -483,7 +483,7 @@ export const useTripStore = create<TripState>()(
         set(s => ({
           trips: s.trips.map(t => t.id === tid ? {
             ...t,
-            shoppingList: t.shoppingList.map(x => x.id === iid ? { ...x, isBought: !x.isBought } : x)
+            shoppingList: t.shoppingList.map(x => x.id === iid ? { ...x, isBought: !x.isBought, updatedAt: Date.now() } : x)
           } : t)
         }));
         const updatedTrip = get().trips.find(x => x.id === tid);
