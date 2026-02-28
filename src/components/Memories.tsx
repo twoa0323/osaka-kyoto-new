@@ -1,9 +1,11 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef } from 'react';
 import { useTripStore } from '../store/useTripStore';
 import {
     Sparkles, Camera, Utensils, ShoppingBag,
     CreditCard, Calendar, Star, MapPin,
-    Plus, ChevronRight, Share2, Heart
+    Plus, ChevronRight, Share2, Heart, X,
+    Edit2, Trash2, CheckCircle2, Info, Receipt,
+    ChevronDown, ChevronUp, ExternalLink, Image as ImageIcon
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { format, parseISO } from 'date-fns';
@@ -11,111 +13,194 @@ import { JournalItem, ShoppingItem, ExpenseItem } from '../types';
 import { triggerHaptic } from '../utils/haptics';
 import { useTranslation } from '../hooks/useTranslation';
 
-// --- 動態郵戳圖示映射 ---
-const CATEGORY_STAMPS: Record<string, string> = {
-    '餐飲': '🍽️',
-    '購物': '🛍️',
-    '交通': '🚗',
-    '住宿': '🏨',
-    '娛樂': '🎡',
-    '藥妝': '💊',
-    '便利商店': '🏪',
-    '超市': '🛒',
-    '其他': '✨'
+// --- Types ---
+type MemoryGroup = {
+    id: string;
+    title: string;
+    date: string;
+    latestTimestamp: number;
+    images: string[];
+    totalExpense: number;
+    items: Array<
+        | (JournalItem & { _type: 'journal' })
+        | (ShoppingItem & { _type: 'shopping' })
+        | (ExpenseItem & { _type: 'expense' })
+    >;
 };
-
-type StreamItem =
-    | (JournalItem & { _type: 'journal' })
-    | (ShoppingItem & { _type: 'shopping', date: string })
-    | (ExpenseItem & { _type: 'expense' });
 
 export const Memories = () => {
     const { t } = useTranslation();
-    const { trips, currentTripId, toggleShoppingItem, openAiAssistant, addJournalItem, addExpenseItem, addShoppingItem } = useTripStore();
+    const {
+        trips, currentTripId, toggleShoppingItem,
+        deleteJournalItem, deleteExpenseItem, deleteShoppingItem,
+        updateJournalItem, updateExpenseItem, updateShoppingItem,
+        showToast
+    } = useTripStore();
     const trip = trips.find(t => t.id === currentTripId);
 
+    const [filter, setFilter] = useState<'all' | 'food' | 'shopping'>('all');
+    const [selectedGroup, setSelectedGroup] = useState<MemoryGroup | null>(null);
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [activeEditor, setActiveEditor] = useState<'food' | 'purchase' | null>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
-    // 1. 數據彙整與排序 (現在包含未購買項目)
-    const stream = useMemo(() => {
+    // 1. Data Aggregation Logic (Auto-Grouping)
+    const groupedMemories = useMemo(() => {
         if (!trip) return [];
 
-        const journals = (trip.journals || []).map(j => ({
-            ...j,
-            _type: 'journal' as const,
-            displayAmount: j.cost
-        }));
+        const groups: Record<string, MemoryGroup> = {};
 
-        const shoppings = (trip.shoppingList || [])
-            .map(s => ({
-                ...s,
-                _type: 'shopping' as const,
-                date: s.updatedAt ? format(new Date(s.updatedAt), 'yyyy-MM-dd') : trip.startDate,
-                displayAmount: s.price * (s.quantity || 1)
-            }));
+        // Merge all source data
+        const allItems = [
+            ...(trip.journals || []).map(j => ({ ...j, _type: 'journal' as const })),
+            ...(trip.expenses || []).map(e => ({ ...e, _type: 'expense' as const })),
+            ...(trip.shoppingList || []).map(s => ({ ...s, _type: 'shopping' as const, location: s.location || s.storeName || 'Other' }))
+        ];
 
-        const expenses = (trip.expenses || []).map(e => ({
-            ...e,
-            _type: 'expense' as const,
-            displayAmount: e.amount
-        }));
+        allItems.forEach(item => {
+            const locKey = (item as any).location || (item as any).storeName || 'Other';
+            const timestamp = (item as any).updatedAt || new Date((item as any).date || trip.startDate).getTime();
 
-        return [...journals, ...shoppings, ...expenses].sort((a, b) => {
-            const dateA = new Date(a.date).getTime();
-            const dateB = new Date(b.date).getTime();
-            if (dateA !== dateB) return dateB - dateA;
-            return (b.updatedAt || 0) - (a.updatedAt || 0);
+            if (!groups[locKey]) {
+                groups[locKey] = {
+                    id: `group-${locKey}`,
+                    title: locKey,
+                    date: (item as any).date || trip.startDate,
+                    latestTimestamp: timestamp,
+                    images: [],
+                    totalExpense: 0,
+                    items: []
+                };
+            }
+
+            const group = groups[locKey];
+            group.items.push(item as any);
+
+            // Collect images
+            if (item.images && item.images.length > 0) {
+                group.images.push(...item.images);
+            }
+
+            // Accumulate expenses
+            if (item._type === 'expense') {
+                group.totalExpense += item.amount;
+            } else if (item._type === 'journal' && item.cost) {
+                group.totalExpense += item.cost;
+            } else if (item._type === 'shopping' && item.isBought) {
+                group.totalExpense += (item.price * item.quantity);
+            }
+
+            // Update latest date/timestamp
+            if (timestamp > group.latestTimestamp) {
+                group.latestTimestamp = timestamp;
+                group.date = (item as any).date || group.date;
+            }
         });
-    }, [trip?.journals, trip?.shoppingList, trip?.expenses, trip?.startDate]);
+
+        const results = Object.values(groups).sort((a, b) => b.latestTimestamp - a.latestTimestamp);
+
+        // Apply filters
+        if (filter === 'food') {
+            return results.filter(g => g.items.some(i => i._type === 'journal' || (i._type === 'expense' && i.category === '餐飲')));
+        }
+        if (filter === 'shopping') {
+            return results.filter(g => g.items.some(i => i._type === 'shopping' || (i._type === 'expense' && i.category === '購物')));
+        }
+        return results;
+    }, [trip, filter]);
+
+    const handleCameraClick = () => {
+        triggerHaptic('medium');
+        fileInputRef.current?.click();
+    };
+
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const files = e.target.files;
+        if (files && files.length > 0) {
+            showToast(`Received ${files.length} images. Processing... 📸`, 'info');
+            // AI batch-parse integration point
+        }
+    };
 
     if (!trip) return null;
 
     return (
         <div className="px-4 pb-40 pt-4 bg-[#F4F5F7] min-h-full overflow-y-auto hide-scrollbar relative">
-            {/* 墨水莖 */}
-            <div
-                className="absolute left-[24px] top-0 bottom-0 w-[1px] z-0 opacity-10"
-                style={{
-                    background: 'linear-gradient(to bottom, var(--p3-navy), var(--p3-ruby), var(--p3-gold))'
-                }}
-            />
-
-            {/* Header */}
-            <div className="flex justify-between items-end mb-10 pl-2 relative z-10 mr-1">
+            {/* Header & Camera */}
+            <div className="flex justify-between items-end mb-6 pl-2 relative z-20">
                 <div>
                     <h2 className="text-3xl font-black text-p3-navy italic tracking-tighter uppercase leading-none">{t('memories.title')}</h2>
                     <p className="text-[10px] font-black text-gray-400 mt-2 tracking-[0.2em] uppercase">{t('memories.subtitle')}</p>
                 </div>
-                <button
-                    onClick={() => triggerHaptic('medium')}
-                    className="w-12 h-12 rounded-2xl bg-white border-[0.5px] border-p3-navy shadow-glass-deep-sm flex items-center justify-center text-p3-navy active:translate-y-1 transition-all"
-                >
-                    <Camera size={24} strokeWidth={2.5} />
-                </button>
+                <div className="flex gap-3">
+                    <input
+                        type="file"
+                        ref={fileInputRef}
+                        onChange={handleFileChange}
+                        multiple
+                        accept="image/*"
+                        className="hidden"
+                    />
+                    <button
+                        onClick={handleCameraClick}
+                        className="w-12 h-12 rounded-2xl bg-white border-[0.5px] border-p3-navy shadow-glass-deep-sm flex items-center justify-center text-p3-navy active:translate-y-1 transition-all"
+                    >
+                        <Camera size={24} strokeWidth={2.5} />
+                    </button>
+                </div>
             </div>
 
-            {/* Magazine Masonry Layout */}
-            <div className="columns-1 md:columns-2 gap-4 space-y-4 relative z-10 px-1">
-                {stream.length > 0 ? (
-                    stream.map((item, idx) => (
-                        <div key={item.id} className="break-inside-avoid">
-                            <MemoryCard
-                                item={item}
-                                index={idx}
-                                t={t}
-                                onToggle={() => toggleShoppingItem(trip.id, item.id)}
-                            />
-                        </div>
+            {/* Filter Bar */}
+            <div className="flex gap-2 mb-8 sticky top-0 z-30 bg-[#F4F5F7]/80 backdrop-blur-xl py-2 -mx-4 px-4 overflow-x-auto hide-scrollbar">
+                {[
+                    { id: 'all', label: 'All', icon: <Sparkles size={14} /> },
+                    { id: 'food', label: 'Food', icon: <Utensils size={14} /> },
+                    { id: 'shopping', label: 'Shopping', icon: <ShoppingBag size={14} /> }
+                ].map((btn) => (
+                    <button
+                        key={btn.id}
+                        onClick={() => { setFilter(btn.id as any); triggerHaptic('light'); }}
+                        className={`flex items-center gap-2 px-5 py-2.5 rounded-full text-[11px] font-black uppercase tracking-widest transition-all ${filter === btn.id
+                                ? 'bg-p3-navy text-white shadow-xl scale-105'
+                                : 'bg-white/50 text-gray-400 border border-black/5 hover:bg-white'
+                            }`}
+                    >
+                        {btn.icon}
+                        {btn.label}
+                    </button>
+                ))}
+            </div>
+
+            {/* Location Cards Feed */}
+            <div className="space-y-6 relative z-10">
+                {groupedMemories.length > 0 ? (
+                    groupedMemories.map((group, idx) => (
+                        <LocationCard
+                            key={group.id}
+                            group={group}
+                            index={idx}
+                            onClick={() => { setSelectedGroup(group); triggerHaptic('medium'); }}
+                        />
                     ))
                 ) : (
-                    <div className="py-20 text-center bg-white border-[0.5px] border-dashed border-gray-300 rounded-[40px] text-gray-400 font-bold italic w-full col-span-full">
+                    <div className="py-20 text-center bg-white border-[0.5px] border-dashed border-gray-300 rounded-[40px] text-gray-400 font-bold italic w-full">
                         {t('memories.emptyStream')}
                     </div>
                 )}
             </div>
 
-            {/* Unified Entry FAB (Unified + Button) */}
+            {/* Detail Modal */}
+            <AnimatePresence>
+                {selectedGroup && (
+                    <GroupDetailModal
+                        group={selectedGroup}
+                        onClose={() => setSelectedGroup(null)}
+                        tripId={trip.id}
+                    />
+                )}
+            </AnimatePresence>
+
+            {/* FAB */}
             <div className="fixed bottom-24 right-6 z-50">
                 <AnimatePresence>
                     {isMenuOpen && (
@@ -144,13 +229,12 @@ export const Memories = () => {
                         setIsMenuOpen(!isMenuOpen);
                         triggerHaptic('medium');
                     }}
-                    className={`w-14 h-14 rounded-full shadow-glass-deep flex items-center justify-center text-white transition-colors ${isMenuOpen ? 'bg-gray-800 rotate-45' : 'bg-p3-navy'}`}
+                    className={`w-14 h-14 rounded-full shadow-glass-deep flex items-center justify-center text-white transition-all ${isMenuOpen ? 'bg-gray-800 rotate-45' : 'bg-p3-navy'}`}
                 >
                     <Plus size={28} />
                 </motion.button>
             </div>
 
-            {/* Quick Editor Modals (Placeholders for real implementation) */}
             <AnimatePresence>
                 {activeEditor && (
                     <QuickEditor
@@ -165,7 +249,297 @@ export const Memories = () => {
     );
 };
 
-// --- 配件: Menu Option ---
+// --- Component: Location Card ---
+const LocationCard = ({ group, index, onClick }: { group: MemoryGroup, index: number, onClick: () => void }) => {
+    const mainImage = group.images[0] || null;
+    const journalCount = group.items.filter(i => i._type === 'journal').length;
+    const shoppingCount = group.items.filter(i => i._type === 'shopping').length;
+    const expenseCount = group.items.filter(i => i._type === 'expense').length;
+
+    return (
+        <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: index * 0.1 }}
+            onClick={onClick}
+            className="group active:scale-[0.98] transition-all cursor-pointer"
+        >
+            <div className="bg-white rounded-[40px] overflow-hidden shadow-glass-deep border border-black/5 hover:border-p3-navy/20 transition-all">
+                {/* Visual Header */}
+                <div className="h-56 relative bg-gray-100">
+                    {mainImage ? (
+                        <img src={mainImage} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" alt={group.title} />
+                    ) : (
+                        <div className="w-full h-full flex items-center justify-center opacity-10 bg-[radial-gradient(#000_1px,transparent_1px)] [background-size:20px:20px]">
+                            <MapPin size={64} />
+                        </div>
+                    )}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+
+                    <div className="absolute bottom-6 left-8 right-8 flex justify-between items-end">
+                        <div>
+                            <div className="flex items-center gap-2 mb-1">
+                                <MapPin size={12} className="text-white/60" />
+                                <span className="text-[10px] font-black text-white/60 uppercase tracking-widest">{group.date}</span>
+                            </div>
+                            <h3 className="text-2xl font-black text-white italic tracking-tighter uppercase truncate max-w-[200px]">{group.title}</h3>
+                        </div>
+                        {group.totalExpense > 0 && (
+                            <div className="bg-white/20 backdrop-blur-md px-4 py-2 rounded-2xl border border-white/20">
+                                <span className="text-[14px] font-black text-white">¥{group.totalExpense.toLocaleString()}</span>
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+                {/* Info Bar */}
+                <div className="px-8 py-6 flex items-center gap-4">
+                    <div className="flex -space-x-3 overflow-hidden">
+                        {group.images.slice(1, 4).map((img, i) => (
+                            <div key={i} className="inline-block h-10 w-10 rounded-full ring-2 ring-white overflow-hidden">
+                                <img src={img} className="h-full w-full object-cover" alt="preview" />
+                            </div>
+                        ))}
+                        {group.images.length > 4 && (
+                            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gray-100 ring-2 ring-white">
+                                <span className="text-[10px] font-extrabold text-gray-500">+{group.images.length - 4}</span>
+                            </div>
+                        )}
+                    </div>
+
+                    <div className="flex gap-2 ml-auto">
+                        {journalCount > 0 && <Badge icon="📝" count={journalCount} />}
+                        {shoppingCount > 0 && <Badge icon="🛍️" count={shoppingCount} color="ruby" />}
+                        {expenseCount > 0 && <Badge icon="💰" count={expenseCount} color="navy" />}
+                    </div>
+                </div>
+            </div>
+        </motion.div>
+    );
+};
+
+const Badge = ({ icon, count, color = 'gold' }: { icon: string, count: number, color?: string }) => {
+    const colors: Record<string, string> = {
+        gold: 'bg-p3-gold/10 text-p3-gold border-p3-gold/20',
+        ruby: 'bg-p3-ruby/10 text-p3-ruby border-p3-ruby/20',
+        navy: 'bg-p3-navy/10 text-p3-navy border-p3-navy/20'
+    };
+    return (
+        <div className={`px-2.5 py-1 rounded-lg border flex items-center gap-1.5 ${colors[color]}`}>
+            <span className="text-[10px]">{icon}</span>
+            <span className="text-[10px] font-black">{count}</span>
+        </div>
+    );
+};
+
+// --- Component: Detail Modal ---
+const GroupDetailModal = ({ group, onClose, tripId }: { group: MemoryGroup, onClose: () => void, tripId: string }) => {
+    const {
+        deleteJournalItem, deleteExpenseItem, deleteShoppingItem,
+        updateJournalItem, updateExpenseItem, updateShoppingItem,
+        toggleShoppingItem
+    } = useTripStore();
+
+    return (
+        <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] bg-white overflow-y-auto"
+        >
+            {/* Modal Header/Hero */}
+            <div className="h-[40vh] relative">
+                {group.images[0] ? (
+                    <img src={group.images[0]} className="w-full h-full object-cover" />
+                ) : (
+                    <div className="w-full h-full bg-p3-navy/5 flex items-center justify-center text-p3-navy/10">
+                        <MapPin size={100} />
+                    </div>
+                )}
+                <div className="absolute inset-0 bg-gradient-to-t from-white via-white/10 to-transparent" />
+
+                <button
+                    onClick={onClose}
+                    className="absolute top-12 right-6 w-10 h-10 rounded-full bg-white/50 backdrop-blur-md border border-white/40 flex items-center justify-center text-p3-navy active:scale-90 transition-all"
+                >
+                    <X size={24} />
+                </button>
+
+                <div className="absolute bottom-6 left-8 right-8">
+                    <div className="flex items-center gap-2 mb-2">
+                        <MapPin size={14} className="text-p3-navy/60" />
+                        <span className="text-xs font-black text-p3-navy/60 tracking-widest uppercase">{group.date}</span>
+                    </div>
+                    <h2 className="text-4xl font-black text-p3-navy italic tracking-tighter uppercase leading-tight mb-2">{group.title}</h2>
+                    <div className="flex gap-4">
+                        {group.totalExpense > 0 && (
+                            <div className="bg-p3-navy text-white px-5 py-2.5 rounded-2xl flex items-center gap-3 shadow-xl">
+                                <CreditCard size={18} />
+                                <span className="text-lg font-black tracking-tight">¥{group.totalExpense.toLocaleString()}</span>
+                            </div>
+                        )}
+                        <button className="bg-white/80 backdrop-blur-md border border-p3-navy/10 h-11 w-11 rounded-2xl flex items-center justify-center text-p3-navy active:scale-95 transition-all">
+                            <MapPin size={22} />
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            {/* List Contents */}
+            <div className="px-8 pb-32 pt-4 space-y-10">
+                {group.items.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0)).map((item, i) => (
+                    <div key={item.id} className="relative group/item">
+                        {item._type === 'journal' && (
+                            <DetailJournalCard
+                                item={item}
+                                onEdit={() => { }}
+                                onDelete={() => { deleteJournalItem(tripId, item.id); onClose(); }}
+                            />
+                        )}
+                        {item._type === 'expense' && (
+                            <DetailExpenseCard
+                                item={item}
+                                onEdit={() => { }}
+                                onDelete={() => { deleteExpenseItem(tripId, item.id); onClose(); }}
+                            />
+                        )}
+                        {item._type === 'shopping' && (
+                            <DetailShoppingCard
+                                item={item}
+                                onEdit={() => { }}
+                                onDelete={() => { deleteShoppingItem(tripId, item.id); onClose(); }}
+                                onToggle={() => { toggleShoppingItem(tripId, item.id); }}
+                            />
+                        )}
+                    </div>
+                ))}
+            </div>
+
+            {/* Bottom Actions */}
+            <div className="fixed bottom-0 left-0 right-0 p-8 bg-gradient-to-t from-white via-white to-transparent">
+                <button
+                    onClick={onClose}
+                    className="w-full py-5 bg-p3-navy text-white rounded-[32px] font-black uppercase tracking-widest text-sm shadow-2xl active:scale-95 transition-all"
+                >
+                    Back to Feed
+                </button>
+            </div>
+        </motion.div>
+    );
+};
+
+const DetailJournalCard = ({ item, onEdit, onDelete }: any) => (
+    <div className="bg-white border-l-4 border-p3-gold pl-6 py-2">
+        <div className="flex justify-between items-start mb-4">
+            <div className="flex gap-0.5">
+                {Array.from({ length: 5 }).map((_, i) => (
+                    <Star key={i} size={14} className={i < item.rating ? "fill-p3-gold text-p3-gold" : "text-gray-200"} />
+                ))}
+            </div>
+            <div className="flex gap-4">
+                <button onClick={onEdit} className="text-gray-300 hover:text-p3-navy transition-colors"><Edit2 size={16} /></button>
+                <button onClick={onDelete} className="text-gray-300 hover:text-p3-ruby transition-colors"><Trash2 size={16} /></button>
+            </div>
+        </div>
+        <p className="text-gray-700 font-medium leading-relaxed italic text-lg mb-4">"{item.content || 'No content yet...'}"</p>
+        <div className="flex gap-2 overflow-x-auto hide-scrollbar pb-2">
+            {item.images.map((img: string, i: number) => (
+                <img key={i} src={img} className="h-40 w-40 object-cover rounded-2xl shadow-sm border border-black/5" />
+            ))}
+        </div>
+        {item.tags?.length > 0 && (
+            <div className="flex flex-wrap gap-2 mt-2">
+                {item.tags.map((tag: string) => (
+                    <span key={tag} className="text-[10px] font-black text-p3-gold/60 uppercase tracking-widest">#{tag}</span>
+                ))}
+            </div>
+        )}
+    </div>
+);
+
+const DetailExpenseCard = ({ item, onEdit, onDelete }: any) => (
+    <div className="bg-gray-50 rounded-[32px] p-6 border border-black/5">
+        <div className="flex justify-between items-start mb-6">
+            <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-2xl bg-p3-navy flex items-center justify-center text-white">
+                    <Receipt size={24} />
+                </div>
+                <div>
+                    <h4 className="text-lg font-black text-p3-navy uppercase tracking-tight">{item.title}</h4>
+                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{item.method} • {item.category}</p>
+                </div>
+            </div>
+            <div className="flex gap-4">
+                <button onClick={onEdit} className="text-gray-300 hover:text-p3-navy transition-colors"><Edit2 size={16} /></button>
+                <button onClick={onDelete} className="text-gray-300 hover:text-p3-ruby transition-colors"><Trash2 size={16} /></button>
+            </div>
+        </div>
+
+        {/* Itemized List */}
+        <div className="space-y-4 mb-6">
+            {item.items?.map((sub: any, idx: number) => (
+                <div key={idx} className="flex justify-between items-center px-2">
+                    <span className="text-sm font-bold text-gray-600">{sub.name}</span>
+                    <span className="text-sm font-black text-p3-navy">¥{sub.price.toLocaleString()}</span>
+                </div>
+            ))}
+            <div className="h-[0.5px] bg-black/5" />
+            <div className="flex justify-between items-center px-2">
+                <span className="text-xs font-black text-gray-400 uppercase">Total Transaction</span>
+                <span className="text-xl font-black text-p3-navy italic">¥{item.amount.toLocaleString()}</span>
+            </div>
+        </div>
+
+        {item.images?.length > 0 && (
+            <div className="flex gap-3 mt-4">
+                {item.images.map((img: string, idx: number) => (
+                    <div key={idx} className="relative group/img">
+                        <img src={img} className="w-20 h-24 object-cover rounded-xl shadow-sm grayscale-[0.5]" />
+                        <div className="absolute inset-0 bg-black/5 hidden group-hover/img:block rounded-xl" />
+                    </div>
+                ))}
+            </div>
+        )}
+    </div>
+);
+
+const DetailShoppingCard = ({ item, onEdit, onDelete, onToggle }: any) => (
+    <div className={`rounded-[32px] p-6 border transition-all ${item.isBought ? 'bg-p3-ruby/5 border-p3-ruby/10' : 'bg-white border-black/5 shadow-sm'}`}>
+        <div className="flex justify-between items-center">
+            <div className="flex items-center gap-5">
+                <button
+                    onClick={() => { onToggle(); triggerHaptic('success'); }}
+                    className={`w-7 h-7 rounded-full border-2 flex items-center justify-center transition-all ${item.isBought ? 'bg-p3-ruby border-p3-ruby text-white' : 'border-gray-300'
+                        }`}
+                >
+                    {item.isBought && <CheckCircle2 size={16} />}
+                </button>
+                <div>
+                    <h4 className={`text-lg font-black uppercase tracking-tight ${item.isBought ? 'text-gray-400 line-through decoration-p3-ruby/30' : 'text-p3-navy'}`}>
+                        {item.title} x{item.quantity}
+                    </h4>
+                    <p className="text-[11px] font-black text-p3-ruby uppercase tracking-widest mt-0.5">
+                        ¥{(item.price * item.quantity).toLocaleString()} ({item.category})
+                    </p>
+                </div>
+            </div>
+            <div className="flex gap-4">
+                <button onClick={onEdit} className="text-gray-300 hover:text-p3-navy transition-colors"><Edit2 size={16} /></button>
+                <button onClick={onDelete} className="text-gray-300 hover:text-p3-ruby transition-colors"><Trash2 size={16} /></button>
+            </div>
+        </div>
+
+        {item.note && (
+            <div className="mt-4 flex items-start gap-2 bg-black/5 p-3 rounded-2xl">
+                <Info size={12} className="text-gray-400 mt-0.5" />
+                <p className="text-xs font-bold text-gray-500 italic">{item.note}</p>
+            </div>
+        )}
+    </div>
+);
+
+// --- Reuseable Components (from previous Memories.tsx) ---
+
 const MenuOption = ({ icon, label, color, onClick, delay }: any) => (
     <motion.button
         initial={{ opacity: 0, y: 10, scale: 0.9 }}
@@ -184,7 +558,6 @@ const MenuOption = ({ icon, label, color, onClick, delay }: any) => (
     </motion.button>
 );
 
-// --- 配件: Quick Editor ---
 const QuickEditor = ({ type, onClose, tripId, t }: any) => {
     const [title, setTitle] = useState('');
     const { addJournalItem, addShoppingItem, showToast } = useTripStore();
@@ -267,162 +640,6 @@ const QuickEditor = ({ type, onClose, tripId, t }: any) => {
                         {t('common.saveConfirm')}
                     </button>
                 </div>
-            </motion.div>
-        </motion.div>
-    );
-};
-
-// --- 子組件: Polaroid Card ---
-const MemoryCard = ({ item, index, t, onToggle }: { item: StreamItem, index: number, t: (key: string) => string, onToggle: () => void }) => {
-    const isJournal = item._type === 'journal';
-    const isShopping = item._type === 'shopping';
-    const isExpense = item._type === 'expense';
-
-    // 取得封面圖與標籤回饋
-    let image = '';
-    let emblem = '';
-    let accentColor = 'bg-p3-navy';
-
-    if (isJournal) {
-        image = item.images?.[0] || '';
-        emblem = '📝';
-        accentColor = 'bg-p3-gold';
-    } else if (isShopping) {
-        image = item.images?.[0] || '';
-        emblem = '🛍️';
-        accentColor = item.isBought ? 'bg-p3-ruby' : 'bg-gray-300';
-    } else if (isExpense) {
-        image = item.images?.[0] || '';
-        emblem = CATEGORY_STAMPS[item.category] || '💰';
-        accentColor = 'bg-p3-navy/60';
-    }
-
-    const rotation = useMemo(() => (index % 2 === 0 ? -1 : 1.5) + (Math.random() * 2 - 1), [index]);
-
-    return (
-        <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: index * 0.05 }}
-            className="mb-8 relative group"
-        >
-            {/* Polaroid Container */}
-            <motion.div
-                style={{ rotate: rotation }}
-                className="bg-white p-3 pb-8 rounded-sm shadow-glass-deep w-full border-[0.5px] border-black/5 relative overflow-hidden"
-            >
-                {/* Ink Splat Checkbox for Shopping */}
-                {isShopping && !item.isBought && (
-                    <motion.button
-                        whileTap={{ scale: 0.8 }}
-                        onClick={() => {
-                            onToggle();
-                            triggerHaptic('success');
-                        }}
-                        className="absolute top-4 left-4 z-20 w-10 h-10 rounded-full bg-p3-ruby/10 border-2 border-p3-ruby/30 flex items-center justify-center text-p3-ruby overflow-hidden"
-                    >
-                        <ShoppingBag size={18} />
-                        <span className="absolute inset-0 bg-p3-ruby opacity-0 active:opacity-20 transition-opacity" />
-                    </motion.button>
-                )}
-
-                {/* Embossed Ink Stamp Overlay for Bought Items */}
-                {isShopping && item.isBought && (
-                    <motion.div
-                        initial={{ opacity: 0, scale: 2 }}
-                        animate={{ opacity: 0.6, scale: 1 }}
-                        className="absolute -top-2 -right-2 z-30 pointer-events-none"
-                    >
-                        <div className="w-20 h-20 rounded-full border-4 border-p3-ruby/40 flex items-center justify-center rotate-12 bg-white/20 backdrop-blur-sm shadow-inner">
-                            <span className="text-[10px] font-black text-p3-ruby uppercase tracking-tighter leading-tight text-center">
-                                PAID<br />STAMPED
-                            </span>
-                        </div>
-                    </motion.div>
-                )}
-
-                {/* Photo Slot */}
-                <div className={`rounded-sm overflow-hidden border-[0.5px] border-black/5 relative mb-4 ${isJournal && !image ? 'aspect-square' : 'aspect-[4/3]'} bg-gray-50`}>
-                    {image ? (
-                        <img src={image} className="w-full h-full object-cover grayscale-[0.1] hover:grayscale-0 transition-all duration-1000" alt="memory" />
-                    ) : (
-                        <div className="w-full h-full flex flex-col items-center justify-center bg-[radial-gradient(#e5e7eb_1px,transparent_1px)] [background-size:16px_16px]">
-                            <div className="text-[48px] opacity-10 filter grayscale select-none">{emblem}</div>
-                            <p className="text-[8px] font-black text-gray-300 uppercase tracking-widest mt-2 italic">{t('memories.capturedMoment')}</p>
-                        </div>
-                    )}
-
-                    {/* Category Label */}
-                    <div className="absolute top-2 right-2 px-2 py-0.5 bg-white/90 backdrop-blur-md rounded border border-gray-200 shadow-sm">
-                        <span className="text-[8px] font-black text-gray-500 uppercase tracking-[0.15em]">
-                            {isJournal ? t('memories.journal') : isShopping ? t('memories.purchase') : t('memories.expense')}
-                        </span>
-                    </div>
-                </div>
-
-                {/* Caption Area */}
-                <div className="px-1 space-y-1">
-                    <div className="flex justify-between items-start">
-                        <h4 className="font-black text-[13px] text-p3-navy line-clamp-2 leading-tight flex-1 pr-2">{item.title}</h4>
-                        <span className="text-[9px] font-bold text-gray-400 italic shrink-0">
-                            {format(parseISO(item.date), 'MMM dd')}
-                        </span>
-                    </div>
-
-                    <div className="flex items-center gap-2 mt-1">
-                        <div className="flex-1">
-                            {isJournal && (
-                                <div className="flex gap-0.5">
-                                    {Array.from({ length: item.rating }).map((_, i) => (
-                                        <Star key={i} size={8} className="fill-p3-gold text-p3-gold" />
-                                    ))}
-                                </div>
-                            )}
-                            {isExpense && (
-                                <p className="text-[9px] font-black text-p3-navy/80 uppercase">
-                                    ¥{(item as any).displayAmount?.toLocaleString()}
-                                </p>
-                            )}
-                            {isShopping && (
-                                <p className={`text-[9px] font-black uppercase ${item.isBought ? 'text-p3-ruby' : 'text-gray-400'}`}>
-                                    {item.isBought ? '✓ ' : ''}¥{(item as any).displayAmount?.toLocaleString()}
-                                </p>
-                            )}
-                        </div>
-
-                        {/* AI Magic Refine Button for Journal */}
-                        {isJournal && (
-                            <motion.button
-                                whileTap={{ scale: 0.9 }}
-                                onClick={() => {
-                                    triggerHaptic('medium');
-                                    // Placeholder for AI Refine
-                                }}
-                                className="w-7 h-7 rounded-full bg-p3-gold/10 flex items-center justify-center text-p3-gold border border-p3-gold/20 hover:bg-p3-gold hover:text-white transition-all shadow-sm"
-                            >
-                                <Sparkles size={12} />
-                            </motion.button>
-                        )}
-
-                        <motion.button
-                            whileTap={{ scale: 0.9 }}
-                            className="w-7 h-7 rounded-full bg-gray-50 flex items-center justify-center text-gray-400 border border-gray-200 hover:text-p3-navy transition-colors shadow-sm"
-                        >
-                            <Heart size={12} />
-                        </motion.button>
-                    </div>
-                </div>
-
-                {/* Logical Binding Trigger */}
-                {isExpense && item.category === '餐飲' && (
-                    <motion.button
-                        whileTap={{ scale: 0.98 }}
-                        className="mt-4 w-full py-2 bg-p3-navy/5 border-[0.5px] border-dashed border-p3-navy/20 rounded-xl flex items-center justify-center gap-2 group/btn"
-                    >
-                        <Sparkles size={10} className="text-p3-navy group-hover/btn:animate-spin" />
-                        <span className="text-[9px] font-black text-p3-navy uppercase tracking-wider">{t('memories.addFoodie')}</span>
-                    </motion.button>
-                )}
             </motion.div>
         </motion.div>
     );

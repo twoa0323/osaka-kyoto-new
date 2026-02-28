@@ -1,21 +1,20 @@
-import { useState, useEffect, useRef, useMemo, ChangeEvent } from 'react';
+import { useState, useMemo, useRef } from 'react';
 import { useTripStore } from '../store/useTripStore';
 import {
-    Wallet as WalletIcon, Coins, Trash2, Camera, BarChart3, Upload, PenTool,
-    LayoutList, Settings, CheckCircle, Image as ImageIcon,
-    Loader2, Store, Search, X, ChevronRight, Edit3, ArrowLeft,
-    Info, ArrowRight, TrendingDown, Sparkles, AlertTriangle, AlertOctagon,
-    RefreshCw, Repeat, ArrowUpDown, Banknote, CreditCard, PieChart, Plus, Utensils,
-    ShoppingBag, Car, Pill, ShoppingCart, Calendar, Home
+    Wallet as WalletIcon, Coins, Trash2, Camera, BarChart3,
+    Store, X, Edit3, ArrowLeft, Info, TrendingUp, Sparkles,
+    Repeat, Banknote, CreditCard, PieChart, Plus, Utensils,
+    ShoppingBag, Car, Pill, ShoppingCart, Calendar, Home,
+    ChevronRight, MapPin, Receipt, Wallet2, CheckCircle2
 } from 'lucide-react';
-import { ExpenseItem, CurrencyCode, Member } from '../types';
+import { ExpenseItem, CurrencyCode } from '../types';
 import { triggerHaptic } from '../utils/haptics';
-import { format } from 'date-fns';
+import { format, parseISO } from 'date-fns';
 import { motion, AnimatePresence } from 'framer-motion';
 import { SwipeableItem } from './Common';
 import { useTranslation } from '../hooks/useTranslation';
 
-// --- 常數配置 ---
+// --- Constants ---
 const CURRENCY_SYMBOLS: Record<string, string> = {
     TWD: 'NT$', JPY: '¥', KRW: '₩', USD: '$', EUR: '€', THB: '฿', GBP: '£', CNY: '¥', HKD: 'HK$', SGD: 'S$', VND: '₫'
 };
@@ -28,52 +27,97 @@ const CATEGORY_ICONS: Record<string, any> = {
     '娛樂': Sparkles, '藥妝': Pill, '便利商店': Store, '超市': ShoppingCart, '其他': Coins
 };
 
+const METHOD_ICONS: Record<string, any> = {
+    '現金': Banknote, '信用卡': CreditCard, '行動支付': Receipt, 'IC卡': Wallet2, '其他': Coins
+};
+
 export const Wallet = () => {
     const { t } = useTranslation();
-    const { trips, currentTripId, exchangeRate, addExpenseItem, deleteExpenseItem, updateExpenseItem, updateTripData, setExchangeRate, showToast, setActiveTab: setGlobalActiveTab } = useTripStore();
+    const {
+        trips, currentTripId, exchangeRate,
+        addExpenseItem, deleteExpenseItem, updateExpenseItem,
+        updateTripData, showToast, setActiveTab: setGlobalActiveTab
+    } = useTripStore();
     const trip = trips.find(t => t.id === currentTripId);
 
-    const [activeTab, setActiveTab] = useState<'record' | 'list' | 'stats'>('record');
-    const [inputMode, setInputMode] = useState<'manual' | 'scan' | 'import'>('manual');
-    const [statsView, setStatsView] = useState<'daily' | 'category' | 'method'>('daily');
-    const [detailItem, setDetailItem] = useState<ExpenseItem | null>(null);
+    const [activeTab, setActiveTab] = useState<'list' | 'record' | 'stats'>('list');
     const [editingId, setEditingId] = useState<string | null>(null);
-    const [isProcessing, setIsProcessing] = useState(false);
-    const [isUploadingImg, setIsUploadingImg] = useState(false);
-    const [isSuccess, setIsSuccess] = useState(false);
-    const [showFoodiePrompt, setShowFoodiePrompt] = useState(false);
-
-    // 匯率引擎狀態
     const [converterValue, setConverterValue] = useState<string>('');
     const [converterMode, setConverterMode] = useState<'JPY2TWD' | 'TWD2JPY'>('JPY2TWD');
+    const [showFoodiePrompt, setShowFoodiePrompt] = useState(false);
 
     const fileInputRef = useRef<HTMLInputElement>(null);
 
+    const expenses = trip?.expenses || [];
+    const rate = exchangeRate || 0.211;
+
+    // --- State: Recording Form ---
     const [form, setForm] = useState<Partial<ExpenseItem>>({
-        date: new Date().toISOString().split('T')[0], currency: trip?.baseCurrency || 'JPY',
-        method: '現金', amount: 0, storeName: '', title: '', location: '', images: [], category: '餐飲', items: []
+        date: format(new Date(), 'yyyy-MM-dd'),
+        currency: trip?.baseCurrency || 'JPY',
+        method: '現金',
+        amount: 0,
+        storeName: '',
+        title: '',
+        location: '',
+        images: [],
+        category: '餐飲',
+        items: []
     });
 
-    const expenses = trip?.expenses || [];
-    const rate = exchangeRate || 0.21;
+    // --- Logic: Data Grouping (Date-Based) ---
+    const groupedExpenses = useMemo(() => {
+        const groups: Record<string, ExpenseItem[]> = {};
+        [...expenses]
+            .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+            .forEach(e => {
+                if (!groups[e.date]) groups[e.date] = [];
+                groups[e.date].push(e);
+            });
+        return Object.entries(groups).sort((a, b) => new Date(b[0]).getTime() - new Date(a[0]).getTime());
+    }, [expenses]);
 
+    // --- Logic: Stats Engine ---
     const stats = useMemo(() => {
         const totalTwd = expenses.reduce((s, e) => s + (e.currency === 'TWD' ? e.amount : e.amount * rate), 0);
         const totalForeign = expenses.filter(e => e.currency === (trip?.baseCurrency || 'JPY')).reduce((s, e) => s + e.amount, 0);
         const taxFreeTotal = expenses.filter(e => e.isTaxFree).reduce((s, e) => s + e.amount, 0);
 
+        // 1. Category Dashboard
         const catStats = expenses.reduce((acc, curr) => {
             const val = curr.currency === 'TWD' ? curr.amount : curr.amount * rate;
             acc[curr.category] = (acc[curr.category] || 0) + val;
             return acc;
         }, {} as Record<string, number>);
 
-        const pieData = Object.entries(catStats).map(([label, value], i) => ({
+        const categoryData = Object.entries(catStats).map(([label, value], i) => ({
             label, value, percent: Math.round((value / (totalTwd || 1)) * 100),
-            color: ['var(--p3-ruby)', 'var(--p3-navy)', 'var(--p3-gold)', 'var(--p3-ruby)', 'var(--p3-navy)'][i % 5]
+            color: ['#FF4B4B', '#2D4B73', '#FFC700', '#00C2FF', '#9E00FF'][i % 5]
         })).sort((a, b) => b.value - a.value);
 
-        return { totalTwd, totalForeign, taxFreeTotal, pieData };
+        // 2. Method Analytics
+        const methodStats = expenses.reduce((acc, curr) => {
+            const val = curr.currency === 'TWD' ? curr.amount : curr.amount * rate;
+            acc[curr.method] = (acc[curr.method] || 0) + val;
+            return acc;
+        }, {} as Record<string, number>);
+
+        const methodData = Object.entries(methodStats).map(([label, value]) => ({
+            label, value, percent: Math.round((value / (totalTwd || 1)) * 100)
+        })).sort((a, b) => b.value - a.value);
+
+        // 3. Daily Trend
+        const trendStats = expenses.reduce((acc, curr) => {
+            const val = curr.currency === 'TWD' ? curr.amount : curr.amount * rate;
+            acc[curr.date] = (acc[curr.date] || 0) + val;
+            return acc;
+        }, {} as Record<string, number>);
+
+        const trendData = Object.entries(trendStats).map(([date, value]) => ({
+            date, value
+        })).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+        return { totalTwd, totalForeign, taxFreeTotal, categoryData, methodData, trendData };
     }, [expenses, rate, trip?.baseCurrency]);
 
     const convertedValue = useMemo(() => {
@@ -82,31 +126,26 @@ export const Wallet = () => {
         return (val / rate).toFixed(0);
     }, [converterValue, converterMode, rate]);
 
-    const handleDelete = (id: string) => {
-        if (!trip) return;
-        deleteExpenseItem(trip.id, id);
-        showToast(t('wallet.delSuccess'), "info");
-    };
-
-    const handleAddFoodieList = () => {
-        if (!trip) return;
-        const wishItem = {
-            id: Date.now().toString(), title: form.storeName || '想吃', location: form.location || '',
-            date: form.date || '', category: 'dining' as any, images: form.images || [], time: '12:00', note: '', cost: 0
-        };
-        updateTripData(trip.id, { items: [...(trip.items || []), wishItem] });
-    };
-
     const handleSave = () => {
         if (!form.amount || !form.title) return showToast(t('wallet.incompleteInfo'), "error");
+
         const item: ExpenseItem = {
-            id: editingId || Date.now().toString(), date: form.date!, storeName: form.storeName || '', title: form.title!, amount: Number(form.amount),
-            currency: form.currency as CurrencyCode, method: form.method as any, location: form.location || '',
-            payerId: form.payerId || trip?.members?.[0]?.id || 'Admin',
-            splitWith: form.splitWith || [],
-            images: form.images || [], category: form.category as any, items: form.items || [],
+            id: editingId || Date.now().toString(),
+            date: form.date!,
+            storeName: form.storeName || '',
+            title: form.title!,
+            amount: Number(form.amount),
+            currency: (form.currency || trip?.baseCurrency || 'JPY') as CurrencyCode,
+            method: (form.method || '現金') as any,
+            location: form.location || '',
+            payerId: 'Admin',
+            splitWith: [],
+            images: form.images || [],
+            category: form.category as any,
+            items: form.items || [],
             isTaxFree: !!form.isTaxFree
         };
+
         if (editingId) {
             updateExpenseItem(trip!.id, editingId, item);
         } else {
@@ -114,58 +153,54 @@ export const Wallet = () => {
         }
 
         triggerHaptic('medium');
-        setIsSuccess(true);
-        setTimeout(() => {
-            setIsSuccess(false);
-            setEditingId(null);
-            setForm({ date: new Date().toISOString().split('T')[0], currency: trip?.baseCurrency || 'JPY', method: '現金', amount: 0, storeName: '', title: '', location: '', images: [], category: '餐飲', items: [] });
-            setInputMode('manual');
-            showToast(t('wallet.saveSuccess'), "success");
-            if (item.category === '餐飲' && !editingId) {
-                setShowFoodiePrompt(true);
-            } else {
-                setActiveTab('list');
-            }
-        }, 800);
+        setEditingId(null);
+        setForm({ date: format(new Date(), 'yyyy-MM-dd'), currency: trip?.baseCurrency || 'JPY', method: '現金', amount: 0, storeName: '', title: '', location: '', images: [], category: '餐飲', items: [] });
+        showToast(t('wallet.saveSuccess'), "success");
+
+        if (item.category === '餐飲' && !editingId) {
+            setShowFoodiePrompt(true);
+        } else {
+            setActiveTab('list');
+        }
     };
 
     if (!trip) return null;
 
     return (
-        <div className="px-5 space-y-6 pb-32 pt-4 bg-[#F4F5F7] h-full overflow-y-auto hide-scrollbar">
+        <div className="px-5 space-y-7 pb-40 pt-4 bg-[#F4F5F7] min-h-full overflow-y-auto hide-scrollbar relative">
 
-            {/* --- Section 1: Hero Dashboard --- */}
-            <div className="bg-splat-yellow border-[0.5px] border-p3-navy glass-card p-6 shadow-glass-deep relative overflow-hidden">
+            {/* --- Hero Dashboard --- */}
+            <div className="bg-splat-yellow border-[0.5px] border-p3-navy glass-card p-7 shadow-glass-deep relative overflow-hidden group">
                 <div className="flex justify-between items-start relative z-10">
-                    <div>
-                        <div className="flex items-center gap-2 mb-2">
-                            <Banknote size={16} className="text-p3-navy" />
-                            <p className="text-[10px] font-black uppercase text-p3-navy tracking-widest italic">{t('wallet.currentExp')}</p>
+                    <div className="space-y-1">
+                        <div className="flex items-center gap-2 mb-1">
+                            <Banknote size={16} className="text-p3-navy/60" />
+                            <p className="text-[10px] font-black uppercase text-p3-navy/60 tracking-widest italic">{t('wallet.currentExp')}</p>
                         </div>
                         <h2 className="text-4xl font-black text-p3-navy tracking-tighter">
                             NT$ {Math.round(stats.totalTwd).toLocaleString()}
                         </h2>
-                        <div className="flex items-center gap-3 mt-3">
+                        <div className="flex items-center gap-3 pt-2">
                             <div className="px-3 py-1 bg-white/40 rounded-full border border-p3-navy/10 text-[10px] font-black text-p3-navy uppercase">
                                 {trip.baseCurrency} {Math.round(stats.totalForeign).toLocaleString()}
                             </div>
-                            <div className="text-[10px] font-black text-p3-navy/40 italic uppercase tracking-widest">
-                                {t('wallet.rate')}: {rate.toFixed(4)}
+                            <div className="text-[10px] font-black text-p3-navy/30 italic uppercase tracking-widest">
+                                Rate: {rate.toFixed(4)}
                             </div>
                         </div>
                     </div>
                     <motion.button
                         whileTap={{ scale: 0.9 }}
-                        onClick={() => setActiveTab('stats')}
-                        className="w-14 h-14 bg-white border-[0.5px] border-p3-navy rounded-2xl shadow-glass-deep-sm flex items-center justify-center text-p3-navy"
+                        onClick={() => { setActiveTab('stats'); triggerHaptic('medium'); }}
+                        className="w-14 h-14 bg-white border-[0.5px] border-p3-navy rounded-2xl shadow-glass-deep-sm flex items-center justify-center text-p3-navy active:translate-y-1 transition-all"
                     >
-                        <PieChart size={28} strokeWidth={2.5} />
+                        <BarChart3 size={28} strokeWidth={2.5} />
                     </motion.button>
                 </div>
             </div>
 
-            {/* --- Section 2: Tax-Free Battery Bar --- */}
-            <div className="glass-card p-5 shadow-glass-soft relative overflow-hidden group border-[0.5px] border-white/40">
+            {/* --- Tax-Free Sentinel --- */}
+            <div className="glass-card p-5 shadow-glass-soft relative overflow-hidden border-[0.5px] border-white/40 bg-white/40">
                 <div className="flex justify-between items-end mb-4">
                     <div className="space-y-1">
                         <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-p3-navy/30">{t('wallet.taxFreeSentinel')}</h4>
@@ -180,157 +215,195 @@ export const Wallet = () => {
                         </span>
                     </div>
                 </div>
-
                 <div className="relative h-4 bg-p3-navy/5 rounded-full p-[2px] overflow-hidden border-[0.5px] border-p3-navy/20">
                     <motion.div
                         initial={{ width: 0 }}
                         animate={{ width: `${Math.min(100, (stats.taxFreeTotal / 5000) * 100)}%` }}
-                        className={`h-full rounded-full transition-colors relative overflow-hidden ${stats.taxFreeTotal >= 5000 ? 'bg-p3-gold' : 'bg-p3-ruby'}`}
+                        className={`h-full rounded-full transition-colors relative overflow-hidden ${stats.taxFreeTotal >= 5000 ? 'bg-p3-gold shadow-[0_0_15px_rgba(255,199,0,0.4)]' : 'bg-p3-ruby'}`}
                     >
-                        <motion.div
-                            animate={{ x: ['-100%', '100%'] }}
-                            transition={{ repeat: Infinity, duration: 2, ease: "linear" }}
-                            className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent"
-                        />
+                        <motion.div animate={{ x: ['-100%', '100%'] }} transition={{ repeat: Infinity, duration: 2, ease: "linear" }} className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent" />
                     </motion.div>
                 </div>
-                {stats.taxFreeTotal >= 5000 && (
-                    <motion.p animate={{ opacity: [0.4, 1, 0.4] }} transition={{ repeat: Infinity, duration: 1 }} className="text-center text-[9px] font-black uppercase text-splat-orange mt-3 tracking-widest">{t('wallet.taxFreeAchieved')}</motion.p>
-                )}
             </div>
 
-            {/* --- Section 3: Instant Exchange Engine --- */}
-            <div className="bg-p3-navy border-[0.5px] border-p3-navy rounded-[24px] p-4 shadow-glass-deep relative">
-                <div className="flex items-center gap-4">
+            {/* --- Instant Converter --- */}
+            <div className="bg-p3-navy border-[0.5px] border-p3-navy rounded-[28px] p-5 shadow-glass-deep relative overflow-hidden group">
+                <div className="flex items-center gap-5 relative z-10">
                     <div className="flex-1 relative">
-                        <input type="text" inputMode="decimal" placeholder={converterMode === 'JPY2TWD' ? t('wallet.jpyAmount') : t('wallet.twdAmount')} value={converterValue} onChange={(e) => setConverterValue(e.target.value)} className="w-full bg-white/10 border-[0.5px] border-white/20 rounded-xl py-3 px-4 text-white font-black placeholder:text-white/20 outline-none focus:border-p3-gold/50 transition-colors text-sm" />
+                        <input
+                            type="number"
+                            inputMode="decimal"
+                            placeholder={converterMode === 'JPY2TWD' ? 'JPY' : 'TWD'}
+                            value={converterValue}
+                            onChange={(e) => setConverterValue(e.target.value)}
+                            className="w-full bg-white/10 border-[0.5px] border-white/20 rounded-2xl py-3.5 px-4 text-white font-black placeholder:text-white/20 outline-none focus:border-p3-gold/50 transition-colors text-lg"
+                        />
                     </div>
-                    <motion.button whileTap={{ rotate: 180 }} onClick={() => { setConverterMode(m => m === 'JPY2TWD' ? 'TWD2JPY' : 'JPY2TWD'); triggerHaptic('light'); }} className="w-10 h-10 rounded-full bg-p3-gold flex items-center justify-center text-p3-navy border-[0.5px] border-white/20 shadow-sm"><Repeat size={20} strokeWidth={3} /></motion.button>
+                    <motion.button
+                        whileTap={{ rotate: 180 }}
+                        onClick={() => { setConverterMode(m => m === 'JPY2TWD' ? 'TWD2JPY' : 'JPY2TWD'); triggerHaptic('light'); }}
+                        className="w-11 h-11 rounded-full bg-p3-gold flex items-center justify-center text-p3-navy border-[0.5px] border-white/20 shadow-xl"
+                    >
+                        <Repeat size={22} strokeWidth={3} />
+                    </motion.button>
                     <div className="flex-1 text-right">
-                        <div className="text-[10px] font-black text-white/40 uppercase tracking-widest mb-1">{t('wallet.result')} ({converterMode === 'JPY2TWD' ? 'TWD' : 'JPY'})</div>
+                        <div className="text-[10px] font-black text-white/40 uppercase tracking-widest mb-1">{converterMode === 'JPY2TWD' ? 'TWD Estimate' : 'JPY Estimate'}</div>
                         <div className="text-xl font-black text-p3-gold tabular-nums">{converterMode === 'JPY2TWD' ? 'NT$ ' : '¥ '}{Math.round(parseFloat(convertedValue) || 0).toLocaleString()}</div>
                     </div>
                 </div>
             </div>
 
-            {/* --- Section 4: Grid Analytics --- */}
-            <div className="space-y-4">
-                <h3 className="text-sm font-black text-p3-navy flex items-center gap-2 uppercase tracking-widest pl-2">
-                    <div className="w-2 h-5 bg-p3-navy rounded-full" /> {t('wallet.spendAnalytics')}
-                </h3>
-                <div className="grid grid-cols-2 gap-4">
-                    {stats.pieData.slice(0, 4).map((d) => (
-                        <div key={d.label} className="bg-white border-[0.5px] border-p3-navy rounded-3xl p-5 shadow-glass-deep-sm relative overflow-hidden group">
-                            <div className={`absolute top-0 right-0 w-12 h-12 -mr-6 -mt-6 rounded-full opacity-20`} style={{ backgroundColor: d.color }} />
-                            <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">{d.label}</div>
-                            <div className="text-lg font-black text-p3-navy tabular-nums">${Math.round(d.value).toLocaleString()}</div>
-                            <div className="flex items-center gap-1.5 mt-4">
-                                <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                                    <motion.div initial={{ width: 0 }} animate={{ width: `${d.percent}%` }} className="h-full rounded-full" style={{ backgroundColor: d.color }} />
-                                </div>
-                                <span className="text-[10px] font-black text-p3-navy">{d.percent}%</span>
-                            </div>
-                        </div>
-                    ))}
+            {/* --- Transaction Log (Grouped by Date) --- */}
+            <div className="space-y-8">
+                <div className="flex justify-between items-center px-1">
+                    <h3 className="text-sm font-black text-p3-navy flex items-center gap-3 uppercase tracking-widest">
+                        <div className="w-2.5 h-6 bg-p3-ruby rounded-full" /> {t('wallet.recentTx')}
+                    </h3>
+                    <div className="text-[10px] font-black text-gray-400 italic bg-gray-100 px-3 py-1 rounded-full uppercase">{expenses.length} Records</div>
                 </div>
-            </div>
 
-            {/* --- Section 5: Recent Transactions --- */}
-            <div className="space-y-4">
-                <h3 className="text-sm font-black text-p3-navy flex justify-between items-center uppercase tracking-widest pl-2">
-                    <div className="flex items-center gap-2">
-                        <div className="w-2 h-5 bg-p3-ruby rounded-full" /> {t('wallet.recentTx')}
+                {groupedExpenses.length === 0 ? (
+                    <div className="bg-white/40 border-[0.5px] border-dashed border-gray-300 rounded-[32px] py-16 text-center text-gray-400 font-black italic uppercase tracking-widest">
+                        {t('wallet.noTransactions')}
                     </div>
-                </h3>
-                <div className="space-y-3">
-                    {expenses.length === 0 ? (
-                        <div className="bg-white/40 border-[0.5px] border-dashed border-gray-300 rounded-3xl py-12 text-center text-gray-400 font-black italic uppercase tracking-widest">
-                            {t('wallet.noTransactions')}
-                        </div>
-                    ) : (
-                        expenses
-                            .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-                            .map(item => {
-                                const Icon = CATEGORY_ICONS[item.category] || Coins;
-                                return (
-                                    <SwipeableItem key={item.id} id={item.id} onDelete={() => handleDelete(item.id)}>
-                                        <motion.div
-                                            whileTap={{ scale: 0.98 }}
-                                            onClick={() => {
-                                                setEditingId(item.id);
-                                                setForm({ ...item });
-                                                setActiveTab('record');
-                                            }}
-                                            className="bg-white border-[0.5px] border-p3-navy rounded-[28px] p-5 shadow-glass-soft flex items-center justify-between group active:bg-gray-50 transition-colors"
-                                        >
-                                            <div className="flex items-center gap-4">
-                                                <div className="w-12 h-12 rounded-2xl bg-gray-50 border-[0.5px] border-p3-navy/10 flex items-center justify-center text-p3-navy">
-                                                    <Icon size={24} strokeWidth={2.5} />
-                                                </div>
-                                                <div>
-                                                    <h4 className="font-black text-p3-navy leading-tight truncate w-32">{item.title || item.storeName}</h4>
-                                                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-1">{item.date} • {item.method}</p>
-                                                </div>
-                                            </div>
-                                            <div className="text-right">
-                                                <div className="text-lg font-black text-p3-navy tabular-nums">
-                                                    {CURRENCY_SYMBOLS[item.currency] || ''}{item.amount.toLocaleString()}
-                                                </div>
-                                                {item.currency !== 'TWD' && (
-                                                    <p className="text-[10px] font-black text-p3-ruby/60 uppercase">
-                                                        ≈ NT$ {Math.round(item.amount * rate).toLocaleString()}
-                                                    </p>
-                                                )}
-                                            </div>
-                                        </motion.div>
-                                    </SwipeableItem>
-                                );
-                            })
-                    )}
-                </div>
+                ) : (
+                    <div className="space-y-10 relative">
+                        {groupedExpenses.map(([date, items]) => (
+                            <div key={date} className="space-y-4">
+                                <div className="flex items-center gap-3 sticky top-0 z-20 pt-1 pb-2 bg-[#F4F5F7]/80 backdrop-blur-md -mx-1 px-1">
+                                    <div className="w-8 h-8 rounded-xl bg-p3-navy/5 flex items-center justify-center text-p3-navy/30">
+                                        <Calendar size={14} />
+                                    </div>
+                                    <span className="text-[11px] font-black text-p3-navy/40 uppercase tracking-[0.2em]">{date}</span>
+                                    <div className="flex-1 h-[1px] bg-p3-navy/10" />
+                                </div>
+
+                                <div className="space-y-4">
+                                    {items.map(item => {
+                                        const Icon = CATEGORY_ICONS[item.category] || Coins;
+                                        return (
+                                            <SwipeableItem key={item.id} id={item.id} onDelete={() => { deleteExpenseItem(trip.id, item.id); triggerHaptic('medium'); }}>
+                                                <motion.div
+                                                    whileTap={{ scale: 0.98 }}
+                                                    onClick={() => {
+                                                        setEditingId(item.id);
+                                                        setForm({ ...item });
+                                                        setActiveTab('record');
+                                                        triggerHaptic('light');
+                                                    }}
+                                                    className="bg-white border-[0.5px] border-p3-navy rounded-[32px] p-6 shadow-glass-deep-sm flex items-center justify-between group active:bg-gray-50 transition-all border-b-4 hover:border-p3-navy"
+                                                >
+                                                    <div className="flex items-center gap-5">
+                                                        <div className="w-14 h-14 rounded-2xl bg-[#F4F5F7] border border-p3-navy/10 flex items-center justify-center text-p3-navy shadow-inner">
+                                                            <Icon size={26} strokeWidth={2.5} />
+                                                        </div>
+                                                        <div className="space-y-1">
+                                                            <h4 className="font-black text-p3-navy text-lg leading-tight truncate w-40 italic uppercase tracking-tighter">
+                                                                {item.title || item.storeName}
+                                                            </h4>
+                                                            <div className="flex items-center gap-2">
+                                                                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{item.method} • {item.category}</p>
+                                                                {item.location && <MapPin size={10} className="text-p3-ruby" />}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div className="text-right">
+                                                        <div className="text-xl font-black text-p3-navy tabular-nums italic">
+                                                            {CURRENCY_SYMBOLS[item.currency] || ''}{item.amount.toLocaleString()}
+                                                        </div>
+                                                        {item.currency !== 'TWD' && (
+                                                            <p className="text-[10px] font-black text-p3-ruby/60 uppercase">
+                                                                ≈ NT$ {Math.round(item.amount * rate).toLocaleString()}
+                                                            </p>
+                                                        )}
+                                                    </div>
+                                                </motion.div>
+                                            </SwipeableItem>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                )}
             </div>
 
-            <button onClick={() => setActiveTab('record')} className="w-full py-5 bg-p3-navy border-[0.5px] border-white/20 rounded-[24px] shadow-glass-deep text-white font-black uppercase tracking-[0.2em] flex items-center justify-center gap-3 active:scale-95 transition-all">
-                <Plus size={20} strokeWidth={4} /> {t('wallet.addNew')}
-            </button>
+            {/* --- Record FAB --- */}
+            <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => { setActiveTab('record'); triggerHaptic('medium'); }}
+                className="fixed bottom-24 right-6 w-16 h-16 bg-p3-navy rounded-full shadow-2xl flex items-center justify-center text-white z-[100] border-4 border-white"
+            >
+                <Plus size={32} strokeWidth={4} />
+            </motion.button>
 
-            {/* --- Detail/Record Overlay --- */}
+            {/* --- Record Modal (Form Refactor) --- */}
             <AnimatePresence>
                 {activeTab === 'record' && (
                     <motion.div
-                        initial={{ y: '100%' }}
-                        animate={{ y: 0 }} exit={{ y: '100%' }}
+                        initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
                         transition={{ type: 'spring', damping: 25, stiffness: 200 }}
                         className="fixed inset-0 z-[1100] bg-white flex flex-col"
                     >
-                        <div className="p-6 flex justify-between items-center border-b-[3px] border-p3-navy">
-                            <h2 className="text-xl font-black italic uppercase tracking-tighter text-p3-navy">{t('wallet.entryTitle')}</h2>
-                            <button onClick={() => setActiveTab('list')} className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-p3-navy"><X size={20} /></button>
+                        <div className="p-6 flex justify-between items-center bg-white border-b-4 border-p3-navy">
+                            <h2 className="text-2xl font-black italic uppercase tracking-tighter text-p3-navy">{editingId ? 'Edit Transaction' : 'Record Expense'}</h2>
+                            <button onClick={() => setActiveTab('list')} className="w-12 h-12 rounded-2xl bg-gray-100 flex items-center justify-center text-p3-navy active:scale-90 transition-all"><X size={24} /></button>
                         </div>
-                        <div className="flex-1 overflow-y-auto p-6 space-y-6 bg-[#F4F5F7]">
-                            <div className="bg-white p-6 rounded-3xl border-[0.5px] border-p3-navy shadow-glass-deep-sm space-y-6">
+
+                        <div className="flex-1 overflow-y-auto p-7 space-y-8 bg-[#F4F5F7]">
+                            <div className="bg-white p-7 rounded-[40px] border-[0.5px] border-p3-navy shadow-glass-deep-sm space-y-7">
+                                {/* Date Selection */}
                                 <div>
-                                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-2">{t('wallet.txDate')}</label>
-                                    <div className="relative">
-                                        <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 text-p3-navy/30" size={18} />
-                                        <input type="date" value={form.date} onChange={e => setForm({ ...form, date: e.target.value })} className="w-full bg-gray-50 border-[0.5px] border-p3-navy rounded-xl p-4 pl-12 font-black outline-none" />
+                                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-2 ml-1">Date</label>
+                                    <div className="flex items-center gap-3 bg-gray-50 border-[0.5px] border-p3-navy rounded-2xl px-5 py-4">
+                                        <Calendar size={18} className="text-p3-navy/30" />
+                                        <input
+                                            type="date"
+                                            value={form.date}
+                                            onChange={e => setForm({ ...form, date: e.target.value })}
+                                            className="bg-transparent font-black text-p3-navy outline-none w-full appearance-none"
+                                        />
                                     </div>
                                 </div>
 
-                                <div>
-                                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-2">{t('wallet.txDetails')}</label>
-                                    <input placeholder={t('wallet.storeName')} value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} className="w-full bg-gray-50 border-[0.5px] border-p3-navy rounded-xl p-4 font-black outline-none focus:border-splat-blue/50 transition-colors" />
+                                {/* Store & Title Separation */}
+                                <div className="space-y-4">
+                                    <div>
+                                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-1 ml-1">Store / Merchant</label>
+                                        <div className="relative">
+                                            <Store size={18} className="absolute left-5 top-1/2 -translate-y-1/2 text-p3-navy/20" />
+                                            <input placeholder="Uniqlo, Ichiran, etc." value={form.storeName} onChange={e => setForm({ ...form, storeName: e.target.value })} className="w-full bg-gray-50 border-[0.5px] border-p3-navy rounded-2xl p-4 pl-12 font-black italic outline-none focus:border-p3-navy transition-all" />
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-1 ml-1">What did you buy?</label>
+                                        <div className="relative">
+                                            <ShoppingBag size={18} className="absolute left-5 top-1/2 -translate-y-1/2 text-p3-navy/20" />
+                                            <input placeholder="Clothes, Ramen, Souvenirs..." value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} className="w-full bg-gray-50 border-[0.5px] border-p3-navy rounded-2xl p-4 pl-12 font-black outline-none focus:border-p3-navy transition-all" />
+                                        </div>
+                                    </div>
                                 </div>
 
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div className="relative">
-                                        <input type="number" placeholder={t('wallet.amount')} value={form.amount || ''} onChange={e => setForm({ ...form, amount: Number(e.target.value) })} className="w-full bg-gray-50 border-[0.5px] border-p3-navy rounded-xl p-4 font-black text-2xl outline-none" />
-                                        <button
-                                            onClick={() => fileInputRef.current?.click()}
-                                            className="absolute right-2 top-1/2 -translate-y-1/2 w-10 h-10 bg-p3-navy text-white rounded-lg flex items-center justify-center active:scale-90 transition-transform shadow-sm"
-                                        >
-                                            <Camera size={20} />
+                                {/* Location Field */}
+                                <div>
+                                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-1 ml-1">Location</label>
+                                    <div className="flex gap-2">
+                                        <div className="relative flex-1">
+                                            <MapPin size={18} className="absolute left-5 top-1/2 -translate-y-1/2 text-p3-ruby/30" />
+                                            <input placeholder="Umeda, Harajuku..." value={form.location} onChange={e => setForm({ ...form, location: e.target.value })} className="w-full bg-gray-50 border-[0.5px] border-p3-navy rounded-2xl p-4 pl-12 font-black text-xs outline-none" />
+                                        </div>
+                                        <button onClick={() => triggerHaptic('light')} className="w-14 bg-white border-[0.5px] border-p3-navy rounded-2xl flex items-center justify-center text-p3-ruby shadow-sm active:scale-95 transition-all">
+                                            <MapPin size={20} />
                                         </button>
+                                    </div>
+                                </div>
+
+                                {/* Amount & Currency */}
+                                <div className="grid grid-cols-5 gap-3">
+                                    <div className="col-span-3 relative">
+                                        <input type="number" inputMode="decimal" placeholder="0.00" value={form.amount || ''} onChange={e => setForm({ ...form, amount: Number(e.target.value) })} className="w-full h-16 bg-gray-50 border-[0.5px] border-p3-navy rounded-2xl p-5 font-black text-3xl outline-none" />
+                                        <button onClick={() => fileInputRef.current?.click()} className="absolute right-3 top-1/2 -translate-y-1/2 w-10 h-10 bg-p3-navy text-white rounded-xl flex items-center justify-center active:scale-90 transition-all shadow-sm"><Camera size={18} /></button>
                                         <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={(e) => {
                                             const file = e.target.files?.[0];
                                             if (file) {
@@ -340,152 +413,210 @@ export const Wallet = () => {
                                             }
                                         }} />
                                     </div>
-                                    <div className="flex bg-gray-100 p-1 rounded-xl border-[0.5px] border-p3-navy">
-                                        <button onClick={() => setForm({ ...form, currency: 'JPY' })} className={`flex-1 rounded-lg font-black text-xs transition-colors ${form.currency === 'JPY' ? 'bg-splat-green text-white shadow-sm' : 'text-gray-400'}`}>JPY</button>
-                                        <button onClick={() => setForm({ ...form, currency: 'TWD' })} className={`flex-1 rounded-lg font-black text-xs transition-colors ${form.currency === 'TWD' ? 'bg-splat-green text-white shadow-sm' : 'text-gray-400'}`}>TWD</button>
+                                    <div className="col-span-2 flex bg-gray-100 p-1 rounded-2xl border-[0.5px] border-p3-navy">
+                                        {['JPY', 'TWD'].map(cur => (
+                                            <button key={cur} onClick={() => setForm({ ...form, currency: cur as any })} className={`flex-1 rounded-xl font-black text-sm transition-all ${form.currency === cur ? 'bg-p3-navy text-white shadow-lg' : 'text-gray-400'}`}>{cur}</button>
+                                        ))}
                                     </div>
                                 </div>
 
+                                {/* Images Preview */}
                                 {(form.images?.length ?? 0) > 0 && (
-                                    <div className="flex gap-2 overflow-x-auto py-2">
+                                    <div className="flex gap-3 overflow-x-auto py-2">
                                         {form.images?.map((img, i) => (
-                                            <div key={i} className="relative w-20 h-20 shrink-0 rounded-xl overflow-hidden border-[0.5px] border-p3-navy shadow-sm">
-                                                <img src={img} className="w-full h-full object-cover" alt="receipt" />
-                                                <button onClick={() => setForm({ ...form, images: form.images?.filter((_, idx) => idx !== i) })} className="absolute top-1 right-1 bg-p3-ruby text-white rounded-full p-1 shadow-sm"><X size={10} /></button>
+                                            <div key={i} className="relative w-24 h-24 shrink-0 rounded-2xl overflow-hidden border-[0.5px] border-p3-navy shadow-glass-deep-sm">
+                                                <img src={img} className="w-full h-full object-cover" />
+                                                <button onClick={() => setForm({ ...form, images: form.images?.filter((_, idx) => idx !== i) })} className="absolute top-1.5 right-1.5 bg-p3-ruby text-white rounded-full p-1.5 shadow-xl"><X size={12} /></button>
                                             </div>
                                         ))}
                                     </div>
                                 )}
 
+                                {/* Category Grid */}
                                 <div>
-                                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-2">{t('wallet.category')}</label>
+                                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-3 ml-1">Category</label>
                                     <div className="grid grid-cols-3 gap-2">
-                                        {CATEGORIES.map(cat => (
-                                            <button key={cat} onClick={() => setForm({ ...form, category: cat as any })} className={`py-2 px-1 rounded-xl border-[0.5px] font-black text-[10px] transition-all ${form.category === cat ? 'bg-p3-navy text-white border-p3-navy shadow-md' : 'bg-white text-gray-400 border-gray-200 hover:border-p3-navy/30'}`}>
-                                                {cat}
-                                            </button>
-                                        ))}
+                                        {CATEGORIES.map(cat => {
+                                            const Icon = CATEGORY_ICONS[cat] || Coins;
+                                            const isSelected = form.category === cat;
+                                            return (
+                                                <button key={cat} onClick={() => { setForm({ ...form, category: cat as any }); triggerHaptic('light'); }} className={`h-22 p-2 rounded-2xl border-[0.5px] flex flex-col items-center justify-center gap-2 transition-all ${isSelected ? 'bg-p3-navy text-white border-p3-navy shadow-inner scale-95' : 'bg-white text-gray-400 border-gray-100 hover:border-p3-navy/30'}`}>
+                                                    <Icon size={18} />
+                                                    <span className="font-black text-[9px] uppercase tracking-tighter">{cat}</span>
+                                                </button>
+                                            );
+                                        })}
                                     </div>
                                 </div>
 
+                                {/* Payment Method */}
                                 <div>
-                                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-2">{t('wallet.payMethod')}</label>
+                                    <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest block mb-3 ml-1">Payment Method</label>
                                     <div className="flex flex-wrap gap-2">
                                         {METHODS.map(m => (
-                                            <button key={m} onClick={() => setForm({ ...form, method: m as any })} className={`py-2 px-4 rounded-xl border-[0.5px] font-black text-[10px] transition-all ${form.method === m ? 'bg-splat-blue text-white border-splat-blue shadow-md' : 'bg-white text-gray-400 border-gray-200 hover:border-splat-blue/30'}`}>
+                                            <button key={m} onClick={() => { setForm({ ...form, method: m as any }); triggerHaptic('light'); }} className={`py-3 px-5 rounded-2xl border-[0.5px] font-black text-[10px] uppercase transition-all ${form.method === m ? 'bg-p3-gold text-p3-navy border-p3-navy shadow-md' : 'bg-white text-gray-400 border-gray-100'}`}>
                                                 {m}
                                             </button>
                                         ))}
                                     </div>
                                 </div>
 
-                                <div className="flex items-center gap-3 p-4 bg-splat-yellow/10 border-2 border-dashed border-splat-yellow rounded-xl cursor-pointer" onClick={() => setForm({ ...form, isTaxFree: !form.isTaxFree })}>
-                                    <Sparkles size={18} className="text-splat-yellow" />
-                                    <div className="flex-1 flex items-center justify-between">
-                                        <span className="text-[10px] font-black text-p3-navy uppercase">{t('wallet.applyTaxFree')}</span>
-                                        <div className={`w-12 h-6 rounded-full p-1 transition-colors ${form.isTaxFree ? 'bg-p3-gold' : 'bg-gray-200'}`}>
-                                            <motion.div animate={{ x: form.isTaxFree ? 24 : 0 }} className="w-4 h-4 bg-white rounded-full shadow-sm" />
-                                        </div>
+                                {/* Tax-Free Toggle */}
+                                <div className="flex items-center gap-4 p-5 bg-p3-gold/5 border-2 border-dashed border-p3-gold/30 rounded-3xl cursor-pointer" onClick={() => { setForm({ ...form, isTaxFree: !form.isTaxFree }); triggerHaptic('medium'); }}>
+                                    <Sparkles size={24} className="text-p3-gold" />
+                                    <div className="flex-1">
+                                        <span className="text-xs font-black text-p3-navy uppercase block mb-0.5">Apply Tax-Free (SENTINEL)</span>
+                                        <p className="text-[10px] font-bold text-gray-400 uppercase">Counts towards the ¥5,000 threshold</p>
+                                    </div>
+                                    <div className={`w-14 h-7 rounded-full p-1 transition-colors ${form.isTaxFree ? 'bg-p3-gold' : 'bg-gray-200'}`}>
+                                        <motion.div animate={{ x: form.isTaxFree ? 28 : 0 }} className="w-5 h-5 bg-white rounded-full shadow-lg" />
                                     </div>
                                 </div>
                             </div>
-                            <button onClick={handleSave} className="w-full py-5 bg-p3-navy text-white rounded-2xl font-black uppercase tracking-widest shadow-glass-deep active:translate-y-1 active:shadow-none transition-all">
-                                {t('wallet.saveTx')}
+
+                            <button onClick={handleSave} className="w-full py-6 bg-p3-navy text-white rounded-[40px] font-black uppercase tracking-[0.3em] text-sm shadow-glass-deep active:scale-95 transition-all mb-10">
+                                {editingId ? 'Update Record' : 'Commit Expense'}
                             </button>
                         </div>
                     </motion.div>
                 )}
             </AnimatePresence>
 
-            {/* --- Stats Overlay --- */}
+            {/* --- Stats Dashboard (Standalone Modal) --- */}
             <AnimatePresence>
                 {activeTab === 'stats' && (
                     <motion.div
-                        initial={{ y: '100%' }}
-                        animate={{ y: 0 }} exit={{ y: '100%' }}
+                        initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
                         transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-                        className="fixed inset-0 z-[1100] bg-[#F4F5F7] flex flex-col"
+                        className="fixed inset-0 z-[1100] bg-[#F4F5F7] flex flex-col pt-12"
                     >
-                        <div className="p-6 flex justify-between items-center border-b-[3px] border-p3-navy bg-white">
-                            <h2 className="text-xl font-black italic uppercase tracking-tighter text-p3-navy flex items-center gap-3">
-                                <PieChart size={20} />
-                                {t('wallet.spendAnalytics')}
-                            </h2>
-                            <button onClick={() => setActiveTab('list')} className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-p3-navy"><X size={20} /></button>
+                        <div className="px-8 py-6 flex justify-between items-center bg-white border-b-4 border-p3-navy">
+                            <div className="flex items-center gap-3">
+                                <TrendingUp className="text-p3-navy" />
+                                <h2 className="text-2xl font-black italic uppercase tracking-tighter text-p3-navy">Stats Dashboard</h2>
+                            </div>
+                            <button onClick={() => setActiveTab('list')} className="w-12 h-12 rounded-2xl bg-gray-100 flex items-center justify-center text-p3-navy active:scale-90 transition-all"><X size={24} /></button>
                         </div>
 
-                        <div className="flex-1 overflow-y-auto p-6 space-y-6">
-                            {/* Total */}
-                            <div className="bg-splat-yellow border-[3px] border-p3-navy rounded-[32px] p-6 shadow-glass-deep">
-                                <p className="text-[10px] font-black uppercase tracking-widest text-p3-navy/50 mb-1">{t('wallet.currentExp')}</p>
-                                <h2 className="text-5xl font-black text-p3-navy tracking-tighter">
-                                    NT$ {Math.round(stats.totalTwd).toLocaleString()}
-                                </h2>
-                                <p className="text-sm font-black text-p3-navy/40 mt-2 uppercase">
-                                    {trip.baseCurrency} {Math.round(stats.totalForeign).toLocaleString()} • {expenses.length} {t('wallet.recentTx')}
-                                </p>
+                        <div className="flex-1 overflow-y-auto p-8 space-y-12">
+                            {/* Summary Hero */}
+                            <div className="bg-p3-navy rounded-[40px] p-8 text-white shadow-2xl relative overflow-hidden">
+                                <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 20, ease: "linear" }} className="absolute -right-20 -top-20 w-60 h-60 bg-white/5 rounded-full blur-3xl" />
+                                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-white/40 mb-2">Total Accumulated Spend</p>
+                                <h3 className="text-5xl font-black italic tracking-tighter mb-4">NT$ {Math.round(stats.totalTwd).toLocaleString()}</h3>
+                                <div className="flex gap-4">
+                                    <div className="bg-white/10 px-4 py-2 rounded-2xl border border-white/5">
+                                        <span className="text-[9px] font-black uppercase text-white/40 block">Records</span>
+                                        <span className="text-sm font-black italic">{expenses.length}</span>
+                                    </div>
+                                    <div className="bg-white/10 px-4 py-2 rounded-2xl border border-white/5">
+                                        <span className="text-[9px] font-black uppercase text-white/40 block">Daily Avg</span>
+                                        <span className="text-sm font-black italic">NT$ {Math.round(stats.totalTwd / Math.max(1, stats.trendData.length)).toLocaleString()}</span>
+                                    </div>
+                                </div>
                             </div>
 
-                            {/* Category Breakdown */}
-                            <div className="bg-white border-[0.5px] border-p3-navy rounded-[32px] p-6 shadow-glass-deep-sm space-y-5">
-                                <h3 className="text-[10px] font-black uppercase tracking-widest text-p3-navy/30">{t('wallet.category')} Breakdown</h3>
-                                {stats.pieData.length === 0 ? (
-                                    <p className="text-center text-gray-400 font-black italic py-8">{t('wallet.noTransactions')}</p>
-                                ) : (
-                                    stats.pieData.map(d => {
+                            {/* 1. Category Analytics */}
+                            <div className="space-y-6">
+                                <h4 className="text-xs font-black text-p3-navy uppercase tracking-widest flex items-center gap-3">
+                                    <Utensils size={14} /> Category Breakdown
+                                </h4>
+                                <div className="bg-white rounded-[40px] p-8 border-[0.5px] border-p3-navy shadow-glass-deep-sm space-y-6">
+                                    {stats.categoryData.map(d => {
                                         const Icon = CATEGORY_ICONS[d.label] || Coins;
                                         return (
-                                            <div key={d.label} className="space-y-2">
-                                                <div className="flex items-center justify-between">
+                                            <div key={d.label} className="space-y-3">
+                                                <div className="flex justify-between items-end">
                                                     <div className="flex items-center gap-3">
-                                                        <div className="w-8 h-8 rounded-xl flex items-center justify-center" style={{ backgroundColor: d.color + '22', color: d.color }}>
-                                                            <Icon size={16} strokeWidth={2.5} />
+                                                        <div className="w-9 h-9 rounded-xl flex items-center justify-center bg-gray-50 border border-p3-navy/5 text-p3-navy">
+                                                            <Icon size={18} strokeWidth={2.5} />
                                                         </div>
                                                         <div>
-                                                            <span className="font-black text-p3-navy text-sm">{d.label}</span>
+                                                            <span className="text-sm font-black text-p3-navy uppercase tracking-tighter italic">{d.label}</span>
                                                             <span className="ml-2 text-[10px] font-black text-gray-400 uppercase">{d.percent}%</span>
                                                         </div>
                                                     </div>
-                                                    <span className="font-black text-p3-navy tabular-nums text-sm">NT$ {Math.round(d.value).toLocaleString()}</span>
+                                                    <span className="text-sm font-black text-p3-navy tabular-nums">NT$ {Math.round(d.value).toLocaleString()}</span>
                                                 </div>
-                                                <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                                                <div className="h-2.5 bg-gray-100 rounded-full overflow-hidden p-[1px]">
                                                     <motion.div
                                                         initial={{ width: 0 }}
                                                         animate={{ width: `${d.percent}%` }}
-                                                        transition={{ duration: 0.6, delay: 0.1 }}
+                                                        transition={{ duration: 0.8, ease: "circOut" }}
                                                         className="h-full rounded-full"
-                                                        style={{ backgroundColor: d.color }}
+                                                        style={{ backgroundColor: 'var(--p3-navy)' }}
                                                     />
                                                 </div>
                                             </div>
                                         );
-                                    })
-                                )}
+                                    })}
+                                </div>
                             </div>
+
+                            {/* 2. Payment Method Analytics */}
+                            <div className="space-y-6">
+                                <h4 className="text-xs font-black text-p3-navy uppercase tracking-widest flex items-center gap-3">
+                                    <CreditCard size={14} /> Method Analytics
+                                </h4>
+                                <div className="grid grid-cols-2 gap-4">
+                                    {stats.methodData.map(m => {
+                                        const Icon = METHOD_ICONS[m.label] || Coins;
+                                        return (
+                                            <div key={m.label} className="bg-white rounded-3xl p-6 border border-p3-navy/10 shadow-glass-soft text-center group">
+                                                <div className="w-12 h-12 rounded-2xl bg-p3-navy/5 flex items-center justify-center text-p3-navy mx-auto mb-3 group-hover:bg-p3-navy group-hover:text-white transition-all">
+                                                    <Icon size={24} />
+                                                </div>
+                                                <h5 className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">{m.label}</h5>
+                                                <p className="text-lg font-black text-p3-navy tabular-nums italic">NT$ {Math.round(m.value).toLocaleString()}</p>
+                                                <div className="mt-2 text-[9px] font-black text-p3-ruby uppercase tracking-tighter">{m.percent}% of total</div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+
+                            {/* 3. Daily Expenditure Trend */}
+                            <div className="space-y-6">
+                                <h4 className="text-xs font-black text-p3-navy uppercase tracking-widest flex items-center gap-3">
+                                    <TrendingUp size={14} /> Daily Expenditure
+                                </h4>
+                                <div className="space-y-3">
+                                    {stats.trendData.map(t => (
+                                        <div key={t.date} className="bg-white rounded-2xl py-4 px-6 border-l-4 border-p3-navy flex justify-between items-center shadow-glass-soft">
+                                            <div className="flex items-center gap-3">
+                                                <span className="text-[11px] font-black text-p3-navy italic uppercase tracking-widest">{t.date}</span>
+                                            </div>
+                                            <span className="text-lg font-black text-p3-navy italic">NT$ {Math.round(t.value).toLocaleString()}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+
+                            <div className="h-20" />
                         </div>
                     </motion.div>
                 )}
             </AnimatePresence>
 
-            {/* --- Foodie Memory Prompt --- */}
+            {/* --- Foodie Alert Prompt --- */}
             <AnimatePresence>
                 {showFoodiePrompt && (
                     <div className="fixed inset-0 z-[2000] flex items-center justify-center px-6">
-                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-p3-navy/60 backdrop-blur-sm" onClick={() => setShowFoodiePrompt(false)} />
-                        <motion.div initial={{ scale: 0.9, opacity: 0, y: 20 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.9, opacity: 0, y: 20 }} className="bg-white border-[4px] border-p3-navy rounded-[40px] p-8 shadow-2xl relative z-10 w-full max-w-sm text-center">
-                            <div className="w-20 h-20 bg-splat-orange text-white rounded-3xl border-[0.5px] border-p3-navy shadow-glass-deep-sm flex items-center justify-center mx-auto mb-6 rotate-[-6deg]">
-                                <Utensils size={40} strokeWidth={3} />
+                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-p3-navy/70 backdrop-blur-md" onClick={() => setShowFoodiePrompt(false)} />
+                        <motion.div initial={{ scale: 0.8, opacity: 0, y: 30 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.8, opacity: 0, y: 30 }} className="bg-white border-[6px] border-p3-navy rounded-[48px] p-10 shadow-2xl relative z-10 w-full max-w-sm text-center">
+                            <div className="w-24 h-24 bg-splat-orange text-white rounded-[32px] border-[1px] border-p3-navy shadow-glass-deep flex items-center justify-center mx-auto mb-8 rotate-[-8deg]">
+                                <Utensils size={48} strokeWidth={3} />
                             </div>
-                            <h3 className="text-2xl font-black text-p3-navy tracking-tighter italic uppercase mb-2">{t('wallet.foodieAlert')}</h3>
-                            <p className="text-gray-500 font-bold leading-tight mb-8">{t('wallet.foodieMsg1')}<br />{t('wallet.foodieMsg2')}</p>
-                            <div className="space-y-3">
-                                <button onClick={() => { setShowFoodiePrompt(false); setGlobalActiveTab('memories'); triggerHaptic('success'); }} className="w-full py-4 bg-splat-orange text-white rounded-2xl border-[0.5px] border-p3-navy shadow-glass-deep-sm font-black uppercase tracking-widest active:translate-y-1 active:shadow-none transition-all">{t('wallet.yesAddMemory')}</button>
-                                <button onClick={() => setShowFoodiePrompt(false)} className="w-full py-3 text-gray-400 font-black text-xs uppercase tracking-widest hover:text-p3-navy transition-colors">{t('wallet.maybeLater')}</button>
+                            <h3 className="text-3xl font-black text-p3-navy tracking-tighter italic uppercase mb-3">Foodie Alert!</h3>
+                            <p className="text-gray-500 font-bold leading-snug mb-10 text-sm">That sounds delicious! Would you like to save this meal to your <b>Memories Hub</b> curated list?</p>
+                            <div className="space-y-4">
+                                <button onClick={() => { setShowFoodiePrompt(false); setGlobalActiveTab('memories'); triggerHaptic('success'); }} className="w-full py-5 bg-splat-orange text-white rounded-2xl border-[1px] border-b-[6px] border-p3-navy shadow-glass-deep font-black uppercase tracking-widest active:translate-y-1 active:border-b-[1px] transition-all">Yes, Add to Hub ✨</button>
+                                <button onClick={() => setShowFoodiePrompt(false)} className="w-full py-2 text-gray-400 font-black text-[10px] uppercase tracking-[0.2em] hover:text-p3-navy transition-colors">Maybe later</button>
                             </div>
                         </motion.div>
                     </div>
                 )}
             </AnimatePresence>
-        </div >
+        </div>
     );
 };

@@ -3,12 +3,15 @@ import { useTripStore } from '../store/useTripStore';
 import {
     Shield, QrCode, FileText, Image as ImageIcon,
     ExternalLink, Search, Plus, X, Eye,
-    CreditCard, Plane, HardDrive, ShieldCheck, ChevronRight, Trash2, Edit3
+    CreditCard, Plane, HardDrive, ShieldCheck, ChevronRight, Trash2, Edit3,
+    Briefcase,
+    Globe
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { InfoItem } from '../types';
 import { triggerHaptic } from '../utils/haptics';
 import { useTranslation } from '../hooks/useTranslation';
+import { PackingList } from './PackingList';
 
 export const Vault = () => {
     const { t } = useTranslation();
@@ -20,26 +23,25 @@ export const Vault = () => {
     const [selectedDoc, setSelectedDoc] = useState<InfoItem | null>(null);
     const [isAdding, setIsAdding] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
+    const [showPacking, setShowPacking] = useState(false);
     const [form, setForm] = useState<Partial<InfoItem>>({ title: '', content: '', images: [], type: 'document' });
 
-    // 1. 分類過濾：找出包含 QR Code (或標註為憑證/門票) 的項目
+    // 智慧目的地判斷
+    const isJapan = useMemo(() => {
+        const keywords = ['日本', '東京', '大阪', '京都', '北海道', '福岡', '沖繩', 'japan', 'tokyo', 'osaka', 'kyoto'];
+        return keywords.some(k => trip?.dest?.toLowerCase().includes(k));
+    }, [trip?.dest]);
+
+    // 🎟️ 票券與憑證：找出包含 QR Code (或標註為憑證/門票) 的項目
     const qrItems = useMemo(() => {
         return infoItems.filter(item =>
             item.title.toLowerCase().includes('qr') ||
             item.content.toLowerCase().includes('http') ||
             (item.category as string) === 'booking' ||
             item.title.includes('票') ||
-            item.title.includes('Code')
-        );
-    }, [infoItems]);
-
-    // 2. 主文件：標註為重要或包含「護照」、「保險」關鍵字的項目
-    const masterDocs = useMemo(() => {
-        return infoItems.filter(item =>
-            item.title.includes('護照') ||
-            item.title.includes('Passport') ||
-            item.title.includes('保險') ||
-            item.title.includes('Insurance')
+            item.title.includes('Code') ||
+            item.type === 'ticket' ||
+            item.type === 'qr'
         );
     }, [infoItems]);
 
@@ -56,58 +58,76 @@ export const Vault = () => {
     return (
         <div className="px-5 space-y-8 pb-32 pt-4 bg-[#F4F5F7] h-full overflow-y-auto hide-scrollbar">
 
-            {/* --- Header: Security Banner --- */}
+            {/* --- Header: Clearance War Room --- */}
             <div className="bg-p3-navy border-[0.5px] border-white/20 glass-card p-6 shadow-glass-deep relative overflow-hidden">
-                <div className="absolute top-0 right-0 w-32 h-32 bg-p3-gold opacity-10 rounded-full -mr-16 -mt-16 blur-2xl" />
+                <div className="absolute top-0 right-0 w-32 h-32 bg-p3-navy-light opacity-20 rounded-full -mr-16 -mt-16 blur-2xl" />
                 <div className="relative z-10 flex items-center gap-4">
                     <div className="w-14 h-14 rounded-2xl bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center text-p3-gold">
                         <ShieldCheck size={32} strokeWidth={2.5} />
                     </div>
                     <div>
-                        <h2 className="text-2xl font-black text-white italic tracking-tighter uppercase">{t('vault.title')}</h2>
-                        <p className="text-[10px] font-black text-white/40 tracking-[0.2em] uppercase">{t('vault.subtitle')}</p>
+                        <h2 className="text-2xl font-black text-white italic tracking-tighter uppercase">Clearance Vault</h2>
+                        <p className="text-[10px] font-black text-white/40 tracking-[0.2em] uppercase">{t('vault.subtitle') || '通關戰情中心'}</p>
                     </div>
                 </div>
             </div>
 
-            {/* --- Master Documents: Quick Access Bar --- */}
+            {/* --- 🛂 Section 1: Entry & Safety (入境與安全) --- */}
             <div className="space-y-4">
                 <h3 className="text-sm font-black text-p3-navy flex items-center gap-2 uppercase tracking-widest pl-2">
                     <div className="w-2 h-5 bg-p3-navy rounded-full" />
-                    {t('vault.masterDocs')}
+                    {t('vault.entrySafety') || '入境與安全 (Entry & Safety)'}
                 </h3>
-                <div className="grid grid-cols-2 gap-3">
-                    {masterDocs.length > 0 ? (
-                        masterDocs.map(doc => (
-                            <motion.button
-                                key={doc.id}
-                                whileTap={{ scale: 0.95 }}
-                                onClick={() => { setSelectedDoc(doc); triggerHaptic('light'); }}
-                                className="flex items-center gap-3 p-4 bg-white/60 backdrop-blur-md border-[0.5px] border-black/5 rounded-2xl shadow-glass-soft text-left group"
-                            >
-                                <div className="w-10 h-10 rounded-xl bg-p3-navy/5 flex items-center justify-center text-p3-navy/60 border border-p3-navy/10">
-                                    {doc.title.includes('護照') ? <CreditCard size={20} /> : <Shield size={20} />}
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                    <div className="text-[9px] font-black text-p3-gold uppercase tracking-widest opacity-60">{t('vault.essential')}</div>
-                                    <div className="text-xs font-black text-p3-navy truncate">{doc.title}</div>
-                                </div>
-                            </motion.button>
-                        ))
-                    ) : (
-                        <div className="col-span-2 p-6 bg-white/50 border-2 border-dashed border-gray-300 rounded-3xl text-center">
-                            <p className="text-[10px] font-black text-gray-400 uppercase">{t('vault.emptyMasterDocs')}</p>
-                        </div>
+                <div className="grid grid-cols-1 gap-3">
+                    {/* Visit Japan Web Shortcut */}
+                    {isJapan && (
+                        <motion.button
+                            whileTap={{ scale: 0.98 }}
+                            onClick={() => { window.open('https://www.vjw.digital.go.jp/', '_blank'); triggerHaptic('medium'); }}
+                            className="flex items-center gap-4 p-5 bg-gradient-to-r from-[#00529b]/10 to-white/60 backdrop-blur-xl border-[0.5px] border-[#00529b]/20 rounded-3xl shadow-glass-deep-sm text-left group overflow-hidden relative"
+                        >
+                            <div className="absolute top-0 right-0 p-2 opacity-5">
+                                <Globe size={80} />
+                            </div>
+                            <div className="w-12 h-12 rounded-2xl bg-[#00529b]/10 flex items-center justify-center text-[#00529b] border border-[#00529b]/20">
+                                <Globe size={24} strokeWidth={2.5} />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                                <div className="text-[10px] font-black text-[#00529b] uppercase tracking-widest opacity-60">Japan Official</div>
+                                <div className="text-sm font-black text-p3-navy">Visit Japan Web (入境審查)</div>
+                            </div>
+                            <ExternalLink size={18} className="text-[#00529b]/40 group-hover:translate-x-1 transition-transform" />
+                        </motion.button>
                     )}
+
+                    {/* Travel Insurance Quick Add */}
+                    <motion.button
+                        whileTap={{ scale: 0.98 }}
+                        onClick={() => {
+                            setForm({ title: '海外旅遊保險', type: 'document', content: '請上傳保險英文證明或保單號碼', images: [] });
+                            setIsAdding(true);
+                            triggerHaptic('light');
+                        }}
+                        className="flex items-center gap-4 p-5 bg-white/60 backdrop-blur-xl border-[0.5px] border-p3-navy/5 rounded-3xl shadow-glass-soft text-left group"
+                    >
+                        <div className="w-12 h-12 rounded-2xl bg-p3-navy/5 flex items-center justify-center text-p3-navy/60 border border-p3-navy-light/10">
+                            <Shield size={24} />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                            <div className="text-[10px] font-black text-p3-gold uppercase tracking-widest opacity-60">Insurance</div>
+                            <div className="text-sm font-black text-p3-navy">海外旅遊保險 (Travel Insurance)</div>
+                        </div>
+                        <Plus size={18} className="text-p3-navy/20 group-hover:rotate-90 transition-transform" />
+                    </motion.button>
                 </div>
             </div>
 
-            {/* --- Quick Scan Grid: QR Codes & Tickets --- */}
+            {/* --- 🎟️ Section 2: Tickets & Vouchers (票券與憑證) --- */}
             <div className="space-y-4">
                 <div className="flex justify-between items-end px-2">
                     <h3 className="text-sm font-black text-p3-navy flex items-center gap-2 uppercase tracking-widest">
                         <div className="w-2 h-5 bg-splat-pink rounded-full" />
-                        {t('vault.quickScan')}
+                        {t('vault.ticketsVouchers') || '票券與憑證 (Tickets & Vouchers)'}
                     </h3>
                     <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest">{qrItems.length} {t('vault.items')}</span>
                 </div>
@@ -116,25 +136,28 @@ export const Vault = () => {
                     {qrItems.map((item, idx) => (
                         <motion.div
                             key={item.id}
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
+                            initial={{ opacity: 0, scale: 0.9 }}
+                            animate={{ opacity: 1, scale: 1 }}
                             transition={{ delay: idx * 0.05 }}
                             onClick={() => { setSelectedDoc(item); triggerHaptic('medium'); }}
-                            className="bg-white border-[0.5px] border-p3-navy rounded-[28px] overflow-hidden shadow-glass-deep-sm group cursor-pointer active:scale-95 transition-all"
+                            className="bg-white border-[0.5px] border-p3-navy rounded-[32px] overflow-hidden shadow-glass-deep-sm group cursor-pointer active:scale-95 transition-all"
                         >
-                            <div className="h-32 bg-gray-100 relative flex items-center justify-center border-b-[3px] border-p3-navy overflow-hidden bg-[radial-gradient(#e5e7eb_1px,transparent_1px)] [background-size:16px_16px]">
+                            <div className="h-28 bg-gray-50 relative flex items-center justify-center border-b-[3px] border-p3-navy overflow-hidden">
                                 {item.images?.[0] ? (
                                     <img src={item.images[0]} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" alt="document" />
                                 ) : (
-                                    <QrCode size={48} className="text-p3-navy/10 group-hover:rotate-12 transition-transform" />
+                                    <div className="flex flex-col items-center gap-2 text-p3-navy/10">
+                                        <QrCode size={40} className="group-hover:rotate-12 transition-transform" />
+                                        <span className="text-[8px] font-black tracking-widest uppercase">E-TICKET</span>
+                                    </div>
                                 )}
-                                <div className="absolute top-3 right-3 w-8 h-8 rounded-full bg-white border-2 border-p3-navy flex items-center justify-center text-p3-navy opacity-0 group-hover:opacity-100 transition-opacity">
-                                    <Eye size={16} />
+                                <div className="absolute top-2 right-2 w-7 h-7 rounded-full bg-white border-2 border-p3-navy flex items-center justify-center text-p3-navy opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <Eye size={14} />
                                 </div>
                             </div>
-                            <div className="p-4 bg-white/80">
-                                <div className="text-[9px] font-black text-splat-pink uppercase tracking-widest mb-1">{t('vault.passTicket')}</div>
-                                <div className="text-xs font-black text-p3-navy truncate">{item.title}</div>
+                            <div className="p-4 bg-white/80 backdrop-blur-md">
+                                <div className="text-[8px] font-black text-splat-pink uppercase tracking-widest mb-0.5">Voucher</div>
+                                <div className="text-[11px] font-black text-p3-navy truncate italic">{item.title}</div>
                             </div>
                         </motion.div>
                     ))}
@@ -143,27 +166,53 @@ export const Vault = () => {
                     <motion.div
                         whileTap={{ scale: 0.95 }}
                         onClick={() => {
-                            setForm({ title: '', content: '', images: [], type: 'document' });
+                            setForm({ title: '', content: '', images: [], type: 'ticket' });
                             setIsAdding(true);
                         }}
-                        className="border-[0.5px] border-dashed border-gray-300 rounded-[28px] h-[180px] flex flex-col items-center justify-center gap-2 text-gray-400 hover:border-p3-navy hover:text-p3-navy transition-colors cursor-pointer"
+                        className="bg-white/40 border-[2px] border-dashed border-gray-300 rounded-[32px] h-[160px] flex flex-col items-center justify-center gap-3 text-gray-400 hover:border-p3-navy hover:text-p3-navy transition-all cursor-pointer group"
                     >
-                        <div className="w-12 h-12 rounded-full border-2 border-current flex items-center justify-center">
+                        <div className="w-12 h-12 rounded-full bg-white border-2 border-current flex items-center justify-center shadow-sm group-hover:bg-p3-navy group-hover:text-white transition-colors">
                             <Plus size={24} strokeWidth={3} />
                         </div>
-                        <span className="text-[10px] font-black uppercase tracking-[0.2em]">手動新增 / 上傳 (Add)</span>
+                        <span className="text-[10px] font-black uppercase tracking-[0.2em] text-center px-4 leading-tight">手動新增 / 上傳<br />(Add)</span>
                     </motion.div>
                 </div>
             </div>
 
-            {/* --- General Documents List --- */}
+            {/* --- 🧳 Section 3: Preparation (預先準備) --- */}
             <div className="space-y-4">
                 <h3 className="text-sm font-black text-p3-navy flex items-center gap-2 uppercase tracking-widest pl-2">
                     <div className="w-2 h-5 bg-splat-yellow rounded-full" />
-                    {t('vault.generalDocs')}
+                    {t('vault.preparation') || '預先準備 (Preparation)'}
                 </h3>
 
-                {/* Search Bar */}
+                <motion.button
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => { setShowPacking(true); triggerHaptic('medium'); }}
+                    className="w-full relative overflow-hidden bg-p3-navy rounded-[32px] p-6 shadow-glass-deep text-left border-[0.5px] border-white/20 group"
+                >
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-p3-navy-light opacity-30 rounded-full -mr-8 -mt-8 blur-2xl group-hover:scale-150 transition-transform duration-700" />
+                    <div className="absolute -bottom-4 -right-4 opacity-5 group-hover:rotate-12 transition-transform">
+                        <Briefcase size={120} />
+                    </div>
+
+                    <div className="relative z-10 flex items-center gap-5">
+                        <div className="w-14 h-14 rounded-2xl bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center text-white">
+                            <Briefcase size={32} />
+                        </div>
+                        <div className="flex-1">
+                            <h4 className="text-white font-black text-lg italic tracking-tighter">🧳 行李與行前清單</h4>
+                            <p className="text-white/40 text-[10px] font-black uppercase tracking-widest mt-1">
+                                AI 智慧生成，帶了就打勾 (Packing & Prep)
+                            </p>
+                        </div>
+                        <ChevronRight className="text-white/20 group-hover:translate-x-2 transition-transform" size={24} />
+                    </div>
+                </motion.button>
+            </div>
+
+            {/* --- General Search List (Optional Filtered View) --- */}
+            <div className="space-y-4 pt-4 opacity-60">
                 <div className="relative">
                     <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
                     <input
@@ -171,32 +220,41 @@ export const Vault = () => {
                         placeholder={t('vault.searchPlaceholder')}
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        className="w-full bg-white border-[0.5px] border-p3-navy rounded-2xl py-4 pl-12 pr-4 font-black placeholder:text-gray-300 outline-none focus:bg-white text-xs"
+                        className="w-full bg-white/60 border-[0.5px] border-black/5 rounded-2xl py-4 pl-12 pr-4 font-black placeholder:text-gray-300 outline-none focus:bg-white text-xs shadow-glass-soft"
                     />
-                </div>
-
-                <div className="space-y-3">
-                    {filteredItems.map(item => (
-                        <motion.div
-                            key={item.id}
-                            onClick={() => setSelectedDoc(item)}
-                            className="flex items-center gap-4 bg-white p-4 rounded-2xl border-[0.5px] border-p3-navy shadow-glass-deep-sm active:translate-x-1 transition-transform cursor-pointer"
-                        >
-                            <div className="w-12 h-12 rounded-xl bg-p3-navy/5 flex items-center justify-center text-p3-navy/40 border border-p3-navy/5">
-                                <FileText size={20} />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                                <div className="text-sm font-black text-p3-navy truncate">{item.title}</div>
-                                <p className="text-[10px] font-medium text-gray-400 truncate mt-0.5">{item.content}</p>
-                            </div>
-                            <ChevronRight size={18} className="text-gray-300" />
-                        </motion.div>
-                    ))}
                 </div>
             </div>
 
-            {/* --- Detail Overlay Modal --- */}
-            <AnimatePresence>
+            {/* --- Details / Edit / Add Modals --- */}
+            <AnimatePresence mode='wait'>
+                {/* Packing Modal */}
+                {showPacking && (
+                    <motion.div
+                        initial={{ y: '100%', opacity: 0 }}
+                        animate={{ y: 0, opacity: 1 }}
+                        exit={{ y: '100%', opacity: 0 }}
+                        transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+                        className="fixed inset-0 z-[1500] bg-[#F4F5F7] flex flex-col"
+                    >
+                        <div className="p-6 flex justify-between items-center bg-white border-b border-gray-200 shadow-sm relative z-10">
+                            <div>
+                                <h2 className="text-xl font-black italic uppercase tracking-tighter text-p3-navy flex items-center gap-2">
+                                    <Briefcase size={20} className="text-p3-gold" />
+                                    {t('packing.title') || '🧳 行前準備'}
+                                </h2>
+                                <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mt-0.5">Checklist & AI Assistant</p>
+                            </div>
+                            <button onClick={() => setShowPacking(false)} className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-p3-navy active:scale-90 transition-transform">
+                                <X size={20} />
+                            </button>
+                        </div>
+                        <div className="flex-1 overflow-y-auto relative hide-scrollbar">
+                            <PackingList />
+                        </div>
+                    </motion.div>
+                )}
+
+                {/* Detail Overlay Modal */}
                 {selectedDoc && (
                     <motion.div
                         initial={{ opacity: 0 }}
@@ -330,10 +388,8 @@ export const Vault = () => {
                         </div>
                     </motion.div>
                 )}
-            </AnimatePresence>
 
-            {/* --- Add New Document Modal --- */}
-            <AnimatePresence>
+                {/* Add New Document Modal */}
                 {isAdding && (
                     <motion.div
                         initial={{ opacity: 0 }}
