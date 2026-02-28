@@ -624,97 +624,91 @@ const FlightDetailModalContent = ({ item, t, showToast }: any) => {
 
   return (
     <div className="flex-1 overflow-y-auto hide-scrollbar bg-[#F4F5F7]">
-      <div className="p-6 pt-20 space-y-6">
-        {/* Full Boarding Pass Visualization */}
-        <motion.div layout className="bg-white rounded-[40px] shadow-2xl border-[0.5px] border-black/10 overflow-hidden relative">
-          {/* Physical Cutouts */}
-          <div className="absolute left-0 top-[28%] -translate-x-1/2 w-10 h-10 rounded-full bg-[#F4F5F7] z-20" />
-          <div className="absolute right-0 top-[28%] translate-x-1/2 w-10 h-10 rounded-full bg-[#F4F5F7] z-20" />
+      <div className="p-6 pt-20 space-y-6 pb-32">
+        {/* 🎟️ 實體登機證主體 */}
+        <motion.div layout onClick={() => { setExpanded(!expanded); triggerHaptic('light'); }} className="bg-white rounded-[24px] shadow-glass-deep overflow-hidden cursor-pointer active:scale-[0.98] transition-transform relative">
 
-          <div className={`${theme.bgClass} h-24 flex justify-between items-center px-10 relative overflow-hidden`}>
-            {/* Pattern Overlay */}
-            <div className="absolute inset-0 opacity-10 pointer-events-none" style={{ backgroundImage: 'radial-gradient(circle, white 1px, transparent 1px)', backgroundSize: '16px 16px' }} />
-            <span className={`text-lg font-black ${theme.textClass} tracking-[0.3em] uppercase z-10`}>{theme.logo}</span>
-            <div className="bg-white/20 backdrop-blur-sm p-3 rounded-2xl border border-white/30 z-10"><Plane size={24} className={`${theme.textClass}`} /></div>
+          {/* 頂部：航空識別色與 Logo */}
+          <div className={`${theme.bgClass} px-6 py-4 flex justify-between items-center`}>
+            <div className="flex items-center gap-2">
+              <Plane size={18} className={`${theme.textClass} -rotate-45`} strokeWidth={2.5} />
+              <span className={`text-sm font-black ${theme.textClass} tracking-widest uppercase`}>{theme.logo}</span>
+            </div>
+            <span className={`text-xs font-bold ${theme.textClass} opacity-80 uppercase tracking-widest`}>{item.date}</span>
           </div>
 
-          <div className="p-10 pt-14 pb-8 relative">
-            {/* Status Badge */}
-            <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white px-8 py-2.5 rounded-full border-2 border-ac-border shadow-md z-30">
-              <span className="text-sm font-black text-p3-navy tracking-[0.2em]">{item.flightNo || 'FLIGHT'}</span>
-            </div>
-
-            <div className="flex justify-between items-center mb-8">
-              <div className="flex flex-col items-center">
-                <span className="text-xs font-black text-ac-green/60 uppercase tracking-widest mb-1">{item.depCity || 'TAIPEI'}</span>
-                <span className="text-6xl font-black text-p3-navy tracking-tighter leading-none">{item.depIata || 'TPE'}</span>
-                <span className="text-2xl font-black text-p3-navy mt-3">{item.depTime || '--:--'}</span>
+          {/* 中段：起降機場與時間 */}
+          <div className="px-6 py-8 relative bg-white">
+            <div className="flex justify-between items-end mb-3">
+              <div className="text-left w-1/3">
+                <span className="text-5xl font-black text-p3-navy leading-none tracking-tighter">{item.depIata || 'TPE'}</span>
               </div>
-
-              <div className="flex-1 flex flex-col items-center px-6">
-                <span className="text-[10px] font-black text-gray-300 mb-2">{item.duration || '02h 45m'}</span>
-                <div className="w-full flex items-center gap-2">
-                  <div className="h-[2px] flex-1 border-t-2 border-dashed border-gray-100" />
-                  <div className="w-12 h-12 rounded-full bg-p3-navy/5 flex items-center justify-center border-2 border-p3-navy/10"><Plane size={24} className="text-p3-ruby rotate-45" /></div>
-                  <div className="h-[2px] flex-1 border-t-2 border-dashed border-gray-100" />
+              <div className="flex-1 flex flex-col items-center px-2 pb-2">
+                <span className="text-[10px] font-black text-gray-400 mb-2 uppercase tracking-widest">{item.flightNo || 'FLIGHT'}</span>
+                <div className="w-full relative flex items-center">
+                  <div className="w-2 h-2 rounded-full border-2 border-gray-300 bg-white z-10 shrink-0"></div>
+                  <div className="flex-1 border-t-2 border-gray-200"></div>
+                  <Plane size={16} className="text-p3-navy mx-2 shrink-0" />
+                  <div className="flex-1 border-t-2 border-gray-200"></div>
+                  <div className="w-2 h-2 rounded-full border-2 border-p3-navy bg-p3-navy z-10 shrink-0"></div>
                 </div>
-                <span className="text-[10px] font-black text-gray-300 mt-2">{item.date}</span>
               </div>
-
-              <div className="flex flex-col items-center">
-                <span className="text-xs font-black text-p3-gold/60 uppercase tracking-widest mb-1">{item.arrCity || 'OSAKA'}</span>
-                <span className="text-6xl font-black text-p3-navy tracking-tighter leading-none">{item.arrIata || 'KIX'}</span>
-                <span className="text-2xl font-black text-p3-navy mt-3">{item.arrTime || '--:--'}</span>
+              <div className="text-right w-1/3">
+                <span className="text-5xl font-black text-p3-navy leading-none tracking-tighter">{item.arrIata || 'KIX'}</span>
               </div>
             </div>
-
-            {/* Stats Grid - Embodied in ticket */}
-            <div className="grid grid-cols-3 gap-0 border-t border-b border-dashed border-gray-200 py-6 mt-8">
-              <div className="text-center border-r border-dashed border-gray-200">
-                <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">Baggage</p>
-                <p className="text-lg font-black text-p3-navy">{item.baggageAllowance || '23kg'}</p>
-              </div>
-              <div className="text-center border-r border-dashed border-gray-200">
-                <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">Seat</p>
-                <p className="text-lg font-black text-p3-navy">{item.seat || '14F'}</p>
-              </div>
-              <div className="text-center">
-                <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">Aircraft</p>
-                <p className="text-lg font-black text-p3-navy">{item.aircraft || 'A350'}</p>
-              </div>
+            <div className="flex justify-between items-center">
+              <span className="text-sm font-black text-p3-navy tracking-widest">{item.depTime || '--:--'}</span>
+              <span className="text-sm font-black text-p3-navy tracking-widest">{item.arrTime || '--:--'}</span>
             </div>
+          </div>
 
-            {/* Barcode */}
-            <div className="mt-8 flex flex-col items-center">
-              <div className="text-6xl font-mono tracking-[0.5em] text-black/10 overflow-hidden h-12 leading-none">||| || | ||| || ||| | || |||</div>
-              <div className="text-[10px] font-mono text-black/20 tracking-widest mt-2 uppercase">eticket-pass-{item.id}</div>
-            </div>
+          {/* 撕罩線與半圓打洞 (擬真細節) */}
+          <div className="relative flex items-center justify-center bg-white h-4">
+            <div className="absolute left-[-12px] w-6 h-6 bg-[#F4F5F7] rounded-full z-10 shadow-inner"></div>
+            <div className="w-full border-t-2 border-dashed border-gray-200 mx-6"></div>
+            <div className="absolute right-[-12px] w-6 h-6 bg-[#F4F5F7] rounded-full z-10 shadow-inner"></div>
+          </div>
+
+          {/* 底部：展開提示與條碼裝飾 */}
+          <div className="bg-white px-6 py-4 flex flex-col justify-center items-center gap-3">
+            <span className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] flex items-center gap-2">
+              {expanded ? 'Hide Details' : 'Tap to Expand Details'}
+              <ChevronDown size={14} className={`transition-transform duration-300 ${expanded ? 'rotate-180' : ''}`} />
+            </span>
+            {!expanded && <div className="w-2/3 h-8 opacity-20 bg-[repeating-linear-gradient(90deg,#000,#000_2px,transparent_2px,transparent_5px,black_5px,black_6px,transparent_6px,transparent_10px)]" />}
           </div>
         </motion.div>
 
-        {/* Action Area */}
-        <div className="space-y-4 px-2">
-          {item.pnr && (
-            <div className="bg-white border-2 border-p3-navy rounded-[32px] p-8 shadow-md flex justify-between items-center active:scale-[0.98] transition-transform cursor-pointer" onClick={() => { navigator.clipboard.writeText(item.pnr); triggerHaptic('success'); showToast("PNR 已複製！", "success"); }}>
-              <div>
-                <p className="text-[11px] font-black text-gray-400 uppercase tracking-widest mb-2">Booking Ref (PNR)</p>
-                <p className="text-4xl font-black text-p3-navy tracking-[0.3em]">{item.pnr}</p>
+        {/* ⬇️ 隱藏的詳細資訊 (展開後才顯示) */}
+        <AnimatePresence>
+          {expanded && (
+            <motion.div initial={{ opacity: 0, height: 0, y: -20 }} animate={{ opacity: 1, height: 'auto', y: 0 }} exit={{ opacity: 0, height: 0, y: -20 }} className="space-y-4 overflow-hidden pt-2">
+              {item.pnr && (
+                <div className="bg-white border-[0.5px] border-p3-navy rounded-[24px] p-6 shadow-sm flex justify-between items-center active:scale-[0.98] transition-transform cursor-pointer" onClick={() => { navigator.clipboard.writeText(item.pnr); triggerHaptic('success'); showToast("PNR 已複製！🦑", "success"); }}>
+                  <div>
+                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">{t('schedule.pnr') || 'Booking Ref (PNR)'}</p>
+                    <p className="text-3xl font-black text-p3-navy tracking-[0.2em]">{item.pnr}</p>
+                  </div>
+                  <div className="w-12 h-12 rounded-xl bg-splat-yellow/20 border-[0.5px] border-splat-yellow flex items-center justify-center text-splat-yellow"><Copy size={20} /></div>
+                </div>
+              )}
+              <div className="grid grid-cols-3 gap-3">
+                <InfoBlock label={t('schedule.terminal') || 'Terminal'} value={item.terminal || '--'} />
+                <InfoBlock label={t('schedule.gate') || 'Gate'} value={item.gate || '--'} />
+                <InfoBlock label={t('schedule.boarding') || 'Boarding'} value={item.boardingTime || '--:--'} highlight />
+                <InfoBlock label="Seat" value={item.seat || '--'} />
+                <InfoBlock label="Baggage" value={item.baggageAllowance || '--'} />
+                <InfoBlock label="Duration" value={item.duration || '--'} />
               </div>
-              <div className="w-16 h-16 rounded-2xl bg-splat-yellow border-2 border-p3-navy flex items-center justify-center text-p3-navy shadow-sm"><Copy size={24} /></div>
-            </div>
+              {item.url && (
+                <button onClick={() => { window.open(item.url, '_blank'); triggerHaptic('success'); }} className="w-full py-5 bg-p3-navy text-white rounded-2xl font-black uppercase tracking-widest shadow-glass-deep flex items-center justify-center gap-3 active:scale-95 transition-all mt-4 border-[0.5px] border-white/20">
+                  <ExternalLink size={18} /> {item.url.includes('evaair') ? '打開長榮航空' : item.url.includes('starlux') ? '打開星宇航空' : item.url.includes('tigerair') ? '打開台灣虎航' : item.url.includes('china-airlines') ? '打開中華航空' : '開啟外部連結 / App'}
+                </button>
+              )}
+            </motion.div>
           )}
-
-          <div className="grid grid-cols-2 gap-4">
-            <InfoBlock label="Terminal" value={item.terminal || '--'} />
-            <InfoBlock label="Gate" value={item.gate || '--'} />
-          </div>
-
-          {item.url && (
-            <button onClick={() => { window.open(item.url, '_blank'); triggerHaptic('success'); }} className="w-full py-6 bg-p3-navy text-white rounded-3xl font-black uppercase tracking-widest shadow-xl flex items-center justify-center gap-4 active:scale-95 transition-all mt-4 border-2 border-white/20">
-              <ExternalLink size={20} /> 打開航空 App 或是官網
-            </button>
-          )}
-        </div>
+        </AnimatePresence>
       </div>
     </div>
   );
@@ -727,91 +721,92 @@ const HotelDetailModalContent = ({ item, t, showToast }: any) => {
 
   return (
     <div className="flex-1 overflow-y-auto hide-scrollbar bg-[#F4F5F7]">
-      <div className="p-6 pt-20 space-y-6">
-        {/* Premium Hotel Key Card Visualization */}
-        <motion.div layout className="bg-white rounded-[40px] shadow-2xl border-[0.5px] border-black/10 overflow-hidden relative flex flex-col">
-          <div className="h-64 relative">
+      <div className="p-6 pt-20 space-y-6 pb-32">
+        {/* 🪪 實體房卡主體 (Premium Key Card) */}
+        <div className="bg-white rounded-[24px] shadow-glass-deep overflow-hidden relative flex flex-col">
+          {/* 上半部：飯店大圖 */}
+          <div className="h-56 relative">
             {item.images?.[0] ? (
               <img src={item.images[0]} className="w-full h-full object-cover" alt="hotel" />
             ) : (
-              <div className="w-full h-full bg-gradient-to-br from-[#1A1B23] to-[#2C3E50] flex items-center justify-center text-white/10">
-                <Home size={64} />
+              <div className="w-full h-full bg-gradient-to-br from-p3-navy to-slate-800 flex items-center justify-center text-white/20">
+                <Home size={64} strokeWidth={1} />
               </div>
             )}
-            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
-            <div className="absolute bottom-6 left-8 right-8">
-              <div className="bg-white/20 backdrop-blur-md px-4 py-1.5 rounded-full border border-white/30 inline-block mb-3">
-                <span className="text-[10px] font-black text-white uppercase tracking-widest">Verified Premium Stay</span>
+            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+            <div className="absolute bottom-4 left-6 right-6">
+              <div className="bg-white/20 backdrop-blur-md px-3 py-1 rounded-full border border-white/30 inline-flex items-center gap-2 mb-2">
+                <div className="w-1.5 h-1.5 rounded-full bg-ac-green animate-pulse"></div>
+                <span className="text-[9px] font-black text-white uppercase tracking-widest">Confirmed Stay</span>
               </div>
-              <h4 className="text-3xl font-black text-white tracking-tighter leading-tight drop-shadow-xl">{item.title}</h4>
+              <h4 className="text-2xl font-black text-white tracking-tight leading-tight">{item.title}</h4>
             </div>
           </div>
 
-          <div className="p-10 space-y-8">
-            <div className="grid grid-cols-2 gap-10">
-              <div className="space-y-2">
-                <p className="text-[11px] font-black text-gray-400 uppercase tracking-[0.2em]">Check-In</p>
-                <p className="text-xl font-black text-p3-navy">{checkIn}</p>
-                <div className="flex items-center gap-2 text-sm font-bold text-gray-500">
-                  <div className="w-8 h-8 rounded-full bg-p3-ruby/10 flex items-center justify-center text-p3-ruby"><Clock size={16} strokeWidth={3} /></div>
-                  {item.checkInTime || '15:00'}
-                </div>
+          {/* 下半部：入住資訊 */}
+          <div className="p-8 space-y-6 bg-white">
+            <div className="grid grid-cols-2 gap-8">
+              <div className="space-y-1">
+                <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Check-In</p>
+                <p className="text-lg font-black text-p3-navy">{checkIn}</p>
+                <p className="text-xs font-bold text-gray-500 flex items-center gap-1.5">
+                  <Clock size={12} className="text-p3-ruby" /> {item.checkInTime || '15:00'}
+                </p>
               </div>
-              <div className="space-y-2">
-                <p className="text-[11px] font-black text-gray-400 uppercase tracking-[0.2em]">Check-Out</p>
-                <p className="text-xl font-black text-p3-navy">{checkOut}</p>
-                <div className="flex items-center gap-2 text-sm font-bold text-gray-500">
-                  <div className="w-8 h-8 rounded-full bg-p3-navy/10 flex items-center justify-center text-p3-navy"><Clock size={16} strokeWidth={3} /></div>
-                  {item.checkOutTime || '11:00'}
-                </div>
+              <div className="space-y-1">
+                <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Check-Out</p>
+                <p className="text-lg font-black text-p3-navy">{checkOut}</p>
+                <p className="text-xs font-bold text-gray-500 flex items-center gap-1.5">
+                  <Clock size={12} className="text-p3-navy" /> {item.checkOutTime || '11:00'}
+                </p>
               </div>
             </div>
 
-            <div className="pt-8 border-t border-gray-100 flex justify-between items-center">
-              <div className="space-y-1">
-                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Stay Duration</p>
-                <div className="bg-splat-yellow text-p3-navy px-6 py-2 rounded-full text-sm font-black uppercase tracking-widest shadow-sm inline-block">
+            <div className="pt-6 border-t border-gray-100 flex justify-between items-center">
+              <div>
+                <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Stay Info</p>
+                <div className="bg-splat-yellow/20 text-p3-navy px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-widest border-[0.5px] border-splat-yellow/30">
                   {nights} {t('booking.nights') || 'Nights'}
                 </div>
               </div>
-              <div className="text-right space-y-1 max-w-[150px]">
-                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Room Type</p>
-                <p className="text-sm font-black text-p3-navy truncate">{item.roomType || 'Standard Room'}</p>
+              <div className="text-right">
+                <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Room Type</p>
+                <p className="text-xs font-black text-p3-navy max-w-[120px] truncate">{item.roomType || 'Standard Room'}</p>
               </div>
             </div>
           </div>
-        </motion.div>
+        </div>
 
-        {/* Info & Actions */}
-        <div className="space-y-4 px-2">
+        {/* 📋 其他輔助資訊 */}
+        <div className="space-y-4">
           {item.confirmationNo && (
-            <div className="bg-white border-2 border-p3-navy rounded-[32px] p-8 shadow-md flex justify-between items-center active:scale-[0.98] transition-transform cursor-pointer" onClick={() => { navigator.clipboard.writeText(item.confirmationNo); triggerHaptic('success'); showToast("預訂編號已複製！", "success"); }}>
+            <div className="bg-white border-[0.5px] border-black/5 rounded-[24px] p-6 shadow-sm flex justify-between items-center active:scale-[0.98] transition-transform cursor-pointer" onClick={() => { navigator.clipboard.writeText(item.confirmationNo); triggerHaptic('success'); showToast("預訂編號已複製！🦑", "success"); }}>
               <div>
-                <p className="text-[11px] font-black text-gray-400 uppercase tracking-widest mb-2">Confirmation No.</p>
-                <p className="text-3xl font-black text-p3-navy tracking-[0.1em]">{item.confirmationNo}</p>
+                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Confirmation No.</p>
+                <p className="text-2xl font-black text-p3-navy tracking-widest">{item.confirmationNo}</p>
               </div>
-              <div className="w-16 h-16 rounded-2xl bg-p3-navy/10 border-2 border-p3-navy/20 flex items-center justify-center text-p3-navy"><Copy size={24} /></div>
+              <div className="w-12 h-12 rounded-xl bg-p3-navy/5 border-[0.5px] border-p3-navy/10 flex items-center justify-center text-p3-navy"><Copy size={20} /></div>
             </div>
           )}
 
-          <div className="bg-white border-2 border-p3-navy rounded-[32px] p-8 shadow-md space-y-6">
-            <div className="flex items-start gap-4">
-              <div className="w-10 h-10 rounded-xl bg-p3-gold/10 flex items-center justify-center text-p3-gold shrink-0"><MapPin size={20} strokeWidth={3} /></div>
+          <div className="bg-white border-[0.5px] border-black/5 rounded-[24px] p-6 shadow-sm">
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 rounded-xl bg-p3-gold/10 flex items-center justify-center text-p3-gold shrink-0"><MapPin size={20} /></div>
               <div>
-                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Address</p>
-                <p className="text-sm font-black text-p3-navy leading-snug">{item.location || 'See map for details'}</p>
+                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-0.5">Address</p>
+                <p className="text-xs font-bold text-p3-navy leading-relaxed">{item.location || 'See map for details'}</p>
               </div>
             </div>
           </div>
 
-          <div className="flex gap-4 mt-2">
-            <button className="flex-1 py-5 bg-white border-2 border-p3-navy rounded-3xl font-black uppercase tracking-widest text-xs flex items-center justify-center gap-3 shadow-xl active:translate-y-1 transition-all text-p3-navy" onClick={() => window.open(`tel:${item.contactPhone || item.phone || ''}`)}><Phone size={20} /> Contact</button>
-            <button className="flex-[1.5] py-5 bg-p3-navy text-white border-2 border-p3-navy rounded-3xl font-black uppercase tracking-widest text-xs flex items-center justify-center gap-3 shadow-xl active:translate-y-1 transition-all" onClick={() => window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(item.location || item.title)}`, '_blank')}><MapPin size={20} /> Open Maps</button>
+          <div className="flex gap-3">
+            <button className="flex-1 py-4 bg-white border-[0.5px] border-p3-navy rounded-2xl font-black uppercase tracking-widest text-[10px] flex items-center justify-center gap-2 shadow-sm active:translate-y-0.5 transition-all text-p3-navy" onClick={() => window.open(`tel:${item.contactPhone || item.phone || ''}`)}><Phone size={16} /> Contact</button>
+            <button className="flex-[1.5] py-4 bg-p3-navy text-white rounded-2xl font-black uppercase tracking-widest text-[10px] flex items-center justify-center gap-2 shadow-glass-deep active:translate-y-0.5 transition-all" onClick={() => window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(item.location || item.title)}`, '_blank')}><MapPin size={16} /> Open Maps</button>
           </div>
 
           {item.url && (
-            <button onClick={() => { window.open(item.url, '_blank'); triggerHaptic('success'); }} className="w-full py-5 bg-gradient-to-r from-p3-gold to-splat-orange text-white rounded-3xl font-black uppercase tracking-widest shadow-xl flex items-center justify-center gap-4 active:scale-95 transition-all mt-2 border-2 border-white/20">
-              <ExternalLink size={20} /> 開啟訂房網站 / App
+            <button onClick={() => { window.open(item.url, '_blank'); triggerHaptic('success'); }} className="w-full py-4 bg-slate-800 text-white rounded-2xl font-black uppercase tracking-widest text-[10px] shadow-glass-deep flex items-center justify-center gap-3 active:scale-95 transition-all mt-2">
+              <ExternalLink size={16} /> 開啟訂房詳情 / App
             </button>
           )}
         </div>
