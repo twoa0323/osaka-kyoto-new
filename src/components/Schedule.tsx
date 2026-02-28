@@ -609,7 +609,7 @@ const ScheduleMapView: FC<{
 
 export const Schedule: FC<{ externalDateIdx?: number }> = ({ externalDateIdx = 0 }) => {
   const { t } = useTranslation();
-  const { trips, currentTripId, updateTripData, addScheduleItem, updateScheduleItem, deleteScheduleItem, showToast, checkAiFallback, uiSettings, addBookingItem, addJournalItem, addShoppingItem, addInfoItem, reorderScheduleItems } = useTripStore();
+  const { trips, currentTripId, updateTripData, addScheduleItem, updateScheduleItem, deleteScheduleItem, deleteBookingItem, showToast, checkAiFallback, uiSettings, addBookingItem, addJournalItem, addShoppingItem, addInfoItem, reorderScheduleItems } = useTripStore();
   const trip = trips.find(t => t.id === currentTripId);
   const isOnline = useNetworkStatus();
   const [isEditorOpen, setIsEditorOpen] = useState(false);
@@ -1247,6 +1247,9 @@ export const Schedule: FC<{ externalDateIdx?: number }> = ({ externalDateIdx = 0
               <motion.button whileTap={{ scale: 0.95, transition: { type: 'spring', stiffness: 500, damping: 20 } }} onClick={() => setViewMode(viewMode === 'list' ? 'map' : 'list')} className={`w-10 h-10 rounded-2xl flex items-center justify-center border-[1px] border-p3-navy/10 ${viewMode === 'map' ? 'bg-splat-blue text-white' : 'bg-white text-p3-navy shadow-xl shadow-black/5'}`}>
                 {viewMode === 'list' ? <MapIcon size={18} /> : <Camera size={18} />}
               </motion.button>
+              <motion.button whileTap={{ scale: 0.95, transition: { type: 'spring', stiffness: 500, damping: 20 } }} onClick={() => setIsEditMode(!isEditMode)} className={`w-10 h-10 rounded-2xl flex items-center justify-center border-[1px] border-p3-navy/10 ${isEditMode ? 'bg-splat-yellow text-p3-navy' : 'bg-white text-gray-400 shadow-xl shadow-black/5'}`}>
+                <Edit3 size={18} />
+              </motion.button>
               <motion.button whileTap={{ scale: 0.95, transition: { type: 'spring', stiffness: 500, damping: 20 } }} onClick={() => { setEditingItem(undefined); setIsEditorOpen(true) }} className="w-12 h-12 rounded-2xl bg-p3-navy text-white flex items-center justify-center shadow-xl shadow-p3-navy/20 transition-shadow hover:shadow-p3-navy/40"><Plus size={18} strokeWidth={2.5} /></motion.button>
             </div>
           </div>
@@ -1272,31 +1275,37 @@ export const Schedule: FC<{ externalDateIdx?: number }> = ({ externalDateIdx = 0
                 dayItems.map((item, idx) => (
                   <div key={item.id} data-id={item.id} className="timeline-item">
                     {item.__type === 'schedule' ? (
-                      <ScheduleItemRow
-                        item={item as any}
-                        idx={idx}
-                        isEditMode={isEditMode}
-                        dayItems={dayItems}
-                        tripId={trip!.id}
-                        updateScheduleItem={updateScheduleItem}
-                        deleteScheduleItem={deleteScheduleItem}
-                        setEditingItem={setEditingItem}
-                        setIsEditorOpen={setIsEditorOpen}
-                        setDetailItem={setDetailItem}
-                        timeToMins={timeToMins}
-                      />
+                      <SwipeableItem id={item.id} onDelete={() => deleteScheduleItem(trip!.id, item.id)}>
+                        <ScheduleItemRow
+                          item={item as any}
+                          idx={idx}
+                          isEditMode={isEditMode}
+                          dayItems={dayItems}
+                          tripId={trip!.id}
+                          updateScheduleItem={updateScheduleItem}
+                          deleteScheduleItem={deleteScheduleItem}
+                          setEditingItem={setEditingItem}
+                          setIsEditorOpen={setIsEditorOpen}
+                          setDetailItem={setDetailItem}
+                          timeToMins={timeToMins}
+                        />
+                      </SwipeableItem>
                     ) : (
                       item.type === 'flight' ? (
-                        <TimelineFlightCard
-                          item={item as any}
-                          onClick={() => setDetailItem(item as any)}
-                        />
+                        <SwipeableItem id={item.id} onDelete={() => deleteBookingItem(trip!.id, item.id)}>
+                          <TimelineFlightCard
+                            item={item as any}
+                            onClick={() => setDetailItem(item as any)}
+                          />
+                        </SwipeableItem>
                       ) : (
-                        <TimelineHotelCard
-                          item={item as any}
-                          onClick={() => setDetailItem(item as any)}
-                          t={t}
-                        />
+                        <SwipeableItem id={item.id} onDelete={() => deleteBookingItem(trip!.id, item.id)}>
+                          <TimelineHotelCard
+                            item={item as any}
+                            onClick={() => setDetailItem(item as any)}
+                            t={t}
+                          />
+                        </SwipeableItem>
                       )
                     )}
                   </div>

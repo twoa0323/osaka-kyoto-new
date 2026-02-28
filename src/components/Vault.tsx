@@ -3,7 +3,7 @@ import { useTripStore } from '../store/useTripStore';
 import {
     Shield, QrCode, FileText, Image as ImageIcon,
     ExternalLink, Search, Plus, X, Eye,
-    CreditCard, Plane, HardDrive, ShieldCheck, ChevronRight
+    CreditCard, Plane, HardDrive, ShieldCheck, ChevronRight, Trash2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { InfoItem } from '../types';
@@ -240,6 +240,9 @@ export const Vault = () => {
                                     </button>
                                     <button className="flex-1 py-4 bg-white/60 backdrop-blur-md text-p3-navy rounded-xl border-[0.5px] border-black/5 flex items-center justify-center gap-2 font-black active:scale-95 transition-all shadow-glass-soft">
                                         <Plus size={18} /> {t('vault.share')}
+                                    </button>
+                                    <button onClick={() => { deleteInfoItem(trip.id, selectedDoc.id); setSelectedDoc(null); triggerHaptic('light'); }} className="shrink-0 w-14 h-14 bg-red-50 text-red-500 rounded-xl border-[0.5px] border-red-200 flex items-center justify-center font-black active:scale-95 transition-all shadow-glass-soft">
+                                        <Trash2 size={24} />
                                     </button>
                                 </div>
                             </div>

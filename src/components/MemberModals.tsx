@@ -7,6 +7,7 @@ import {
 import { Trip, Member } from '../types';
 import { useTripStore } from '../store/useTripStore';
 import { uploadImage } from '../utils/imageUtils';
+import { useTranslation } from '../hooks/useTranslation';
 
 interface MemberManagementProps {
     trip: Trip;
@@ -19,6 +20,7 @@ interface MemberManagementProps {
 export const MemberManagement: FC<MemberManagementProps> = ({
     trip, myProfile, onClose, onEditProfile, onShowSettings
 }) => {
+    const { t } = useTranslation();
     const { showToast } = useTripStore();
     const [showEditIcon, setShowEditIcon] = useState<string | null>(null);
 
@@ -38,7 +40,7 @@ export const MemberManagement: FC<MemberManagementProps> = ({
                     <div className="flex-1 pr-4">
                         <div className="flex items-center gap-2 mb-2">
                             <h2 className="text-2xl font-black italic text-splat-dark tracking-tighter leading-tight uppercase break-words">
-                                TRIP MATES
+                                {t('member.title')}
                             </h2>
                             <div className="flex items-center gap-1 px-2 py-0.5 bg-splat-green/10 border border-splat-green/30 rounded-full">
                                 <RefreshCcw size={10} className="text-splat-green animate-spin-slow" />
@@ -92,6 +94,7 @@ interface ProfileEditorProps {
 }
 
 export const ProfileEditor: FC<ProfileEditorProps> = ({ myProfile, onSave, onClose }) => {
+    const { t } = useTranslation();
     const { showToast } = useTripStore();
     const [form, setForm] = useState({ name: myProfile.name, mood: myProfile.mood || '', avatar: myProfile.avatar });
 
@@ -107,7 +110,7 @@ export const ProfileEditor: FC<ProfileEditorProps> = ({ myProfile, onSave, onClo
             <div className="w-full max-w-sm space-y-6 text-center bg-[#F4F5F7] border-[4px] border-splat-dark rounded-[2.5rem] shadow-[8px_8px_0px_#1A1A1A] p-8 relative animate-in zoom-in-95">
                 <button onClick={onClose} className="absolute top-5 right-5 bg-white p-2 rounded-full border-2 border-splat-dark active:scale-95 shadow-sm"><X size={16} strokeWidth={3} /></button>
 
-                <h2 className="text-2xl font-black italic uppercase text-splat-dark">EDIT PROFILE</h2>
+                <h2 className="text-2xl font-black italic uppercase text-splat-dark">{t('member.editProfile')}</h2>
 
                 <div className="space-y-6">
                     <div className="space-y-3">
@@ -131,19 +134,19 @@ export const ProfileEditor: FC<ProfileEditorProps> = ({ myProfile, onSave, onClo
                     </div>
 
                     <div className="space-y-1 text-left">
-                        <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest pl-1">Nickname 暱稱</label>
+                        <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest pl-1">{t('member.nickname')}</label>
                         <input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} className="w-full p-4 bg-white rounded-xl border-[3px] border-splat-dark font-black text-splat-dark outline-none focus:border-splat-blue transition-colors" />
                     </div>
 
                     <div className="space-y-1 text-left">
-                        <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest pl-1">Mood / Message 心情留言</label>
-                        <input placeholder="寫點什麼心情呢？" value={form.mood} onChange={e => setForm({ ...form, mood: e.target.value })} className="w-full p-4 bg-white rounded-xl border-[3px] border-splat-dark font-black text-splat-dark outline-none focus:border-splat-blue transition-colors" />
+                        <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest pl-1">{t('member.mood')}</label>
+                        <input value={form.mood} onChange={e => setForm({ ...form, mood: e.target.value })} className="w-full p-4 bg-white rounded-xl border-[3px] border-splat-dark font-black text-splat-dark outline-none focus:border-splat-blue transition-colors" />
                     </div>
 
                     <button onClick={() => {
-                        if (!form.name) return showToast("名字不能空白喔！", "info");
+                        if (!form.name) return showToast(t('member.nameEmpty'), "info");
                         onSave({ ...myProfile, ...form });
-                    }} className="btn-splat w-full py-4 text-lg bg-splat-green text-white">SAVE ➔</button>
+                    }} className="btn-splat w-full py-4 text-lg bg-splat-green text-white">{t('member.save')}</button>
                 </div>
             </div>
         </div>
@@ -155,6 +158,7 @@ interface PersonalSetupProps {
 }
 
 export const PersonalSetup: FC<PersonalSetupProps> = ({ onComplete }) => {
+    const { t } = useTranslation();
     const { showToast } = useTripStore();
     const [setupForm, setSetupForm] = useState({ name: '', email: '', pin: '' });
 
@@ -162,16 +166,16 @@ export const PersonalSetup: FC<PersonalSetupProps> = ({ onComplete }) => {
         <div className="fixed inset-0 z-[2000] bg-white flex items-center justify-center p-8">
             <div className="w-full max-w-sm space-y-8 text-center">
                 <div className="w-20 h-20 bg-splat-yellow rounded-full flex items-center justify-center mx-auto border-[4px] border-splat-dark shadow-splat-solid animate-bounce"><User size={40} strokeWidth={3} className="text-splat-dark" /></div>
-                <h2 className="text-3xl font-black italic">WHO ARE YOU?</h2>
+                <h2 className="text-3xl font-black italic">{t('member.whoAreYou')}</h2>
                 <div className="bg-white border-[4px] border-splat-dark rounded-[2.5rem] shadow-splat-solid p-8 space-y-6">
                     <div className="space-y-1 text-left">
-                        <label className="text-[10px] font-black opacity-30 uppercase tracking-widest pl-1">Nickname / 你的暱稱</label>
-                        <input placeholder="如何稱呼您？" className="w-full p-4 bg-gray-50 rounded-xl border-[3px] border-splat-dark font-black outline-none focus:bg-white" value={setupForm.name} onChange={e => setSetupForm({ ...setupForm, name: e.target.value })} />
+                        <label className="text-[10px] font-black opacity-30 uppercase tracking-widest pl-1">{t('member.nicknameShort')}</label>
+                        <input className="w-full p-4 bg-gray-50 rounded-xl border-[3px] border-splat-dark font-black outline-none focus:bg-white" value={setupForm.name} onChange={e => setSetupForm({ ...setupForm, name: e.target.value })} />
                     </div>
                     <button onClick={() => {
-                        if (!setupForm.name) return showToast("請告訴我們您的暱稱唷！🦑", "info");
+                        if (!setupForm.name) return showToast(t('member.namePrompt'), "info");
                         onComplete({ name: setupForm.name, email: '', pin: '' });
-                    }} className="btn-splat w-full py-5 text-xl bg-splat-green text-white uppercase tracking-widest">加入旅程 ➔</button>
+                    }} className="btn-splat w-full py-5 text-xl bg-splat-green text-white uppercase tracking-widest">{t('member.join')}</button>
                 </div>
             </div>
         </div>

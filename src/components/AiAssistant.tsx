@@ -6,6 +6,7 @@ import { triggerHaptic } from '../utils/haptics';
 import { compressImage, compressImageForAI, uploadImage } from '../utils/imageUtils';
 import { experimental_useObject as useObject } from '@ai-sdk/react';
 import { z } from 'zod';
+import { useTranslation } from '../hooks/useTranslation';
 
 const transportSchema = z.object({
     summary: z.string(),
@@ -24,6 +25,7 @@ export const AiAssistant: FC = () => {
         addExpenseItem, exchangeRate, addPackingItem, showToast, setAiMetadata,
         applyAiImport
     } = useTripStore();
+    const { t } = useTranslation();
     const trip = trips.find(t => t.id === currentTripId);
 
     const [loadingAction, setLoadingAction] = useState<string | null>(null);
@@ -372,7 +374,7 @@ export const AiAssistant: FC = () => {
                         <div className="p-2 bg-white text-splat-blue rounded-xl rotate-[-3deg] shadow-sm">
                             <Sparkles size={20} strokeWidth={3} />
                         </div>
-                        <h3 className="text-xl font-black italic tracking-tighter uppercase">Magic Assistant</h3>
+                        <h3 className="text-xl font-black italic tracking-tighter uppercase">{t('ai.title')}</h3>
                     </div>
                     <button onClick={() => setAiModalOpen(false)} className="bg-white/20 p-2 rounded-full backdrop-blur-md border border-white/30 active:scale-90 transition-transform">
                         <X size={20} strokeWidth={3} />
@@ -403,15 +405,15 @@ export const AiAssistant: FC = () => {
                                     {/* 🤖 AI 模式標籤 Chips */}
                                     <div className="flex gap-2 mb-3">
                                         {[
-                                            { id: 'chat' as const, label: '💬 聊天問答', color: 'bg-splat-blue' },
-                                            { id: 'import' as const, label: '✨ 智慧匯入', color: 'bg-splat-yellow' },
+                                            { id: 'chat' as const, label: t('ai.chatMode'), color: 'bg-splat-blue' },
+                                            { id: 'import' as const, label: t('ai.importMode'), color: 'bg-splat-yellow' },
                                         ].map(mode => (
                                             <button
                                                 key={mode.id}
                                                 onClick={() => { setAiMode(mode.id); setImportResult(null); }}
                                                 className={`flex-1 py-2 rounded-xl text-[11px] font-black uppercase tracking-wider border-2 transition-all ${aiMode === mode.id
-                                                        ? `${mode.color} text-white border-splat-dark shadow-splat-solid-xs`
-                                                        : 'bg-white text-gray-400 border-gray-200'
+                                                    ? `${mode.color} text-white border-splat-dark shadow-splat-solid-xs`
+                                                    : 'bg-white text-gray-400 border-gray-200'
                                                     }`}
                                             >
                                                 {mode.label}
@@ -429,12 +431,12 @@ export const AiAssistant: FC = () => {
 
                                     <div className="flex justify-between items-center mb-3 pr-1">
                                         <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest pl-1">
-                                            {aiMode === 'import' ? 'Agentic Import 全能管家' : 'Magic Import 多模態導入'}
+                                            {aiMode === 'import' ? t('ai.importSub') : t('ai.importSub')}
                                         </p>
                                         {aiMode === 'chat' && (
                                             <label className="flex items-center gap-1 text-[10px] font-black text-splat-blue cursor-pointer bg-splat-blue/10 px-2 py-1 rounded-lg hover:bg-splat-blue/20 transition-colors">
                                                 {isUploadingImage ? <Loader2 size={12} className="animate-spin" /> : <Camera size={12} strokeWidth={3} />}
-                                                <span>附加截圖</span>
+                                                <span>{t('ai.attachImage')}</span>
                                                 <input type="file" accept="image/*" className="hidden" onChange={handleAiImageUpload} />
                                             </label>
                                         )}
@@ -455,8 +457,8 @@ export const AiAssistant: FC = () => {
 
                                     <textarea
                                         placeholder={aiMode === 'import'
-                                            ? '請貼上機票確認信、飯店預訂、想去的景點或購物清單...\n\nAI 管家將自動分類匯入對應模組'
-                                            : aiImages.length > 0 ? '請描述圖片內容或附加更多行程細節...' : '貼上你的行程備忘錄或上傳飯店截圖...'}
+                                            ? t('ai.placeholderImport')
+                                            : aiImages.length > 0 ? t('ai.placeholderImage') : t('ai.placeholderChat')}
                                         className="w-full h-24 bg-white border-[2px] border-gray-300 rounded-xl p-3 font-bold text-splat-dark outline-none focus:border-splat-blue resize-none shadow-inner text-sm"
                                         value={aiText}
                                         onChange={e => setAiText(e.target.value)}
@@ -513,22 +515,22 @@ export const AiAssistant: FC = () => {
                                     >
                                         {(loadingAction === 'analyze' || loadingAction === 'import')
                                             ? <><Loader2 className="animate-spin" size={18} /> {aiMode === 'import' ? '✨ 正在為您拆解並安排行程...' : LOADING_TEXTS[loadingStage]}</>
-                                            : aiMode === 'import' ? '✨ 全能管家解析 ➔' : '開始魔法解析 ➔'}
+                                            : aiMode === 'import' ? t('ai.buttonImport') : t('ai.buttonChat')}
                                     </button>
                                 </div>
 
                                 <div className="grid grid-cols-2 gap-3 mt-2">
                                     <button className="p-4 bg-white rounded-2xl border-[3px] border-splat-dark flex flex-col items-center gap-2 shadow-splat-solid-sm active:translate-y-1 active:shadow-none">
                                         <Compass size={24} className="text-splat-blue" />
-                                        <span className="font-black text-[11px]">路線最佳化</span>
+                                        <span className="font-black text-[11px]">{t('ai.routeOpt')}</span>
                                     </button>
                                     <button className="p-4 bg-white rounded-2xl border-[3px] border-splat-dark flex flex-col items-center gap-2 shadow-splat-solid-sm active:translate-y-1 active:shadow-none">
                                         <CloudRain size={24} className="text-splat-pink" />
-                                        <span className="font-black text-[11px]">雨天備案</span>
+                                        <span className="font-black text-[11px]">{t('ai.rainBackup')}</span>
                                     </button>
                                     <button className="col-span-2 p-3 bg-white rounded-2xl border-[3px] border-splat-dark flex items-center justify-center gap-2 shadow-splat-solid-sm active:translate-y-1 active:shadow-none">
                                         <Layout size={20} className="text-splat-orange" />
-                                        <span className="font-black text-[11px]">自動填補行程空檔</span>
+                                        <span className="font-black text-[11px]">{t('ai.autoFill')}</span>
                                     </button>
                                 </div>
 
@@ -538,11 +540,11 @@ export const AiAssistant: FC = () => {
                                         <div className="p-2 bg-splat-blue text-white rounded-xl shadow-splat-solid-xs -rotate-3">
                                             <Train size={18} strokeWidth={3} />
                                         </div>
-                                        <h4 className="font-black text-splat-dark text-lg uppercase italic tracking-tighter">Transport Wizard</h4>
+                                        <h4 className="font-black text-splat-dark text-lg uppercase italic tracking-tighter">{t('ai.transportLabel')}</h4>
                                     </div>
 
                                     <p className="text-[11px] font-bold text-gray-500 leading-snug">
-                                        點選下方按鈕，AI 將即時規劃兩點間的最佳路線。
+                                        {t('ai.transportText')}
                                     </p>
 
                                     {/* 串流結果區域 */}
@@ -616,7 +618,7 @@ export const AiAssistant: FC = () => {
                                         className="btn-splat w-full py-3 bg-splat-blue text-white text-sm flex items-center justify-center gap-2"
                                     >
                                         <ArrowRight size={18} strokeWidth={3} />
-                                        <span>即時規劃交通建議 ➔</span>
+                                        <span>{t('ai.transportBtn')}</span>
                                     </button>
                                 </div>
                             </motion.div>
@@ -628,15 +630,15 @@ export const AiAssistant: FC = () => {
                                     <div className="w-16 h-16 bg-splat-pink rounded-full flex items-center justify-center text-white mx-auto shadow-splat-solid-sm -rotate-6">
                                         <Receipt size={32} strokeWidth={2.5} />
                                     </div>
-                                    <h4 className="font-black text-splat-dark text-lg uppercase italic tracking-tighter">Receipt Scanner</h4>
-                                    <p className="text-xs font-bold text-gray-500 leading-snug px-4">拍下或上傳收據，AI 將自動辨識金額、店家與類別並自動記帳。</p>
+                                    <h4 className="font-black text-splat-dark text-lg uppercase italic tracking-tighter">{t('ai.receiptLabel')}</h4>
+                                    <p className="text-xs font-bold text-gray-500 leading-snug px-4">{t('ai.receiptText')}</p>
 
                                     <button
                                         onClick={() => aiInputRef.current?.click()}
                                         disabled={loadingAction === 'receipt'}
                                         className="btn-splat w-full py-4 bg-splat-pink text-white text-sm flex items-center justify-center gap-2"
                                     >
-                                        {loadingAction === 'receipt' ? <><Loader2 className="animate-spin" size={18} /> {LOADING_TEXTS[loadingStage]}</> : <><Camera size={18} /> 選擇收據照片</>}
+                                        {loadingAction === 'receipt' ? <><Loader2 className="animate-spin" size={18} /> {LOADING_TEXTS[loadingStage]}</> : <><Camera size={18} /> {t('ai.receiptBtn')}</>}
                                     </button>
                                     <input ref={aiInputRef} type="file" accept="image/*" className="hidden" onChange={handleReceiptScan} />
                                 </div>
@@ -651,8 +653,8 @@ export const AiAssistant: FC = () => {
                                             {loadingAction === 'finance' ? <Loader2 className="animate-spin" size={20} /> : <BarChart3 size={20} className="text-splat-dark" />}
                                         </div>
                                         <div className="text-left">
-                                            <p className="font-black text-xs text-splat-dark uppercase">Financial Insights</p>
-                                            <p className="text-[9px] font-bold text-gray-400 uppercase">{loadingAction === 'finance' ? LOADING_TEXTS[loadingStage] : '分析旅遊支出並提供省錢建議'}</p>
+                                            <p className="font-black text-xs text-splat-dark uppercase">{t('ai.financeLabel')}</p>
+                                            <p className="text-[9px] font-bold text-gray-400 uppercase">{loadingAction === 'finance' ? LOADING_TEXTS[loadingStage] : t('ai.financeText')}</p>
                                         </div>
                                     </div>
                                     <Sparkles size={18} className="text-splat-yellow" />
@@ -666,15 +668,15 @@ export const AiAssistant: FC = () => {
                                     <div className="w-16 h-16 bg-splat-pink rounded-full flex items-center justify-center text-white mx-auto shadow-splat-solid-sm rotate-6">
                                         <Package size={32} strokeWidth={2.5} />
                                     </div>
-                                    <h4 className="font-black text-splat-dark text-lg uppercase italic tracking-tighter">Smart Packing List</h4>
-                                    <p className="text-xs font-bold text-gray-500 leading-snug px-4">根據行程目的地、天氣與旅遊天數，AI 為您量身打造行李清單。</p>
+                                    <h4 className="font-black text-splat-dark text-lg uppercase italic tracking-tighter">{t('ai.packLabel')}</h4>
+                                    <p className="text-xs font-bold text-gray-500 leading-snug px-4">{t('ai.packText')}</p>
 
                                     <button
                                         onClick={handleAiSuggestPacking}
                                         disabled={loadingAction === 'packing'}
                                         className="btn-splat w-full py-4 bg-splat-pink text-white text-sm flex items-center justify-center gap-2"
                                     >
-                                        {loadingAction === 'packing' ? <><Loader2 className="animate-spin" size={18} /> {LOADING_TEXTS[loadingStage]}</> : <><Sparkles size={18} /> 生成打包清單 ➔</>}
+                                        {loadingAction === 'packing' ? <><Loader2 className="animate-spin" size={18} /> {LOADING_TEXTS[loadingStage]}</> : <><Sparkles size={18} /> {t('ai.packBtn')}</>}
                                     </button>
                                 </div>
                             </motion.div>
@@ -685,13 +687,13 @@ export const AiAssistant: FC = () => {
                                 <div className="bg-splat-green/5 border-[3px] border-splat-green rounded-[32px] p-6 space-y-4">
                                     <div className="flex items-center gap-3 mb-2">
                                         <Search className="text-splat-green" size={24} strokeWidth={3} />
-                                        <h4 className="font-black text-splat-dark uppercase italic tracking-tighter">Global Price Research</h4>
+                                        <h4 className="font-black text-splat-dark uppercase italic tracking-tighter">{t('ai.shopLabel')}</h4>
                                     </div>
-                                    <p className="text-[11px] font-bold text-gray-500 leading-relaxed">我們將掃描日本各大商城，為您的購物清單提供最精準的市場行情與購買建議。</p>
+                                    <p className="text-[11px] font-bold text-gray-500 leading-relaxed">{t('ai.shopText')}</p>
 
                                     <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
                                         {trip.shoppingList?.filter(i => !i.isBought).length === 0 ? (
-                                            <div className="text-center py-6 text-gray-300 text-[10px] font-black uppercase tracking-widest border-2 border-dashed border-gray-200 rounded-xl">No items to research</div>
+                                            <div className="text-center py-6 text-gray-300 text-[10px] font-black uppercase tracking-widest border-2 border-dashed border-gray-200 rounded-xl">{t('ai.noItem')}</div>
                                         ) : trip.shoppingList?.filter(i => !i.isBought).map(item => (
                                             <div key={item.id} className="flex items-center justify-between bg-white p-3 rounded-xl border-2 border-splat-dark shadow-sm">
                                                 <span className="font-black text-xs truncate max-w-[150px] uppercase text-splat-dark">{item.title}</span>
@@ -700,7 +702,7 @@ export const AiAssistant: FC = () => {
                                                     disabled={loadingAction === `research-${item.id}`}
                                                     className="text-[9px] font-black bg-splat-green text-white px-3 py-1.5 rounded-lg border-2 border-splat-dark shadow-splat-solid-xs active:translate-y-0.5"
                                                 >
-                                                    {loadingAction === `research-${item.id}` ? <Loader2 className="animate-spin" size={10} /> : "RESEARCH"}
+                                                    {loadingAction === `research-${item.id}` ? <Loader2 className="animate-spin" size={10} /> : t('ai.researchBtn')}
                                                 </button>
                                             </div>
                                         ))}
@@ -720,7 +722,7 @@ export const AiAssistant: FC = () => {
                                 className="absolute inset-0 bg-white z-[30] p-6 flex flex-col"
                             >
                                 <div className="flex justify-between items-center mb-6">
-                                    <h4 className="text-xl font-black italic uppercase text-splat-dark">Review Receipt</h4>
+                                    <h4 className="text-xl font-black italic uppercase text-splat-dark">{t('ai.reviewTitle')}</h4>
                                     <button onClick={() => setReceiptPreview(null)} className="p-2 bg-gray-100 rounded-full hover:bg-gray-200 transition-colors">
                                         <X size={20} className="text-gray-500" />
                                     </button>
@@ -741,14 +743,14 @@ export const AiAssistant: FC = () => {
                                     <div className="card-splat p-5 space-y-4">
                                         <div className="flex justify-between items-start">
                                             <div>
-                                                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Store / Shop Type</p>
+                                                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">{t('ai.store')}</p>
                                                 <h5 className="text-lg font-black text-splat-dark uppercase leading-tight">{receiptPreview.data?.storeName || '未知商店'}</h5>
                                                 <span className="inline-block bg-splat-blue/10 text-splat-blue text-[9px] font-black px-2 py-0.5 rounded uppercase mt-1">
                                                     {receiptPreview.data?.shopType || '店家'}
                                                 </span>
                                             </div>
                                             <div className="text-right">
-                                                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Total Amount</p>
+                                                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">{t('ai.amount')}</p>
                                                 <p className="text-2xl font-black text-splat-dark">
                                                     <span className="text-xs mr-1">{receiptPreview.data?.currency || 'JPY'}</span>
                                                     {(receiptPreview.data?.amount || 0).toLocaleString()}
@@ -761,26 +763,26 @@ export const AiAssistant: FC = () => {
                                             <div className="bg-splat-orange/10 border-2 border-splat-orange p-3 rounded-2xl flex items-start gap-3">
                                                 <AlertTriangle size={20} className="text-splat-orange shrink-0" />
                                                 <div>
-                                                    <p className="text-[11px] font-black text-splat-orange uppercase uppercase italic">Low Confidence Alert</p>
-                                                    <p className="text-[10px] font-bold text-gray-600">辨識信心值較低 ({Math.round((receiptPreview.data.confidence || 0) * 100)}%)，請仔細確認金額與日期。</p>
+                                                    <p className="text-[11px] font-black text-splat-orange uppercase uppercase italic">{t('ai.lowConf')}</p>
+                                                    <p className="text-[10px] font-bold text-gray-600">{t('ai.lowConfText')} ({Math.round((receiptPreview.data.confidence || 0) * 100)}%)</p>
                                                 </div>
                                             </div>
                                         )}
 
                                         <div className="grid grid-cols-2 gap-4">
                                             <div className="bg-gray-50 p-3 rounded-xl border-2 border-gray-100">
-                                                <p className="text-[9px] font-black text-gray-400 uppercase mb-1">Category</p>
+                                                <p className="text-[9px] font-black text-gray-400 uppercase mb-1">{t('ai.category')}</p>
                                                 <p className="text-xs font-black text-splat-dark uppercase italic">{receiptPreview.data?.category || '其他'}</p>
                                             </div>
                                             <div className="bg-gray-50 p-3 rounded-xl border-2 border-gray-100">
-                                                <p className="text-[9px] font-black text-gray-400 uppercase mb-1">Date</p>
+                                                <p className="text-[9px] font-black text-gray-400 uppercase mb-1">{t('ai.date')}</p>
                                                 <p className="text-xs font-black text-splat-dark">{receiptPreview.data?.date || new Date().toISOString().split('T')[0]}</p>
                                             </div>
                                         </div>
 
                                         {/* 付款人選擇 */}
                                         <div className="space-y-2">
-                                            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Select Payer 付款人</p>
+                                            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{t('ai.payer')}</p>
                                             <div className="flex gap-2 overflow-x-auto hide-scrollbar pb-1">
                                                 {(trip.members || [{ id: 'Admin', name: 'Admin', avatar: '🦑' }]).map(m => (
                                                     <button

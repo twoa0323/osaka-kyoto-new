@@ -607,6 +607,9 @@ const App: FC = () => {
               <div className="mt-6 px-1">
                 <Booking />
               </div>
+              <div className="mt-6 px-1">
+                <PackingList />
+              </div>
             </Suspense>
           </div>
         )}
@@ -637,26 +640,28 @@ const App: FC = () => {
       </main>
 
       {/* 🧭 Bottom Navigation — 5 Unified Modules */}
-      <nav className="fixed bottom-6 left-1/2 -translate-x-1/2 w-[92%] max-w-sm glass-card px-4 py-4 flex justify-between items-center z-50 shadow-glass-deep border-[0.5px] border-white/40 rounded-[32px]">
-        <NavIcon icon={<Calendar />} label={t('nav.timeline')} id="timeline" active={activeTab} onClick={handleTabChange} color="text-p3-navy" />
-        <NavIcon icon={<Lock />} label={t('nav.vault')} id="vault" active={activeTab} onClick={handleTabChange} color="text-p3-ruby" />
+      <LayoutGroup>
+        <nav className="fixed bottom-6 left-1/2 -translate-x-1/2 w-[92%] max-w-sm glass-card px-4 py-4 flex justify-between items-center z-50 shadow-glass-deep border-[0.5px] border-white/40 rounded-[32px]">
+          <NavIcon icon={<Calendar />} label={t('nav.timeline')} id="timeline" active={activeTab} onClick={handleTabChange} color="text-p3-navy" />
+          <NavIcon icon={<Lock />} label={t('nav.vault')} id="vault" active={activeTab} onClick={handleTabChange} color="text-p3-ruby" />
 
-        {/* 🤖 Magic Assistant 置中浮動按鈕 */}
-        <div className="flex-1 flex justify-center -translate-y-5">
-          <motion.button
-            whileTap={{ scale: 0.9, y: 2 }}
-            whileHover={{ scale: 1.05 }}
-            onClick={() => openAiAssistant()}
-            className="w-16 h-16 rounded-full flex items-center justify-center bg-white/90 backdrop-blur-2xl border-[0.5px] border-white/50 shadow-glass-deep relative"
-          >
-            <div className="absolute inset-0 bg-p3-ruby opacity-10 blur-xl rounded-full pointer-events-none" />
-            <SparklesIcon size={28} strokeWidth={2.5} className="text-p3-ruby drop-shadow-[0_0_10px_var(--p3-ruby-fallback)]" />
-          </motion.button>
-        </div>
+          {/* 🤖 Magic Assistant 置中浮動按鈕 */}
+          <div className="flex-1 flex justify-center -translate-y-5">
+            <motion.button
+              whileTap={{ scale: 0.9, y: 2 }}
+              whileHover={{ scale: 1.05 }}
+              onClick={() => openAiAssistant()}
+              className="w-16 h-16 rounded-full flex items-center justify-center bg-white/90 backdrop-blur-2xl border-[0.5px] border-white/50 shadow-glass-deep relative"
+            >
+              <div className="absolute inset-0 bg-p3-ruby opacity-10 blur-xl rounded-full pointer-events-none" />
+              <SparklesIcon size={28} strokeWidth={2.5} className="text-p3-ruby drop-shadow-[0_0_10px_var(--p3-ruby-fallback)]" />
+            </motion.button>
+          </div>
 
-        <NavIcon icon={<WalletIcon />} label={t('nav.wallet')} id="wallet" active={activeTab} onClick={handleTabChange} color="text-p3-gold" />
-        <NavIcon icon={<Camera />} label={t('nav.memories')} id="memories" active={activeTab} onClick={handleTabChange} color="text-p3-green" />
-      </nav>
+          <NavIcon icon={<WalletIcon />} label={t('nav.wallet')} id="wallet" active={activeTab} onClick={handleTabChange} color="text-p3-gold" />
+          <NavIcon icon={<Camera />} label={t('nav.memories')} id="memories" active={activeTab} onClick={handleTabChange} color="text-p3-green" />
+        </nav>
+      </LayoutGroup>
 
       {
         lockedTripId && (
