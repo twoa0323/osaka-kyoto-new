@@ -172,66 +172,7 @@ const TimelineHotelCard: FC<{
   );
 };
 
-// --- 🔹 空間地圖 Header ---
-const SpatialMapHeader: FC<{
-  trip: Trip;
-  activeItem?: any;
-  t: (key: string) => string;
-}> = ({ trip, activeItem, t }) => {
-  const mapRef = useRef<MapLibreGLType.Map | null>(null);
-  const MAPTILER_KEY = (import.meta as any).env.VITE_MAPTILER_API_KEY;
-
-  useEffect(() => {
-    if (activeItem?.lat && activeItem?.lng && mapRef.current) {
-      mapRef.current.flyTo({
-        center: [activeItem.lng, activeItem.lat],
-        zoom: 15,
-        padding: { top: 100, bottom: 20, left: 20, right: 20 },
-        duration: 1500,
-        essential: true
-      });
-    }
-  }, [activeItem?.id]);
-
-  return (
-    <div className="relative h-64 w-full glass-card overflow-hidden shadow-glass-deep group border-[0.5px] border-white/40">
-      <Map
-        ref={mapRef}
-        styles={{
-          light: `https://api.maptiler.com/maps/dataviz/style.json?key=${MAPTILER_KEY}`,
-          dark: `https://api.maptiler.com/maps/dataviz/style.json?key=${MAPTILER_KEY}`
-        }}
-        initialViewState={{
-          center: [trip.lng || 135.5023, trip.lat || 34.6937],
-          zoom: 12,
-          pitch: 60,
-        }}
-        className="w-full h-full"
-      >
-        <Map3DBuildings />
-        {activeItem?.lat && (
-          <MapMarker longitude={activeItem.lng} latitude={activeItem.lat}>
-            <div className="w-8 h-8 rounded-full bg-splat-blue border-4 border-white shadow-xl animate-pulse" />
-          </MapMarker>
-        )}
-      </Map>
-      <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-white/90 pointer-events-none" />
-
-      {/* 墨線裝飾 */}
-      <div className="absolute inset-x-8 bottom-10 flex justify-between items-end pointer-events-none">
-        <div>
-          <h2 className="text-4xl boutique-h1 text-p3-navy drop-shadow-sm">
-            {trip.dest} <span className="text-p3-ruby">EXPRESS</span>
-          </h2>
-          <p className="boutique-tag text-p3-navy/30 mt-2">{t('schedule.spatialTimeline')}</p>
-        </div>
-        <div className="px-6 py-2 bg-p3-navy text-white rounded-full boutique-tag">
-          {t('schedule.liveTracking')}
-        </div>
-      </div>
-    </div>
-  );
-};
+// SpatialMapHeader 已提取至獨立組件
 
 const ScheduleItemRow: FC<{
   item: ScheduleItem,
@@ -660,9 +601,8 @@ export const Schedule: FC<{ externalDateIdx?: number }> = ({ externalDateIdx = 0
     });
   }, [trip, selectedDateStr]);
 
-  const [activeDayItem, setActiveDayItem] = useState<any>(null);
-
   // 🚀 IntersectionObserver 用於空間地圖隨動
+  const setActiveDayItem = useTripStore(s => s.setActiveDayItem);
   useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
@@ -679,7 +619,7 @@ export const Schedule: FC<{ externalDateIdx?: number }> = ({ externalDateIdx = 0
     const elements = document.querySelectorAll('.timeline-item');
     elements.forEach(el => observer.observe(el));
     return () => observer.disconnect();
-  }, [dayItems]);
+  }, [dayItems, setActiveDayItem]);
 
   const timeline = useMemo(() => {
     const sortedForTimeline = [...dayItems].sort((a, b) => {
@@ -1229,9 +1169,7 @@ export const Schedule: FC<{ externalDateIdx?: number }> = ({ externalDateIdx = 0
     <div className="flex flex-col h-full relative text-p3-navy">
       <div className="flex-1 overflow-y-auto hide-scrollbar p-6 space-y-8 pb-32">
         <div className="sticky top-0 z-50 bg-[#F4F5F7]/80 backdrop-blur-md pt-2 pb-6">
-          <SpatialMapHeader trip={trip!} activeItem={activeDayItem} t={t} />
-
-          <div className="flex items-center justify-between mt-6 px-4">
+          <div className="flex items-center justify-between mt-2 px-4">
             <div className="flex gap-4">
               <div onClick={() => setShowFullWeather(true)} className="flex items-center gap-3 cursor-pointer group">
                 <div className="text-3xl font-black text-p3-navy">{currentTempStr}°</div>
@@ -1334,7 +1272,14 @@ export const Schedule: FC<{ externalDateIdx?: number }> = ({ externalDateIdx = 0
                           deleteScheduleItem={deleteScheduleItem}
                           setEditingItem={setEditingItem}
                           setIsEditorOpen={setIsEditorOpen}
-                          setDetailItem={setDetailItem}
+                          setDetailItem={(it: any) => {
+                            // 🚀 自動將點擊的項目置中
+                            const element = document.querySelector(`[data-id="${it.id}"]`);
+                            if (element) {
+                              element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                            }
+                            setDetailItem(it);
+                          }}
                           timeToMins={timeToMins}
                         />
                       </SwipeableItem>
@@ -1343,14 +1288,22 @@ export const Schedule: FC<{ externalDateIdx?: number }> = ({ externalDateIdx = 0
                         <SwipeableItem id={item.id} onDelete={() => deleteBookingItem(trip!.id, item.id)}>
                           <TimelineFlightCard
                             item={item as any}
-                            onClick={() => setDetailItem(item as any)}
+                            onClick={() => {
+                              const element = document.querySelector(`[data-id="${item.id}"]`);
+                              if (element) element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                              setDetailItem(item as any);
+                            }}
                           />
                         </SwipeableItem>
                       ) : (
                         <SwipeableItem id={item.id} onDelete={() => deleteBookingItem(trip!.id, item.id)}>
                           <TimelineHotelCard
                             item={item as any}
-                            onClick={() => setDetailItem(item as any)}
+                            onClick={() => {
+                              const element = document.querySelector(`[data-id="${item.id}"]`);
+                              if (element) element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                              setDetailItem(item as any);
+                            }}
                             t={t}
                           />
                         </SwipeableItem>
@@ -1386,7 +1339,7 @@ export const Schedule: FC<{ externalDateIdx?: number }> = ({ externalDateIdx = 0
           >
             <motion.div
               layoutId={`card-${detailItem.id}`}
-              className="bg-[#F4F5F7] w-full h-full sm:h-auto sm:max-w-md sm:rounded-[40px] border-b-0 sm:border-[4px] border-p3-navy shadow-2xl flex flex-col overflow-hidden relative"
+              className="bg-[#F4F5F7] w-[92%] max-h-[85vh] sm:max-w-md rounded-[40px] border-[4px] border-p3-navy shadow-2xl flex flex-col overflow-hidden relative"
               onClick={e => e.stopPropagation()}
             >
 

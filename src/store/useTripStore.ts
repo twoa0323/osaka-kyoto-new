@@ -115,6 +115,8 @@ interface TripState {
   setExchangeRate: (rate: number) => void;
   setAiModalOpen: (open: boolean) => void;
   openAiAssistant: (context?: string) => void;
+  setActiveDayItem: (item: any) => void;
+  closeAiAssistant: () => void;
   showToast: (message: string, type?: 'success' | 'error' | 'info', action?: { label: string, onClick: () => void }) => void;
   undoDelete: () => void;
 
@@ -181,6 +183,7 @@ interface TripState {
     enableGlassmorphism: boolean; // 玻璃擬態 2.0
     language: AppLanguage; // 👈 新增：全域語系設定
   };
+  activeDayItem: any; // 📍 用於同步空間地圖標記
   setUISettings: (settings: Partial<TripState['uiSettings']>) => void;
   isSyncing: boolean;
   setIsSyncing: (s: boolean) => void;
@@ -199,6 +202,7 @@ export const useTripStore = create<TripState>()(
       activeTab: 'timeline',
       exchangeRate: 1,
       isAiModalOpen: false,
+      activeDayItem: null,
       aiContext: 'schedule',
       toast: null,
       lastDeletedItem: null,
@@ -238,7 +242,9 @@ export const useTripStore = create<TripState>()(
       setActiveTab: (tab) => set({ activeTab: tab }),
       setExchangeRate: (rate) => set({ exchangeRate: rate }),
       setAiModalOpen: (open) => set({ isAiModalOpen: open }),
-      openAiAssistant: (context) => set({ isAiModalOpen: true, aiContext: context || get().activeTab }),
+      openAiAssistant: (context) => set({ isAiModalOpen: true, aiContext: context }),
+      setActiveDayItem: (item) => set({ activeDayItem: item }),
+      closeAiAssistant: () => set({ isAiModalOpen: false, aiContext: "" }),
       showToast: (message, type = 'info', action) => {
         set({ toast: { message, type, action } });
         setTimeout(() => {

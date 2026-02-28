@@ -24,6 +24,8 @@ import { useGyroscope } from './hooks/useGyroscope';
 import { AiAssistant } from './components/AiAssistant';
 import { SplatToast } from './components/ui/SplatToast';
 import { useTranslation } from './hooks/useTranslation';
+import { SpatialMapHeader } from './components/SpatialHeader';
+import { Trip } from './types';
 
 // 🚀 Lazy Load 各分頁組件，大幅減少首次載入 bundle 體積
 const Schedule = lazy(() => import('./components/Schedule').then(m => ({ default: m.Schedule })));
@@ -283,6 +285,7 @@ const App: FC = () => {
   const setUISettings = useTripStore(s => s.setUISettings);
   const showToast = useTripStore(s => s.showToast);
   const isSyncing = useTripStore(s => s.isSyncing);
+  const activeDayItem = useTripStore(s => s.activeDayItem);
 
   const { t } = useTranslation();
 
@@ -325,8 +328,21 @@ const App: FC = () => {
   // 移除本地 state，改用 Zustand uiSettings
   useHapticShake();
 
-  // 供內部滾動區域使用的 Ref (解決 React hook 規則問題，必須置於 early return 之前)
+  // 供內部滾動區域使用的 Ref
   const contentRef = useRef<HTMLDivElement>(null);
+  const dateScrollRef = useRef<HTMLDivElement>(null);
+
+  // 🚀 自動將選中的日期按鈕置中
+  useEffect(() => {
+    if (dateScrollRef.current && activeTab === 'timeline') {
+      const container = dateScrollRef.current;
+      const activeButton = container.children[selectedDateIdx] as HTMLElement;
+      if (activeButton) {
+        const scrollLeft = activeButton.offsetLeft - (container.offsetWidth / 2) + (activeButton.offsetWidth / 2);
+        container.scrollTo({ left: scrollLeft, behavior: 'smooth' });
+      }
+    }
+  }, [selectedDateIdx, activeTab]);
 
   // 物理互動感知層：監聽裝置陀螺儀
   const gyroData = useGyroscope(uiSettings.enableHaptics ? 0.8 : 0); // Use haptic setting to control gyroscope sensitivity
@@ -488,7 +504,13 @@ const App: FC = () => {
       </AnimatePresence>
 
       {activeTab === 'timeline' && (
-        <header className="p-4 sticky top-0 z-[100] w-full max-w-md mx-auto animate-fade-in bg-[#F4F5F7]/95 backdrop-blur-sm border-b-[3px] border-splat-dark shadow-sm">
+        <header className="p-4 sticky top-0 z-[100] w-full max-w-md mx-auto animate-fade-in bg-[#F4F5F7]/95 backdrop-blur-sm border-b-[1px] border-black/5 shadow-sm">
+          <SpatialMapHeader
+            trip={currentTrip as Trip}
+            activeItem={activeDayItem}
+            t={t}
+            enable3DMap={uiSettings.enable3DMap}
+          />
           <div className="bg-splat-yellow border-[3px] border-splat-dark rounded-[24px] shadow-splat-solid p-4 flex justify-between items-center relative z-20">
             <div className="relative text-left min-w-0">
               <h2 className="boutique-tag text-splat-dark uppercase tracking-widest mb-0.5 bg-white inline-block px-2 border-2 border-splat-dark rounded-full shadow-splat-solid-sm -rotate-2">
@@ -588,7 +610,10 @@ const App: FC = () => {
             </motion.div>
           </div>
 
-          <div className="flex overflow-x-auto gap-3 hide-scrollbar pt-4 px-1 date-btn-container">
+          <div
+            ref={dateScrollRef}
+            className="flex overflow-x-auto gap-3 hide-scrollbar pt-4 px-1 date-btn-container scroll-smooth"
+          >
             {dateRange.map((date, i) => (
               <button key={i} onClick={() => setSelectedDateIdx(i)} className={`flex flex-col items-center min-w-[72px] p-2.5 rounded-[22px] border-[0.5px] transition-all duration-300 font-black ${selectedDateIdx === i ? 'bg-p3-navy text-white shadow-glass-deep border-white/20 -translate-y-1' : 'bg-white/40 backdrop-blur-md border-white/30 text-gray-400 shadow-glass-soft'}`}>
                 <span className="text-[10px] uppercase opacity-60">DAY {i + 1}</span>
