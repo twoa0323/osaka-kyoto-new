@@ -459,7 +459,7 @@ const DetailJournalCard = ({ item, onEdit, onDelete }: any) => (
         </div>
         <p className="text-gray-700 font-medium leading-relaxed italic text-lg mb-4">"{item.content || 'No content yet...'}"</p>
         <div className="flex gap-2 overflow-x-auto hide-scrollbar pb-2">
-            {item.images.map((img: string, i: number) => (
+            {(item.images || []).map((img: string, i: number) => (
                 <img key={i} src={img} className="h-40 w-40 object-cover rounded-2xl shadow-sm border border-black/5" />
             ))}
         </div>
