@@ -1,7 +1,8 @@
-import { FC, ReactNode, useState } from 'react';
+import { FC, ReactNode, useState, useEffect } from 'react';
 import { motion, useAnimate } from 'framer-motion';
 import { ToggleLeft, ToggleRight, Trash2 } from 'lucide-react';
 import { triggerHaptic } from '../utils/haptics';
+import { useGyroscope } from '../hooks/useGyroscope';
 
 interface SettingToggleProps {
     label: string;
@@ -10,12 +11,12 @@ interface SettingToggleProps {
 }
 
 export const SettingToggle: FC<SettingToggleProps> = ({ label, enabled, onChange }) => (
-    <div className="flex justify-between items-center bg-white/50 backdrop-blur-sm p-4 rounded-2xl border-[2px] border-splat-dark/5 shadow-sm active:scale-[0.98] transition-all">
+    <div className="flex justify-between items-center bg-white/40 backdrop-blur-xl p-4 rounded-[24px] border-[0.5px] border-white/30 shadow-glass-soft transition-all active:scale-[0.98]">
         <div className="text-left">
-            <p className="font-black text-[13px] text-splat-dark uppercase tracking-tight">{label}</p>
+            <p className="font-black text-[13px] text-splat-dark uppercase tracking-tight opacity-80">{label}</p>
         </div>
-        <button onClick={() => onChange(!enabled)} className={`transition-all ${enabled ? 'text-splat-green scale-110' : 'text-gray-300'}`}>
-            {enabled ? <ToggleRight size={38} strokeWidth={3} /> : <ToggleLeft size={38} strokeWidth={3} />}
+        <button onClick={() => onChange(!enabled)} className={`transition-all duration-500 ${enabled ? 'text-p3-ruby scale-110 drop-shadow-[0_0_8px_var(--p3-ruby-fallback)]' : 'text-gray-200'}`}>
+            {enabled ? <ToggleRight size={36} strokeWidth={3} /> : <ToggleLeft size={36} strokeWidth={3} />}
         </button>
     </div>
 );
@@ -32,12 +33,12 @@ export const GridToggle: FC<GridToggleProps> = ({ label, icon, enabled, onChange
     <motion.button
         whileTap={{ scale: 0.95 }}
         onClick={() => { triggerHaptic('light'); onChange(!enabled); }}
-        className={`flex flex-col items-center justify-center gap-2 p-4 rounded-[24px] border-[3px] transition-all ${enabled ? 'bg-splat-dark border-splat-dark text-white' : 'bg-white border-splat-dark/5 text-gray-400'}`}
+        className={`flex flex-col items-center justify-center gap-2 p-4 rounded-[28px] border-[0.5px] transition-all duration-500 ${enabled ? 'bg-p3-navy text-white shadow-glass-deep border-white/10' : 'bg-white/40 backdrop-blur-md border-white/30 text-gray-400 shadow-glass-soft'}`}
     >
-        <div className={enabled ? 'text-splat-yellow' : 'text-gray-300'}>
+        <div className={enabled ? 'text-p3-gold animate-pulse' : 'text-gray-300'}>
             {icon}
         </div>
-        <span className="text-[10px] font-black uppercase tracking-widest leading-none">{label}</span>
+        <span className="text-[10px] font-black uppercase tracking-widest leading-none opacity-80">{label}</span>
     </motion.button>
 );
 
@@ -66,61 +67,70 @@ export const SystemSlider: FC<SystemSliderProps> = ({ label, icon, value, min = 
             max={max}
             value={value}
             onChange={(e) => onChange(parseInt(e.target.value))}
-            className="w-full h-1.5 bg-splat-dark/10 rounded-full appearance-none cursor-pointer accent-splat-dark"
+            className="w-full h-1.5 bg-p3-navy/10 rounded-full appearance-none cursor-pointer accent-p3-navy"
         />
     </div>
 );
 
 // ────────────────────────────────────────────
-// InkSplat v2 — SVG Liquid Morphing Animation
-// 使用純 SVG <motion.path> 模擬液體張力爆發效果
-// 省電且流暢（無 WebGL，無 Canvas）
+// InkSplat v3 — Viscous Liquid Morphing (ADL)
+// 模擬高粘度液體爆裂效果，具備表面張力感
 // ────────────────────────────────────────────
-// 三個 SVG path 關鍵影格 (viewBox 0 0 100 100)：
-//   d0 = 初始水滴（中心一個不規則小液滴）
-//   d1 = 擴散中（邊緣開始波浪）
-//   d2 = 全覆蓋（佔滿整個畫面，帶不規則波浪邊緣）
-const D0 = 'M50 44 C52 41, 56 40, 58 44 C60 48, 57 55, 50 56 C43 55, 40 48, 42 44 C44 40, 48 41, 50 44 Z';
-const D1 = 'M50 10 C68 8, 90 20, 92 40 C95 60, 82 85, 62 90 C42 95, 12 85, 8 62 C4 40, 18 8, 50 10 Z';
-const D2 = 'M0 0 C30 -2, 70 -2, 100 0 C102 30, 102 70, 100 100 C70 102, 30 102, 0 100 C-2 70, -2 30, 0 0 Z';
+const D0 = 'M50 50 C50 50 50 50 50 50 C50 50 50 50 50 50 C50 50 50 50 50 50 C50 50 50 50 50 50 Z';
+const D1 = 'M50 10 C75 10 90 40 90 55 C90 75 70 90 50 90 C30 90 10 75 10 55 C10 40 25 10 50 10 Z'; // 更有張力的液滴感
+const D2 = 'M-10 -10 L110 -10 L110 110 L-10 110 Z'; // 溢出擴散
 
-export const InkSplat: FC<{ color: string }> = ({ color }) => (
-    <motion.div
-        key="ink-splat-svg"
-        className="fixed inset-0 pointer-events-none z-[9999]"
-        initial={{ opacity: 1 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0, transition: { duration: 0.3, ease: 'easeIn' } }}
-    >
-        <svg
-            viewBox="0 0 100 100"
-            preserveAspectRatio="xMidYMid slice"
-            xmlns="http://www.w3.org/2000/svg"
-            style={{ width: '100%', height: '100%', position: 'absolute', inset: 0 }}
+export const InkSplat: FC<{ color: string }> = ({ color }) => {
+    // 取得手機傾斜率 (Sensitivity 調得比較高，讓墨水對重力更有感)
+    const gyroData = useGyroscope(2.0);
+
+    return (
+        <motion.div
+            key="ink-splat-liquid"
+            className="fixed inset-0 pointer-events-none z-[9999]"
+            initial={{ opacity: 1 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0, transition: { duration: 0.6, ease: [0.23, 1, 0.32, 1] } }}
         >
-            <motion.path
-                fill={color}
-                initial={{ d: D0, opacity: 0.9 }}
-                animate={{
-                    d: [D0, D1, D2],
-                    opacity: [1, 1, 0.95],
-                    transition: {
-                        d: { duration: 0.4, ease: [0.22, 1, 0.36, 1], times: [0, 0.5, 1] },
-                        opacity: { duration: 0.4 }
-                    }
-                }}
-                exit={{
-                    d: [D2, D1, D0],
-                    opacity: [0.95, 0.4, 0],
-                    transition: {
-                        d: { duration: 0.3, ease: 'easeIn', times: [0, 0.5, 1] },
-                        opacity: { duration: 0.3 }
-                    }
-                }}
-            />
-        </svg>
-    </motion.div>
-);
+            <svg
+                viewBox="0 0 100 100"
+                preserveAspectRatio="xMidYMid slice"
+                xmlns="http://www.w3.org/2000/svg"
+                style={{ width: '100%', height: '100%', position: 'absolute', inset: 0 }}
+            >
+                {/* 透過 Framer Motion 動態調整墨水群的重心，模擬地心引力 */}
+                <motion.g
+                    animate={{
+                        x: gyroData.x,
+                        y: gyroData.y
+                    }}
+                    transition={{
+                        type: 'spring',
+                        stiffness: 100,
+                        damping: 20
+                    }}
+                >
+                    <motion.path
+                        fill={color}
+                        initial={{ d: D0, opacity: 0 }}
+                        animate={{
+                            d: [D0, D1, D2],
+                            opacity: [0, 1, 1],
+                            transition: {
+                                d: { duration: 0.6, ease: [0.34, 1.56, 0.64, 1], times: [0, 0.4, 1] },
+                                opacity: { duration: 0.2 }
+                            }
+                        }}
+                        exit={{
+                            opacity: 0,
+                            transition: { duration: 0.4 }
+                        }}
+                    />
+                </motion.g>
+            </svg>
+        </motion.div>
+    );
+};
 
 
 interface SwipeableItemProps {

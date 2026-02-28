@@ -1,4 +1,4 @@
-import { FC, useState, useEffect, Suspense, useMemo, lazy, cloneElement, memo } from 'react';
+import { FC, useState, useEffect, Suspense, useMemo, lazy, cloneElement, memo, useRef } from 'react';
 import { useTripStore } from './store/useTripStore';
 import { useFirebaseSync } from './hooks/useFirebaseSync';
 import { usePushNotifications } from './hooks/usePushNotifications';
@@ -13,13 +13,14 @@ import { format, addDays, differenceInDays, parseISO } from 'date-fns';
 import { compressImage, uploadImage } from './utils/imageUtils';
 import { auth } from './services/firebase';
 // framer-motion v12: 標準導入（LazyMotion/domAnimation 在 v12 不再支援）
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, LayoutGroup } from 'framer-motion';
 import { SettingToggle, InkSplat, GridToggle, SystemSlider } from './components/Common';
 import { MemberManagement, ProfileEditor, PersonalSetup } from './components/MemberModals';
 import { Member } from './types';
 import { OfflineStatus } from './components/OfflineStatus';
 import { triggerHaptic } from './utils/haptics';
 import { useHapticShake } from './hooks/useHapticShake';
+import { useGyroscope } from './hooks/useGyroscope';
 import { AiAssistant } from './components/AiAssistant';
 import { SplatToast } from './components/ui/SplatToast';
 
@@ -39,25 +40,29 @@ const PRESET_AVATARS = [
   `https://api.dicebear.com/7.x/avataaars/svg?seed=Max`,
 ];
 
-const SPLAT_COLORS = ['#FFC000', '#2932CF', '#F03C69', '#21CC65', '#FF6C00'];
+// 💎 Liquid Glass Luxury: P3 Wide Color Gamut (ADL)
+const SPLAT_COLORS = ['var(--p3-navy)', 'var(--p3-ruby)', 'var(--p3-gold)', '#F4F5F7'];
 
 const NavIcon = ({ icon, label, id, active, onClick, color }: any) => {
   const isActive = active === id;
   return (
     <motion.button
-      whileTap={{ scale: 0.85, y: 3 }}
+      whileTap={{ scale: 0.9, y: 2 }}
       onClick={() => onClick(id)}
       className={`flex flex-col items-center gap-1.5 flex-1 transition-colors duration-300 relative ${isActive ? `${color}` : 'text-gray-400'}`}
     >
-      {cloneElement(icon, { size: 22, strokeWidth: isActive ? 3 : 2 })}
-      <span className={`text-[9px] font-black tracking-widest uppercase transition-opacity ${isActive ? 'opacity-100' : 'opacity-60'}`}>{label}</span>
-      {/* 🪨 墨點指示器 — 極簡墨滴 */}
+      {cloneElement(icon, { size: 18, strokeWidth: 2.5 })}
+      <span className={`text-[10px] boutique-h2 transition-opacity ${isActive ? 'opacity-100' : 'opacity-40'}`}>{label}</span>
       {isActive && (
         <motion.div
-          layoutId="ink-drop"
-          className="absolute -bottom-2.5 w-1.5 h-1.5 rounded-full"
-          style={{ backgroundColor: 'currentColor' }}
-          transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+          layoutId="active-nav-dot"
+          className="absolute -bottom-2 w-1.5 h-1.5 rounded-full bg-current shadow-[0_0_10px_currentColor]"
+          transition={{
+            type: 'spring',
+            stiffness: 500, // 高剛性創造快速起步
+            damping: 25,    // 低阻尼創造慣性 Overshoot
+            mass: 0.8       // 減輕質量讓動畫更輕盈具黏性
+          }}
         />
       )}
     </motion.button>
@@ -85,10 +90,10 @@ const AIStatusCapsule: FC<{ syncing: boolean, enableMotion: boolean, springConfi
       <motion.div
         animate={animate ? { scaleX: [1, 1.15, 1], scaleY: [1, 0.92, 1] } : {}}
         transition={animate ? { duration: 1.6, repeat: Infinity, ease: 'easeInOut' } : {}}
-        className="bg-splat-dark text-white px-4 py-1.5 rounded-full flex items-center gap-2 border-[2px] border-white/20 shadow-lg min-w-[120px] justify-center origin-center"
+        className="bg-splat-dark/80 backdrop-blur-xl text-white px-4 py-1.5 rounded-full flex items-center gap-2 border-[0.5px] border-white/20 shadow-glass-deep min-w-[120px] justify-center origin-center"
       >
-        <div className={`w-2 h-2 rounded-full ${syncing ? 'bg-splat-green animate-pulse' : 'bg-gray-500'}`} />
-        <span className="text-[10px] font-black tracking-widest uppercase">
+        <div className={`w-1.5 h-1.5 rounded-full ${syncing ? 'bg-p3-ruby animate-pulse shadow-[0_0_10px_var(--p3-ruby-fallback)]' : 'bg-gray-500'}`} />
+        <span className="boutique-tag tracking-widest uppercase opacity-90">
           {syncing ? 'AI Syncing' : 'Ready'}
         </span>
       </motion.div>
@@ -109,26 +114,26 @@ const UISettingsContainer = memo(({
       initial={{ scale: 0.9, y: 20 }}
       animate={{ scale: 1, y: 0 }}
       exit={{ scale: 0.9, y: 20 }}
-      className="bg-white w-full max-w-sm rounded-[40px] border-[4px] border-splat-dark shadow-2xl p-8 relative z-10 overflow-hidden"
+      className="glass-card w-full max-w-sm p-10 relative z-10 overflow-hidden shadow-glass-deep"
     >
-      <div className="absolute top-0 right-0 w-32 h-32 bg-splat-dark/5 rounded-full -mr-16 -mt-16 blur-3xl pointer-events-none" />
+      <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full -mr-16 -mt-16 blur-3xl pointer-events-none" />
 
-      <div className="flex justify-between items-center mb-6">
-        <h2 className="text-2xl font-black italic uppercase flex items-center gap-2 tracking-tighter">
-          <SettingsIcon className="text-splat-dark" /> Control HQ
+      <div className="flex justify-between items-center mb-10">
+        <h2 className="text-2xl boutique-h1 flex items-center gap-3 text-p3-navy">
+          <SettingsIcon size={24} strokeWidth={2.5} className="text-p3-navy" /> Control HQ
         </h2>
-        <button onClick={onClose} className="w-10 h-10 rounded-full border-2 border-splat-dark/10 flex items-center justify-center active:scale-90 transition-transform">
-          <X size={20} />
+        <button onClick={onClose} className="w-12 h-12 rounded-full border-[0.5px] border-black/10 flex items-center justify-center active:scale-95 transition-transform bg-white/40 backdrop-blur-md">
+          <X size={20} strokeWidth={2.5} />
         </button>
       </div>
 
-      <div className="space-y-6 max-h-[70vh] overflow-y-auto hide-scrollbar pr-1">
+      <div className="space-y-10 max-h-[70vh] overflow-y-auto hide-scrollbar pr-1">
         {/* --- 💳 Traveler ID Card (Currency) --- */}
-        <div className="bg-splat-dark rounded-[32px] p-6 text-white shadow-splat-solid relative overflow-hidden group">
+        <div className="bg-p3-navy rounded-[32px] p-8 text-white shadow-glass-deep relative overflow-hidden group border-[0.5px] border-white/10">
           <div className="relative z-10 flex justify-between items-start">
             <div>
-              <p className="text-[10px] font-black text-white/40 uppercase tracking-[0.2em] mb-1">Traveler ID / Base</p>
-              <h3 className="text-3xl font-black tracking-tighter flex items-center gap-2">
+              <p className="boutique-tag text-white/30 mb-2">Traveler ID / Base</p>
+              <h3 className="text-3xl boutique-h1 flex items-center gap-3 text-p3-gold">
                 {currentTrip.baseCurrency} <Sparkline />
               </h3>
             </div>
@@ -136,24 +141,24 @@ const UISettingsContainer = memo(({
               <select
                 value={currentTrip.baseCurrency || 'JPY'}
                 onChange={e => updateTripData(currentTrip.id, { baseCurrency: e.target.value as any })}
-                className="bg-white/10 backdrop-blur-md border border-white/20 rounded-xl p-1 px-2 text-[10px] font-black outline-none"
+                className="bg-white/10 backdrop-blur-md border border-white/20 rounded-xl p-2 px-3 text-[10px] boutique-h2 outline-none"
               >
-                <option value="JPY" className="text-splat-dark">JPY ¥</option>
-                <option value="TWD" className="text-splat-dark">TWD $</option>
-                <option value="USD" className="text-splat-dark">USD $</option>
-                <option value="KRW" className="text-splat-dark">KRW ₩</option>
+                <option value="JPY">JPY ¥</option>
+                <option value="TWD">TWD $</option>
+                <option value="USD">USD $</option>
+                <option value="KRW">KRW ₩</option>
               </select>
             </div>
           </div>
-          <div className="mt-4 pt-4 border-t border-white/10 flex justify-between items-end">
-            <div className="text-[9px] font-black text-white/60 tracking-widest uppercase">Current Exchange Rate Active</div>
+          <div className="mt-6 pt-6 border-t border-white/10 flex justify-between items-end">
+            <div className="boutique-tag text-white/40">Current Exchange Rate Active</div>
             <Fingerprint size={16} className="text-splat-yellow opacity-50" />
           </div>
         </div>
 
         {/* --- 🎨 Visual Vibe (2x2 Grid) --- */}
         <div className="space-y-3">
-          <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest pl-2">Visual Vibe</h4>
+          <h4 className="boutique-tag text-gray-400 uppercase tracking-widest pl-2">Visual Vibe</h4>
           <div className="grid grid-cols-2 gap-3">
             <GridToggle
               label="Liquid Ink"
@@ -184,7 +189,7 @@ const UISettingsContainer = memo(({
 
         {/* --- 🧠 Intelligence --- */}
         <div className="space-y-3">
-          <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest pl-2">Intelligence</h4>
+          <h4 className="boutique-tag text-gray-400 uppercase tracking-widest pl-2">Intelligence</h4>
           <div className="space-y-3">
             <SettingToggle
               label="AI Stream"
@@ -201,7 +206,7 @@ const UISettingsContainer = memo(({
 
         {/* --- ⚙️ System --- */}
         <div className="space-y-3">
-          <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest pl-2">System Performance</h4>
+          <h4 className="boutique-tag text-gray-400 uppercase tracking-widest pl-2">System Performance</h4>
           <SystemSlider
             label="Haptic"
             icon={<Cpu size={14} />}
@@ -218,9 +223,9 @@ const UISettingsContainer = memo(({
       </div>
 
       <motion.button
-        whileTap={{ scale: 0.95, y: 2 }}
+        whileTap={{ scale: 0.98, y: 1 }}
         onClick={onClose}
-        className="w-full py-4 mt-8 bg-splat-dark text-white font-black uppercase tracking-widest rounded-2xl shadow-splat-solid active:shadow-none transition-all"
+        className="w-full py-4 mt-8 bg-p3-navy text-white font-black uppercase tracking-widest rounded-[22px] shadow-glass-deep border-[0.5px] border-white/20 active:shadow-none transition-all"
       >
         Confirm Setup ➔
       </motion.button>
@@ -288,6 +293,18 @@ const App: FC = () => {
   // 移除本地 state，改用 Zustand uiSettings
   useHapticShake();
 
+  // 物理互動感知層：監聽裝置陀螺儀
+  const gyroData = useGyroscope(uiSettings.enableHaptics ? 0.8 : 0); // Use haptic setting to control gyroscope sensitivity
+
+  // 動態深度運算 (Gyroscope-linked Shadows)
+  // 將陀螺儀的 xy 偏移轉換為陰影長度與模糊度
+  const shadowX = uiSettings.enableMotionDepth ? gyroData.x * 2.5 : 0;
+  const shadowY = uiSettings.enableMotionDepth ? gyroData.y * 2.5 : 4;
+
+  // 反射光暈偏移
+  const glareX = uiSettings.enableMotionDepth ? gyroData.x * -5 : 0;
+  const glareY = uiSettings.enableMotionDepth ? gyroData.y * -5 : 0;
+
   useFirebaseSync();
 
   const currentTrip = trips.find(t => t.id === currentTripId) || trips[0];
@@ -346,7 +363,7 @@ const App: FC = () => {
     if (tabId === activeTab) return;
 
     // 觸發墨水 SVG 動畫
-    if (uiSettings.showSplash) {
+    if (uiSettings.enableSplatter) {
       setSplatColor(SPLAT_COLORS[Math.floor(Math.random() * SPLAT_COLORS.length)]);
       setIsSplatting(true);
       setTimeout(() => setIsSplatting(false), 800); // 配合 SVG 動畫時間
@@ -383,18 +400,65 @@ const App: FC = () => {
     }
   };
 
+  const contentRef = useRef<HTMLDivElement>(null);
+
   return (
-    <div className="flex flex-col min-h-screen font-sans text-splat-dark relative bg-[#F4F5F7] bg-[radial-gradient(#D1D5DB_2px,transparent_2px)] bg-[size:24px_24px]">
+    <div className="relative min-h-[100dvh] w-full max-w-md mx-auto bg-[#F4F5F7] overflow-hidden drop-shadow-2xl sm:rounded-[40px] sm:my-8 sm:h-[844px] flex flex-col font-sans">
+      {/* 動態材質疊層 (Dynamic Material Overlay) */}
+      <div
+        className="absolute inset-0 pointer-events-none opacity-[0.03] mix-blend-color-burn"
+        style={{
+          backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")`,
+          backgroundPosition: `${gyroData.x * 0.5}px ${gyroData.y * 0.5}px`,
+          transition: 'background-position 0.1s ease-out'
+        }}
+      ></div>
 
       <AnimatePresence>
         {isSplatting && <InkSplat color={splatColor} />}
+        {uiSettings.enableSplatter && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="absolute inset-0 pointer-events-none z-0"
+            style={{
+              transform: `translate(${gyroData.x * 1.5}px, ${gyroData.y * 1.5}px)`,
+              transition: 'transform 0.1s ease-out'
+            }}
+          >
+            {[...Array(6)].map((_, i) => (
+              <motion.div
+                key={`bg-splat-${i}`}
+                className="absolute w-64 h-64 rounded-full mix-blend-multiply filter blur-3xl opacity-20"
+                style={{
+                  background: SPLAT_COLORS[i % SPLAT_COLORS.length],
+                  left: `${Math.random() * 100}%`,
+                  top: `${Math.random() * 100}%`,
+                  transform: `translate(-50%, -50%) scale(${1 + Math.random()})`,
+                }}
+                animate={{
+                  x: [0, Math.random() * 50 - 25, 0],
+                  y: [0, Math.random() * 50 - 25, 0],
+                  scale: [1, 1.1, 1],
+                  opacity: [0.15, 0.25, 0.15]
+                }}
+                transition={{
+                  duration: 10 + Math.random() * 10,
+                  repeat: Infinity,
+                  ease: "easeInOut"
+                }}
+              />
+            ))}
+          </motion.div>
+        )}
       </AnimatePresence>
 
       {activeTab === 'timeline' && (
         <header className="p-4 sticky top-0 z-[100] w-full max-w-md mx-auto animate-fade-in bg-[#F4F5F7]/95 backdrop-blur-sm border-b-[3px] border-splat-dark shadow-sm">
           <div className="bg-splat-yellow border-[3px] border-splat-dark rounded-[24px] shadow-splat-solid p-4 flex justify-between items-center relative z-20">
             <div className="relative text-left min-w-0">
-              <h2 className="text-[10px] font-black text-splat-dark uppercase tracking-widest mb-0.5 bg-white inline-block px-2 border-2 border-splat-dark rounded-full shadow-splat-solid-sm -rotate-2">
+              <h2 className="boutique-tag text-splat-dark uppercase tracking-widest mb-0.5 bg-white inline-block px-2 border-2 border-splat-dark rounded-full shadow-splat-solid-sm -rotate-2">
                 {currentTrip.startDate} — {currentTrip.endDate}
               </h2>
 
@@ -484,7 +548,7 @@ const App: FC = () => {
 
             <motion.div
               whileTap={{ scale: 0.9, rotate: 10 }}
-              className="w-14 h-14 rounded-full border-[3px] border-splat-dark shadow-splat-solid overflow-hidden bg-white shrink-0 cursor-pointer rotate-3"
+              className="w-14 h-14 rounded-full border-[0.5px] border-white/40 shadow-glass-soft overflow-hidden bg-white/40 backdrop-blur-md shrink-0 cursor-pointer"
               onClick={() => setMemberOpen(true)}
             >
               <img src={myProfile?.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=Adventurer`} alt="avatar" className="w-full h-full object-cover" />
@@ -493,8 +557,8 @@ const App: FC = () => {
 
           <div className="flex overflow-x-auto gap-3 hide-scrollbar pt-4 px-1 date-btn-container">
             {dateRange.map((date, i) => (
-              <button key={i} onClick={() => setSelectedDateIdx(i)} className={`flex flex-col items-center min-w-[70px] p-2.5 rounded-2xl border-[3px] transition-all font-black ${selectedDateIdx === i ? 'bg-splat-blue border-splat-dark text-white shadow-splat-solid -translate-y-1' : 'bg-white border-splat-dark text-gray-400 shadow-[2px_2px_0px_#1A1A1A]'}`}>
-                <span className="text-[10px] uppercase">DAY {i + 1}</span>
+              <button key={i} onClick={() => setSelectedDateIdx(i)} className={`flex flex-col items-center min-w-[72px] p-2.5 rounded-[22px] border-[0.5px] transition-all duration-300 font-black ${selectedDateIdx === i ? 'bg-p3-navy text-white shadow-glass-deep border-white/20 -translate-y-1' : 'bg-white/40 backdrop-blur-md border-white/30 text-gray-400 shadow-glass-soft'}`}>
+                <span className="text-[10px] uppercase opacity-60">DAY {i + 1}</span>
                 <span className="text-lg mt-0.5">{format(date, 'M/d')}</span>
               </button>
             ))}
@@ -548,40 +612,36 @@ const App: FC = () => {
       </main>
 
       {/* 🧭 Bottom Navigation — 4 Unified Modules */}
-      <nav className="fixed bottom-6 left-1/2 -translate-x-1/2 w-[85%] max-w-sm bg-white/90 backdrop-blur-xl border-[3px] border-splat-dark rounded-[28px] shadow-splat-solid px-4 py-3 flex justify-between items-center z-50">
-        <NavIcon icon={<Calendar />} label="Timeline" id="timeline" active={activeTab} onClick={handleTabChange} color="text-splat-blue" />
-        <NavIcon icon={<Lock />} label="Vault" id="vault" active={activeTab} onClick={handleTabChange} color="text-splat-pink" />
-        <NavIcon icon={<WalletIcon />} label="Wallet" id="wallet" active={activeTab} onClick={handleTabChange} color="text-splat-yellow" />
-        <NavIcon icon={<SparklesIcon />} label="Memories" id="memories" active={activeTab} onClick={handleTabChange} color="text-splat-green" />
+      <nav className="fixed bottom-6 left-1/2 -translate-x-1/2 w-[88%] max-w-sm glass-card px-8 py-5 flex justify-between items-center z-50 shadow-glass-deep border-[0.5px] border-white/40">
+        <NavIcon icon={<Calendar />} label="Timeline" id="timeline" active={activeTab} onClick={handleTabChange} color="text-p3-navy" />
+        <NavIcon icon={<Lock />} label="Vault" id="vault" active={activeTab} onClick={handleTabChange} color="text-p3-ruby" />
+        <NavIcon icon={<WalletIcon />} label="Wallet" id="wallet" active={activeTab} onClick={handleTabChange} color="text-p3-gold" />
+        <NavIcon icon={<SparklesIcon />} label="Memories" id="memories" active={activeTab} onClick={handleTabChange} color="text-p3-ruby" />
       </nav>
 
       {/* 🤖 AI FAB — Glassmorphism 浮動按鈕 */}
       <motion.button
-        whileTap={{ scale: 0.85 }}
+        whileTap={{ scale: 0.9, y: 2 }}
         whileHover={{ scale: 1.05 }}
         onClick={() => openAiAssistant()}
-        className="fixed bottom-[100px] right-5 z-50 w-14 h-14 rounded-full flex items-center justify-center"
-        style={{
-          background: 'rgba(255, 255, 255, 0.7)',
-          backdropFilter: 'blur(16px) saturate(180%)',
-          WebkitBackdropFilter: 'blur(16px) saturate(180%)',
-          border: '2px solid rgba(255, 255, 255, 0.3)',
-          boxShadow: '0 8px 32px rgba(0,0,0,0.12), 0 0 20px rgba(255,192,0,0.3)'
-        }}
+        className="fixed bottom-[110px] right-6 z-50 w-16 h-16 rounded-full flex items-center justify-center bg-white/40 backdrop-blur-2xl border-[0.5px] border-white/50 shadow-glass-deep"
       >
-        <SparklesIcon size={24} strokeWidth={2.5} className="text-splat-yellow drop-shadow-sm" />
+        <div className="absolute inset-0 bg-p3-ruby opacity-10 blur-xl rounded-full" />
+        <SparklesIcon size={28} strokeWidth={2.5} className="text-p3-ruby drop-shadow-[0_0_10px_var(--p3-ruby-fallback)]" />
       </motion.button>
 
       {
         lockedTripId && (
-          <div className="fixed inset-0 bg-splat-dark/80 backdrop-blur-sm z-[1000] flex items-center justify-center p-4">
-            <div className="bg-white border-4 border-splat-dark w-full max-w-sm rounded-[32px] shadow-[8px_8px_0px_#FFC000] p-8 text-center space-y-4 animate-in zoom-in-95">
-              <Lock size={48} className="mx-auto text-splat-dark mb-2" strokeWidth={2.5} />
-              <h3 className="text-2xl font-black text-splat-dark uppercase">切換行程</h3>
-              <input type="password" maxLength={4} inputMode="numeric" placeholder="****" className="w-full bg-gray-100 text-splat-dark font-black p-4 rounded-xl text-center text-3xl tracking-[0.5em] outline-none border-4 border-splat-dark focus:bg-white transition-colors" value={verifyPin} onChange={(e) => setVerifyPin(e.target.value)} />
-              <div className="flex gap-3 mt-4">
-                <button onClick={() => { setLockedTripId(null); setVerifyPin(''); }} className="flex-1 py-3 border-4 border-splat-dark bg-gray-200 font-black rounded-xl active:translate-y-1 transition-all shadow-splat-solid-sm">取消</button>
-                <button onClick={confirmTripSwitch} className="flex-[2] py-3 bg-splat-blue text-white border-4 border-splat-dark font-black rounded-xl shadow-splat-solid-sm active:translate-y-1 active:shadow-none transition-all">解鎖 ➔</button>
+          <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[1000] flex items-center justify-center p-4">
+            <div className="glass-card w-full max-w-sm p-10 text-center space-y-6 shadow-glass-deep">
+              <div className="w-20 h-20 bg-p3-ruby/10 rounded-full flex items-center justify-center mx-auto mb-2">
+                <Lock size={40} className="text-p3-ruby" strokeWidth={2.5} />
+              </div>
+              <h3 className="text-2xl font-black text-p3-navy uppercase tracking-tight">行前認證</h3>
+              <input type="password" maxLength={4} inputMode="numeric" placeholder="••••" className="w-full bg-white/40 backdrop-blur-md text-p3-navy font-black p-5 rounded-[22px] text-center text-4xl tracking-[0.5em] outline-none border-[0.5px] border-white/50 focus:bg-white/60 transition-all shadow-inner" value={verifyPin} onChange={(e) => setVerifyPin(e.target.value)} />
+              <div className="flex gap-4 mt-6">
+                <button onClick={() => { setLockedTripId(null); setVerifyPin(''); }} className="flex-1 py-4 bg-white/20 backdrop-blur-md text-slate-500 font-black rounded-2xl border-[0.5px] border-white/30 active:scale-95 transition-all">取消</button>
+                <button onClick={confirmTripSwitch} className="flex-[2] py-4 bg-p3-navy text-white font-black rounded-2xl shadow-glass-deep border-[0.5px] border-white/20 active:scale-95 transition-all">解鎖 ➔</button>
               </div>
             </div>
           </div>

@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Kosugi+Maru&family=Noto+Sans+TC:wght@400;700;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Barlow:wght@900&family=Noto+Sans+TC:wght@500;700;900&display=swap');
 @import 'maplibre-gl/dist/maplibre-gl.css';
 
 @tailwind base;
@@ -12,21 +12,28 @@
     --sar: env(safe-area-inset-right);
     --sal: env(safe-area-inset-left);
 
-    /* 2026 P3 Wide Color Gamut Definitions */
-    --p3-blue: color(display-p3 0.16 0.2 0.81);
-    --p3-pink: color(display-p3 0.94 0.24 0.41);
-    --p3-yellow: color(display-p3 1 0.75 0);
+    /* 💎 2026 Liquid Glass Luxury: P3 Wide Color Gamut */
+    --p3-navy: color(display-p3 0.04 0.08 0.18);
+    --p3-ruby: color(display-p3 0.92 0.15 0.38);
+    --p3-gold: color(display-p3 0.88 0.72 0.45);
+
+    /* Fallback for standard SRGB */
+    --p3-navy-fallback: #0A142E;
+    --p3-ruby-fallback: #EB2661;
+    --p3-gold-fallback: #E1B873;
   }
 
   body {
     background-color: #F4F5F7;
     color: #1A1A1A;
-    font-family: 'Kosugi Maru', 'Noto Sans TC', sans-serif;
-    /* 遊戲感波點背景 */
-    background-image: radial-gradient(#D1D5DB 2px, transparent 2px);
-    background-size: 24px 24px;
+    font-family: 'Noto Sans TC', sans-serif;
 
-    /* 確保在 PWA 模式下填滿整個螢幕且不滾動 */
+    /* 💎 Matte Metallic 2% Noise Texture */
+    background-image:
+      radial-gradient(at 0% 0%, rgba(255, 255, 255, 0.5) 0, transparent 50%),
+      url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.02'/%3E%3C/svg%3E");
+    background-attachment: fixed;
+
     min-height: 100vh;
     min-height: 100dvh;
     margin: 0;
@@ -53,30 +60,51 @@
     @apply font-black uppercase tracking-widest border-[3px] border-splat-dark shadow-splat-solid active:shadow-splat-active active:translate-x-1 active:translate-y-1 transition-all rounded-full;
   }
 
-  /* 💎 玻璃擬態 2.0 (iOS 適配 — 支援 backdrop-filter 時啟用) */
+  /* 💎 玻璃擬態 2.0 (Liquid Glass Luxury) */
   .glass-card {
-    background: white;
-    border: 3px solid #1A1A1A;
-    box-shadow: 4px 4px 0px #1A1A1A;
-    @apply rounded-[24px];
+    background: rgba(255, 255, 255, 0.45);
+    backdrop-filter: blur(40px) saturate(200%);
+    -webkit-backdrop-filter: blur(40px) saturate(200%);
+    border: 0.5px solid rgba(255, 255, 255, 0.4);
+    box-shadow:
+      0 4px 6px -1px rgba(0, 0, 0, 0.05),
+      0 2px 4px -2px rgba(0, 0, 0, 0.05),
+      inset 0 0 12px rgba(255, 255, 255, 0.1);
+    @apply rounded-[28px] transition-all duration-500;
   }
 
-  @supports (backdrop-filter: blur(1px)) {
-    .glass-card {
-      background: rgba(255, 255, 255, 0.7);
-      backdrop-filter: blur(12px) saturate(180%);
-      -webkit-backdrop-filter: blur(12px) saturate(180%);
-      border: 1px solid rgba(255, 255, 255, 0.3);
-      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
-    }
+  .glass-card:hover {
+    background: rgba(255, 255, 255, 0.5);
+    box-shadow:
+      10px 15px -3px rgba(0, 0, 0, 0.08),
+      0 4px 6px -2px rgba(0, 0, 0, 0.05);
   }
 
-  /* 🔋 電力平衡：降級為硬陰影風格 (不依賴背景模糊) */
-  .glass-card-fallback,
+  /* 🔋 電力平衡：簡約霧面 */
   .power-saving-card {
-    background: white;
-    @apply border-[3px] border-splat-dark rounded-[24px];
-    box-shadow: 4px 4px 0px #1A1A1A;
+    background: #FFFFFF;
+    @apply border-[0.5px] border-gray-200 rounded-[28px] shadow-sm p-6;
+  }
+
+  /* 💎 Boutique Typography Logic */
+  .boutique-h1 {
+    font-family: 'Barlow', sans-serif;
+    @apply font-black uppercase tracking-tighter;
+  }
+
+  .boutique-h2 {
+    font-family: 'Barlow', sans-serif;
+    @apply font-black uppercase tracking-tight;
+  }
+
+  .boutique-body {
+    font-family: 'Noto Sans TC', sans-serif;
+    @apply font-medium leading-relaxed;
+  }
+
+  .boutique-tag {
+    font-family: 'Barlow', sans-serif;
+    @apply font-black uppercase tracking-widest text-[10px];
   }
 }
 

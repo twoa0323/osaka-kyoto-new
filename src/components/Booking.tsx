@@ -25,7 +25,7 @@ const AIRLINE_THEMES: Record<string, any> = {
   eva: { bgClass: 'bg-[#007A53]', textClass: 'text-[#F2A900]', logoHtml: <span className="font-sans text-white text-2xl font-bold tracking-widest flex items-center gap-2"><span className="text-[#F2A900] text-3xl">⊕</span> EVA AIR</span>, },
   peach: { bgClass: 'bg-[#D93B8B]', textClass: 'text-white', logoHtml: <span className="font-sans text-white text-4xl font-black tracking-tighter lowercase pr-2">peach</span>, },
   ana: { bgClass: 'bg-[#133261]', textClass: 'text-white', logoHtml: <span className="font-sans text-white text-3xl font-black italic tracking-widest flex gap-1 items-center">ANA</span>, },
-  other: { bgClass: 'bg-splat-dark', textClass: 'text-white', logoHtml: <span className="font-sans text-white text-xl font-black tracking-[0.2em]">BOARDING PASS</span>, }
+  other: { bgClass: 'bg-p3-navy', textClass: 'text-white', logoHtml: <span className="font-sans text-white text-xl font-black tracking-[0.2em]">BOARDING PASS</span>, }
 };
 
 const getTheme = (airline?: string) => {
@@ -34,9 +34,9 @@ const getTheme = (airline?: string) => {
   return key ? AIRLINE_THEMES[key] : AIRLINE_THEMES.other;
 };
 
-// 子分頁顏色
+// 子分頁顏色 (P3 Wide Color)
 const SUBTAB_COLORS: Record<string, string> = {
-  flight: 'bg-splat-blue', hotel: 'bg-splat-pink', spot: 'bg-splat-green', voucher: 'bg-splat-yellow'
+  flight: 'bg-p3-navy', hotel: 'bg-p3-ruby', spot: 'bg-p3-gold', voucher: 'bg-p3-ruby/80'
 };
 
 // --- 倒數計時輔助函數 ---
@@ -105,8 +105,8 @@ export const Booking = () => {
     <div className="px-4 space-y-6 animate-fade-in pb-28 text-left h-full">
 
       {/* 1. 子選單導航列 (iOS Pill 動效) */}
-      <div className="sticky top-0 z-20 py-2 bg-[#F4F5F7]">
-        <div className="flex bg-white p-1.5 rounded-[32px] border-[3px] border-splat-dark shadow-splat-solid relative">
+      <div className="sticky top-0 z-20 py-2 bg-[#F4F5F7]/80 backdrop-blur-md">
+        <div className="flex glass-card p-1.5 border-[0.5px] border-white/40 shadow-glass-soft relative overflow-hidden">
           {['flight', 'hotel', 'spot', 'voucher'].map((t: any) => {
             const isActive = activeSubTab === t;
             return (
@@ -118,14 +118,14 @@ export const Booking = () => {
                 {isActive && (
                   <motion.div
                     layoutId="active-pill"
-                    className={`absolute inset-0 rounded-[24px] border-2 border-splat-dark shadow-splat-solid-sm ${SUBTAB_COLORS[t]}`}
-                    transition={{ type: "spring", bounce: 0.25, duration: 0.5 }}
+                    className={`absolute inset-0 rounded-[22px] border-[0.5px] border-white/20 shadow-glass-deep ${SUBTAB_COLORS[t]}`}
+                    transition={{ type: "spring", bounce: 0.2, duration: 0.5 }}
                   />
                 )}
                 <div className={`relative z-20 flex flex-col items-center transition-colors duration-300 ${isActive ? 'text-white' : 'text-gray-400'}`}>
                   {t === 'flight' ? <Plane size={18} /> : t === 'hotel' ? <Home size={18} /> : t === 'spot' ? <MapPin size={18} /> : <QrCode size={18} />}
-                  <span className="text-[8px] mt-1 uppercase font-black tracking-widest">
-                    {t === 'flight' ? '機票' : t === 'hotel' ? '住宿' : t === 'spot' ? '景點' : '憑證'}
+                  <span className="text-[10px] mt-1 uppercase font-black tracking-widest opacity-80 scale-90">
+                    {t}
                   </span>
                 </div>
               </button>
@@ -146,7 +146,7 @@ export const Booking = () => {
             className="space-y-6"
           >
             {bookings.length === 0 ? (
-              <div className="text-center py-16 bg-white border-[3px] border-dashed border-gray-400 rounded-[32px] text-gray-500 font-black italic shadow-sm uppercase">
+              <div className="text-center py-16 bg-white border-[0.5px] border-dashed border-gray-400 glass-card text-gray-500 font-black italic shadow-sm uppercase">
                 Empty Pocket 🏮
               </div>
             ) : (
@@ -168,9 +168,9 @@ export const Booking = () => {
         </AnimatePresence>
 
         <motion.button
-          whileTap={{ scale: 0.95 }}
+          whileTap={{ scale: 0.98 }}
           onClick={() => { setEditingItem(undefined); setIsEditorOpen(true); }}
-          className="w-full py-5 bg-white border-[3px] border-dashed border-splat-dark shadow-splat-solid rounded-[32px] text-splat-dark font-black flex items-center justify-center gap-2 active:translate-y-1 transition-all"
+          className="w-full py-5 bg-white/40 backdrop-blur-md border-[0.5px] border-dashed border-black/20 shadow-glass-soft glass-card text-p3-navy font-black flex items-center justify-center gap-2 active:scale-98 transition-all"
         >
           <Plus strokeWidth={3} /> 新增{activeSubTab === 'flight' ? '航班' : '預訂'}
         </motion.button>
@@ -179,21 +179,21 @@ export const Booking = () => {
       {/* 3. 詳情 Modal */}
       <AnimatePresence>
         {detailItem && (
-          <div className="fixed inset-0 bg-splat-dark/80 backdrop-blur-sm z-[300] flex items-center justify-center p-4" onClick={() => setDetailItem(undefined)}>
+          <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[300] flex items-center justify-center p-4" onClick={() => setDetailItem(undefined)}>
             <motion.div
               initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }}
-              className="bg-[#F4F5F7] w-full max-w-sm rounded-[32px] border-[4px] border-splat-dark shadow-[8px_8px_0px_#1A1A1A] overflow-hidden"
+              className="glass-card w-full max-w-sm overflow-hidden shadow-glass-deep border-[0.5px] border-white/40"
               onClick={e => e.stopPropagation()}
             >
               <div className="p-6 space-y-6 max-h-[80vh] overflow-y-auto hide-scrollbar">
                 <div className="flex justify-between items-start">
-                  <h2 className="text-2xl font-black text-splat-dark uppercase pr-8 font-['Barlow'] tracking-tight">{detailItem.title}</h2>
-                  <button onClick={() => setDetailItem(undefined)} className="p-2 bg-white rounded-full border-2 border-splat-dark shadow-sm active:scale-90 transition-transform"><X size={16} strokeWidth={3} /></button>
+                  <h2 className="text-2xl font-black text-p3-navy uppercase pr-8 font-['Barlow'] tracking-tight">{detailItem.title}</h2>
+                  <button onClick={() => setDetailItem(undefined)} className="p-2 bg-white rounded-full border-2 border-p3-navy shadow-sm active:scale-90 transition-transform"><X size={16} strokeWidth={3} /></button>
                 </div>
 
-                {detailItem.images?.[0] && <LazyImage src={detailItem.images[0]} containerClassName="w-full aspect-video rounded-2xl object-cover border-[3px] border-splat-dark shadow-splat-solid-sm" />}
+                {detailItem.images?.[0] && <LazyImage src={detailItem.images[0]} containerClassName="w-full aspect-video rounded-2xl object-cover border-[0.5px] border-p3-navy shadow-glass-deep-sm" />}
 
-                <div className="bg-white p-4 border-[3px] border-splat-dark rounded-xl shadow-sm">
+                <div className="bg-white p-4 border-[0.5px] border-p3-navy rounded-xl shadow-sm">
                   <p className="text-sm text-gray-700 font-bold whitespace-pre-wrap leading-relaxed">{detailItem.note || "尚無備註資訊"}</p>
                 </div>
 
@@ -201,36 +201,34 @@ export const Booking = () => {
                 {detailItem.type === 'flight' && (
                   <div className="space-y-4">
                     {/* PNR 快捷區 */}
-                    {detailItem.pnr && (
-                      <div
-                        className="bg-splat-yellow/20 border-[3px] border-splat-yellow rounded-2xl p-4 flex justify-between items-center cursor-copy active:scale-95 transition-transform"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          navigator.clipboard.writeText(detailItem.pnr!);
-                          setSplatColor('#F2A900');
-                          setTimeout(() => setSplatColor(null), 1000);
-                          triggerHaptic('success');
-                        }}
-                      >
-                        <div>
-                          <div className="text-[10px] font-black text-splat-dark uppercase tracking-[0.2em] mb-1">PNR 確認碼</div>
-                          <div className="text-3xl font-black text-splat-dark font-['Barlow'] tracking-widest">{detailItem.pnr}</div>
-                        </div>
-                        <div className="w-12 h-12 bg-white rounded-xl border-2 border-splat-yellow flex items-center justify-center shadow-sm">
-                          <Copy size={20} className="text-splat-yellow" strokeWidth={3} />
-                        </div>
+                    <div
+                      className="bg-p3-gold/10 border-[0.5px] border-p3-gold/30 rounded-2xl p-4 flex justify-between items-center cursor-copy active:scale-95 transition-transform shadow-glass-soft"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigator.clipboard.writeText(detailItem.pnr!);
+                        setSplatColor('var(--p3-gold)');
+                        setTimeout(() => setSplatColor(null), 1000);
+                        triggerHaptic('success');
+                      }}
+                    >
+                      <div>
+                        <div className="text-[10px] font-black text-p3-navy/60 uppercase tracking-[0.2em] mb-1">PNR 確認碼</div>
+                        <div className="text-3xl font-black text-p3-navy font-['Barlow'] tracking-widest">{detailItem.pnr}</div>
                       </div>
-                    )}
+                      <div className="w-12 h-12 bg-white/60 backdrop-blur-md rounded-xl border-[0.5px] border-p3-gold/30 flex items-center justify-center shadow-sm">
+                        <Copy size={20} className="text-p3-gold" strokeWidth={3} />
+                      </div>
+                    </div>
 
                     {/* 航廈與登機門卡片 */}
                     <div className="grid grid-cols-2 gap-3">
-                      <div className="bg-white border-[3px] border-splat-dark rounded-xl p-3 shadow-splat-solid-sm flex flex-col items-center justify-center">
+                      <div className="bg-white border-[0.5px] border-p3-navy rounded-xl p-3 shadow-glass-deep-sm flex flex-col items-center justify-center">
                         <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">Terminal</span>
-                        <span className="text-2xl font-black text-splat-dark tabular-nums">{detailItem.terminal || '--'}</span>
+                        <span className="text-2xl font-black text-p3-navy tabular-nums">{detailItem.terminal || '--'}</span>
                       </div>
-                      <div className="bg-white border-[3px] border-splat-dark rounded-xl p-3 shadow-splat-solid-sm flex flex-col items-center justify-center">
+                      <div className="bg-white border-[0.5px] border-p3-navy rounded-xl p-3 shadow-glass-deep-sm flex flex-col items-center justify-center">
                         <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-1">Gate</span>
-                        <span className="text-2xl font-black text-splat-dark tabular-nums">{detailItem.gate || '--'}</span>
+                        <span className="text-2xl font-black text-p3-navy tabular-nums">{detailItem.gate || '--'}</span>
                       </div>
                     </div>
 
@@ -253,12 +251,12 @@ export const Booking = () => {
                       <div className="space-y-2">
                         <div className="flex justify-between items-center bg-white px-3 py-2 rounded-lg border border-gray-200">
                           <span className="text-xs font-bold text-gray-600">托運行李</span>
-                          <span className="text-sm font-black text-splat-dark">{detailItem.baggage || '無 / 未知'}</span>
+                          <span className="text-sm font-black text-p3-navy">{detailItem.baggage || '無 / 未知'}</span>
                         </div>
                         {detailItem.baggageAllowance && (
                           <div className="flex justify-between items-center bg-white px-3 py-2 rounded-lg border border-gray-200">
                             <span className="text-xs font-bold text-gray-600">手提行李</span>
-                            <span className="text-sm font-black text-splat-dark">{detailItem.baggageAllowance}</span>
+                            <span className="text-sm font-black text-p3-navy">{detailItem.baggageAllowance}</span>
                           </div>
                         )}
                       </div>
@@ -268,7 +266,7 @@ export const Booking = () => {
 
                 {/* --- 共通 QR Code --- */}
                 {detailItem.qrCode && (
-                  <div onClick={() => setFocusedQr(detailItem.qrCode!)} className="bg-white p-4 rounded-2xl flex flex-col items-center gap-2 border-[3px] border-splat-dark shadow-splat-solid-sm cursor-zoom-in active:scale-95 transition-transform">
+                  <div onClick={() => setFocusedQr(detailItem.qrCode!)} className="bg-white p-4 rounded-2xl flex flex-col items-center gap-2 border-[0.5px] border-p3-navy shadow-glass-deep-sm cursor-zoom-in active:scale-95 transition-transform">
                     <img src={detailItem.qrCode} className="w-40 h-40 object-contain" alt="QR" />
                     <span className="text-[10px] font-black text-splat-pink uppercase tracking-widest bg-gray-100 px-3 py-1 rounded-md">Tap to Scan</span>
                   </div>
@@ -278,7 +276,7 @@ export const Booking = () => {
                 <div className="grid grid-cols-2 gap-3">
                   <button
                     onClick={() => { downloadIcs(detailItem!); triggerHaptic('medium'); }}
-                    className="btn-splat py-4 bg-white text-splat-dark flex items-center justify-center gap-2 font-black"
+                    className="btn-splat py-4 bg-white text-p3-navy flex items-center justify-center gap-2 font-black"
                   >
                     <Calendar size={18} /> 加入行事曆
                   </button>
@@ -295,14 +293,14 @@ export const Booking = () => {
                     <a
                       href={detailItem.flightNo ? `https://www.google.com/search?q=Flight+Status+${detailItem.flightNo}` : '#'}
                       target="_blank" rel="noreferrer"
-                      className="w-full py-3 bg-splat-dark text-white border-[3px] border-splat-dark rounded-xl font-black text-xs text-center shadow-splat-solid-sm flex items-center justify-center gap-2 active:translate-y-1 transition-all"
+                      className="w-full py-3 bg-p3-navy text-white border-[0.5px] border-p3-navy rounded-xl font-black text-xs text-center shadow-glass-deep-sm flex items-center justify-center gap-2 active:translate-y-1 transition-all"
                     >
                       <Plane size={14} /> 航班即時動態
                     </a>
                     <a
                       href={detailItem.depIata ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${detailItem.depIata} 機場 航廈${detailItem.terminal || ''}`)}` : '#'}
                       target="_blank" rel="noreferrer"
-                      className="w-full py-3 bg-splat-green text-white border-[3px] border-splat-dark rounded-xl font-black text-xs text-center shadow-splat-solid-sm flex items-center justify-center gap-2 active:translate-y-1 transition-all"
+                      className="w-full py-3 bg-splat-green text-white border-[0.5px] border-p3-navy rounded-xl font-black text-xs text-center shadow-glass-deep-sm flex items-center justify-center gap-2 active:translate-y-1 transition-all"
                     >
                       <MapPin size={14} /> 導航至航廈
                     </a>
@@ -315,7 +313,7 @@ export const Booking = () => {
                     href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(detailItem.location)}`}
                     target="_blank"
                     rel="noreferrer"
-                    className="w-full py-4 bg-splat-green text-white border-[3px] border-splat-dark rounded-2xl font-black text-center shadow-splat-solid-sm flex items-center justify-center gap-2 active:translate-y-1 active:shadow-none transition-all"
+                    className="w-full py-4 bg-splat-green text-white border-[0.5px] border-p3-navy rounded-2xl font-black text-center shadow-glass-deep-sm flex items-center justify-center gap-2 active:translate-y-1 active:shadow-none transition-all"
                   >
                     <MapPin size={18} strokeWidth={3} />
                     開啟地圖導航
@@ -325,7 +323,7 @@ export const Booking = () => {
                 {detailItem.qrCode && (
                   <button
                     onClick={() => handleDownload(detailItem!.qrCode!)}
-                    className={`w-full py-3 rounded-2xl border-[3px] border-splat-dark font-black flex items-center justify-center gap-2 transition-all ${detailItem.qrCode && cachedUrls.has(detailItem.qrCode) ? 'bg-gray-100 text-gray-400' : 'bg-white text-splat-dark shadow-splat-solid-sm active:translate-y-1 active:shadow-none'}`}
+                    className={`w-full py-3 rounded-2xl border-[0.5px] border-p3-navy font-black flex items-center justify-center gap-2 transition-all ${detailItem.qrCode && cachedUrls.has(detailItem.qrCode) ? 'bg-gray-100 text-gray-400' : 'bg-white text-p3-navy shadow-glass-deep-sm active:translate-y-1 active:shadow-none'}`}
                   >
                     {detailItem.qrCode && cachedUrls.has(detailItem.qrCode) ? <CheckCircle2 size={18} /> : <Download size={18} />}
                     {detailItem.qrCode && cachedUrls.has(detailItem.qrCode) ? '已快取離線資源' : '下載離線憑證'}
@@ -342,16 +340,16 @@ export const Booking = () => {
         {focusedQr && (
           <motion.div
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-white z-[2000] flex flex-col items-center justify-center p-8"
+            className="fixed inset-0 bg-white/80 backdrop-blur-2xl z-[2000] flex flex-col items-center justify-center p-8"
             onClick={() => setFocusedQr(null)}
           >
             <motion.div
-              initial={{ scale: 0.5, rotate: -10 }} animate={{ scale: 1, rotate: 0 }}
-              className="bg-white p-6 border-[6px] border-splat-dark rounded-[40px] shadow-2xl flex flex-col items-center"
+              initial={{ scale: 0.8, y: 20 }} animate={{ scale: 1, y: 0 }}
+              className="bg-white p-8 rounded-[48px] shadow-glass-deep flex flex-col items-center border-[0.5px] border-black/10"
             >
-              <img src={focusedQr} className="w-64 h-64 object-contain mb-8" alt="Focus QR" />
-              <p className="text-2xl font-black text-splat-dark uppercase tracking-widest italic animate-pulse font-['Barlow']">Scan Me! 🦑</p>
-              <p className="text-xs text-gray-400 font-black mt-4 border-2 border-gray-200 px-4 py-1 rounded-full uppercase">Tap Screen to Close</p>
+              <img src={focusedQr} className="w-64 h-64 object-contain mb-8 group-hover:scale-105 transition-transform" alt="Focus QR" />
+              <p className="text-2xl font-black text-p3-navy uppercase tracking-tight italic animate-pulse">Scan & GO</p>
+              <p className="text-[10px] text-gray-400 font-bold mt-6 px-4 py-1.5 rounded-full uppercase tracking-widest bg-gray-50 border-[0.5px] border-gray-100">Tap to Close</p>
             </motion.div>
           </motion.div>
         )}
@@ -366,9 +364,9 @@ export const Booking = () => {
               initial={{ scale: 0, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0, opacity: 0 }}
-              className="bg-white border-[4px] border-splat-dark px-6 py-2 rounded-2xl shadow-splat-solid transform -rotate-3"
+              className="bg-white border-[4px] border-p3-navy px-6 py-2 rounded-2xl shadow-glass-deep transform -rotate-3"
             >
-              <span className="text-2xl font-black text-splat-dark italic">COPIED! 🦑</span>
+              <span className="text-2xl font-black text-p3-navy italic">COPIED! 🦑</span>
             </motion.div>
           </div>
         )}
@@ -390,10 +388,10 @@ const CopyableField = ({ label, value, onCopy }: any) => {
         onCopy();
       }}
     >
-      <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest">{label}</span>
+      <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest opacity-60">{label}</span>
       <div className="flex items-center gap-1.5">
-        <span className="font-black text-splat-dark text-sm tracking-tight">{value || '---'}</span>
-        <Copy size={12} className="text-gray-300 group-hover:text-splat-blue transition-colors" />
+        <span className="font-black text-p3-navy text-sm tracking-tight">{value || '---'}</span>
+        <Copy size={12} className="text-gray-300 group-hover:text-p3-gold transition-colors" />
       </div>
     </div>
   );
@@ -425,12 +423,12 @@ const FlightCard = ({ item, onEdit, onViewDetails, onQrClick }: any) => {
   return (
     <motion.div
       whileTap={{ scale: 0.98 }}
-      className="relative bg-white rounded-[2.5rem] overflow-hidden border-[3px] border-splat-dark shadow-splat-solid group cursor-pointer"
+      className="relative glass-card overflow-hidden shadow-glass-deep group cursor-pointer border-[0.5px] border-white/40"
       onClick={handleCardClick}
     >
       {/* 編輯按鈕 */}
       <div className={`absolute top-4 right-4 z-40 transition-opacity duration-300 ${showActions ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
-        <button onClick={onEdit} className="p-2.5 bg-splat-yellow border-[3px] border-splat-dark rounded-full text-splat-dark shadow-splat-solid-sm hover:scale-110 transition-transform">
+        <button onClick={onEdit} className="p-2.5 bg-p3-gold border-[0.5px] border-white/20 rounded-full text-white shadow-glass-soft hover:scale-110 transition-transform">
           <Edit3 size={18} strokeWidth={3} />
         </button>
       </div>
@@ -439,26 +437,26 @@ const FlightCard = ({ item, onEdit, onViewDetails, onQrClick }: any) => {
       {(() => {
         const cd = getCountdown(item.date, item.depTime);
         return cd && (
-          <div className={`absolute top-2 left-2 z-50 px-2.5 py-0.5 rounded-lg border-2 border-splat-dark text-[8px] font-black text-white shadow-splat-solid-sm -rotate-6 ${cd.color}`}>
+          <div className={`absolute top-2 left-2 z-50 px-2.5 py-0.5 rounded-lg border-2 border-p3-navy text-[8px] font-black text-white shadow-glass-deep-sm -rotate-6 ${cd.color}`}>
             {cd.text}
           </div>
         );
       })()}
 
       <div
-        className={`relative h-[93px] w-full flex items-center justify-center border-b-[3px] border-splat-dark ${theme.bgClass}`}
+        className={`relative h-[93px] w-full flex items-center justify-center border-b-[0.5px] border-white/20 ${theme.bgClass}`}
         style={{
-          backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.15) 1px, transparent 1px)',
+          backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.1) 1px, transparent 1px)',
           backgroundSize: '12px 12px'
         }}
       >
-        <div className="drop-shadow-md scale-110">
+        <div className="drop-shadow-sm scale-100">
           {theme.logoHtml}
         </div>
       </div>
 
-      <div className="absolute top-[75px] left-1/2 -translate-x-1/2 bg-white px-8 py-1.5 rounded-full border-[3px] border-gray-50 shadow-md z-30 flex items-center justify-center">
-        <span className="text-base font-bold font-['Barlow'] text-gray-700/90 tracking-[0.2em] outline-none">{item.flightNo || '---'}</span>
+      <div className="absolute top-[75px] left-1/2 -translate-x-1/2 bg-white/80 backdrop-blur-md px-8 py-1.5 rounded-full border-[0.5px] border-black/5 shadow-sm z-30 flex items-center justify-center">
+        <span className="text-base font-bold font-['Barlow'] text-p3-navy tracking-[0.2em] outline-none opacity-80">{item.flightNo || '---'}</span>
       </div>
 
       <div className="relative p-3.5 pt-8 pb-3.5 font-['Barlow']">
@@ -468,7 +466,7 @@ const FlightCard = ({ item, onEdit, onViewDetails, onQrClick }: any) => {
           <div className="flex flex-col items-center">
             <span className="text-[24px] font-black text-gray-400 tracking-tight uppercase mb-0">{item.depIata || 'TPE'}</span>
             <span className="text-[44px] leading-tight font-bold text-[#1A1A1A] tracking-tighter tabular-nums">{item.depTime || '--:--'}</span>
-            <div className="mt-1.5 bg-[#447A5A] text-white px-3.5 py-0.5 rounded-full text-[10px] font-bold tracking-widest whitespace-nowrap shadow-sm">
+            <div className="mt-2 bg-p3-navy/10 text-p3-navy px-3.5 py-0.5 rounded-full text-[10px] font-bold tracking-widest whitespace-nowrap border-[0.5px] border-p3-navy/20 shadow-sm">
               {item.depCity || '出發地'}
             </div>
           </div>
@@ -486,7 +484,7 @@ const FlightCard = ({ item, onEdit, onViewDetails, onQrClick }: any) => {
           <div className="flex flex-col items-center">
             <span className="text-[24px] font-black text-gray-400 tracking-tight uppercase mb-0">{item.arrIata || 'KIX'}</span>
             <span className="text-[44px] leading-tight font-bold text-[#1A1A1A] tracking-tighter tabular-nums">{item.arrTime || '--:--'}</span>
-            <div className="mt-1.5 bg-[#B3936E] text-white px-3.5 py-0.5 rounded-full text-[10px] font-bold tracking-widest whitespace-nowrap shadow-sm">
+            <div className="mt-2 bg-p3-ruby/10 text-p3-ruby px-3.5 py-0.5 rounded-full text-[10px] font-bold tracking-widest whitespace-nowrap border-[0.5px] border-p3-ruby/20 shadow-sm">
               {item.arrCity || '目的地'}
             </div>
           </div>
@@ -526,8 +524,8 @@ const FlightCard = ({ item, onEdit, onViewDetails, onQrClick }: any) => {
         </div>
       )}
 
-      <div className="absolute top-[80px] -left-3.5 w-7 h-7 bg-[#F4F5F7] rounded-full border-[3px] border-splat-dark z-30 shadow-inner" />
-      <div className="absolute top-[80px] -right-3.5 w-7 h-7 bg-[#F4F5F7] rounded-full border-[3px] border-splat-dark z-30 shadow-inner" />
+      <div className="absolute top-[80px] -left-3.5 w-7 h-7 bg-white/40 backdrop-blur-md rounded-full border-[0.5px] border-white/40 z-30" />
+      <div className="absolute top-[80px] -right-3.5 w-7 h-7 bg-white/40 backdrop-blur-md rounded-full border-[0.5px] border-white/40 z-30" />
     </motion.div>
   );
 };
@@ -537,28 +535,28 @@ const HotelCard = ({ item, onEdit, onViewDetails, onQrClick, onCopy }: any) => {
   const handleCardClick = () => { if (!showActions) { setShowActions(true); setTimeout(() => setShowActions(false), 3000); } else { onViewDetails(); setShowActions(false); } };
 
   return (
-    <motion.div whileTap={{ scale: 0.98 }} className="bg-white rounded-[2rem] border-[3px] border-splat-dark shadow-splat-solid overflow-hidden relative cursor-pointer" onClick={handleCardClick}>
+    <motion.div whileTap={{ scale: 0.98 }} className="glass-card shadow-glass-soft overflow-hidden relative cursor-pointer border-[0.5px] border-white/40" onClick={handleCardClick}>
       <div className={`absolute top-4 right-4 z-20 transition-opacity duration-300 ${showActions ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
-        <button onClick={onEdit} className="p-2.5 bg-splat-yellow border-[3px] border-splat-dark rounded-full text-splat-dark shadow-splat-solid-sm"><Edit3 size={18} strokeWidth={3} /></button>
+        <button onClick={onEdit} className="p-2.5 bg-p3-gold border-[0.5px] border-white/20 rounded-full text-white shadow-glass-soft active:scale-90 transition-transform"><Edit3 size={18} strokeWidth={3} /></button>
       </div>
 
-      <div className="aspect-video bg-gray-200 relative border-b-[3px] border-splat-dark overflow-hidden">
+      <div className="aspect-video bg-gray-200 relative border-b-[3px] border-p3-navy overflow-hidden">
         {item.images?.[0] ? (<LazyImage src={item.images[0]} containerClassName="absolute inset-0 w-full h-full object-cover" />) : (<div className="absolute inset-0 w-full h-full flex items-center justify-center bg-splat-pink/10"><Home size={40} className="text-splat-pink/40" /></div>)}
 
         {/* 倒數計時標籤改放在圖片左上角，並加上陰影分離 */}
         {(() => {
           const cd = getCountdown(item.date);
           return cd && (
-            <div className={`absolute top-4 left-4 z-30 px-3 py-1 rounded-xl border-[3px] border-splat-dark text-[10px] font-black text-white shadow-splat-solid-sm -rotate-3 ${cd.color}`}>
+            <div className={`absolute top-4 left-4 z-30 px-3 py-1 rounded-xl border-[0.5px] border-p3-navy text-[10px] font-black text-white shadow-glass-deep-sm -rotate-3 ${cd.color}`}>
               {cd.text}
             </div>
           );
         })()}
 
-        <div className="absolute top-4 right-4 bg-white border-2 border-splat-dark px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest text-splat-dark shadow-[2px_2px_0px_#1A1A1A]">HOTEL</div>
+        <div className="absolute top-4 right-4 bg-white border-2 border-p3-navy px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest text-p3-navy shadow-[2px_2px_0px_#1A1A1A]">HOTEL</div>
 
         {/* Check-in Time Overlay */}
-        <div className="absolute bottom-0 left-0 right-0 bg-splat-dark/60 backdrop-blur-md px-4 py-2 flex justify-between items-center text-white border-t-2 border-white/20">
+        <div className="absolute bottom-0 left-0 right-0 bg-p3-navy/60 backdrop-blur-md px-4 py-2 flex justify-between items-center text-white border-t-2 border-white/20">
           <div className="flex flex-col">
             <span className="text-[8px] font-black uppercase tracking-[0.2em] opacity-80">Check-in</span>
             <span className="text-lg font-black tracking-tight">{item.checkInTime || '15:00'}</span>
@@ -574,10 +572,10 @@ const HotelCard = ({ item, onEdit, onViewDetails, onQrClick, onCopy }: any) => {
       <div className="p-5 space-y-4">
         <div className="flex justify-between items-start gap-3">
           <div className="flex-1 min-w-0">
-            <h3 className="font-black text-xl text-splat-dark leading-tight font-['Barlow'] truncate">{item.title}</h3>
+            <h3 className="font-black text-xl text-p3-navy leading-tight font-['Barlow'] truncate">{item.title}</h3>
             {/* 日期區塊強化 */}
             <div className="flex gap-2 items-center mt-1.5">
-              <span className="inline-flex items-center gap-1.5 text-sm font-black text-splat-dark font-['Barlow'] tabular-nums tracking-wide">
+              <span className="inline-flex items-center gap-1.5 text-sm font-black text-p3-navy font-['Barlow'] tabular-nums tracking-wide">
                 {item.date?.replace(/-/g, '/')} <ArrowRight size={12} className="text-gray-400" /> {item.checkOutDate ? item.checkOutDate.replace(/-/g, '/') : '---'}
               </span>
               <span className="text-[10px] font-black text-white bg-splat-pink px-2 py-0.5 rounded-lg transform -rotate-2">
@@ -603,8 +601,8 @@ const HotelCard = ({ item, onEdit, onViewDetails, onQrClick, onCopy }: any) => {
         </div>
       </div>
 
-      <div className="absolute top-[144px] -left-3 w-6 h-6 bg-[#F4F5F7] rounded-full border-[3px] border-splat-dark z-10 shadow-inner" />
-      <div className="absolute top-[144px] -right-3 w-6 h-6 bg-[#F4F5F7] rounded-full border-[3px] border-splat-dark z-10 shadow-inner" />
+      <div className="absolute top-[144px] -left-3 w-6 h-6 bg-white/40 backdrop-blur-md rounded-full border-[0.5px] border-white/40 z-10" />
+      <div className="absolute top-[144px] -right-3 w-6 h-6 bg-white/40 backdrop-blur-md rounded-full border-[0.5px] border-white/40 z-10" />
     </motion.div>
   );
 };
@@ -614,16 +612,16 @@ const SpotCard = ({ item, onEdit, onViewDetails, onQrClick, onCopy }: any) => {
   const handleCardClick = () => { if (!showActions) { setShowActions(true); setTimeout(() => setShowActions(false), 3000); } else { onViewDetails(); setShowActions(false); } };
 
   return (
-    <motion.div whileTap={{ scale: 0.98 }} className="relative bg-[#FFFAF0] rounded-3xl border-[3px] border-splat-dark shadow-splat-solid cursor-pointer flex flex-col overflow-hidden" onClick={handleCardClick}>
+    <motion.div whileTap={{ scale: 0.98 }} className="relative bg-white/60 backdrop-blur-md rounded-3xl border-[0.5px] border-white/30 shadow-glass-soft cursor-pointer flex flex-col overflow-hidden" onClick={handleCardClick}>
       <div className={`absolute top-4 right-4 z-20 transition-opacity duration-300 ${showActions ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
-        <button onClick={onEdit} className="p-2.5 bg-splat-yellow border-[3px] border-splat-dark rounded-full text-splat-dark shadow-splat-solid-sm"><Edit3 size={18} strokeWidth={3} /></button>
+        <button onClick={onEdit} className="p-2.5 bg-p3-gold border-[0.5px] border-white/20 rounded-full text-white shadow-glass-soft"><Edit3 size={18} strokeWidth={3} /></button>
       </div>
 
       {/* 倒數計時標籤 */}
       {(() => {
         const cd = getCountdown(item.date, item.entryTime);
         return cd && (
-          <div className={`absolute top-2 left-2 z-30 px-2.5 py-0.5 rounded-lg border-2 border-splat-dark text-[8px] font-black text-white shadow-splat-solid-sm -rotate-3 ${cd.color}`}>
+          <div className={`absolute top-2 left-2 z-30 px-2.5 py-0.5 rounded-lg border-2 border-p3-navy text-[8px] font-black text-white shadow-glass-deep-sm -rotate-3 ${cd.color}`}>
             {cd.text}
           </div>
         );
@@ -631,9 +629,9 @@ const SpotCard = ({ item, onEdit, onViewDetails, onQrClick, onCopy }: any) => {
 
       <div className="p-5 relative bg-[#FFFAF0] border-b-[3px] border-dashed border-gray-300">
         <div className="flex justify-between items-start mb-2">
-          <div className="bg-splat-yellow border-2 border-splat-dark px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest text-splat-dark shadow-sm">🎫 SPOT TICKET</div>
+          <div className="bg-splat-yellow border-2 border-p3-navy px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest text-p3-navy shadow-sm">🎫 SPOT TICKET</div>
         </div>
-        <h3 className="font-black text-xl text-splat-dark leading-tight pr-4 truncate font-['Barlow']">{item.title}</h3>
+        <h3 className="font-black text-xl text-p3-navy leading-tight pr-4 truncate font-['Barlow']">{item.title}</h3>
       </div>
 
       <div className="p-5 bg-white flex items-center relative">
@@ -644,7 +642,7 @@ const SpotCard = ({ item, onEdit, onViewDetails, onQrClick, onCopy }: any) => {
           <div className="grid grid-cols-2 gap-3 font-['Barlow']">
             <div>
               <div className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-0.5">Date</div>
-              <div className="font-black text-sm text-splat-dark tabular-nums">{item.date}</div>
+              <div className="font-black text-sm text-p3-navy tabular-nums">{item.date}</div>
             </div>
             <div>
               <div className="text-[9px] font-black text-gray-400 uppercase tracking-widest mb-0.5">Entry</div>
@@ -655,7 +653,7 @@ const SpotCard = ({ item, onEdit, onViewDetails, onQrClick, onCopy }: any) => {
           {item.meetingPoint && (
             <div className="bg-splat-blue/5 border-2 border-splat-blue/20 rounded-xl p-2.5">
               <div className="text-[8px] font-black text-splat-blue uppercase tracking-widest mb-0.5">Meeting Point</div>
-              <div className="font-bold text-[11px] text-splat-dark leading-snug truncate">{item.meetingPoint}</div>
+              <div className="font-bold text-[11px] text-p3-navy leading-snug truncate">{item.meetingPoint}</div>
             </div>
           )}
 
@@ -677,8 +675,8 @@ const SpotCard = ({ item, onEdit, onViewDetails, onQrClick, onCopy }: any) => {
         </div>
       </div>
 
-      <div className="absolute top-[88px] -left-3 w-6 h-6 bg-[#F4F5F7] rounded-full border-[3px] border-splat-dark z-10 shadow-inner" />
-      <div className="absolute top-[88px] -right-3 w-6 h-6 bg-[#F4F5F7] rounded-full border-[3px] border-splat-dark z-10 shadow-inner" />
+      <div className="absolute top-[88px] -left-3 w-6 h-6 bg-[#F4F5F7] rounded-full border-[0.5px] border-p3-navy z-10 shadow-inner" />
+      <div className="absolute top-[88px] -right-3 w-6 h-6 bg-[#F4F5F7] rounded-full border-[0.5px] border-p3-navy z-10 shadow-inner" />
     </motion.div>
   );
 };
@@ -688,42 +686,42 @@ const VoucherCard = ({ item, onEdit, onViewDetails, onQrClick, onCopy }: any) =>
   const handleCardClick = () => { if (!showActions) { setShowActions(true); setTimeout(() => setShowActions(false), 3000); } else { onViewDetails(); setShowActions(false); } };
 
   return (
-    <motion.div whileTap={{ scale: 0.98 }} className="bg-white rounded-3xl border-[3px] border-splat-dark shadow-splat-solid cursor-pointer overflow-hidden flex relative" onClick={handleCardClick}>
+    <motion.div whileTap={{ scale: 0.98 }} className="glass-card shadow-glass-soft cursor-pointer overflow-hidden flex relative border-[0.5px] border-white/40" onClick={handleCardClick}>
       <div className={`absolute top-4 right-4 z-30 transition-opacity duration-300 ${showActions ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
-        <button onClick={onEdit} className="p-2.5 bg-splat-yellow border-[3px] border-splat-dark rounded-full text-splat-dark shadow-splat-solid-sm"><Edit3 size={18} strokeWidth={3} /></button>
+        <button onClick={onEdit} className="p-2.5 bg-p3-gold border-[0.5px] border-white/20 rounded-full text-white shadow-glass-soft"><Edit3 size={18} strokeWidth={3} /></button>
       </div>
 
       {/* 倒數計時標籤 */}
       {(() => {
         const cd = getCountdown(item.date);
         return cd && (
-          <div className={`absolute top-2 left-2 z-40 px-2.5 py-0.5 rounded-lg border-2 border-splat-dark text-[8px] font-black text-white shadow-splat-solid-sm -rotate-3 ${cd.color}`}>
+          <div className={`absolute top-2 left-2 z-40 px-2.5 py-0.5 rounded-lg border-2 border-p3-navy text-[8px] font-black text-white shadow-glass-deep-sm -rotate-3 ${cd.color}`}>
             {cd.text}
           </div>
         );
       })()}
 
-      <div className="w-10 bg-[#FF8A00] border-r-[3px] border-splat-dark flex flex-col items-center justify-center py-4 relative shrink-0">
+      <div className="w-10 bg-[#FF8A00] border-r-[3px] border-p3-navy flex flex-col items-center justify-center py-4 relative shrink-0">
         <span className="text-[11px] font-black text-white uppercase tracking-[0.4em] -rotate-90 whitespace-nowrap drop-shadow-md z-10 font-['Barlow']">VOUCHER</span>
       </div>
 
       <div className="flex-1 p-5 flex items-center relative">
         <div className="absolute top-0 bottom-0 right-[88px] w-0 border-l-[2.5px] border-dashed border-gray-200" />
         <div className="flex-1 pr-6 space-y-3 font-['Barlow']">
-          <h3 className="font-black text-[17px] text-splat-dark leading-tight pr-2">{item.title}</h3>
+          <h3 className="font-black text-[17px] text-p3-navy leading-tight pr-2">{item.title}</h3>
 
           <div className="space-y-2">
             <div className="flex gap-2 text-[10px] bg-gray-50 p-2 rounded-xl border-2 border-gray-100">
               <div className="flex-1">
                 <div className="text-[7px] font-black text-gray-400 uppercase tracking-widest mb-0.5">Valid Date</div>
-                <div className="font-black text-splat-dark tabular-nums">{item.date}</div>
+                <div className="font-black text-p3-navy tabular-nums">{item.date}</div>
               </div>
               {item.endDate && (
                 <>
                   <div className="w-[1.5px] bg-gray-200 my-0.5 rounded-full"></div>
                   <div className="flex-1">
                     <div className="text-[7px] font-black text-gray-400 uppercase tracking-widest mb-0.5">End Date</div>
-                    <div className="font-black text-splat-dark tabular-nums">{item.endDate}</div>
+                    <div className="font-black text-p3-navy tabular-nums">{item.endDate}</div>
                   </div>
                 </>
               )}
@@ -735,7 +733,7 @@ const VoucherCard = ({ item, onEdit, onViewDetails, onQrClick, onCopy }: any) =>
                   <div className="text-[8px] font-black text-[#FF8A00] uppercase tracking-widest flex items-center gap-1.5"><MapPin size={10} /> Exchange</div>
                   {item.exchangeHours && <span className="text-[7px] font-black bg-white px-1.5 py-0.5 rounded border border-orange-200 text-[#FF8A00]">{item.exchangeHours}</span>}
                 </div>
-                <div className="font-black text-[11px] text-splat-dark leading-snug truncate">{item.exchangeLocation}</div>
+                <div className="font-black text-[11px] text-p3-navy leading-snug truncate">{item.exchangeLocation}</div>
               </div>
             )}
 
@@ -756,8 +754,8 @@ const VoucherCard = ({ item, onEdit, onViewDetails, onQrClick, onCopy }: any) =>
           )}
         </div>
       </div>
-      <div className="absolute top-1/2 -mt-3 -left-3 w-6 h-6 bg-[#F4F5F7] rounded-full border-[3px] border-splat-dark z-20 shadow-inner" />
-      <div className="absolute top-1/2 -mt-3 -right-3 w-6 h-6 bg-[#F4F5F7] rounded-full border-[3px] border-splat-dark z-20 shadow-inner" />
+      <div className="absolute top-1/2 -mt-3 -left-3 w-6 h-6 bg-[#F4F5F7] rounded-full border-[0.5px] border-p3-navy z-20 shadow-inner" />
+      <div className="absolute top-1/2 -mt-3 -right-3 w-6 h-6 bg-[#F4F5F7] rounded-full border-[0.5px] border-p3-navy z-20 shadow-inner" />
     </motion.div>
   );
 };

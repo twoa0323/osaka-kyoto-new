@@ -18,11 +18,12 @@ import { ARCompass } from './ui/ARCompass';
 const GEMINI_MODEL = "gemini-3-flash-preview"; // Fix 14: 確保使用正確模型版本
 const ICON_MAP = { sightseeing: Camera, food: Utensils, transport: Plane, hotel: Home };
 
-const CATEGORY_STYLE = {
-  sightseeing: { bg: 'bg-splat-yellow', text: 'text-splat-dark', label: 'SIGHTSEEING', splat: '#FFC000' },
-  food: { bg: 'bg-splat-pink', text: 'text-white', label: 'FOOD', splat: '#F03C69' },
-  transport: { bg: 'bg-splat-blue', text: 'text-white', label: 'TRANSPORT', splat: '#2932CF' },
-  hotel: { bg: 'bg-splat-green', text: 'text-white', label: 'HOTEL', splat: '#21CC65' },
+const CATEGORY_STYLE: any = {
+  sightseeing: { bg: 'bg-p3-ruby/10', text: 'text-p3-ruby', label: 'SIGHTSEEING', splat: 'var(--p3-ruby)' },
+  food: { bg: 'bg-p3-gold/10', text: 'text-p3-gold', label: 'FOOD', splat: 'var(--p3-gold)' },
+  transport: { bg: 'bg-p3-navy/10', text: 'text-p3-navy', label: 'TRANSPORT', splat: 'var(--p3-navy)' },
+  hotel: { bg: 'bg-p3-ruby/20', text: 'text-p3-ruby', label: 'HOTEL', splat: 'var(--p3-ruby)' },
+  broadway: { bg: 'bg-p3-gold/10', text: 'text-p3-gold', label: 'SHOW', splat: 'var(--p3-gold)' }
 };
 
 // --- 航班主題萃取 ---
@@ -31,7 +32,7 @@ const AIRLINE_THEMES: Record<string, any> = {
   starlux: { bgClass: 'bg-[#181B26]', textClass: 'text-[#C4A97A]', logo: 'STARLUX' },
   eva: { bgClass: 'bg-[#007A53]', textClass: 'text-white', logo: 'EVA AIR' },
   china: { bgClass: 'bg-[#002855]', textClass: 'text-[#FFB6C1]', logo: 'CHINA AIRLINES' },
-  other: { bgClass: 'bg-splat-dark', textClass: 'text-white', logo: 'FLIGHT' }
+  other: { bgClass: 'bg-p3-navy', textClass: 'text-white', logo: 'FLIGHT' }
 };
 
 const getAirlineTheme = (airline?: string) => {
@@ -95,35 +96,35 @@ const TimelineFlightCard: FC<{
       layoutId={`card-${item.id}`}
       onClick={onClick}
       initial={{ scale: 0.95, opacity: 0 }}
-      animate={{ scale: 0.95, opacity: 1 }}
-      whileHover={{ scale: 0.98 }}
+      animate={{ scale: 1, opacity: 1 }}
+      whileHover={{ scale: 1.02 }}
+      whileTap={{ scale: 0.95, transition: { type: 'spring', stiffness: 500, damping: 20 } }}
       className="relative ml-14 mb-10 cursor-pointer group"
     >
-      <div className="bg-white rounded-[32px] overflow-hidden border-[3px] border-splat-dark shadow-splat-solid relative">
-        <div className={`${theme.bgClass} h-12 flex items-center justify-center border-b-[3px] border-splat-dark`}>
-          <span className={`text-[10px] font-black uppercase tracking-[0.3em] ${theme.textClass}`}>{theme.logo}</span>
+      <div className="glass-card overflow-hidden shadow-glass-deep relative border-[0.5px] border-white/40">
+        <div className={`${theme.bgClass} h-12 flex items-center justify-center border-b-[0.5px] border-white/20`}>
+          <span className={`boutique-tag ${theme.textClass} opacity-90 tracking-[0.3em]`}>{theme.logo}</span>
         </div>
-        <div className="p-5 flex justify-between items-center bg-[#fcfcfc]">
+        <div className="p-6 flex justify-between items-center bg-white/30 backdrop-blur-md">
           <div className="flex flex-col items-center">
-            <span className="text-2xl font-black text-splat-dark">{item.depIata || 'TPE'}</span>
-            <span className="text-[10px] font-bold text-gray-400">{item.depTime || '--:--'}</span>
+            <span className="text-3xl boutique-h1 text-p3-navy leading-none">{item.depIata || 'TPE'}</span>
+            <span className="boutique-tag text-gray-400 mt-2">{item.depTime || '--:--'}</span>
           </div>
-          <div className="flex-1 flex flex-col items-center px-4">
-            <div className="text-[10px] font-black text-splat-blue mb-1">{item.flightNo}</div>
-            <div className="w-full flex items-center gap-2">
-              <div className="h-[2px] flex-1 bg-splat-dark/5 border-t-2 border-dashed border-splat-dark/20" />
-              <Plane size={14} className="text-splat-blue rotate-45" />
-              <div className="h-[2px] flex-1 bg-splat-dark/5 border-t-2 border-dashed border-splat-dark/20" />
+          <div className="flex-1 flex flex-col items-center px-6">
+            <div className="boutique-tag text-p3-ruby mb-2">{item.flightNo}</div>
+            <div className="w-full flex items-center gap-3">
+              <div className="h-[1px] flex-1 bg-gray-300" />
+              <Plane size={16} strokeWidth={2.5} className="text-p3-ruby rotate-45" />
+              <div className="h-[1px] flex-1 bg-gray-300" />
             </div>
           </div>
           <div className="flex flex-col items-center">
-            <span className="text-2xl font-black text-splat-dark">{item.arrIata || 'KIX'}</span>
-            <span className="text-[10px] font-bold text-gray-400">{item.arrTime || '--:--'}</span>
+            <span className="text-3xl boutique-h1 text-p3-navy leading-none">{item.arrIata || 'KIX'}</span>
+            <span className="boutique-tag text-gray-400 mt-2">{item.arrTime || '--:--'}</span>
           </div>
         </div>
-        {/* 指令提示元件 */}
-        <div className="absolute right-4 bottom-4 w-8 h-8 rounded-full bg-splat-dark text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-          <ChevronRight size={16} />
+        <div className="absolute right-4 bottom-4 w-10 h-10 rounded-full bg-p3-navy text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all shadow-lg scale-75 group-hover:scale-100">
+          <ChevronRight size={20} strokeWidth={2.5} />
         </div>
       </div>
     </motion.div>
@@ -140,28 +141,29 @@ const TimelineHotelCard: FC<{
       layoutId={`card-${item.id}`}
       onClick={onClick}
       initial={{ scale: 0.95, opacity: 0 }}
-      animate={{ scale: 0.95, opacity: 1 }}
-      whileHover={{ scale: 0.98 }}
+      animate={{ scale: 1, opacity: 1 }}
+      whileHover={{ scale: 1.02 }}
+      whileTap={{ scale: 0.95, transition: { type: 'spring', stiffness: 500, damping: 20 } }}
       className="relative ml-14 mb-10 cursor-pointer group"
     >
-      <div className="bg-white rounded-[32px] overflow-hidden border-[3px] border-splat-dark shadow-splat-solid flex h-32 relative">
-        <div className="w-32 bg-gray-100 border-r-[3px] border-splat-dark overflow-hidden">
+      <div className="glass-card overflow-hidden shadow-glass-deep flex h-36 relative border-[0.5px] border-white/40">
+        <div className="w-36 bg-gray-100 border-r-[0.5px] border-white/20 overflow-hidden">
           {item.images?.[0] ? (
-            <img src={item.images[0]} className="w-full h-full object-cover grayscale-[0.3] group-hover:grayscale-0 transition-all" alt="hotel" />
+            <img src={item.images[0]} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" alt="hotel" />
           ) : (
-            <div className="w-full h-full flex items-center justify-center"><Home size={32} className="text-gray-300" /></div>
+            <div className="w-full h-full flex items-center justify-center bg-p3-navy/5"><Home size={32} strokeWidth={2.5} className="text-p3-navy/20" /></div>
           )}
         </div>
-        <div className="flex-1 p-5 flex flex-col justify-center">
-          <div className="text-[10px] font-black text-splat-green uppercase tracking-widest mb-1">Stay Confirmed</div>
-          <h4 className="font-black text-lg text-splat-dark truncate leading-none">{item.title}</h4>
-          <div className="flex items-center gap-3 mt-3 text-[10px] font-bold text-gray-400 uppercase">
-            <div className="flex items-center gap-1"><Clock size={10} /> {item.checkInTime || '15:00'}</div>
-            <div className="flex items-center gap-1"><MapPin size={10} /> {item.location}</div>
+        <div className="flex-1 p-6 flex flex-col justify-center bg-white/20 backdrop-blur-md">
+          <div className="boutique-tag text-p3-navy opacity-60 mb-2">Verified Stay</div>
+          <h4 className="boutique-h2 text-xl text-p3-navy truncate">{item.title}</h4>
+          <div className="flex items-center gap-4 mt-4 boutique-tag text-gray-400">
+            <div className="flex items-center gap-1.5"><Clock size={14} strokeWidth={2.5} className="text-p3-ruby" /> {item.checkInTime || '15:00'}</div>
+            <div className="flex items-center gap-1.5"><MapPin size={14} strokeWidth={2.5} className="text-p3-gold" /> {item.location}</div>
           </div>
         </div>
-        <div className="absolute right-4 bottom-4 w-8 h-8 rounded-full bg-splat-green text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-          <ChevronRight size={16} />
+        <div className="absolute right-4 bottom-4 w-10 h-10 rounded-full bg-white/80 backdrop-blur-md text-p3-navy flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all shadow-md scale-75 group-hover:scale-100 border-[0.5px] border-black/5">
+          <ChevronRight size={20} strokeWidth={2.5} />
         </div>
       </div>
     </motion.div>
@@ -189,7 +191,7 @@ const SpatialMapHeader: FC<{
   }, [activeItem?.id]);
 
   return (
-    <div className="relative h-64 w-full rounded-[40px] overflow-hidden border-[3px] border-splat-dark shadow-splat-solid group">
+    <div className="relative h-64 w-full glass-card overflow-hidden shadow-glass-deep group border-[0.5px] border-white/40">
       <Map
         ref={mapRef}
         styles={{
@@ -213,14 +215,14 @@ const SpatialMapHeader: FC<{
       <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-white/90 pointer-events-none" />
 
       {/* 墨線裝飾 */}
-      <div className="absolute inset-x-8 bottom-8 flex justify-between items-end pointer-events-none">
+      <div className="absolute inset-x-8 bottom-10 flex justify-between items-end pointer-events-none">
         <div>
-          <h2 className="text-3xl font-black text-splat-dark italic tracking-tighter drop-shadow-sm uppercase">
-            {trip.dest} <span className="text-splat-blue">Express</span>
+          <h2 className="text-4xl boutique-h1 text-p3-navy drop-shadow-sm">
+            {trip.dest} <span className="text-p3-ruby">EXPRESS</span>
           </h2>
-          <p className="text-[10px] font-black text-splat-dark/40 tracking-[0.2em] mt-1">SPATIAL TIMELINE v2.0</p>
+          <p className="boutique-tag text-p3-navy/30 mt-2">SPATIAL TIMELINE v3.0</p>
         </div>
-        <div className="px-5 py-2 bg-splat-dark text-white rounded-full text-[10px] font-black tracking-widest uppercase">
+        <div className="px-6 py-2 bg-p3-navy text-white rounded-full boutique-tag">
           Live Tracking
         </div>
       </div>
@@ -254,6 +256,7 @@ const ScheduleItemRow: FC<{
     <motion.div
       layoutId={`card-${item.id}`}
       onClick={() => isEditMode ? (setEditingItem(item), setIsEditorOpen(true)) : setDetailItem(item)}
+      whileTap={{ scale: 0.95, transition: { type: 'spring', stiffness: 500, damping: 20 } }}
       className="relative pl-6 mb-8 group cursor-pointer"
     >
       {/* 動態連接線 */}
@@ -268,41 +271,41 @@ const ScheduleItemRow: FC<{
 
       <div className="flex gap-4">
         <div className="pt-4 min-w-[40px] text-right">
-          <span className="text-xs font-black text-splat-dark/30 italic">{item.time}</span>
+          <span className="boutique-tag text-p3-navy/30 italic">{item.time}</span>
         </div>
 
-        <div className="flex-1 bg-white border-[1px] border-splat-dark/10 rounded-[24px] p-5 hover:border-splat-dark/20 transition-all hover:shadow-xl hover:shadow-black/5 relative overflow-hidden group/card">
-          <div className="flex justify-between items-start mb-2">
+        <div className="flex-1 bg-white/40 backdrop-blur-3xl border-[0.5px] border-black/5 rounded-[32px] p-8 hover:border-black/10 transition-all hover:shadow-glass-deep relative overflow-hidden group/card shadow-sm">
+          <div className="flex justify-between items-start mb-4">
             <div>
-              <div className="flex items-center gap-2 mb-1">
-                <span className={`text-[9px] font-black px-2 py-0.5 rounded-full border-[1px] border-splat-dark/10 ${catStyle.text} uppercase tracking-tighter`}>
+              <div className="flex items-center gap-3 mb-3">
+                <span className={`boutique-tag px-3 py-1 rounded-full border-[0.5px] border-p3-navy/10 ${catStyle.text}`}>
                   {item.category}
                 </span>
-                {item.isCompleted && <Check size={12} className="text-splat-green" strokeWidth={4} />}
+                {item.isCompleted && <Check size={14} className="text-p3-navy" strokeWidth={3} />}
               </div>
-              <h4 className="font-bold text-lg text-splat-dark leading-tight">{item.title}</h4>
+              <h4 className="boutique-h2 text-xl text-p3-navy leading-tight">{item.title}</h4>
             </div>
             {item.images?.[0] && (
-              <div className="w-12 h-12 rounded-xl border-[1px] border-splat-dark/10 overflow-hidden rotate-3 group-hover/card:rotate-0 transition-transform">
+              <div className="w-16 h-16 rounded-2xl border-[0.5px] border-black/5 shadow-sm overflow-hidden transition-transform group-hover/card:scale-105">
                 <LazyImage src={item.images[0]} containerClassName="w-full h-full" alt="spot" />
               </div>
             )}
           </div>
 
-          <div className="flex items-center gap-3 mt-4 pt-4 border-t border-splat-dark/5">
-            <div className="flex items-center gap-1 text-[10px] font-bold text-gray-400 uppercase">
-              <MapPin size={10} /> {item.location}
+          <div className="flex items-center gap-6 mt-6 pt-6 border-t border-p3-navy/5">
+            <div className="flex items-center gap-2 boutique-tag text-p3-navy/30">
+              <MapPin size={12} strokeWidth={2.5} className="text-p3-gold" /> {item.location}
             </div>
             {item.cost > 0 && (
-              <div className="flex items-center gap-1 text-[10px] font-bold text-splat-orange uppercase">
-                <Star size={10} /> JPY {item.cost.toLocaleString()}
+              <div className="flex items-center gap-2 boutique-tag text-p3-ruby">
+                <Star size={12} strokeWidth={2.5} /> JPY {item.cost.toLocaleString()}
               </div>
             )}
           </div>
 
-          <div className="absolute right-4 bottom-4 opacity-0 group-hover/card:opacity-100 transition-opacity">
-            <div className="p-2 bg-splat-dark text-white rounded-full">
-              <ChevronRight size={14} />
+          <div className="absolute right-6 bottom-8 opacity-0 group-hover/card:opacity-100 transition-all active:scale-90">
+            <div className="p-3 bg-p3-navy text-white rounded-full shadow-lg">
+              <ChevronRight size={18} strokeWidth={2.5} />
             </div>
           </div>
         </div>
@@ -426,7 +429,7 @@ const ScheduleMapView: FC<{
 
   return (
     <div className="flex flex-col h-full gap-4 relative">
-      <div className="flex-1 relative rounded-[32px] overflow-hidden border-[4px] border-splat-dark shadow-splat-solid bg-gray-100">
+      <div className="flex-1 relative glass-card overflow-hidden border-[4px] border-p3-navy shadow-glass-deep bg-gray-100">
         <Map
           ref={mapRef as any}
           initialViewState={{
@@ -473,9 +476,9 @@ const ScheduleMapView: FC<{
                   onClick={(e) => { e.stopPropagation(); setSelectedAiPlace(place); }}
                   animate={{ y: [0, -10, 0] }}
                   transition={{ repeat: Infinity, duration: 1.5, delay: idx * 0.2 }}
-                  className="w-10 h-10 bg-splat-yellow rounded-full border-[3px] border-splat-dark flex items-center justify-center shadow-[0_0_15px_#FFC000]"
+                  className="w-10 h-10 bg-splat-yellow rounded-full border-[0.5px] border-p3-navy flex items-center justify-center shadow-[0_0_15px_#FFC000]"
                 >
-                  <Sparkles size={18} className="text-splat-dark" strokeWidth={3} />
+                  <Sparkles size={18} className="text-p3-navy" strokeWidth={3} />
                 </motion.div>
               </MarkerContent>
             </MapMarker>
@@ -488,21 +491,21 @@ const ScheduleMapView: FC<{
               latitude={selectedAiPlace.lat}
               onClose={() => setSelectedAiPlace(null)}
               closeButton={true}
-              className="border-[3px] border-splat-dark rounded-2xl shadow-splat-solid-sm p-4 w-56 bg-white relative"
+              className="border-[0.5px] border-p3-navy rounded-2xl shadow-glass-deep-sm p-4 w-56 bg-white relative"
             >
               <div className="pt-2">
                 <div className="text-[9px] font-black bg-splat-pink text-white px-2 py-0.5 rounded-full inline-block mb-1 tracking-widest">
                   AI DISCOVERY
                 </div>
-                <h4 className="font-black text-splat-dark text-base leading-tight mb-1">{selectedAiPlace.name}</h4>
+                <h4 className="font-black text-p3-navy text-base leading-tight mb-1">{selectedAiPlace.name}</h4>
                 <p className="text-xs font-bold text-gray-600 leading-snug mb-3">
                   {selectedAiPlace.reason}
                 </p>
-                <p className="text-[10px] font-black text-gray-400 mb-3 flex items-center gap-1">
+                <p className="boutique-tag text-gray-400 mb-3 flex items-center gap-1">
                   <Clock size={12} /> 建議停留: {selectedAiPlace.estimatedTime}
                 </p>
                 <button
-                  className="w-full bg-splat-green text-white font-black text-xs py-2.5 rounded-xl border-2 border-splat-dark shadow-sm active:translate-y-0.5 transition-transform flex items-center justify-center gap-2"
+                  className="w-full bg-splat-green text-white boutique-tag py-2.5 rounded-xl border-2 border-p3-navy shadow-sm active:translate-y-0.5 transition-transform flex items-center justify-center gap-2"
                   onClick={() => {
                     addScheduleItem(trip!.id, {
                       id: Date.now().toString(),
@@ -532,7 +535,7 @@ const ScheduleMapView: FC<{
 
         {/* 📍 頂部控制列：包含計數器與魔法雷達按鈕 */}
         <div className="absolute top-4 left-4 right-4 z-20 flex justify-between items-start pointer-events-none">
-          <div className="bg-white/90 backdrop-blur px-3 py-1.5 rounded-full border-2 border-splat-dark font-black text-[10px] flex items-center gap-2 shadow-sm">
+          <div className="bg-white/90 backdrop-blur px-3 py-1.5 rounded-full border-2 border-p3-navy boutique-tag flex items-center gap-2 shadow-sm">
             <MapIcon size={12} className="text-splat-blue" />
             {items.length} SPOTS
           </div>
@@ -540,7 +543,7 @@ const ScheduleMapView: FC<{
           <button
             onClick={handleExploreNearby}
             disabled={isExploring}
-            className="pointer-events-auto bg-splat-dark text-splat-yellow border-[3px] border-splat-dark px-4 py-2 rounded-2xl font-black text-xs flex items-center gap-2 shadow-splat-solid-sm active:translate-y-1 transition-all disabled:opacity-70"
+            className="pointer-events-auto bg-p3-navy text-splat-yellow border-[0.5px] border-p3-navy px-4 py-2 rounded-2xl boutique-tag flex items-center gap-2 shadow-glass-deep-sm active:translate-y-1 transition-all disabled:opacity-70"
           >
             {isExploring ? <Loader2 size={16} className="animate-spin text-white" /> : <Sparkles size={16} />}
             {isExploring ? "掃描中..." : "探索此區"}
@@ -583,9 +586,9 @@ const ScheduleMapView: FC<{
               key={item.id}
               whileTap={{ scale: 0.95 }}
               onClick={() => handleCardClick(item)}
-              className="snap-center shrink-0 w-44 bg-white border-[3px] border-splat-dark rounded-[20px] shadow-splat-solid-sm overflow-hidden flex cursor-pointer"
+              className="snap-center shrink-0 w-44 bg-white border-[0.5px] border-p3-navy rounded-[20px] shadow-glass-deep-sm overflow-hidden flex cursor-pointer"
             >
-              <div className={`w-1.5 ${catStyle.bg} h-full border-r-2 border-splat-dark`} />
+              <div className={`w-1.5 ${catStyle.bg} h-full border-r-2 border-p3-navy`} />
               <div className="flex-1 p-2.5 flex flex-col justify-between overflow-hidden">
                 <div className="text-[14px] font-black uppercase italic text-splat-blue leading-none mb-1">{item.time}</div>
                 <div className="text-[13px] font-black truncate">{item.title}</div>
@@ -1216,7 +1219,7 @@ export const Schedule: FC<{ externalDateIdx?: number }> = ({ externalDateIdx = 0
   if (!trip || dateRange.length === 0) return null;
 
   return (
-    <div className="flex flex-col h-full relative text-splat-dark">
+    <div className="flex flex-col h-full relative text-p3-navy">
       <div className="flex-1 overflow-y-auto hide-scrollbar p-6 space-y-8 pb-32">
         <div className="sticky top-0 z-50 bg-[#F4F5F7]/80 backdrop-blur-md pt-2 pb-6">
           <SpatialMapHeader trip={trip!} activeItem={activeDayItem} />
@@ -1224,9 +1227,9 @@ export const Schedule: FC<{ externalDateIdx?: number }> = ({ externalDateIdx = 0
           <div className="flex items-center justify-between mt-6 px-4">
             <div className="flex gap-4">
               <div onClick={() => setShowFullWeather(true)} className="flex items-center gap-3 cursor-pointer group">
-                <div className="text-3xl font-black text-splat-dark">{currentTempStr}°</div>
+                <div className="text-3xl font-black text-p3-navy">{currentTempStr}°</div>
                 <div>
-                  <div className="text-[10px] font-black text-splat-dark/40 uppercase tracking-widest">{weatherInfo.t}</div>
+                  <div className="boutique-tag text-p3-navy/40 uppercase tracking-widest">{weatherInfo.t}</div>
                   <div className="flex items-center gap-1 text-[10px] font-bold text-splat-blue">
                     <CloudRain size={10} /> {todayWeather.rain}%
                   </div>
@@ -1235,10 +1238,10 @@ export const Schedule: FC<{ externalDateIdx?: number }> = ({ externalDateIdx = 0
             </div>
 
             <div className="flex gap-2">
-              <motion.button whileTap={{ scale: 0.9 }} onClick={() => setViewMode(viewMode === 'list' ? 'map' : 'list')} className={`w-10 h-10 rounded-2xl flex items-center justify-center border-[1px] border-splat-dark/10 ${viewMode === 'map' ? 'bg-splat-blue text-white' : 'bg-white text-splat-dark shadow-xl shadow-black/5'}`}>
+              <motion.button whileTap={{ scale: 0.95, transition: { type: 'spring', stiffness: 500, damping: 20 } }} onClick={() => setViewMode(viewMode === 'list' ? 'map' : 'list')} className={`w-10 h-10 rounded-2xl flex items-center justify-center border-[1px] border-p3-navy/10 ${viewMode === 'map' ? 'bg-splat-blue text-white' : 'bg-white text-p3-navy shadow-xl shadow-black/5'}`}>
                 {viewMode === 'list' ? <MapIcon size={18} /> : <Camera size={18} />}
               </motion.button>
-              <motion.button whileTap={{ scale: 0.9 }} onClick={() => { setEditingItem(undefined); setIsEditorOpen(true) }} className="w-10 h-10 rounded-2xl bg-splat-dark text-white flex items-center justify-center shadow-xl shadow-splat-dark/20"><Plus size={20} /></motion.button>
+              <motion.button whileTap={{ scale: 0.95, transition: { type: 'spring', stiffness: 500, damping: 20 } }} onClick={() => { setEditingItem(undefined); setIsEditorOpen(true) }} className="w-12 h-12 rounded-2xl bg-p3-navy text-white flex items-center justify-center shadow-xl shadow-p3-navy/20 transition-shadow hover:shadow-p3-navy/40"><Plus size={18} strokeWidth={2.5} /></motion.button>
             </div>
           </div>
         </div>
@@ -1313,17 +1316,17 @@ export const Schedule: FC<{ externalDateIdx?: number }> = ({ externalDateIdx = 0
       <AnimatePresence>
         {detailItem && (
           <div
-            className="fixed inset-0 bg-splat-dark/60 backdrop-blur-xl z-[600] flex items-center justify-center p-0 sm:p-4"
+            className="fixed inset-0 bg-p3-navy/60 backdrop-blur-xl z-[600] flex items-center justify-center p-0 sm:p-4"
             onClick={() => setDetailItem(undefined)}
           >
             <motion.div
               layoutId={`card-${detailItem.id}`}
-              className="bg-[#F4F5F7] w-full h-full sm:h-auto sm:max-w-md sm:rounded-[40px] border-b-0 sm:border-[4px] border-splat-dark shadow-2xl flex flex-col overflow-hidden relative"
+              className="bg-[#F4F5F7] w-full h-full sm:h-auto sm:max-w-md sm:rounded-[40px] border-b-0 sm:border-[4px] border-p3-navy shadow-2xl flex flex-col overflow-hidden relative"
               onClick={e => e.stopPropagation()}
             >
               <button
                 onClick={() => setDetailItem(undefined)}
-                className="absolute top-6 right-6 z-[700] bg-white/80 backdrop-blur-sm border-[3px] border-splat-dark p-2 rounded-full shadow-splat-solid-sm active:scale-90 transition-transform"
+                className="absolute top-6 right-6 z-[700] bg-white/80 backdrop-blur-sm border-[0.5px] border-p3-navy p-2 rounded-full shadow-glass-deep-sm active:scale-90 transition-transform"
               >
                 <X size={20} strokeWidth={3} />
               </button>
@@ -1331,7 +1334,7 @@ export const Schedule: FC<{ externalDateIdx?: number }> = ({ externalDateIdx = 0
               <div className="flex-1 overflow-y-auto hide-scrollbar">
                 {/* --- 1. Header (Image or Theme) --- */}
                 {detailItem.__type === 'booking' && detailItem.type === 'flight' ? (
-                  <div className={`${getAirlineTheme(detailItem.airline).bgClass} h-40 flex items-center justify-center border-b-[4px] border-splat-dark relative overflow-hidden`}>
+                  <div className={`${getAirlineTheme(detailItem.airline).bgClass} h-40 flex items-center justify-center border-b-[4px] border-p3-navy relative overflow-hidden`}>
                     <div className="absolute inset-0 opacity-10 flex flex-wrap gap-4 p-4 pointer-events-none">
                       {Array.from({ length: 20 }).map((_, i) => <Plane key={i} size={40} className="rotate-45" />)}
                     </div>
@@ -1340,15 +1343,15 @@ export const Schedule: FC<{ externalDateIdx?: number }> = ({ externalDateIdx = 0
                     </span>
                   </div>
                 ) : (
-                  <div className="h-64 bg-gray-200 relative border-b-[4px] border-splat-dark shrink-0">
+                  <div className="h-64 bg-gray-200 relative border-b-[4px] border-p3-navy shrink-0">
                     <LazyImage
                       src={detailItem.images?.[0] || ''}
                       containerClassName="w-full h-full"
                       alt="hero"
                     />
                     {!detailItem.images?.[0] && (
-                      <div className="w-full h-full flex items-center justify-center bg-splat-dark/5">
-                        {detailItem.type === 'hotel' ? <Home size={64} className="text-splat-dark/10" /> : <MapPin size={64} className="text-splat-dark/10" />}
+                      <div className="w-full h-full flex items-center justify-center bg-p3-navy/5">
+                        {detailItem.type === 'hotel' ? <Home size={64} className="text-p3-navy/10" /> : <MapPin size={64} className="text-p3-navy/10" />}
                       </div>
                     )}
                   </div>
@@ -1359,37 +1362,37 @@ export const Schedule: FC<{ externalDateIdx?: number }> = ({ externalDateIdx = 0
                   {/* Title & Badge */}
                   <div>
                     <div className="flex items-center gap-2 mb-2">
-                      <span className={`text-[9px] font-black px-3 py-1 rounded-full border-[2px] border-splat-dark uppercase tracking-widest ${detailItem.__type === 'booking' ? 'bg-splat-yellow text-splat-dark' : 'bg-white text-splat-dark'}`}>
+                      <span className={`text-[9px] font-black px-3 py-1 rounded-full border-[2px] border-p3-navy uppercase tracking-widest ${detailItem.__type === 'booking' ? 'bg-splat-yellow text-p3-navy' : 'bg-white text-p3-navy'}`}>
                         {detailItem.category || detailItem.type}
                       </span>
                     </div>
-                    <h2 className="text-3xl font-black text-splat-dark italic tracking-tighter leading-none">{detailItem.title}</h2>
+                    <h2 className="text-3xl font-black text-p3-navy italic tracking-tighter leading-none">{detailItem.title}</h2>
                   </div>
 
                   {/* Flight Special Details */}
                   {detailItem.__type === 'booking' && detailItem.type === 'flight' && (
                     <div className="space-y-4">
                       {detailItem.pnr && (
-                        <div className="bg-white border-[3px] border-splat-dark rounded-2xl p-5 shadow-splat-solid-sm flex justify-between items-center group active:scale-[0.98] transition-all" onClick={() => { navigator.clipboard.writeText(detailItem.pnr); triggerHaptic('success'); showToast("PNR 已複製！🦑", "success"); }}>
+                        <div className="bg-white border-[0.5px] border-p3-navy rounded-2xl p-5 shadow-glass-deep-sm flex justify-between items-center group active:scale-[0.98] transition-all" onClick={() => { navigator.clipboard.writeText(detailItem.pnr); triggerHaptic('success'); showToast("PNR 已複製！🦑", "success"); }}>
                           <div>
-                            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Confirmation PNR</p>
-                            <p className="text-3xl font-black text-splat-dark tracking-[0.2em]">{detailItem.pnr}</p>
+                            <p className="boutique-tag text-gray-400 uppercase tracking-widest mb-1">Confirmation PNR</p>
+                            <p className="text-3xl font-black text-p3-navy tracking-[0.2em]">{detailItem.pnr}</p>
                           </div>
-                          <div className="w-12 h-12 rounded-xl bg-splat-yellow border-[3px] border-splat-dark flex items-center justify-center text-splat-dark group-hover:bg-splat-dark group-hover:text-white transition-colors">
+                          <div className="w-12 h-12 rounded-xl bg-splat-yellow border-[0.5px] border-p3-navy flex items-center justify-center text-p3-navy group-hover:bg-p3-navy group-hover:text-white transition-colors">
                             <Copy size={20} />
                           </div>
                         </div>
                       )}
                       <div className="grid grid-cols-3 gap-3">
-                        <div className="bg-white border-[2px] border-splat-dark/10 rounded-xl p-3 text-center">
+                        <div className="bg-white border-[2px] border-p3-navy/10 rounded-xl p-3 text-center">
                           <span className="text-[9px] font-black text-gray-400 block uppercase mb-1">Terminal</span>
-                          <span className="text-xl font-black text-splat-dark">{detailItem.terminal || '--'}</span>
+                          <span className="text-xl font-black text-p3-navy">{detailItem.terminal || '--'}</span>
                         </div>
-                        <div className="bg-white border-[2px] border-splat-dark/10 rounded-xl p-3 text-center">
+                        <div className="bg-white border-[2px] border-p3-navy/10 rounded-xl p-3 text-center">
                           <span className="text-[9px] font-black text-gray-400 block uppercase mb-1">Gate</span>
-                          <span className="text-xl font-black text-splat-dark">{detailItem.gate || '--'}</span>
+                          <span className="text-xl font-black text-p3-navy">{detailItem.gate || '--'}</span>
                         </div>
-                        <div className="bg-white border-[2px] border-splat-dark/10 rounded-xl p-3 text-center">
+                        <div className="bg-white border-[2px] border-p3-navy/10 rounded-xl p-3 text-center">
                           <span className="text-[9px] font-black text-gray-400 block uppercase mb-1">Boarding</span>
                           <span className="text-xl font-black text-splat-pink">{detailItem.boardingTime || '--:--'}</span>
                         </div>
@@ -1398,7 +1401,7 @@ export const Schedule: FC<{ externalDateIdx?: number }> = ({ externalDateIdx = 0
                         href={`https://www.google.com/search?q=Flight+Status+${detailItem.flightNo}`}
                         target="_blank"
                         rel="noreferrer"
-                        className="w-full py-4 bg-splat-dark text-white rounded-2xl font-black uppercase tracking-widest text-center flex items-center justify-center gap-3 shadow-splat-solid active:translate-y-1 transition-all"
+                        className="w-full py-4 bg-p3-navy text-white rounded-2xl font-black uppercase tracking-widest text-center flex items-center justify-center gap-3 shadow-glass-deep active:translate-y-1 transition-all"
                       >
                         <Plane size={18} /> Live Status ➔
                       </a>
@@ -1407,34 +1410,34 @@ export const Schedule: FC<{ externalDateIdx?: number }> = ({ externalDateIdx = 0
 
                   {/* Hotel Special Details */}
                   {detailItem.__type === 'booking' && detailItem.type === 'hotel' && (
-                    <div className="space-y-4">
-                      <div className="bg-white border-[3px] border-splat-dark rounded-2xl p-5 shadow-splat-solid-sm space-y-4">
-                        <div className="flex justify-between border-b-2 border-dashed border-gray-100 pb-4">
+                    <div className="space-y-8">
+                      <div className="glass-card bg-white/20 backdrop-blur-3xl border-[0.5px] border-white/40 p-10 space-y-8 shadow-glass-deep">
+                        <div className="flex justify-between border-b-[0.5px] border-p3-navy/5 pb-8">
                           <div>
-                            <span className="text-[10px] font-black text-gray-400 uppercase block mb-1">Check-In</span>
-                            <span className="text-xl font-black text-splat-dark">{detailItem.checkInTime || '15:00'}</span>
+                            <span className="boutique-tag text-p3-navy/30 block mb-2">Check-In</span>
+                            <span className="text-3xl boutique-h1 text-p3-navy">{detailItem.checkInTime || '15:00'}</span>
                           </div>
                           <div className="text-right">
-                            <span className="text-[10px] font-black text-gray-400 uppercase block mb-1">Check-Out</span>
-                            <span className="text-xl font-black text-splat-dark">{detailItem.checkOutTime || '11:00'}</span>
+                            <span className="boutique-tag text-p3-navy/30 block mb-2">Check-Out</span>
+                            <span className="text-3xl boutique-h1 text-p3-navy">{detailItem.checkOutTime || '11:00'}</span>
                           </div>
                         </div>
                         {detailItem.confirmationNo && (
-                          <div className="flex justify-between items-center bg-gray-50 px-4 py-2 rounded-lg border border-gray-100">
-                            <span className="text-[10px] font-black text-gray-400 uppercase">Room Type</span>
-                            <span className="text-sm font-black text-splat-dark">{detailItem.roomType || 'Standard Room'}</span>
+                          <div className="flex justify-between items-center pt-2">
+                            <span className="boutique-tag text-p3-navy/30">Room Type</span>
+                            <span className="boutique-h2 text-p3-navy">{detailItem.roomType || 'Standard Room'}</span>
                           </div>
                         )}
                       </div>
                       <div className="flex gap-3">
                         <button
-                          className="flex-1 py-4 bg-white border-[3px] border-splat-dark rounded-2xl font-black uppercase text-xs flex items-center justify-center gap-2 shadow-splat-solid-sm active:translate-y-1 transition-all"
+                          className="flex-1 py-4 bg-white border-[0.5px] border-p3-navy rounded-2xl font-black uppercase text-xs flex items-center justify-center gap-2 shadow-glass-deep-sm active:translate-y-1 transition-all"
                           onClick={() => window.open(`tel:${detailItem.phone || ''}`)}
                         >
                           <Phone size={16} /> Contact
                         </button>
                         <button
-                          className="flex-1 py-4 bg-splat-green text-white border-[3px] border-splat-dark rounded-2xl font-black uppercase text-xs flex items-center justify-center gap-2 shadow-splat-solid-sm active:translate-y-1 transition-all"
+                          className="flex-1 py-4 bg-splat-green text-white border-[0.5px] border-p3-navy rounded-2xl font-black uppercase text-xs flex items-center justify-center gap-2 shadow-glass-deep-sm active:translate-y-1 transition-all"
                           onClick={() => window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(detailItem.location || "")}`, '_blank')}
                         >
                           <MapPin size={16} /> Map
@@ -1445,21 +1448,23 @@ export const Schedule: FC<{ externalDateIdx?: number }> = ({ externalDateIdx = 0
 
                   {/* Regular Schedule Details */}
                   {detailItem.__type === 'schedule' && (
-                    <div className="space-y-6">
-                      <div className="p-4 bg-white border-[3px] border-splat-dark rounded-2xl shadow-splat-solid-sm">
-                        <h4 className="text-[10px] font-black uppercase mb-2 flex items-center gap-1.5"><Sparkles size={14} className="text-splat-yellow" /> AI Spot Insight</h4>
+                    <div className="space-y-10">
+                      <div className="p-10 glass-card bg-white/20 backdrop-blur-3xl border-[0.5px] border-white/40 shadow-glass-deep">
+                        <h4 className="boutique-tag text-p3-navy/30 mb-6 flex items-center gap-3">
+                          <Sparkles size={16} strokeWidth={2.5} className="text-p3-gold" /> AI Spot Insight
+                        </h4>
                         {detailItem.spotGuide ? (
-                          <div className="text-sm font-bold text-gray-700 whitespace-pre-wrap leading-relaxed">{detailItem.spotGuide.background}</div>
+                          <div className="boutique-body text-p3-navy/80 whitespace-pre-wrap">{detailItem.spotGuide.background}</div>
                         ) : spotAiLoading === detailItem.id && completion ? (
-                          <div className="text-sm font-bold text-gray-700 whitespace-pre-wrap leading-relaxed animate-pulse">{completion}</div>
+                          <div className="boutique-body text-p3-navy/40 whitespace-pre-wrap animate-pulse">{completion}</div>
                         ) : (
-                          <button onClick={() => handleFetchSpotGuide(detailItem)} disabled={!!spotAiLoading} className="w-full py-4 border-2 border-dashed border-gray-300 rounded-xl text-xs font-black text-gray-400 hover:text-splat-dark transition-colors">
-                            {spotAiLoading === detailItem.id ? <Loader2 size={16} className="animate-spin" /> : '取得 AI 景點智慧導覽'}
+                          <button onClick={() => handleFetchSpotGuide(detailItem)} disabled={!!spotAiLoading} className="w-full py-6 border-[0.5px] border-dashed border-p3-navy/20 rounded-[22px] boutique-tag text-p3-navy/40 hover:text-p3-navy hover:bg-white/40 transition-all">
+                            {spotAiLoading === detailItem.id ? <Loader2 size={20} className="animate-spin" /> : '取得 AI 景點智慧導覽'}
                           </button>
                         )}
                       </div>
 
-                      <button onClick={() => window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(detailItem.location || "")}`, '_blank')} className="btn-splat w-full py-5 bg-splat-blue text-white flex items-center justify-center gap-3 text-lg">
+                      <button onClick={() => window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(detailItem.location || "")}`, '_blank')} className="w-full py-5 bg-p3-navy text-white rounded-[22px] shadow-glass-deep flex items-center justify-center gap-3 text-lg font-black active:scale-95 transition-all border-[0.5px] border-white/20">
                         <MapPin size={24} strokeWidth={3} /> 開啟 Google Maps
                       </button>
                     </div>

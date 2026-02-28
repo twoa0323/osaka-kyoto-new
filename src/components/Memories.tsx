@@ -75,21 +75,21 @@ export const Memories = () => {
 
             {/* 墨水莖 (Central Ink Stem) - P3 廣色域效果 */}
             <div
-                className="absolute left-[34px] top-0 bottom-0 w-[4px] z-0 opacity-20"
+                className="absolute left-[34px] top-0 bottom-0 w-[2px] z-0 opacity-10"
                 style={{
-                    background: 'linear-gradient(to bottom, color(display-p3 0.16 0.2 0.81), color(display-p3 0.94 0.24 0.41), color(display-p3 1 0.75 0))'
+                    background: 'linear-gradient(to bottom, var(--p3-navy), var(--p3-ruby), var(--p3-gold))'
                 }}
             />
 
             {/* Header */}
             <div className="flex justify-between items-end mb-10 pl-2 relative z-10">
                 <div>
-                    <h2 className="text-3xl font-black text-splat-dark italic tracking-tighter uppercase leading-none">The Stream</h2>
+                    <h2 className="text-3xl font-black text-p3-navy italic tracking-tighter uppercase leading-none">The Stream</h2>
                     <p className="text-[10px] font-black text-gray-400 mt-2 tracking-[0.2em] uppercase">Life Chronicles v1.0</p>
                 </div>
                 <button
                     onClick={() => triggerHaptic('medium')}
-                    className="w-12 h-12 rounded-2xl bg-white border-[3px] border-splat-dark shadow-splat-solid-sm flex items-center justify-center text-splat-dark active:translate-y-1 transition-all"
+                    className="w-12 h-12 rounded-2xl bg-white border-[0.5px] border-p3-navy shadow-glass-deep-sm flex items-center justify-center text-p3-navy active:translate-y-1 transition-all"
                 >
                     <Camera size={24} strokeWidth={2.5} />
                 </button>
@@ -102,7 +102,7 @@ export const Memories = () => {
                         <MemoryCard key={item.id} item={item} index={idx} />
                     ))
                 ) : (
-                    <div className="py-20 text-center bg-white border-[3px] border-dashed border-gray-300 rounded-[40px] text-gray-400 font-bold italic">
+                    <div className="py-20 text-center bg-white border-[0.5px] border-dashed border-gray-300 rounded-[40px] text-gray-400 font-bold italic">
                         開始記錄旅行中的點滴吧... ✨
                     </div>
                 )}
@@ -120,20 +120,20 @@ const MemoryCard = ({ item, index }: { item: StreamItem, index: number }) => {
     // 取得封面圖與標籤回饋
     let image = '';
     let emblem = '';
-    let accentColor = 'bg-splat-blue';
+    let accentColor = 'bg-p3-navy';
 
     if (isJournal) {
         image = item.images?.[0] || '';
         emblem = '📝';
-        accentColor = 'bg-splat-orange';
+        accentColor = 'bg-p3-gold';
     } else if (isShopping) {
         image = item.images?.[0] || '';
         emblem = '🛍️';
-        accentColor = 'bg-splat-pink';
+        accentColor = 'bg-p3-ruby';
     } else if (isExpense) {
         image = item.images?.[0] || '';
         emblem = CATEGORY_STAMPS[item.category] || '💰';
-        accentColor = 'bg-splat-green';
+        accentColor = 'bg-p3-navy/60';
     }
 
     const rotation = useMemo(() => (index % 2 === 0 ? -1 : 1.5) + (Math.random() * 2 - 1), [index]);
@@ -147,22 +147,22 @@ const MemoryCard = ({ item, index }: { item: StreamItem, index: number }) => {
         >
             {/* Date Marker & Connection Dot */}
             <div className="mt-8 shrink-0 relative z-10">
-                <div className={`w-5 h-5 rounded-full border-[3px] border-white shadow-md ring-4 ring-offset-0 ring-[rgba(0,0,0,0.05)] ${accentColor}`} />
+                <div className={`w-5 h-5 rounded-full border-[0.5px] border-white shadow-md ring-4 ring-offset-0 ring-[rgba(0,0,0,0.05)] ${accentColor}`} />
             </div>
 
             {/* Polaroid Container */}
             <motion.div
                 style={{ rotate: rotation }}
-                className="bg-white p-3 pb-8 rounded-sm border-[1px] border-gray-200 shadow-xl w-full"
+                className="bg-white p-3 pb-10 rounded-sm shadow-glass-deep w-full border-[0.5px] border-black/5"
             >
                 {/* Photo Slot */}
-                <div className="aspect-[4/3] bg-gray-100 rounded-sm overflow-hidden border-[1px] border-gray-100 relative mb-4">
+                <div className="aspect-[4/3] bg-gray-50 rounded-sm overflow-hidden border-[0.5px] border-black/5 relative mb-4">
                     {image ? (
-                        <img src={image} className="w-full h-full object-cover grayscale-[0.2] hover:grayscale-0 transition-all duration-700" alt="memory" />
+                        <img src={image} className="w-full h-full object-cover grayscale-[0.1] hover:grayscale-0 transition-all duration-1000" alt="memory" />
                     ) : (
-                        <div className="w-full h-full flex flex-col items-center justify-center bg-[radial-gradient(#e5e7eb_1px,transparent_1px)] [background-size:12px_12px]">
-                            <div className="text-[60px] opacity-20 filter blur-[1px] select-none">{emblem}</div>
-                            <p className="text-[10px] font-black text-gray-300 uppercase tracking-widest mt-2 italic">AI Memory Stamp</p>
+                        <div className="w-full h-full flex flex-col items-center justify-center bg-[radial-gradient(#e5e7eb_1px,transparent_1px)] [background-size:16px_16px]">
+                            <div className="text-[60px] opacity-10 filter grayscale select-none">{emblem}</div>
+                            <p className="text-[10px] font-black text-gray-200 uppercase tracking-widest mt-2 italic">Captured Moment</p>
                         </div>
                     )}
 
@@ -177,7 +177,7 @@ const MemoryCard = ({ item, index }: { item: StreamItem, index: number }) => {
                 {/* Caption Area (Handwriting Feel) */}
                 <div className="px-1 space-y-1">
                     <div className="flex justify-between items-baseline">
-                        <h4 className="font-black text-sm text-splat-dark truncate flex-1 pr-4">{item.title}</h4>
+                        <h4 className="font-black text-sm text-p3-navy truncate flex-1 pr-4">{item.title}</h4>
                         <span className="text-[10px] font-bold text-gray-400 italic">
                             {format(parseISO(item.date), 'MMM dd')}
                         </span>
@@ -188,22 +188,22 @@ const MemoryCard = ({ item, index }: { item: StreamItem, index: number }) => {
                             {isJournal && (
                                 <div className="flex gap-1">
                                     {Array.from({ length: item.rating }).map((_, i) => (
-                                        <Star key={i} size={10} className="fill-splat-yellow text-splat-yellow" />
+                                        <Star key={i} size={10} className="fill-p3-gold text-p3-gold" />
                                     ))}
                                 </div>
                             )}
                             {isExpense && (
-                                <p className="text-[10px] font-black text-splat-green uppercase">
+                                <p className="text-[10px] font-black text-p3-navy/80 uppercase">
                                     Cash Flow: ¥{(item as any).displayAmount?.toLocaleString()}
                                 </p>
                             )}
                             {isShopping && (
-                                <p className="text-[10px] font-black text-splat-pink uppercase">
+                                <p className="text-[10px] font-black text-p3-ruby uppercase">
                                     Picked up at {(item as any).storeName || 'Store'} (¥{(item as any).displayAmount?.toLocaleString()})
                                 </p>
                             )}
                             {isJournal && (item as any).displayAmount && (
-                                <p className="text-[10px] font-black text-splat-orange uppercase">
+                                <p className="text-[10px] font-black text-p3-gold uppercase">
                                     Cost: ¥{(item as any).displayAmount?.toLocaleString()}
                                 </p>
                             )}
@@ -211,7 +211,7 @@ const MemoryCard = ({ item, index }: { item: StreamItem, index: number }) => {
 
                         <motion.button
                             whileTap={{ scale: 0.9 }}
-                            className="w-7 h-7 rounded-full bg-gray-50 flex items-center justify-center text-gray-400 border border-gray-200 hover:text-splat-dark transition-colors"
+                            className="w-7 h-7 rounded-full bg-gray-50 flex items-center justify-center text-gray-400 border border-gray-200 hover:text-p3-navy transition-colors"
                         >
                             <Heart size={14} />
                         </motion.button>
@@ -223,10 +223,10 @@ const MemoryCard = ({ item, index }: { item: StreamItem, index: number }) => {
                     <motion.button
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
-                        className="mt-6 w-full py-2 bg-splat-blue/5 border-2 border-dashed border-splat-blue/20 rounded-lg flex items-center justify-center gap-2 group/btn"
+                        className="mt-6 w-full py-2 bg-p3-navy/5 border-[0.5px] border-dashed border-p3-navy/20 rounded-xl flex items-center justify-center gap-2 group/btn"
                     >
-                        <Sparkles size={12} className="text-splat-blue group-hover/btn:animate-spin" />
-                        <span className="text-[10px] font-black text-splat-blue uppercase">Add foodie memory for this?</span>
+                        <Sparkles size={12} className="text-p3-navy group-hover/btn:animate-spin" />
+                        <span className="text-[10px] font-black text-p3-navy uppercase tracking-wider">Add foodie memory for this?</span>
                     </motion.button>
                 )}
             </motion.div>
