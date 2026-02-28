@@ -174,8 +174,8 @@ const UISettingsContainer = memo(({
                 key={lang.id}
                 onClick={() => setUISettings({ ...uiSettings, language: lang.id })}
                 className={`py-3 rounded-2xl text-[10px] font-black transition-all border-[0.5px] ${uiSettings.language === lang.id
-                    ? 'bg-p3-navy text-white border-p3-navy shadow-glass-deep'
-                    : 'bg-white/40 text-p3-navy border-black/10'
+                  ? 'bg-p3-navy text-white border-p3-navy shadow-glass-deep'
+                  : 'bg-white/40 text-p3-navy border-black/10'
                   }`}
               >
                 {lang.label}
@@ -342,7 +342,7 @@ const App: FC = () => {
 
   useFirebaseSync();
 
-  const currentTrip = trips.find(t => t.id === currentTripId) || trips[0];
+  const currentTrip = trips.find(trip => trip.id === currentTripId) || trips[0];
 
   useEffect(() => {
     if (currentTrip && (!currentTrip.members || currentTrip.members.length === 0)) {
@@ -424,7 +424,7 @@ const App: FC = () => {
 
 
   const confirmTripSwitch = () => {
-    const target = trips.find(t => t.id === lockedTripId);
+    const target = trips.find(trip => trip.id === lockedTripId);
     if (target?.tripPin === verifyPin) {
       switchTrip(lockedTripId!);
       setLockedTripId(null);
@@ -522,17 +522,17 @@ const App: FC = () => {
                   className="absolute top-[120%] left-0 w-64 bg-white border-[3px] border-splat-dark rounded-[24px] shadow-splat-solid z-[110] overflow-hidden"
                 >
                   <div className="p-3 max-h-48 overflow-y-auto hide-scrollbar">
-                    {trips.map(t => {
-                      const isCreator = t.creatorId === (auth.currentUser?.uid || 'unknown');
+                    {trips.map(tripItem => {
+                      const isCreator = tripItem.creatorId === (auth.currentUser?.uid || 'unknown');
                       return (
-                        <div key={t.id} className={`flex items-center justify-between p-3 rounded-xl border-2 mb-2 ${t.id === currentTrip.id ? 'bg-splat-yellow border-splat-dark' : 'border-transparent hover:border-gray-200'}`}>
-                          <button className="flex-1 text-left font-black text-sm truncate pr-2" onClick={() => { if (t.id === currentTrip.id) return; setLockedTripId(t.id); setVerifyPin(''); }}>{t.tripName || t.dest}</button>
+                        <div key={tripItem.id} className={`flex items-center justify-between p-3 rounded-xl border-2 mb-2 ${tripItem.id === currentTrip.id ? 'bg-splat-yellow border-splat-dark' : 'border-transparent hover:border-gray-200'}`}>
+                          <button className="flex-1 text-left font-black text-sm truncate pr-2" onClick={() => { if (tripItem.id === currentTrip.id) return; setLockedTripId(tripItem.id); setVerifyPin(''); }}>{tripItem.tripName || tripItem.dest}</button>
                           <button onClick={() => {
                             if (isCreator) {
-                              deleteTrip(t.id);
+                              deleteTrip(tripItem.id);
                               showToast("行程已永久刪除 🗑️", "success");
                             } else {
-                              removeTripLocal(t.id);
+                              removeTripLocal(tripItem.id);
                               showToast("已退出行程 👋", "info");
                             }
                           }} className="text-red-500 hover:scale-110 transition-transform shrink-0">
@@ -548,7 +548,7 @@ const App: FC = () => {
                       onClick={async () => {
                         const shareId = prompt("請輸入旅伴提供的行程代碼 (ID):");
                         if (!shareId) return;
-                        if (trips.find(t => t.id === shareId)) {
+                        if (trips.find(trip => trip.id === shareId)) {
                           showToast("您已經在這個行程裡囉！", "info");
                           return;
                         }

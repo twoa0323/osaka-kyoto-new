@@ -36,6 +36,7 @@ export const dictionaries: Record<AppLanguage, Dictionary> = {
         'common.verifyBeforeTrip': '行前認證',
         'common.cancel': '取消',
         'common.unlock': '解鎖',
+        'common.saveConfirm': '確認儲存 ➔',
         'ar.gyroscopeNeeded': '我們需要讀取手機的陀螺儀\n來為您指引物理方向 🧭',
         'ar.noLocation': '無法取得定位資訊',
         'ar.gyroPermissionRequired': '需要陀螺儀權限才能使用羅盤唷！',
@@ -91,6 +92,9 @@ export const dictionaries: Record<AppLanguage, Dictionary> = {
         'expense.categoryLabel': '分類標籤',
         'expense.methodLabel': '支付方式',
         'expense.noteLabel': '摘要備註',
+        'expense.uploadFailed': '上傳失敗',
+        'expense.budgetExceeded': '超過預算',
+        'expense.budgetApproaching': '將達預算',
 
         // Memories
         'memories.title': '回憶日誌',
@@ -359,6 +363,7 @@ export const dictionaries: Record<AppLanguage, Dictionary> = {
         'common.verifyBeforeTrip': 'Pre-trip Verification',
         'common.cancel': 'Cancel',
         'common.unlock': 'Unlock',
+        'common.saveConfirm': 'Save Confirm ➔',
         'ar.gyroscopeNeeded': 'We need to access your gyroscope\nto guide you in the right direction 🧭',
         'ar.noLocation': 'Cannot get location information',
         'ar.gyroPermissionRequired': 'Gyroscope permission is required to use the compass!',
@@ -414,6 +419,9 @@ export const dictionaries: Record<AppLanguage, Dictionary> = {
         'expense.categoryLabel': 'Category',
         'expense.methodLabel': 'Payment Method',
         'expense.noteLabel': 'Notes',
+        'expense.uploadFailed': 'Upload Failed',
+        'expense.budgetExceeded': 'Budget Exceeded',
+        'expense.budgetApproaching': 'Budget Approaching',
 
         // Memories
         'memories.title': 'The Stream',
@@ -682,6 +690,7 @@ export const dictionaries: Record<AppLanguage, Dictionary> = {
         'common.verifyBeforeTrip': '事前認証',
         'common.cancel': 'キャンセル',
         'common.unlock': 'ロック解除',
+        'common.saveConfirm': '保存する ➔',
         'ar.gyroscopeNeeded': '方向を案内するために\nジャイロスコープへのアクセスが必要です 🧭',
         'ar.noLocation': '位置情報を取得できません',
         'ar.gyroPermissionRequired': 'コンパスを使用するにはジャイロスコープの権限が必要です！',
@@ -737,6 +746,9 @@ export const dictionaries: Record<AppLanguage, Dictionary> = {
         'expense.categoryLabel': 'カテゴリー',
         'expense.methodLabel': '支払い方法',
         'expense.noteLabel': 'メモ',
+        'expense.uploadFailed': 'アップロード失敗',
+        'expense.budgetExceeded': '予算超過',
+        'expense.budgetApproaching': '予算が近づいています',
 
         // Memories
         'memories.title': 'タイムライン',
@@ -821,7 +833,12 @@ export const dictionaries: Record<AppLanguage, Dictionary> = {
         'booking.editor.spotAddress': 'スポット住所',
         'booking.editor.changePhoto': '写真を変更',
         'booking.editor.uploadPhoto': '写真をアップロード',
-        'booking.editor.notes': '詳細メモ',
+        'booking.editor.mapLinkGenerated': 'Googleマップのリンクを生成しました！',
+        'booking.editor.generateMapLink': '地図リンクを生成',
+        'booking.editor.inputName': '名称を入力してください！',
+        'booking.editor.inputFlightNo': '便名を入力してください！',
+        'booking.editor.aiSuccess': '✨ AI解析成功！自動入力しました。',
+        'booking.editor.aiFailed': 'AI解析に失敗しました。手動で入力してください。',
         'booking.spot': 'スポット',
         'booking.voucher': 'チケット',
         'booking.emptyPocket': '空っぽです 🏮',

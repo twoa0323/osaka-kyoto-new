@@ -69,7 +69,7 @@ const getCountdown = (dateStr: string, timeStr?: string, t?: any, lang?: string)
 export const Booking = () => {
   const { t, language } = useTranslation();
   const { trips, currentTripId, deleteBookingItem, showToast } = useTripStore();
-  const trip = trips.find(t => t.id === currentTripId);
+  const trip = trips.find(trip => trip.id === currentTripId);
   const [activeSubTab, setActiveSubTab] = useState<'flight' | 'hotel' | 'spot' | 'voucher'>('flight');
   const [editingItem, setEditingItem] = useState<BookingItem | undefined>();
   const [detailItem, setDetailItem] = useState<BookingItem | undefined>();
@@ -114,25 +114,25 @@ export const Booking = () => {
       {/* 1. 子選單導航列 (iOS Pill 動效) */}
       <div className="sticky top-0 z-20 py-2 bg-[#F4F5F7]/80 backdrop-blur-md">
         <div className="flex glass-card p-1.5 border-[0.5px] border-white/40 shadow-glass-soft relative overflow-hidden">
-          {['flight', 'hotel', 'spot', 'voucher'].map((t: any) => {
-            const isActive = activeSubTab === t;
+          {['flight', 'hotel', 'spot', 'voucher'].map((tabType: any) => {
+            const isActive = activeSubTab === tabType;
             return (
               <button
-                key={t}
-                onClick={() => setActiveSubTab(t)}
+                key={tabType}
+                onClick={() => setActiveSubTab(tabType)}
                 className="flex-1 flex flex-col items-center justify-center py-2 relative z-10"
               >
                 {isActive && (
                   <motion.div
                     layoutId="active-pill"
-                    className={`absolute inset-0 rounded-[22px] border-[0.5px] border-white/20 shadow-glass-deep ${SUBTAB_COLORS[t]}`}
+                    className={`absolute inset-0 rounded-[22px] border-[0.5px] border-white/20 shadow-glass-deep ${SUBTAB_COLORS[tabType]}`}
                     transition={{ type: "spring", bounce: 0.2, duration: 0.5 }}
                   />
                 )}
                 <div className={`relative z-20 flex flex-col items-center transition-colors duration-300 ${isActive ? 'text-white' : 'text-gray-400'}`}>
-                  {t === 'flight' ? <Plane size={18} /> : t === 'hotel' ? <Home size={18} /> : t === 'spot' ? <MapPin size={18} /> : <QrCode size={18} />}
+                  {tabType === 'flight' ? <Plane size={18} /> : tabType === 'hotel' ? <Home size={18} /> : tabType === 'spot' ? <MapPin size={18} /> : <QrCode size={18} />}
                   <span className="text-[10px] mt-1 uppercase font-black tracking-widest opacity-80 scale-90">
-                    {t(`booking.${t}` as any) || t}
+                    {t(`booking.${tabType}` as any) || tabType}
                   </span>
                 </div>
               </button>

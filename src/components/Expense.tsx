@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useMemo, ChangeEvent } from 'react';
 import { useTripStore } from '../store/useTripStore';
+import { useTranslation } from '../hooks/useTranslation';
 import {
   Wallet, Coins, Trash2, Camera, BarChart3, Upload, PenTool,
   LayoutList, Settings, CheckCircle, Image as ImageIcon,
@@ -241,6 +242,7 @@ const SettlementSection = ({ expenses, members, rate }: { expenses: ExpenseItem[
 };
 
 export const Expense = () => {
+  const { t } = useTranslation();
   const { trips, currentTripId, exchangeRate, addExpenseItem, deleteExpenseItem, updateExpenseItem, updateTripData, setExchangeRate, showToast } = useTripStore();
   const trip = trips.find(t => t.id === currentTripId);
 
@@ -268,22 +270,22 @@ export const Expense = () => {
     if (globalActiveTab === 'expense' && trip?.baseCurrency && trip.baseCurrency !== 'TWD') {
       // 📍 檢查上次更新時間，避免 1 小時內重複抓取
       const ONE_HOUR = 3600000;
-      if (trip.lastRateUpdate && (Date.now() - trip.lastRateUpdate < ONE_HOUR)) {
+      if (trip?.lastRateUpdate && (Date.now() - trip.lastRateUpdate < ONE_HOUR)) {
         if (trip.lastFetchedRate) setExchangeRate(trip.lastFetchedRate);
         return;
       }
 
-      fetch(`https://open.er-api.com/v6/latest/${trip.baseCurrency}`)
+      fetch(`https://open.er-api.com/v6/latest/${trip?.baseCurrency}`)
         .then(res => res.json())
         .then(data => {
           if (data?.rates?.TWD) {
             setExchangeRate(data.rates.TWD);
-            updateTripData(trip.id, { lastFetchedRate: data.rates.TWD, lastRateUpdate: Date.now() });
+            if (trip) updateTripData(trip.id, { lastFetchedRate: data.rates.TWD, lastRateUpdate: Date.now() });
           }
         })
         .catch(() => {
-          if (trip.lastFetchedRate) setExchangeRate(trip.lastFetchedRate);
-          else setExchangeRate(trip.baseCurrency === 'JPY' ? 0.21 : 1);
+          if (trip?.lastFetchedRate) setExchangeRate(trip.lastFetchedRate);
+          else setExchangeRate(trip?.baseCurrency === 'JPY' ? 0.21 : 1);
         });
     } else if (trip?.baseCurrency === 'TWD') { setExchangeRate(1); }
   }, [globalActiveTab, trip?.id, trip?.baseCurrency, setExchangeRate]);
@@ -291,15 +293,15 @@ export const Expense = () => {
   const expenses = trip?.expenses || [];
 
   const { totalTwd, totalForeign, dailyData, pieData, methodData, grouped } = useMemo(() => {
-    const exps = trip.expenses || [];
+    const exps = trip?.expenses || [];
     const rate = exchangeRate || 1;
 
     const totalTwd = exps.reduce((s, e) => s + (e.currency === 'TWD' ? e.amount : e.amount * rate), 0);
-    const totalForeign = exps.filter(e => e.currency === trip.baseCurrency).reduce((s, e) => s + e.amount, 0);
+    const totalForeign = exps.filter(e => e.currency === trip?.baseCurrency).reduce((s, e) => s + e.amount, 0);
 
     const dailyStats = exps.reduce((acc, curr) => {
       const val = curr.currency === 'TWD' ? curr.amount : curr.amount * rate;
-      acc[curr.date] = (acc[curr.date] || 0) + val;
+      acc[curr.date || trip?.startDate || 'Unknown'] = (acc[curr.date || trip?.startDate || 'Unknown'] || 0) + val;
       return acc;
     }, {} as Record<string, number>);
     const dailyData = Object.keys(dailyStats).sort().map(d => ({ date: d, amount: Math.round(dailyStats[d]) }));
@@ -712,7 +714,7 @@ export const Expense = () => {
             </div>
 
             <div className="space-y-1">
-              <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">消費日期</label>
+              <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest ml-1">{t('expense.dateLabel')}</label>
               <div className="flex justify-center bg-gray-100 border-[3px] border-splat-dark rounded-xl focus-within:bg-white transition-colors overflow-hidden h-14">
                 <input type="date" value={form.date} onChange={e => setForm({ ...form, date: e.target.value })} className="w-full bg-transparent font-black text-splat-dark text-center text-lg outline-none" />
               </div>
@@ -725,12 +727,14 @@ export const Expense = () => {
                 {budget > 0 && predictivePercent >= 90 && (
                   <motion.div initial={{ opacity: 0, y: -5 }} animate={{ opacity: 1, y: 0 }} className={`mt-2 p-2 rounded-lg border-2 text-[10px] font-black flex items-center gap-1.5 ${predictivePercent > 100 ? 'bg-splat-pink/10 border-splat-pink text-splat-pink' : 'bg-splat-orange/10 border-splat-orange text-splat-orange'}`}>
                     <AlertTriangle size={12} strokeWidth={3} />
-                    {predictivePercent > 100 ? `Budget Sentinel: 超過預算 ${predictivePercent - 100}%！💸` : `Budget Sentinel: 將達預算 ${predictivePercent}%！⚠️`}
+                    {predictivePercent > 100
+                      ? `Budget Sentinel: ${t('expense.budgetExceeded')} ${predictivePercent - 100}%！💸`
+                      : `Budget Sentinel: ${t('expense.budgetApproaching')} ${predictivePercent}%！⚠️`}
                   </motion.div>
                 )}
               </div>
               <div className="space-y-1">
-                <label className="text-[10px] font-black text-gray-500 uppercase ml-1">貨幣幣別</label>
+                <label className="text-[10px] font-black text-gray-500 uppercase ml-1">{t('expense.currencyLabel')}</label>
                 <div className="flex gap-2 h-14">
                   {[trip.baseCurrency, 'TWD'].map(c => <button key={c} onClick={() => setForm({ ...form, currency: c as any })} className={`flex-1 rounded-xl font-black border-[3px] transition-all ${form.currency === c ? 'bg-splat-green border-splat-dark text-white shadow-sm' : 'bg-white border-gray-100 text-gray-300'}`}>{c}</button>)}
                 </div>
@@ -738,10 +742,10 @@ export const Expense = () => {
             </div>
 
             <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1"><label className="text-[10px] font-black text-gray-500 uppercase ml-1">分類標籤</label>
+              <div className="space-y-1"><label className="text-[10px] font-black text-gray-500 uppercase ml-1">{t('expense.categoryLabel')}</label>
                 <select value={form.category} onChange={e => setForm({ ...form, category: e.target.value as any })} className="w-full h-14 px-4 bg-gray-100 border-[3px] border-splat-dark rounded-xl font-black outline-none appearance-none focus:bg-white cursor-pointer uppercase text-xs">{CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}</select>
               </div>
-              <div className="space-y-1"><label className="text-[10px] font-black text-gray-500 uppercase ml-1">支付方式</label>
+              <div className="space-y-1"><label className="text-[10px] font-black text-gray-500 uppercase ml-1">{t('expense.methodLabel')}</label>
                 <select value={form.method} onChange={e => setForm({ ...form, method: e.target.value as any })} className="w-full h-14 px-4 bg-gray-100 border-[3px] border-splat-dark rounded-xl font-black outline-none appearance-none focus:bg-white cursor-pointer uppercase text-xs">{METHODS.map(m => <option key={m} value={m}>{m}</option>)}</select>
               </div>
             </div>
@@ -754,11 +758,11 @@ export const Expense = () => {
               </button>
               <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={async e => {
                 const file = e.target.files?.[0];
-                if (file) { e.target.value = ''; setIsUploadingImg(true); try { const url = await uploadImage(file); setForm(prev => ({ ...prev, images: [url] })); } catch (err) { showToast("上傳失敗", "error"); } finally { setIsUploadingImg(false); } }
+                if (file) { e.target.value = ''; setIsUploadingImg(true); try { const url = await uploadImage(file); setForm(prev => ({ ...prev, images: [url] })); } catch (err) { showToast(t('expense.uploadFailed'), "error"); } finally { setIsUploadingImg(false); } }
               }} />
             </div>
 
-            <div className="space-y-1"><label className="text-[10px] font-black text-gray-500 uppercase ml-1">摘要備註</label>
+            <div className="space-y-1"><label className="text-[10px] font-black text-gray-500 uppercase ml-1">{t('expense.noteLabel')}</label>
               <input placeholder="例如：買了限定公仔、宵夜..." value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} className="w-full p-4 bg-gray-100 border-[3px] border-splat-dark rounded-xl font-black text-splat-dark outline-none focus:bg-white" />
             </div>
 

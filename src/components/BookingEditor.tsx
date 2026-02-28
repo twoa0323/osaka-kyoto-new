@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, FC, ChangeEvent } from 'react';
 import { useTripStore } from '../store/useTripStore';
+import { useTranslation } from '../hooks/useTranslation';
 import { X, Camera, Globe, QrCode, Loader2, Trash2, Plane, ChevronDown, Sparkles, MapPin } from 'lucide-react';
 import { BookingItem } from '../types';
 import { uploadImage, compressImage } from '../utils/imageUtils';
@@ -26,6 +27,7 @@ const AIRLINES = [
 ];
 
 export const BookingEditor: FC<Props> = ({ tripId, type, item, onClose }) => {
+  const { t } = useTranslation();
   const { addBookingItem, updateBookingItem, deleteBookingItem, showToast } = useTripStore();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const qrInputRef = useRef<HTMLInputElement>(null);
@@ -102,13 +104,13 @@ export const BookingEditor: FC<Props> = ({ tripId, type, item, onClose }) => {
             exchangeHours: data.exchangeHours || prev.exchangeHours
           }));
         }
-        showToast("✨ AI 解析成功！已為您自動填入資訊。", "success");
+        showToast(t('booking.editor.aiSuccess'), "success");
       } else {
-        throw new Error("AI 解析失敗");
+        throw new Error(t('booking.editor.aiFailed'));
       }
     } catch (e) {
       console.error(e);
-      showToast("AI 解析失敗，請手動確認填寫。", "error");
+      showToast(t('booking.editor.aiFailed'), "error");
     } finally {
       setIsAiLoading(false);
       if (aiInputRef.current) aiInputRef.current.value = '';
@@ -150,7 +152,7 @@ export const BookingEditor: FC<Props> = ({ tripId, type, item, onClose }) => {
         const url = await uploadImage(file);
         if (field === 'images') setForm(prev => ({ ...prev, images: [url] }));
         else setForm(prev => ({ ...prev, qrCode: url }));
-      } catch (err) { showToast("上傳失敗！", "error"); }
+      } catch (err) { showToast(t('expense.uploadFailed'), "error"); }
       finally { setUploadingField(null); }
     }
   };
@@ -173,8 +175,8 @@ export const BookingEditor: FC<Props> = ({ tripId, type, item, onClose }) => {
   }, [form.date, form.endDate, type, form.nights]);
 
   const handleSave = () => {
-    if (type !== 'flight' && !form.title) return showToast("請輸入名稱唷！", "info");
-    if (type === 'flight' && !form.flightNo) return showToast("請輸入航班號碼！", "info");
+    if (type !== 'flight' && !form.title) return showToast(t('booking.editor.inputName'), "info");
+    if (type === 'flight' && !form.flightNo) return showToast(t('booking.editor.inputFlightNo'), "info");
 
     const finalForm = { ...form };
     if (type === 'flight') {
@@ -189,11 +191,11 @@ export const BookingEditor: FC<Props> = ({ tripId, type, item, onClose }) => {
   };
 
   return (
-    <BottomSheet isOpen={true} onClose={onClose} title="🖋️ 編輯資訊">
+    <BottomSheet isOpen={true} onClose={onClose} title={t('booking.editor.editInfo')}>
       <div className="space-y-6">
         {item && (
           <div className="flex justify-end -mb-4">
-            <button onClick={() => { deleteBookingItem(tripId, item.id); showToast("已刪除資訊", "success"); onClose(); }} className="p-2 bg-red-50 text-red-500 rounded-full active:scale-90"><Trash2 size={18} /></button>
+            <button onClick={() => { deleteBookingItem(tripId, item.id); showToast(t('booking.editor.deleted'), "success"); onClose(); }} className="p-2 bg-red-50 text-red-500 rounded-full active:scale-90"><Trash2 size={18} /></button>
           </div>
         )}
 
@@ -203,7 +205,7 @@ export const BookingEditor: FC<Props> = ({ tripId, type, item, onClose }) => {
           <div className="relative">
             <button onClick={() => aiInputRef.current?.click()} disabled={isAiLoading} className="w-full bg-[#1A1A1A] text-white p-4 rounded-2xl font-black tracking-widest flex items-center justify-center gap-2 active:scale-95 transition-all shadow-[4px_4px_0px_#C4A97A] border-2 border-transparent hover:border-[#C4A97A]">
               {isAiLoading ? <Loader2 className="animate-spin" size={20} /> : <Sparkles size={20} className="text-[#C4A97A] animate-pulse" />}
-              {isAiLoading ? 'AI 魔法解析中... 🚀' : '📸 上傳截圖，AI 自動帶入'}
+              {isAiLoading ? t('booking.editor.aiParsing') : t('booking.editor.uploadScreenshot')}
             </button>
             <input ref={aiInputRef} type="file" accept="image/*" className="hidden" onChange={handleAiParse} />
           </div>
@@ -213,7 +215,7 @@ export const BookingEditor: FC<Props> = ({ tripId, type, item, onClose }) => {
             <div className="space-y-6">
 
               <div className="space-y-1.5">
-                <label className="text-[10px] font-black text-ac-brown/40 uppercase tracking-widest ml-1">航空公司模板</label>
+                <label className="text-[10px] font-black text-ac-brown/40 uppercase tracking-widest ml-1">{t('booking.editor.airlineTemplate')}</label>
                 <div className="relative">
                   <select
                     className="w-full p-4 bg-white border-2 border-ac-border rounded-2xl font-black text-ac-brown outline-none appearance-none cursor-pointer"
@@ -231,11 +233,11 @@ export const BookingEditor: FC<Props> = ({ tripId, type, item, onClose }) => {
               {/* 日期與航班號對齊 */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-black text-ac-brown/40 uppercase tracking-widest ml-1">日期</label>
+                  <label className="text-[10px] font-black text-ac-brown/40 uppercase tracking-widest ml-1">{t('booking.editor.date')}</label>
                   <input type="date" className="w-full h-14 px-4 bg-white border-2 border-ac-border rounded-2xl font-bold text-ac-brown text-sm outline-none shadow-sm" value={form.date} onChange={e => setForm({ ...form, date: e.target.value })} />
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-black text-ac-brown/40 uppercase tracking-widest ml-1">航班號</label>
+                  <label className="text-[10px] font-black text-ac-brown/40 uppercase tracking-widest ml-1">{t('booking.editor.flightNumber')}</label>
                   <input placeholder="JX820" className="w-full h-14 px-4 bg-white border-2 border-ac-border rounded-2xl font-black text-ac-brown text-sm uppercase outline-none shadow-sm" value={form.flightNo} onChange={e => setForm({ ...form, flightNo: e.target.value })} />
                 </div>
               </div>
@@ -248,14 +250,14 @@ export const BookingEditor: FC<Props> = ({ tripId, type, item, onClose }) => {
 
                 <div className="grid grid-cols-2 gap-4 relative z-10">
                   <div className="space-y-2.5">
-                    <label className="text-[10px] font-black text-ac-brown/30 uppercase tracking-widest text-center block w-full">出發地</label>
+                    <label className="text-[10px] font-black text-ac-brown/30 uppercase tracking-widest text-center block w-full">{t('booking.editor.departure')}</label>
                     <input placeholder="TPE" className="w-full h-16 bg-[#F5F6F8] border-2 border-ac-border/30 rounded-xl font-black text-center text-4xl uppercase outline-none focus:border-ac-green focus:bg-white transition-colors text-ac-brown" value={form.depIata} onChange={e => setForm({ ...form, depIata: e.target.value })} />
                     <input type="time" className="w-full h-14 bg-[#F5F6F8] border-2 border-ac-border/30 rounded-xl font-black text-center text-xl outline-none focus:border-ac-green focus:bg-white transition-colors text-ac-brown" value={form.depTime} onChange={e => setForm({ ...form, depTime: e.target.value })} />
                     <input placeholder="台北" className="w-full h-10 bg-[#F5F6F8] border-2 border-ac-border/30 rounded-xl font-bold text-center text-[11px] outline-none focus:border-ac-green focus:bg-white transition-colors" value={form.depCity} onChange={e => setForm({ ...form, depCity: e.target.value })} />
                   </div>
 
                   <div className="space-y-2.5">
-                    <label className="text-[10px] font-black text-ac-brown/30 uppercase tracking-widest text-center block w-full">目的地</label>
+                    <label className="text-[10px] font-black text-ac-brown/30 uppercase tracking-widest text-center block w-full">{t('booking.editor.destination')}</label>
                     <input placeholder="KIX" className="w-full h-16 bg-[#F5F6F8] border-2 border-ac-border/30 rounded-xl font-black text-center text-4xl uppercase outline-none focus:border-ac-green focus:bg-white transition-colors text-ac-brown" value={form.arrIata} onChange={e => setForm({ ...form, arrIata: e.target.value })} />
                     <input type="time" className="w-full h-14 bg-[#F5F6F8] border-2 border-ac-border/30 rounded-xl font-black text-center text-xl outline-none focus:border-ac-green focus:bg-white transition-colors text-ac-brown" value={form.arrTime} onChange={e => setForm({ ...form, arrTime: e.target.value })} />
                     <input placeholder="大阪" className="w-full h-10 bg-[#F5F6F8] border-2 border-ac-border/30 rounded-xl font-bold text-center text-[11px] outline-none focus:border-ac-green focus:bg-white transition-colors" value={form.arrCity} onChange={e => setForm({ ...form, arrCity: e.target.value })} />
@@ -264,7 +266,7 @@ export const BookingEditor: FC<Props> = ({ tripId, type, item, onClose }) => {
 
                 {/* 飛行時間 */}
                 <div className="bg-[#F5F6F8] border border-ac-border/30 rounded-2xl p-4 flex flex-col items-center justify-center gap-3 relative z-10">
-                  <span className="text-[9px] font-black text-ac-brown/40 uppercase tracking-widest">飛行時間</span>
+                  <span className="text-[9px] font-black text-ac-brown/40 uppercase tracking-widest">{t('booking.editor.flightDuration')}</span>
                   <div className="flex items-center gap-3">
                     <div className="flex items-center gap-1.5 bg-white px-3 py-2 rounded-xl border border-ac-border/30 shadow-sm">
                       <input type="number" min="0" value={durH} onChange={e => setDurH(e.target.value)} className="w-12 bg-transparent font-black text-center text-lg outline-none text-ac-brown" placeholder="0" />
@@ -281,15 +283,15 @@ export const BookingEditor: FC<Props> = ({ tripId, type, item, onClose }) => {
               {/* 底部附屬 */}
               <div className="grid grid-cols-3 gap-3">
                 <div className="space-y-1.5 text-center">
-                  <label className="text-[9px] font-black text-ac-brown/40 uppercase">行李</label>
+                  <label className="text-[9px] font-black text-ac-brown/40 uppercase">{t('booking.editor.baggage')}</label>
                   <input placeholder="15kg" className="w-full h-12 bg-white border-2 border-ac-border rounded-xl font-bold text-xs text-center outline-none" value={form.baggage} onChange={e => setForm({ ...form, baggage: e.target.value })} />
                 </div>
                 <div className="space-y-1.5 text-center">
-                  <label className="text-[9px] font-black text-ac-brown/40 uppercase">機型</label>
+                  <label className="text-[9px] font-black text-ac-brown/40 uppercase">{t('booking.editor.aircraft')}</label>
                   <input placeholder="A321" className="w-full h-12 bg-white border-2 border-ac-border rounded-xl font-bold text-xs text-center uppercase outline-none" value={form.aircraft} onChange={e => setForm({ ...form, aircraft: e.target.value })} />
                 </div>
                 <div className="space-y-1.5 text-center">
-                  <label className="text-[9px] font-black text-ac-brown/40 uppercase">座位</label>
+                  <label className="text-[9px] font-black text-ac-brown/40 uppercase">{t('booking.editor.seat')}</label>
                   <input placeholder="14F" className="w-full h-12 bg-white border-2 border-ac-border rounded-xl font-bold text-xs text-center uppercase outline-none" value={form.seat} onChange={e => setForm({ ...form, seat: e.target.value })} />
                 </div>
               </div>
@@ -302,7 +304,7 @@ export const BookingEditor: FC<Props> = ({ tripId, type, item, onClose }) => {
                     <input placeholder="6位大寫字母" className="w-full h-12 px-3 bg-white border-2 border-ac-green/30 rounded-xl font-black text-ac-green text-sm outline-none focus:border-ac-green" value={form.pnr || ''} onChange={e => setForm({ ...form, pnr: e.target.value.toUpperCase() })} />
                   </div>
                   <div className="space-y-1.5">
-                    <label className="text-[9px] font-black text-ac-green uppercase ml-1 tracking-widest">登機時間</label>
+                    <label className="text-[9px] font-black text-ac-green uppercase ml-1 tracking-widest">{t('booking.editor.boardingTime')}</label>
                     <input type="time" className="w-full h-12 px-3 bg-white border-2 border-ac-green/30 rounded-xl font-black text-ac-green text-sm outline-none focus:border-ac-green" value={form.boardingTime || ''} onChange={e => setForm({ ...form, boardingTime: e.target.value })} />
                   </div>
                 </div>
@@ -319,29 +321,29 @@ export const BookingEditor: FC<Props> = ({ tripId, type, item, onClose }) => {
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="text-[9px] font-black text-ac-brown/40 uppercase ml-1 tracking-widest">行李額度詳情</label>
+                  <label className="text-[9px] font-black text-ac-brown/40 uppercase ml-1 tracking-widest">{t('booking.editor.baggageAllowance')}</label>
                   <input placeholder="如: 23kg x 2" className="w-full h-12 px-4 bg-white border-2 border-ac-border rounded-xl font-bold text-sm outline-none" value={form.baggageAllowance || ''} onChange={e => setForm({ ...form, baggageAllowance: e.target.value })} />
                 </div>
               </div>
             </div>
           ) : (
             <div className="space-y-4">
-              <div className="space-y-1.5"><label className="text-[10px] font-black text-ac-brown/40 uppercase ml-1 tracking-widest">標題名稱</label>
+              <div className="space-y-1.5"><label className="text-[10px] font-black text-ac-brown/40 uppercase ml-1 tracking-widest">{t('booking.editor.titleName')}</label>
                 <input className="w-full h-14 px-4 bg-white border-2 border-ac-border rounded-2xl font-bold text-ac-brown outline-none focus:border-ac-green" value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} placeholder="例如：東橫INN" /></div>
 
               <div className="space-y-1.5">
-                <label className="text-[10px] font-black text-ac-brown/40 uppercase ml-1 tracking-widest">地址 / 位置</label>
+                <label className="text-[10px] font-black text-ac-brown/40 uppercase ml-1 tracking-widest">{t('booking.editor.location')}</label>
                 <div className="relative">
                   <input placeholder="輸入具體地址" className="w-full h-14 px-4 pr-12 bg-white border-2 border-ac-border rounded-2xl font-bold outline-none focus:border-ac-green" value={form.location} onChange={e => setForm({ ...form, location: e.target.value })} />
                   <button
                     onClick={() => {
-                      if (!form.location) return showToast("請先輸入地址唷！", "info");
+                      if (!form.location) return showToast(t('booking.editor.inputAddressFirst'), "info");
                       const url = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(form.location)}`;
                       setForm({ ...form, mapUrl: url });
-                      showToast("已產生 Google Maps 連結！", "success");
+                      showToast(t('booking.editor.mapLinkGenerated'), "success");
                     }}
                     className="absolute right-3 top-1/2 -translate-y-1/2 p-2 text-ac-green hover:bg-ac-green/10 rounded-xl transition-colors"
-                    title="產生導航連結"
+                    title={t('booking.editor.generateMapLink')}
                   >
                     <MapPin size={20} />
                   </button>
@@ -383,24 +385,24 @@ export const BookingEditor: FC<Props> = ({ tripId, type, item, onClose }) => {
                 <div className="bg-white p-5 rounded-[2.5rem] border-2 border-ac-border space-y-4 shadow-sm animate-in slide-in-from-bottom-2">
                   <div className="space-y-1.5"><label className="text-[10px] font-black text-ac-brown/40 uppercase tracking-widest ml-1">{type === 'spot' ? '景點名稱' : '憑證名稱'}</label><input placeholder={type === 'spot' ? '如: 環球影城門票' : '如: JR Pass'} value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} className="w-full h-14 px-4 bg-[#F5F6F8] border border-ac-border/30 rounded-xl font-black text-ac-brown outline-none focus:border-ac-green focus:bg-white" /></div>
                   <div className="grid grid-cols-2 gap-3">
-                    <div className="space-y-1.5"><label className="text-[10px] font-black text-ac-brown/40 uppercase tracking-widest ml-1">使用日期</label><input type="date" value={form.date} onChange={e => setForm({ ...form, date: e.target.value })} className="w-full h-12 px-3 bg-[#F5F6F8] border border-ac-border/30 rounded-xl font-black text-sm outline-none focus:border-ac-green focus:bg-white" /></div>
-                    <div className="space-y-1.5"><label className="text-[10px] font-black text-ac-brown/40 uppercase tracking-widest ml-1">憑證/訂單編號</label><input placeholder="12345678" value={form.confirmationNo} onChange={e => setForm({ ...form, confirmationNo: e.target.value })} className="w-full h-12 px-3 bg-[#F5F6F8] border border-ac-border/30 rounded-xl font-black text-sm text-ac-green outline-none focus:border-ac-green focus:bg-white" /></div>
+                    <div className="space-y-1.5"><label className="text-[10px] font-black text-ac-brown/40 uppercase tracking-widest ml-1">{t('booking.editor.useDate')}</label><input type="date" value={form.date} onChange={e => setForm({ ...form, date: e.target.value })} className="w-full h-12 px-3 bg-[#F5F6F8] border border-ac-border/30 rounded-xl font-black text-sm outline-none focus:border-ac-green focus:bg-white" /></div>
+                    <div className="space-y-1.5"><label className="text-[10px] font-black text-ac-brown/40 uppercase tracking-widest ml-1">{t('common.id')}</label><input placeholder="12345678" value={form.confirmationNo} onChange={e => setForm({ ...form, confirmationNo: e.target.value })} className="w-full h-12 px-3 bg-[#F5F6F8] border border-ac-border/30 rounded-xl font-black text-sm text-ac-green outline-none focus:border-ac-green focus:bg-white" /></div>
                   </div>
 
                   {type === 'spot' && (
                     <div className="grid grid-cols-2 gap-3">
                       <div className="space-y-1.5"><label className="text-[10px] font-black text-ac-brown/40 uppercase tracking-widest ml-1">出發/入場時間</label><input type="time" value={form.entryTime || ''} onChange={e => setForm({ ...form, entryTime: e.target.value })} className="w-full h-12 px-3 bg-[#F5F6F8] border border-ac-border/30 rounded-xl font-black text-sm outline-none focus:border-ac-green focus:bg-white" /></div>
-                      <div className="space-y-1.5"><label className="text-[10px] font-black text-ac-brown/40 uppercase tracking-widest ml-1">最後入場時間</label><input type="time" value={form.lastEntryTime || ''} onChange={e => setForm({ ...form, lastEntryTime: e.target.value })} className="w-full h-12 px-3 bg-[#F5F6F8] border border-ac-border/30 rounded-xl font-black text-sm outline-none focus:border-ac-green focus:bg-white" /></div>
+                      <div className="space-y-1.5"><label className="text-[10px] font-black text-ac-brown/40 uppercase tracking-widest ml-1">{t('booking.editor.lastEntryTime')}</label><input type="time" value={form.lastEntryTime || ''} onChange={e => setForm({ ...form, lastEntryTime: e.target.value })} className="w-full h-12 px-3 bg-[#F5F6F8] border border-ac-border/30 rounded-xl font-black text-sm outline-none focus:border-ac-green focus:bg-white" /></div>
                     </div>
                   )}
 
-                  <div className="space-y-1.5"><label className="text-[10px] font-black text-ac-brown/40 uppercase tracking-widest ml-1">票種人數</label><input placeholder="如: 成人票x2" value={form.ticketType || ''} onChange={e => setForm({ ...form, ticketType: e.target.value })} className="w-full h-14 px-4 bg-[#F5F6F8] border border-ac-border/30 rounded-xl font-black text-sm outline-none focus:border-ac-green focus:bg-white" /></div>
+                  <div className="space-y-1.5"><label className="text-[10px] font-black text-ac-brown/40 uppercase tracking-widest ml-1">{t('booking.editor.ticketType')}</label><input placeholder="如: 成人票x2" value={form.ticketType || ''} onChange={e => setForm({ ...form, ticketType: e.target.value })} className="w-full h-14 px-4 bg-[#F5F6F8] border border-ac-border/30 rounded-xl font-black text-sm outline-none focus:border-ac-green focus:bg-white" /></div>
 
                   {type === 'voucher' && (
                     <div className="space-y-4">
                       <div className="space-y-1.5"><label className="text-[10px] font-black text-ac-brown/40 uppercase tracking-widest ml-1">兌換/領取地點</label><input placeholder="如: 關西機場 JR 綠色窗口" value={form.exchangeLocation || ''} onChange={e => setForm({ ...form, exchangeLocation: e.target.value })} className="w-full h-12 px-3 bg-[#F5F6F8] border border-ac-border/30 rounded-xl font-black text-sm text-[#FF8A00] outline-none focus:border-ac-green focus:bg-white" /></div>
                       <div className="grid grid-cols-2 gap-3">
-                        <div className="space-y-1.5"><label className="text-[10px] font-black text-ac-brown/40 uppercase tracking-widest ml-1">集合地點</label><input placeholder="如: 門口噴水池" value={form.meetingPoint || ''} onChange={e => setForm({ ...form, meetingPoint: e.target.value })} className="w-full h-12 px-3 bg-[#F5F6F8] border border-ac-border/30 rounded-xl font-black text-sm outline-none focus:border-ac-green focus:bg-white" /></div>
+                        <div className="space-y-1.5"><label className="text-[10px] font-black text-ac-brown/40 uppercase tracking-widest ml-1">{t('booking.editor.meetingPoint')}</label><input placeholder="如: 門口噴水池" value={form.meetingPoint || ''} onChange={e => setForm({ ...form, meetingPoint: e.target.value })} className="w-full h-12 px-3 bg-[#F5F6F8] border border-ac-border/30 rounded-xl font-black text-sm outline-none focus:border-ac-green focus:bg-white" /></div>
                         <div className="space-y-1.5"><label className="text-[10px] font-black text-ac-brown/40 uppercase tracking-widest ml-1">營業/兌換時間</label><input placeholder="09:00 - 18:00" value={form.exchangeHours || ''} onChange={e => setForm({ ...form, exchangeHours: e.target.value })} className="w-full h-12 px-3 bg-[#F5F6F8] border border-ac-border/30 rounded-xl font-black text-sm outline-none focus:border-ac-green focus:bg-white" /></div>
                       </div>
                     </div>
@@ -411,7 +413,7 @@ export const BookingEditor: FC<Props> = ({ tripId, type, item, onClose }) => {
                   )}
 
                   {type === 'spot' && (
-                    <div className="space-y-1.5"><label className="text-[10px] font-black text-ac-brown/40 uppercase tracking-widest ml-1">景點地址</label><input placeholder="輸入具體地址" value={form.location} onChange={e => setForm({ ...form, location: e.target.value })} className="w-full h-12 px-3 bg-[#F5F6F8] border border-ac-border/30 rounded-xl font-black text-sm outline-none focus:border-ac-green focus:bg-white" /></div>
+                    <div className="space-y-1.5"><label className="text-[10px] font-black text-ac-brown/40 uppercase tracking-widest ml-1">{t('booking.editor.spotAddress')}</label><input placeholder="輸入具體地址" value={form.location} onChange={e => setForm({ ...form, location: e.target.value })} className="w-full h-12 px-3 bg-[#F5F6F8] border border-ac-border/30 rounded-xl font-black text-sm outline-none focus:border-ac-green focus:bg-white" /></div>
                   )}
                 </div>
               )}
@@ -432,8 +434,8 @@ export const BookingEditor: FC<Props> = ({ tripId, type, item, onClose }) => {
                 </div>
               )}
               {form.qrCode ? (
-                <><img src={form.qrCode} className="h-full object-contain p-2 pointer-events-none" /><div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"><span className="text-white text-[10px] font-black">更換 QR</span></div></>
-              ) : <><QrCode size={24} /> <span className="text-[9px] font-black mt-2 uppercase tracking-widest">上傳 QR</span></>}
+                <><img src={form.qrCode} className="h-full object-contain p-2 pointer-events-none" /><div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"><span className="text-white text-[10px] font-black">{t('booking.editor.changePhoto')}</span></div></>
+              ) : <><QrCode size={24} /> <span className="text-[9px] font-black mt-2 uppercase tracking-widest">{t('booking.editor.uploadPhoto')}</span></>}
             </button>
             <input ref={qrInputRef} type="file" className="hidden" onChange={e => handlePhoto(e, 'qrCode')} />
 
@@ -444,19 +446,19 @@ export const BookingEditor: FC<Props> = ({ tripId, type, item, onClose }) => {
                 </div>
               )}
               {form.images?.[0] ? (
-                <><img src={form.images[0]} className="w-full h-full object-cover pointer-events-none" /><div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"><span className="text-white text-[10px] font-black">更換照片</span></div></>
-              ) : <><Camera size={24} /> <span className="text-[9px] font-black mt-2 uppercase tracking-widest">上傳照片</span></>}
+                <><img src={form.images[0]} className="w-full h-full object-cover pointer-events-none" /><div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"><span className="text-white text-[10px] font-black">{t('booking.editor.changePhoto')}</span></div></>
+              ) : <><Camera size={24} /> <span className="text-[9px] font-black mt-2 uppercase tracking-widest">{t('booking.editor.uploadPhoto')}</span></>}
             </button>
             <input ref={fileInputRef} type="file" className="hidden" onChange={e => handlePhoto(e, 'images')} />
           </div>
 
           <div className="space-y-1.5">
-            <label className="text-[10px] font-black text-ac-brown/40 uppercase ml-1">細項筆記</label>
+            <label className="text-[10px] font-black text-ac-brown/40 uppercase ml-1">{t('booking.editor.notes')}</label>
             <textarea placeholder="寫下相關細節資訊..." className="w-full p-4 bg-white border-2 border-ac-border rounded-2xl font-bold h-24 text-sm outline-none resize-none focus:border-ac-green" value={form.note} onChange={e => setForm({ ...form, note: e.target.value })} />
           </div>
 
           <button onClick={handleSave} className="btn-zakka w-full py-5 text-lg font-black tracking-widest shadow-sm mt-2">
-            確認儲存 ➔
+            {t('common.saveConfirm')}
           </button>
         </div>
       </div>

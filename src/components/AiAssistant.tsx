@@ -385,14 +385,14 @@ export const AiAssistant: FC = () => {
 
                     {/* Context Switcher (Optional if we want to allow cross-mode) */}
                     <div className="flex gap-2 bg-gray-100 p-1.5 rounded-2xl border-2 border-gray-200">
-                        {tabs.map(t => (
+                        {tabs.map(tab => (
                             <button
-                                key={t.id}
-                                onClick={() => useTripStore.getState().openAiAssistant(t.id)}
-                                className={`flex-1 flex flex-col items-center py-2 rounded-xl transition-all ${currentContext === t.id ? 'bg-white shadow-sm border-2 border-splat-dark' : 'text-gray-400 opacity-60'}`}
+                                key={tab.id}
+                                onClick={() => useTripStore.getState().openAiAssistant(tab.id)}
+                                className={`flex-1 flex flex-col items-center py-2 rounded-xl transition-all ${currentContext === tab.id ? 'bg-white shadow-sm border-2 border-splat-dark' : 'text-gray-400 opacity-60'}`}
                             >
-                                {cloneElement(t.icon as any, { size: 18 })}
-                                <span className="text-[9px] font-black mt-1 uppercase">{t.label}</span>
+                                {cloneElement(tab.icon as any, { size: 18 })}
+                                <span className="text-[9px] font-black mt-1 uppercase">{tab.label}</span>
                             </button>
                         ))}
                     </div>
