@@ -13,6 +13,7 @@ import { useNetworkStatus } from '../hooks/useNetworkStatus';
 import { useTranslation } from '../hooks/useTranslation';
 import { triggerHaptic } from '../utils/haptics';
 import { ARCompass } from './ui/ARCompass';
+import { SpatialMapHeader } from './SpatialHeader';
 
 // 移除受限制的前端 API Key 引進
 // const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY || "";
@@ -603,6 +604,7 @@ export const Schedule: FC<{ externalDateIdx?: number }> = ({ externalDateIdx = 0
 
   // 🚀 IntersectionObserver 用於空間地圖隨動
   const setActiveDayItem = useTripStore(s => s.setActiveDayItem);
+  const activeDayItem = useTripStore(s => s.activeDayItem);
   useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
@@ -1168,6 +1170,9 @@ export const Schedule: FC<{ externalDateIdx?: number }> = ({ externalDateIdx = 0
   return (
     <div className="flex flex-col h-full relative text-p3-navy">
       <div className="flex-1 overflow-y-auto hide-scrollbar p-6 space-y-8 pb-32">
+        <div className="mb-2">
+          <SpatialMapHeader trip={trip!} activeItem={activeDayItem} t={t} enable3DMap={uiSettings.enable3DMap} />
+        </div>
         <div className="sticky top-0 z-50 bg-[#F4F5F7]/80 backdrop-blur-md pt-2 pb-6">
           <div className="flex items-center justify-between mt-2 px-4">
             <div className="flex gap-4">

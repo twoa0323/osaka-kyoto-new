@@ -24,8 +24,6 @@ import { useGyroscope } from './hooks/useGyroscope';
 import { AiAssistant } from './components/AiAssistant';
 import { SplatToast } from './components/ui/SplatToast';
 import { useTranslation } from './hooks/useTranslation';
-import { SpatialMapHeader } from './components/SpatialHeader';
-import { Trip } from './types';
 
 // 🚀 Lazy Load 各分頁組件，大幅減少首次載入 bundle 體積
 const Schedule = lazy(() => import('./components/Schedule').then(m => ({ default: m.Schedule })));
@@ -285,7 +283,6 @@ const App: FC = () => {
   const setUISettings = useTripStore(s => s.setUISettings);
   const showToast = useTripStore(s => s.showToast);
   const isSyncing = useTripStore(s => s.isSyncing);
-  const activeDayItem = useTripStore(s => s.activeDayItem);
 
   const { t } = useTranslation();
 
@@ -452,7 +449,7 @@ const App: FC = () => {
   };
 
   return (
-    <div className="relative min-h-[100dvh] w-full max-w-md mx-auto bg-[#F4F5F7] overflow-hidden drop-shadow-2xl sm:rounded-[40px] sm:my-8 sm:h-[844px] flex flex-col font-sans">
+    <div className="relative h-[100dvh] w-full max-w-md mx-auto bg-[#F4F5F7] overflow-hidden drop-shadow-2xl sm:rounded-[40px] sm:my-8 sm:h-[844px] flex flex-col font-sans">
       {/* 動態材質疊層 (Dynamic Material Overlay) */}
       <div
         className="absolute inset-0 pointer-events-none opacity-[0.03] mix-blend-color-burn"
@@ -505,12 +502,6 @@ const App: FC = () => {
 
       {activeTab === 'timeline' && (
         <header className="p-4 sticky top-0 z-[100] w-full max-w-md mx-auto animate-fade-in bg-[#F4F5F7]/95 backdrop-blur-sm border-b-[1px] border-black/5 shadow-sm">
-          <SpatialMapHeader
-            trip={currentTrip as Trip}
-            activeItem={activeDayItem}
-            t={t}
-            enable3DMap={uiSettings.enable3DMap}
-          />
           <div className="bg-splat-yellow border-[3px] border-splat-dark rounded-[24px] shadow-splat-solid p-4 flex justify-between items-center relative z-20">
             <div className="relative text-left min-w-0">
               <h2 className="boutique-tag text-splat-dark uppercase tracking-widest mb-0.5 bg-white inline-block px-2 border-2 border-splat-dark rounded-full shadow-splat-solid-sm -rotate-2">
@@ -668,7 +659,7 @@ const App: FC = () => {
 
       {/* 🧭 Bottom Navigation — 5 Unified Modules */}
       <LayoutGroup>
-        <nav className="fixed bottom-6 left-1/2 -translate-x-1/2 w-[95%] max-w-md glass-card px-2 py-4 flex justify-around items-center z-50 shadow-glass-deep border-[0.5px] border-white/40 rounded-[32px]">
+        <nav className="absolute bottom-6 left-1/2 -translate-x-1/2 w-[95%] max-w-md glass-card px-2 py-4 flex justify-around items-center z-50 shadow-glass-deep border-[0.5px] border-white/40 rounded-[32px]">
           <NavIcon icon={<Calendar />} label={t('nav.timeline')} id="timeline" active={activeTab} onClick={handleTabChange} color="text-p3-navy" />
           <NavIcon icon={<Lock />} label={t('nav.vault')} id="vault" active={activeTab} onClick={handleTabChange} color="text-p3-ruby" />
           <NavIcon icon={<WalletIcon />} label={t('nav.wallet')} id="wallet" active={activeTab} onClick={handleTabChange} color="text-p3-gold" />
