@@ -589,75 +589,75 @@ export const useTripStore = create<TripState>()(
       applyAiImport: (tripId, aiData) => {
         if (!aiData) return;
         const uid = () => `ai-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
+        const trip = get().trips.find(t => t.id === tripId);
+        if (!trip) return;
 
+        // 1. 生成所有新項目
+        const newSchedules = (aiData.schedules || []).map((s: any) => ({
+          id: uid(),
+          title: s.title || '未命名行程',
+          date: s.date || trip.startDate,
+          time: s.startTime || '09:00',
+          type: s.type || 'attraction',
+          location: s.location || '',
+          cost: 0,
+          note: s.note || '',
+          category: s.type === 'food' ? 'food' : 'attraction',
+        }));
+
+        const newBookings = (aiData.bookings || []).map((b: any) => ({
+          id: uid(),
+          title: b.title || '未命名預訂',
+          type: b.type || 'spot',
+          provider: b.provider || '',
+          bookingRef: b.bookingRef || '',
+          date: b.date || trip.startDate,
+          endDate: b.endDate || '',
+          note: b.note || '',
+          status: 'confirmed' as const,
+        }));
+
+        const newShopping = (aiData.shoppingList || []).map((s: any) => ({
+          id: uid(),
+          title: s.itemName || '未命名商品',
+          quantity: s.quantity || 1,
+          category: s.category || '其他',
+          note: s.note || '',
+          isBought: false,
+          currency: trip.baseCurrency || 'JPY',
+        }));
+
+        const newJournals = (aiData.journals || []).map((j: any) => ({
+          id: uid(),
+          title: j.title || '未命名日誌',
+          type: j.type || 'food',
+          content: j.content || '',
+          location: j.location || '',
+          date: trip.startDate,
+          mood: '🍽️',
+        }));
+
+        // 2. 更新本地狀態
         set(s => ({
           trips: s.trips.map(t => {
             if (t.id !== tripId) return t;
-            const updated = { ...t };
-
-            // 1. Schedules → items
-            if (aiData.schedules?.length) {
-              const newItems = aiData.schedules.map((s: any) => ({
-                id: uid(),
-                title: s.title || '未命名行程',
-                date: s.date || t.startDate,
-                time: s.startTime || '09:00',
-                type: s.type || 'attraction',
-                location: s.location || '',
-                cost: 0,
-                note: s.note || '',
-                category: s.type === 'food' ? 'food' : 'attraction',
-              }));
-              updated.items = [...(t.items || []), ...newItems];
-            }
-
-            // 2. Bookings → bookings
-            if (aiData.bookings?.length) {
-              const newBookings = aiData.bookings.map((b: any) => ({
-                id: uid(),
-                title: b.title || '未命名預訂',
-                type: b.type || 'spot',
-                provider: b.provider || '',
-                bookingRef: b.bookingRef || '',
-                date: b.date || t.startDate,
-                endDate: b.endDate || '',
-                note: b.note || '',
-                status: 'confirmed' as const,
-              }));
-              updated.bookings = [...(t.bookings || []), ...newBookings];
-            }
-
-            // 3. ShoppingList → shoppingList
-            if (aiData.shoppingList?.length) {
-              const newShopping = aiData.shoppingList.map((s: any) => ({
-                id: uid(),
-                title: s.itemName || '未命名商品',
-                quantity: s.quantity || 1,
-                category: s.category || '其他',
-                note: s.note || '',
-                isBought: false,
-                currency: t.baseCurrency || 'JPY',
-              }));
-              updated.shoppingList = [...(t.shoppingList || []), ...newShopping];
-            }
-
-            // 4. Journals → journals
-            if (aiData.journals?.length) {
-              const newJournals = aiData.journals.map((j: any) => ({
-                id: uid(),
-                title: j.title || '未命名日誌',
-                type: j.type || 'food',
-                content: j.content || '',
-                location: j.location || '',
-                date: t.startDate,
-                mood: '🍽️',
-              }));
-              updated.journals = [...(t.journals || []), ...newJournals];
-            }
-
-            return updated;
+            return {
+              ...t,
+              items: [...(t.items || []), ...newSchedules],
+              bookings: [...(t.bookings || []), ...newBookings],
+              shoppingList: [...(t.shoppingList || []), ...newShopping],
+              journals: [...(t.journals || []), ...newJournals],
+            };
           })
         }));
+
+        // 3. 同步至 Firebase (非同步執行，不阻塞 UI)
+        newSchedules.forEach(i => syncItemToCloud(tripId, "items", i));
+        newBookings.forEach(b => syncItemToCloud(tripId, "bookings", b));
+        newShopping.forEach(s => syncItemToCloud(tripId, "shopping", s));
+        newJournals.forEach(j => syncItemToCloud(tripId, "journals", j));
+
+        get().showToast(`已匯入 ${newSchedules.length + newBookings.length + newShopping.length + newJournals.length} 項內容 ✨`, "success");
       },
     }),
     {

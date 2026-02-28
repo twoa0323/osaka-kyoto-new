@@ -57,8 +57,13 @@ export const useFirebaseSync = () => {
             const trip = state.trips.find(t => t.id === tripId);
             if (!trip) return state;
 
-            const currentItems = trip[sub.field as keyof Trip] || [];
-            if (JSON.stringify(currentItems) === JSON.stringify(items)) {
+            const currentItems = (trip[sub.field as keyof Trip] || []) as any[];
+
+            // 效能優化：比對陣列長度與最大更新時間，取代耗能的 JSON.stringify
+            const maxLocal = currentItems.reduce((max, i) => Math.max(max, i.updatedAt || 0), 0);
+            const maxRemote = items.reduce((max, i) => Math.max(max, i.updatedAt || 0), 0);
+
+            if (currentItems.length === items.length && maxRemote <= maxLocal) {
               return state;
             }
 

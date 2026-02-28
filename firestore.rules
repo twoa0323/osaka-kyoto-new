@@ -35,7 +35,7 @@ service cloud.firestore {
 
       allow read:   if request.auth != null;
       allow create: if isValidCreate();
-      allow update: if request.auth != null; // 👈 允許新成員加入時寫入 memberIds
+      allow update: if isTripMember(); 
       allow delete: if request.auth != null
                     && resource.data.creatorId == request.auth.uid;
 
