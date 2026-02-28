@@ -602,7 +602,7 @@ export const Schedule: FC<{ externalDateIdx?: number }> = ({ externalDateIdx = 0
     });
   }, [trip, selectedDateStr]);
 
-  const { actionBookings, activeHotel } = useMemo(() => {
+  const { actionBookings, activeHotel, activeFlight } = useMemo(() => {
     const bookings = dayItems.filter(i => i.__type === 'booking');
 
     // B: 靈動膠囊 (只在 Check-in, Check-out, Flight 當天顯示)
@@ -619,7 +619,10 @@ export const Schedule: FC<{ externalDateIdx?: number }> = ({ externalDateIdx = 0
       return b.type === 'hotel' && bDate <= selectedDateStr && (!bEndDate || bEndDate >= selectedDateStr);
     });
 
-    return { actionBookings: actions, activeHotel: hotel };
+    // C: 當日航班
+    const flight = bookings.find(b => b.type === 'flight' && (b as any).date === selectedDateStr);
+
+    return { actionBookings: actions, activeHotel: hotel, activeFlight: flight };
   }, [dayItems, selectedDateStr]);
 
   // 🚀 IntersectionObserver 用於空間地圖隨動
@@ -1288,20 +1291,30 @@ export const Schedule: FC<{ externalDateIdx?: number }> = ({ externalDateIdx = 0
           </div>
         </div>
 
-        {/* 🛠️ 操作按鈕列 (保留原本功能，優化排版) */}
+        {/* 🛠️ 操作按鈕列 (左側常駐圖示，右側功能按鈕) */}
         <div className="flex items-center justify-between px-2">
-          <div className="flex items-center gap-3">
-            <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest bg-gray-100 px-3 py-1.5 rounded-full">
-              {dayItems.filter(i => i.__type === 'schedule').length} {t('schedule.ai.spots')}
-            </span>
-            {/* 💡 方案 A：常駐住宿按鈕 */}
+
+          {/* 左側：當日狀態 (移除景點數量文字，改為純圖示) */}
+          <div className="flex items-center gap-2">
+            {activeFlight && (
+              <button
+                onClick={() => setDetailItem(activeFlight)}
+                className="w-9 h-9 rounded-full bg-white border-[0.5px] border-blue-200 flex items-center justify-center shadow-sm active:scale-95 transition-all text-p3-navy"
+              >
+                <Plane size={16} strokeWidth={2.5} />
+              </button>
+            )}
             {activeHotel && (
-              <button onClick={() => setDetailItem(activeHotel)} className="flex items-center gap-1.5 text-[10px] font-black text-p3-navy bg-white border-[0.5px] border-blue-200 px-3 py-1.5 rounded-full shadow-sm active:scale-95 transition-all">
-                <Home size={12} className="text-p3-ruby" strokeWidth={3} />
-                <span className="max-w-[80px] truncate">{activeHotel.title}</span>
+              <button
+                onClick={() => setDetailItem(activeHotel)}
+                className="w-9 h-9 rounded-full bg-white border-[0.5px] border-blue-200 flex items-center justify-center shadow-sm active:scale-95 transition-all text-p3-ruby"
+              >
+                <Home size={16} strokeWidth={2.5} />
               </button>
             )}
           </div>
+
+          {/* 右側：地圖 / 編輯 / 新增 */}
           <div className="flex gap-2">
             <motion.button whileTap={{ scale: 0.95, transition: { type: 'spring', stiffness: 500, damping: 20 } }} onClick={() => setViewMode(viewMode === 'list' ? 'map' : 'list')} className={`w-10 h-10 rounded-2xl flex items-center justify-center border-[1px] border-p3-navy/10 ${viewMode === 'map' ? 'bg-splat-blue text-white' : 'bg-white text-p3-navy shadow-xl shadow-black/5'}`}>
               {viewMode === 'list' ? <MapIcon size={18} /> : <Camera size={18} />}
