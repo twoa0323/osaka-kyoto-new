@@ -5,20 +5,69 @@ import { triggerHaptic } from '../utils/haptics';
 
 interface SettingToggleProps {
     label: string;
-    desc: string;
     enabled: boolean;
     onChange: (enabled: boolean) => void;
 }
 
-export const SettingToggle: FC<SettingToggleProps> = ({ label, desc, enabled, onChange }) => (
-    <div className="flex justify-between items-center bg-gray-50 p-4 rounded-2xl border-2 border-gray-100">
+export const SettingToggle: FC<SettingToggleProps> = ({ label, enabled, onChange }) => (
+    <div className="flex justify-between items-center bg-white/50 backdrop-blur-sm p-4 rounded-2xl border-[2px] border-splat-dark/5 shadow-sm active:scale-[0.98] transition-all">
         <div className="text-left">
-            <p className="font-black text-sm text-splat-dark">{label}</p>
-            <p className="text-[10px] font-bold text-gray-400">{desc}</p>
+            <p className="font-black text-[13px] text-splat-dark uppercase tracking-tight">{label}</p>
         </div>
-        <button onClick={() => onChange(!enabled)} className={`transition-colors ${enabled ? 'text-splat-green' : 'text-gray-300'}`}>
-            {enabled ? <ToggleRight size={40} strokeWidth={2.5} /> : <ToggleLeft size={40} strokeWidth={2.5} />}
+        <button onClick={() => onChange(!enabled)} className={`transition-all ${enabled ? 'text-splat-green scale-110' : 'text-gray-300'}`}>
+            {enabled ? <ToggleRight size={38} strokeWidth={3} /> : <ToggleLeft size={38} strokeWidth={3} />}
         </button>
+    </div>
+);
+
+// --- 🔹 GridToggle: 用於 2x2 視覺網格 ---
+interface GridToggleProps {
+    label: string;
+    icon: ReactNode;
+    enabled: boolean;
+    onChange: (enabled: boolean) => void;
+}
+
+export const GridToggle: FC<GridToggleProps> = ({ label, icon, enabled, onChange }) => (
+    <motion.button
+        whileTap={{ scale: 0.95 }}
+        onClick={() => { triggerHaptic('light'); onChange(!enabled); }}
+        className={`flex flex-col items-center justify-center gap-2 p-4 rounded-[24px] border-[3px] transition-all ${enabled ? 'bg-splat-dark border-splat-dark text-white' : 'bg-white border-splat-dark/5 text-gray-400'}`}
+    >
+        <div className={enabled ? 'text-splat-yellow' : 'text-gray-300'}>
+            {icon}
+        </div>
+        <span className="text-[10px] font-black uppercase tracking-widest leading-none">{label}</span>
+    </motion.button>
+);
+
+// --- 🔹 SystemSlider: 簡約數值拉桿 ---
+interface SystemSliderProps {
+    label: string;
+    icon: ReactNode;
+    value: number;
+    min?: number;
+    max?: number;
+    onChange: (value: number) => void;
+}
+
+export const SystemSlider: FC<SystemSliderProps> = ({ label, icon, value, min = 0, max = 100, onChange }) => (
+    <div className="bg-white/50 backdrop-blur-sm p-4 rounded-[24px] border-[2px] border-splat-dark/5 space-y-3">
+        <div className="flex justify-between items-center">
+            <div className="flex items-center gap-2 text-splat-dark">
+                {icon}
+                <span className="text-[10px] font-black uppercase tracking-widest">{label}</span>
+            </div>
+            <span className="text-[10px] font-black text-gray-400">{value}%</span>
+        </div>
+        <input
+            type="range"
+            min={min}
+            max={max}
+            value={value}
+            onChange={(e) => onChange(parseInt(e.target.value))}
+            className="w-full h-1.5 bg-splat-dark/10 rounded-full appearance-none cursor-pointer accent-splat-dark"
+        />
     </div>
 );
 

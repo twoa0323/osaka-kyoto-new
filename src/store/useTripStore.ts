@@ -195,7 +195,7 @@ export const useTripStore = create<TripState>()(
     (set, get) => ({
       trips: [],
       currentTripId: null,
-      activeTab: 'schedule',
+      activeTab: 'timeline',
       exchangeRate: 1,
       isAiModalOpen: false,
       aiContext: 'schedule',

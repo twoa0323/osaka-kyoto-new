@@ -2,9 +2,9 @@ import { useState, useMemo, useEffect, useCallback, useRef, FC } from 'react';
 import { useQueries } from '@tanstack/react-query';
 import { useTripStore } from '../store/useTripStore';
 import { format, addDays, differenceInDays, parseISO, isValid, isSameDay } from 'date-fns';
-import { MapPin, Plus, Edit3, Trash2, Utensils, Plane, Home, Camera, Sparkles, X, Loader2, Wind, Umbrella, Sunrise, ChevronUp, ChevronDown, Clock, Cloud, CloudRain, Sun, Droplets, AlertTriangle, Wand2, Check, WifiOff, Star, Map as MapIcon, MapPinOff } from 'lucide-react';
+import { MapPin, Plus, Edit3, Trash2, Utensils, Plane, Home, Camera, Sparkles, X, Loader2, Wind, Umbrella, Sunrise, ChevronUp, ChevronDown, ChevronRight, Clock, Cloud, CloudRain, Sun, Droplets, AlertTriangle, Wand2, Check, WifiOff, Star, Map as MapIcon, MapPinOff, Copy, Phone, Luggage } from 'lucide-react';
 import { ScheduleEditor } from './ScheduleEditor';
-import { ScheduleItem, Trip } from '../types';
+import { ScheduleItem, Trip, BookingItem } from '../types';
 import { WeatherReportModal, TransportAiModal } from './ScheduleModals';
 import { motion, AnimatePresence, Reorder } from 'framer-motion';
 import { LazyImage } from './LazyImage';
@@ -23,6 +23,21 @@ const CATEGORY_STYLE = {
   food: { bg: 'bg-splat-pink', text: 'text-white', label: 'FOOD', splat: '#F03C69' },
   transport: { bg: 'bg-splat-blue', text: 'text-white', label: 'TRANSPORT', splat: '#2932CF' },
   hotel: { bg: 'bg-splat-green', text: 'text-white', label: 'HOTEL', splat: '#21CC65' },
+};
+
+// --- 航班主題萃取 ---
+const AIRLINE_THEMES: Record<string, any> = {
+  tigerair: { bgClass: 'bg-[#F49818]', textClass: 'text-white', logo: 'tigerair' },
+  starlux: { bgClass: 'bg-[#181B26]', textClass: 'text-[#C4A97A]', logo: 'STARLUX' },
+  eva: { bgClass: 'bg-[#007A53]', textClass: 'text-white', logo: 'EVA AIR' },
+  china: { bgClass: 'bg-[#002855]', textClass: 'text-[#FFB6C1]', logo: 'CHINA AIRLINES' },
+  other: { bgClass: 'bg-splat-dark', textClass: 'text-white', logo: 'FLIGHT' }
+};
+
+const getAirlineTheme = (airline?: string) => {
+  if (!airline) return AIRLINE_THEMES.other;
+  const key = Object.keys(AIRLINE_THEMES).find(k => airline.toLowerCase().includes(k));
+  return key ? AIRLINE_THEMES[key] : AIRLINE_THEMES.other;
 };
 
 const getWeatherDesc = (code: number) => {
@@ -66,12 +81,158 @@ import MapLibreGL, { LngLatBounds } from 'maplibre-gl';
 import type * as MapLibreGLType from 'maplibre-gl';
 
 
-// --- 輔助組件：每個行程項目的渲染（包含自動取圖邏輯） ---
+// --- 🔹 極簡空間 Timeline 組件 ---
+
+// --- 🔹 專用航班卡片 (時間軸版) ---
+const TimelineFlightCard: FC<{
+  item: BookingItem;
+  onClick: () => void;
+}> = ({ item, onClick }) => {
+  const theme = getAirlineTheme(item.airline);
+
+  return (
+    <motion.div
+      layoutId={`card-${item.id}`}
+      onClick={onClick}
+      initial={{ scale: 0.95, opacity: 0 }}
+      animate={{ scale: 0.95, opacity: 1 }}
+      whileHover={{ scale: 0.98 }}
+      className="relative ml-14 mb-10 cursor-pointer group"
+    >
+      <div className="bg-white rounded-[32px] overflow-hidden border-[3px] border-splat-dark shadow-splat-solid relative">
+        <div className={`${theme.bgClass} h-12 flex items-center justify-center border-b-[3px] border-splat-dark`}>
+          <span className={`text-[10px] font-black uppercase tracking-[0.3em] ${theme.textClass}`}>{theme.logo}</span>
+        </div>
+        <div className="p-5 flex justify-between items-center bg-[#fcfcfc]">
+          <div className="flex flex-col items-center">
+            <span className="text-2xl font-black text-splat-dark">{item.depIata || 'TPE'}</span>
+            <span className="text-[10px] font-bold text-gray-400">{item.depTime || '--:--'}</span>
+          </div>
+          <div className="flex-1 flex flex-col items-center px-4">
+            <div className="text-[10px] font-black text-splat-blue mb-1">{item.flightNo}</div>
+            <div className="w-full flex items-center gap-2">
+              <div className="h-[2px] flex-1 bg-splat-dark/5 border-t-2 border-dashed border-splat-dark/20" />
+              <Plane size={14} className="text-splat-blue rotate-45" />
+              <div className="h-[2px] flex-1 bg-splat-dark/5 border-t-2 border-dashed border-splat-dark/20" />
+            </div>
+          </div>
+          <div className="flex flex-col items-center">
+            <span className="text-2xl font-black text-splat-dark">{item.arrIata || 'KIX'}</span>
+            <span className="text-[10px] font-bold text-gray-400">{item.arrTime || '--:--'}</span>
+          </div>
+        </div>
+        {/* 指令提示元件 */}
+        <div className="absolute right-4 bottom-4 w-8 h-8 rounded-full bg-splat-dark text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+          <ChevronRight size={16} />
+        </div>
+      </div>
+    </motion.div>
+  );
+};
+
+// --- 🔹 專用飯店卡片 (時間軸版) ---
+const TimelineHotelCard: FC<{
+  item: BookingItem;
+  onClick: () => void;
+}> = ({ item, onClick }) => {
+  return (
+    <motion.div
+      layoutId={`card-${item.id}`}
+      onClick={onClick}
+      initial={{ scale: 0.95, opacity: 0 }}
+      animate={{ scale: 0.95, opacity: 1 }}
+      whileHover={{ scale: 0.98 }}
+      className="relative ml-14 mb-10 cursor-pointer group"
+    >
+      <div className="bg-white rounded-[32px] overflow-hidden border-[3px] border-splat-dark shadow-splat-solid flex h-32 relative">
+        <div className="w-32 bg-gray-100 border-r-[3px] border-splat-dark overflow-hidden">
+          {item.images?.[0] ? (
+            <img src={item.images[0]} className="w-full h-full object-cover grayscale-[0.3] group-hover:grayscale-0 transition-all" alt="hotel" />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center"><Home size={32} className="text-gray-300" /></div>
+          )}
+        </div>
+        <div className="flex-1 p-5 flex flex-col justify-center">
+          <div className="text-[10px] font-black text-splat-green uppercase tracking-widest mb-1">Stay Confirmed</div>
+          <h4 className="font-black text-lg text-splat-dark truncate leading-none">{item.title}</h4>
+          <div className="flex items-center gap-3 mt-3 text-[10px] font-bold text-gray-400 uppercase">
+            <div className="flex items-center gap-1"><Clock size={10} /> {item.checkInTime || '15:00'}</div>
+            <div className="flex items-center gap-1"><MapPin size={10} /> {item.location}</div>
+          </div>
+        </div>
+        <div className="absolute right-4 bottom-4 w-8 h-8 rounded-full bg-splat-green text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+          <ChevronRight size={16} />
+        </div>
+      </div>
+    </motion.div>
+  );
+};
+
+// --- 🔹 空間地圖 Header ---
+const SpatialMapHeader: FC<{
+  trip: Trip;
+  activeItem?: any;
+}> = ({ trip, activeItem }) => {
+  const mapRef = useRef<MapLibreGLType.Map | null>(null);
+  const MAPTILER_KEY = (import.meta as any).env.VITE_MAPTILER_API_KEY;
+
+  useEffect(() => {
+    if (activeItem?.lat && activeItem?.lng && mapRef.current) {
+      mapRef.current.flyTo({
+        center: [activeItem.lng, activeItem.lat],
+        zoom: 15,
+        padding: { top: 100, bottom: 20, left: 20, right: 20 },
+        duration: 1500,
+        essential: true
+      });
+    }
+  }, [activeItem?.id]);
+
+  return (
+    <div className="relative h-64 w-full rounded-[40px] overflow-hidden border-[3px] border-splat-dark shadow-splat-solid group">
+      <Map
+        ref={mapRef}
+        styles={{
+          light: `https://api.maptiler.com/maps/dataviz/style.json?key=${MAPTILER_KEY}`,
+          dark: `https://api.maptiler.com/maps/dataviz/style.json?key=${MAPTILER_KEY}`
+        }}
+        initialViewState={{
+          center: [trip.lng || 135.5023, trip.lat || 34.6937],
+          zoom: 12,
+          pitch: 60,
+        }}
+        className="w-full h-full"
+      >
+        <Map3DBuildings />
+        {activeItem?.lat && (
+          <MapMarker longitude={activeItem.lng} latitude={activeItem.lat}>
+            <div className="w-8 h-8 rounded-full bg-splat-blue border-4 border-white shadow-xl animate-pulse" />
+          </MapMarker>
+        )}
+      </Map>
+      <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-white/90 pointer-events-none" />
+
+      {/* 墨線裝飾 */}
+      <div className="absolute inset-x-8 bottom-8 flex justify-between items-end pointer-events-none">
+        <div>
+          <h2 className="text-3xl font-black text-splat-dark italic tracking-tighter drop-shadow-sm uppercase">
+            {trip.dest} <span className="text-splat-blue">Express</span>
+          </h2>
+          <p className="text-[10px] font-black text-splat-dark/40 tracking-[0.2em] mt-1">SPATIAL TIMELINE v2.0</p>
+        </div>
+        <div className="px-5 py-2 bg-splat-dark text-white rounded-full text-[10px] font-black tracking-widest uppercase">
+          Live Tracking
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const ScheduleItemRow: FC<{
   item: ScheduleItem,
   idx: number,
   isEditMode: boolean,
-  dayItems: ScheduleItem[],
+  dayItems: any[],
   tripId: string,
   updateScheduleItem: any,
   deleteScheduleItem: any,
@@ -82,109 +243,71 @@ const ScheduleItemRow: FC<{
 }> = ({ item, idx, isEditMode, dayItems, tripId, updateScheduleItem, deleteScheduleItem, setEditingItem, setIsEditorOpen, setDetailItem, timeToMins }) => {
   const { showToast } = useTripStore();
   const catStyle = CATEGORY_STYLE[item.category as keyof typeof CATEGORY_STYLE] || CATEGORY_STYLE.sightseeing;
-  const prevItem = idx > 0 ? dayItems[idx - 1] : null;
-  let warningMsg = null;
-  let gapMins = 0;
 
-  if (prevItem) {
-    const prevEndTimeMins = prevItem.endTime ? timeToMins(prevItem.endTime) : timeToMins(prevItem.time);
-    const currentStartTimeMins = timeToMins(item.time);
-    gapMins = currentStartTimeMins - prevEndTimeMins;
-    if (gapMins < 0) warningMsg = "時間重疊囉！⏳";
-    else if (gapMins > 0 && gapMins < 30 && prevItem.location !== item.location) warningMsg = "行程有點趕！🏃";
-  }
-
-  // Fix 2: sessionStorage 快取避免重複呼叫 AI 取圖 (N+1 問題)
-  useEffect(() => {
-    if (item.images && item.images.length > 0) return;
-
-    // 檢查本次會話是否已經嘗試過取圖
-    const cacheKey = `img_fetched_${item.id}`;
-    if (sessionStorage.getItem(cacheKey)) return;
-
-    const controller = new AbortController();
-    const fetchImage = async () => {
-      // 標記為「已嘗試」不論成成費，避免重複呼叫
-      sessionStorage.setItem(cacheKey, '1');
-      try {
-        const res = await fetch('/api/ai', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            action: 'get-image-for-item',
-            payload: { title: item.title, location: item.location, category: item.category }
-          }),
-          signal: controller.signal
-        });
-        const data = await res.json();
-        if (data.imageUrl && (!item.images || item.images.length === 0)) {
-          updateScheduleItem(tripId, item.id, { ...item, images: [data.imageUrl] });
-        }
-      } catch (err: any) {
-        if (err?.name !== 'AbortError') {
-          console.error("Failed to fetch image for item:", item.title);
-        }
-      }
-    };
-    // 隨機延遲降低同時呼叫數，避免發出一波 AI 請求
-    const delay = 800 + Math.random() * 3000;
-    const timeoutId = setTimeout(fetchImage, delay);
-    return () => { clearTimeout(timeoutId); controller.abort(); };
-  }, [item.id]);
-
-  const [hasTriggeredHaptic, setHasTriggeredHaptic] = useState(false);
+  const nextItem = dayItems[idx + 1];
+  const connectorColor = nextItem
+    ? (CATEGORY_STYLE[nextItem.category as keyof typeof CATEGORY_STYLE]?.splat ||
+      (nextItem.__type === 'booking' ? (nextItem.type === 'flight' ? '#2932CF' : '#21CC65') : '#1A1A1A'))
+    : '#1A1A1A';
 
   return (
-    <Reorder.Item key={item.id} value={item} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, scale: 0.9 }} dragListener={isEditMode} className="relative pl-6 group select-none touch-pan-y">
-      <div className={`absolute left-[7px] top-6 bottom-[-24px] w-1 border-r-[3px] border-dashed border-splat-dark opacity-20 ${idx === dayItems.length - 1 ? 'hidden' : ''}`} />
-      <div className={`absolute left-0 top-[18px] w-4 h-4 rounded-full border-[3px] border-splat-dark z-10 ${catStyle.bg}`} />
+    <motion.div
+      layoutId={`card-${item.id}`}
+      onClick={() => isEditMode ? (setEditingItem(item), setIsEditorOpen(true)) : setDetailItem(item)}
+      className="relative pl-6 mb-8 group cursor-pointer"
+    >
+      {/* 動態連接線 */}
+      <div
+        className="absolute left-[7px] top-6 bottom-[-32px] w-[2px] opacity-20 border-l-2 border-dashed group-last:hidden"
+        style={{ borderColor: connectorColor }}
+      />
+      <div
+        className="absolute left-0 top-[18px] w-4 h-4 rounded-full border-2 bg-white z-10 transition-transform group-hover:scale-125"
+        style={{ borderColor: connectorColor }}
+      />
 
-      <SwipeableItem
-        id={item.id}
-        onDelete={() => deleteScheduleItem(tripId, item.id)}
-        disabled={isEditMode}
-        className="rounded-[24px]"
-      >
-        <div className="flex-1 flex gap-3 relative z-10 bg-[#F4F5F7] cursor-pointer">
-          <div className="w-16 shrink-0 flex flex-col items-center mt-3 z-10">
-            <motion.button onClick={(e) => { e.stopPropagation(); updateScheduleItem(tripId, item.id, { ...item, isCompleted: !item.isCompleted }); }} className={`rounded-xl py-2 w-full text-center border-[3px] border-splat-dark -rotate-3 transition-colors ${item.isCompleted ? 'bg-gray-300 text-gray-500' : 'bg-white shadow-splat-solid-sm'}`}>
-              <span className="font-black text-[15px]">{item.time}</span>
-            </motion.button>
-          </div>
-          <div className="flex-1 min-w-0 flex flex-col gap-2">
-            {warningMsg && <div className="bg-white border-2 border-splat-dark px-3 py-1.5 rounded-lg text-[10px] font-black flex items-center gap-1.5 shadow-sm overflow-hidden"><AlertTriangle size={14} className="text-splat-orange" /> {warningMsg}</div>}
-            <motion.div onClick={() => isEditMode ? (setEditingItem(item), setIsEditorOpen(true)) : setDetailItem(item)} className={`card-splat p-0 overflow-hidden cursor-pointer bg-white border-[3px] border-splat-dark rounded-[24px] shadow-splat-solid relative ${item.isCompleted ? 'bg-gray-100 ring-4 ring-gray-200 overflow-hidden' : ''} ${isEditMode ? 'pr-12' : ''}`}>
-              {item.isCompleted && (
-                <>
-                  <div className="absolute inset-0 z-10 pointer-events-none opacity-20">
-                    <div className="absolute top-1/2 left-[-10%] w-[120%] h-[12px] bg-gray-400 -translate-y-1/2 -rotate-[25deg] origin-center skew-x-12" />
-                    <div className="absolute top-1/2 left-[-10%] w-[120%] h-[2px] bg-gray-400 translate-y-6 -rotate-[25deg] origin-center" />
-                  </div>
-                </>
-              )}
-              <div className={`h-7 w-full ${item.isCompleted ? 'bg-gray-400 opacity-60' : catStyle.bg} border-b-[3px] border-splat-dark flex items-center px-3 justify-between`}>
-                <span className={`text-[10px] font-black uppercase tracking-widest ${item.isCompleted ? 'text-white' : catStyle.text}`}>
-                  {item.isCompleted ? 'COMPLETED' : catStyle.label}
+      <div className="flex gap-4">
+        <div className="pt-4 min-w-[40px] text-right">
+          <span className="text-xs font-black text-splat-dark/30 italic">{item.time}</span>
+        </div>
+
+        <div className="flex-1 bg-white border-[1px] border-splat-dark/10 rounded-[24px] p-5 hover:border-splat-dark/20 transition-all hover:shadow-xl hover:shadow-black/5 relative overflow-hidden group/card">
+          <div className="flex justify-between items-start mb-2">
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                <span className={`text-[9px] font-black px-2 py-0.5 rounded-full border-[1px] border-splat-dark/10 ${catStyle.text} uppercase tracking-tighter`}>
+                  {item.category}
                 </span>
-                {item.isCompleted && <Check size={14} className="text-white" strokeWidth={4} />}
+                {item.isCompleted && <Check size={12} className="text-splat-green" strokeWidth={4} />}
               </div>
-              <div className={`p-4 flex justify-between items-center bg-white relative ${item.isCompleted ? 'opacity-40 grayscale' : ''}`}>
-                <div className="flex-1 min-w-0 pr-2">
-                  <h4 className="font-black text-xl uppercase truncate">{item.title}</h4>
-                  <p className="text-xs font-bold text-gray-500 truncate"><MapPin size={14} /> {item.location}</p>
-                </div>
-                {isEditMode && (
-                  <div className="absolute right-0 top-0 bottom-0 w-12 bg-gray-50 border-l-[3px] border-splat-dark flex flex-col z-30">
-                    <button onClick={(e) => { e.stopPropagation(); setEditingItem(item); setIsEditorOpen(true); }} className="flex-1 flex items-center justify-center border-b-[3px] border-splat-dark"><Edit3 size={16} /></button>
-                    <button onClick={(e) => { e.stopPropagation(); deleteScheduleItem(tripId, item.id); }} className="flex-1 flex items-center justify-center text-red-500"><Trash2 size={16} /></button>
-                  </div>
-                )}
+              <h4 className="font-bold text-lg text-splat-dark leading-tight">{item.title}</h4>
+            </div>
+            {item.images?.[0] && (
+              <div className="w-12 h-12 rounded-xl border-[1px] border-splat-dark/10 overflow-hidden rotate-3 group-hover/card:rotate-0 transition-transform">
+                <LazyImage src={item.images[0]} containerClassName="w-full h-full" alt="spot" />
               </div>
-            </motion.div>
+            )}
+          </div>
+
+          <div className="flex items-center gap-3 mt-4 pt-4 border-t border-splat-dark/5">
+            <div className="flex items-center gap-1 text-[10px] font-bold text-gray-400 uppercase">
+              <MapPin size={10} /> {item.location}
+            </div>
+            {item.cost > 0 && (
+              <div className="flex items-center gap-1 text-[10px] font-bold text-splat-orange uppercase">
+                <Star size={10} /> JPY {item.cost.toLocaleString()}
+              </div>
+            )}
+          </div>
+
+          <div className="absolute right-4 bottom-4 opacity-0 group-hover/card:opacity-100 transition-opacity">
+            <div className="p-2 bg-splat-dark text-white rounded-full">
+              <ChevronRight size={14} />
+            </div>
           </div>
         </div>
-      </SwipeableItem>
-    </Reorder.Item>
+      </div>
+    </motion.div>
   );
 };
 
@@ -220,7 +343,7 @@ const ScheduleMapView: FC<{
 
   // 🚀 修復 Lazy-Keep 導致的地圖破圖 (hidden 屬性變回 visible 時需要 resize)
   useEffect(() => {
-    if (activeTab === 'schedule' && mapRef.current) {
+    if (activeTab === 'timeline' && mapRef.current) {
       requestAnimationFrame(() => {
         mapRef.current?.resize();
       });
@@ -484,7 +607,7 @@ export const Schedule: FC<{ externalDateIdx?: number }> = ({ externalDateIdx = 0
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [editingItem, setEditingItem] = useState<ScheduleItem | undefined>();
-  const [detailItem, setDetailItem] = useState<ScheduleItem | undefined>();
+  const [detailItem, setDetailItem] = useState<any | undefined>();
 
   const [showFullWeather, setShowFullWeather] = useState(false);
   const [isAiLoading, setIsAiLoading] = useState(false);
@@ -499,6 +622,7 @@ export const Schedule: FC<{ externalDateIdx?: number }> = ({ externalDateIdx = 0
   const [weatherAdvice, setWeatherAdvice] = useState<{ reason: string, recommendations: any[] } | null>(null);
   const [showWizardModal, setShowWizardModal] = useState(false);
 
+
   const dateRange = useMemo(() => {
     if (!trip?.startDate || !trip?.endDate) return [];
     const start = parseISO(trip.startDate);
@@ -509,9 +633,52 @@ export const Schedule: FC<{ externalDateIdx?: number }> = ({ externalDateIdx = 0
   }, [trip]);
 
   const selectedDateStr = dateRange.length > 0 ? format(dateRange[externalDateIdx], 'yyyy-MM-dd') : '';
-  const dayItems = useMemo(() => (trip?.items || []).filter(i => i.date === selectedDateStr).sort((a, b) => (a.time || '').localeCompare(b.time || '')), [trip, selectedDateStr]);
+
+  // 🚀 合併 Schedule 與 Booking
+  const dayItems = useMemo(() => {
+    const schedules = (trip?.items || []).filter(i => i.date === selectedDateStr);
+    const bookings = (trip?.bookings || []).filter(i => i.date === selectedDateStr || (i.endDate && selectedDateStr >= i.date && selectedDateStr <= i.endDate));
+
+    const merged = [
+      ...schedules.map(i => ({ ...i, __type: 'schedule' as const })),
+      ...bookings.map(i => ({ ...i, __type: 'booking' as const }))
+    ];
+
+    return merged.sort((a, b) => {
+      const timeA = (a as any).time || (a as any).depTime || '00:00';
+      const timeB = (b as any).time || (b as any).depTime || '00:00';
+      return timeA.localeCompare(timeB);
+    });
+  }, [trip, selectedDateStr]);
+
+  const [activeDayItem, setActiveDayItem] = useState<any>(null);
+
+  // 🚀 IntersectionObserver 用於空間地圖隨動
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const visible = entries.find(e => e.isIntersecting);
+        if (visible) {
+          const id = visible.target.getAttribute('data-id');
+          const item = dayItems.find(i => i.id === id);
+          if (item) setActiveDayItem(item);
+        }
+      },
+      { threshold: 0.5, rootMargin: '-10% 0% -40% 0%' }
+    );
+
+    const elements = document.querySelectorAll('.timeline-item');
+    elements.forEach(el => observer.observe(el));
+    return () => observer.disconnect();
+  }, [dayItems]);
 
   const timeline = useMemo(() => {
+    const sortedForTimeline = [...dayItems].sort((a, b) => {
+      const tA = (a as any).time || (a as any).depTime || '00:00';
+      const tB = (b as any).time || (b as any).depTime || '00:00';
+      return tA.localeCompare(tB);
+    });
+
     const defaultCity = { name: trip?.dest.toUpperCase() || 'CITY', lat: trip?.lat || 0, lng: trip?.lng || 0 };
     if (!trip || dateRange.length === 0) return [{ time: '00:00', city: defaultCity }];
 
@@ -537,11 +704,11 @@ export const Schedule: FC<{ externalDateIdx?: number }> = ({ externalDateIdx = 0
     };
 
     const tl: { time: string, city: typeof defaultCity }[] = [];
-    for (const item of dayItems) {
+    for (const item of sortedForTimeline as any[]) {
       const found = CITY_DB.find(c => c.keys.some(k => `${item.title} ${item.location} `.includes(k)));
       if (found) {
         if (tl.length === 0 || tl[tl.length - 1].city.name !== found.name) {
-          tl.push({ time: item.time, city: found });
+          tl.push({ time: item.time || item.depTime || '00:00', city: found });
         }
       }
     }
@@ -693,10 +860,10 @@ export const Schedule: FC<{ externalDateIdx?: number }> = ({ externalDateIdx = 0
   const handleAutoFillGaps = async () => {
     let foundGap = null;
     for (let i = 1; i < dayItems.length; i++) {
-      const prev = dayItems[i - 1];
-      const curr = dayItems[i];
-      const prevEnd = prev.endTime ? timeToMins(prev.endTime) : timeToMins(prev.time);
-      const currStart = timeToMins(curr.time);
+      const prev = dayItems[i - 1] as any;
+      const curr = dayItems[i] as any;
+      const prevEnd = prev.endTime ? timeToMins(prev.endTime) : timeToMins(prev.time || prev.depTime);
+      const currStart = timeToMins(curr.time || curr.depTime);
       if (currStart - prevEnd >= 120) {
         foundGap = { prev, curr };
         break;
@@ -716,7 +883,7 @@ export const Schedule: FC<{ externalDateIdx?: number }> = ({ externalDateIdx = 0
     const items = trip?.items || [];
     const sortedItems = [...items].filter(i => i.date === currentItem.date).sort((a, b) => (a.time || '').localeCompare(b.time || ''));
     const globalIdx = sortedItems.findIndex(i => i.id === currentItem.id);
-    const prevItem = globalIdx > 0 ? sortedItems[globalIdx - 1] : null;
+    const prevItem = globalIdx > 0 ? sortedItems[globalIdx - 1] as ScheduleItem : null;
 
     // Fix 5: 30 秒超時保護
     const controller = new AbortController();
@@ -879,7 +1046,7 @@ export const Schedule: FC<{ externalDateIdx?: number }> = ({ externalDateIdx = 0
           payload: {
             location: todayWeather.cityName,
             weather: weatherInfo.t,
-            currentItems: dayItems.map(i => ({ id: i.id, title: i.title, location: i.location, category: i.category })),
+            currentItems: dayItems.map((i: any) => ({ id: i.id, title: i.title, location: i.location, category: i.category })),
             preferences: [
               ...(trip?.journals || []).filter(j => j.rating >= 4).map(j => j.title),
               ...(trip?.expenses || []).map(e => e.storeName)
@@ -909,7 +1076,7 @@ export const Schedule: FC<{ externalDateIdx?: number }> = ({ externalDateIdx = 0
     const original = dayItems.find(i => i.id === originalId);
     if (!original) return;
 
-    const newItem: ScheduleItem = {
+    const newItem: any = {
       ...original,
       title: recommendation.newTitle,
       location: recommendation.newLocation,
@@ -977,7 +1144,7 @@ export const Schedule: FC<{ externalDateIdx?: number }> = ({ externalDateIdx = 0
       const guide = { background: fullText, highlights: [], suggestedDuration: "" };
       const updatedItem = { ...item, spotGuide: guide };
       if (trip) updateScheduleItem(trip.id, item.id, updatedItem);
-      setDetailItem(prev => prev?.id === item.id ? updatedItem : prev);
+      setDetailItem((prev: any) => prev?.id === item.id ? updatedItem : prev);
 
       triggerHaptic('success');
     } catch (err: any) {
@@ -1024,9 +1191,9 @@ export const Schedule: FC<{ externalDateIdx?: number }> = ({ externalDateIdx = 0
       if (Array.isArray(optimizedIds)) {
         const newOrder = [...optimizedIds]
           .map(id => dayItems.find(i => i.id === id))
-          .filter(Boolean) as ScheduleItem[];
+          .filter(Boolean) as any[];
         const missing = dayItems.filter(i => !optimizedIds.includes(i.id));
-        reorderScheduleItems(trip!.id, [...newOrder, ...missing]);
+        reorderScheduleItems(trip!.id, [...newOrder, ...missing] as any);
         triggerHaptic('success');
         showToast("✨ AI 路徑優化成功！", "success");
       }
@@ -1051,52 +1218,28 @@ export const Schedule: FC<{ externalDateIdx?: number }> = ({ externalDateIdx = 0
   return (
     <div className="flex flex-col h-full relative text-splat-dark">
       <div className="flex-1 overflow-y-auto hide-scrollbar p-6 space-y-8 pb-32">
-        <motion.div
-          onClick={() => setShowFullWeather(true)}
-          initial={{ y: 20, opacity: 0, scale: 0.95 }}
-          animate={{ y: 0, opacity: 1, scale: 1 }}
-          whileTap={{ scale: 0.98 }}
-          className={`${weatherInfo.color || 'bg-white'} text-splat-dark rounded-[32px] border-[3px] border-splat-dark flex flex-col cursor-pointer shadow-splat-solid relative overflow-hidden p-5 transition-colors duration-500`}
-        >
-          <div className="flex justify-between items-start z-10">
-            <div>
-              <div className="flex items-center gap-1 text-splat-dark/60 font-black text-[11px] uppercase tracking-widest mb-2 whitespace-nowrap">
-                <MapPin size={12} /> <span className="inline-block shrink-0">{todayWeather.cityName} CITY</span>
-              </div>
-              <div className="text-2xl sm:text-3xl font-black flex items-center gap-2 whitespace-nowrap">
-                <span className="shrink-0">{weatherInfo.t}</span> <span className="text-3xl sm:text-4xl shrink-0">{weatherInfo.e}</span>
-              </div>
-              <div className="flex gap-4 mt-2">
-                <div className="flex items-center gap-1 text-[10px] font-black text-splat-dark/70">
-                  <CloudRain size={14} /> {todayWeather.rain}%
-                </div>
-                <div className="flex items-center gap-1 text-[10px] font-black text-splat-dark/70">
-                  <Droplets size={14} /> {todayWeather.wind}
+        <div className="sticky top-0 z-50 bg-[#F4F5F7]/80 backdrop-blur-md pt-2 pb-6">
+          <SpatialMapHeader trip={trip!} activeItem={activeDayItem} />
+
+          <div className="flex items-center justify-between mt-6 px-4">
+            <div className="flex gap-4">
+              <div onClick={() => setShowFullWeather(true)} className="flex items-center gap-3 cursor-pointer group">
+                <div className="text-3xl font-black text-splat-dark">{currentTempStr}°</div>
+                <div>
+                  <div className="text-[10px] font-black text-splat-dark/40 uppercase tracking-widest">{weatherInfo.t}</div>
+                  <div className="flex items-center gap-1 text-[10px] font-bold text-splat-blue">
+                    <CloudRain size={10} /> {todayWeather.rain}%
+                  </div>
                 </div>
               </div>
             </div>
-            <div className="text-right mt-1 z-10">
-              <div className="text-5xl font-black drop-shadow-sm">{currentTempStr}°</div>
-              <div className="text-[11px] font-black text-splat-dark/40 mt-1 tracking-widest">{todayWeather.min}° / {todayWeather.max}°</div>
+
+            <div className="flex gap-2">
+              <motion.button whileTap={{ scale: 0.9 }} onClick={() => setViewMode(viewMode === 'list' ? 'map' : 'list')} className={`w-10 h-10 rounded-2xl flex items-center justify-center border-[1px] border-splat-dark/10 ${viewMode === 'map' ? 'bg-splat-blue text-white' : 'bg-white text-splat-dark shadow-xl shadow-black/5'}`}>
+                {viewMode === 'list' ? <MapIcon size={18} /> : <Camera size={18} />}
+              </motion.button>
+              <motion.button whileTap={{ scale: 0.9 }} onClick={() => { setEditingItem(undefined); setIsEditorOpen(true) }} className="w-10 h-10 rounded-2xl bg-splat-dark text-white flex items-center justify-center shadow-xl shadow-splat-dark/20"><Plus size={20} /></motion.button>
             </div>
-          </div>
-          {/* 加入背景潑墨點綴 */}
-          <div className="absolute -bottom-4 -right-4 w-32 h-32 bg-black/5 rounded-full blur-3xl" />
-          <div className="absolute inset-0 opacity-[0.03] pointer-events-none" style={{ backgroundImage: 'radial-gradient(circle, currentColor 1px, transparent 1px)', backgroundSize: '12px 12px' }} />
-        </motion.div>
-
-        {/* 🪄 降雨超能力移至 AI Menu 中統一觸發 */}
-
-        <div className="flex items-center justify-between bg-white border-[3px] border-splat-dark shadow-splat-solid p-3 rounded-2xl">
-          <h3 className="text-lg font-black text-splat-dark italic tracking-widest uppercase ml-2 flex items-center gap-2">
-            <span className="bg-splat-yellow px-2 py-0.5 -rotate-2 rounded">SCHEDULE</span>
-          </h3>
-          <div className="flex gap-2 items-center">
-            <motion.button whileTap={{ scale: 0.9 }} onClick={() => setViewMode(viewMode === 'list' ? 'map' : 'list')} className={`w-9 h-9 rounded-xl flex items-center justify-center border-2 border-splat-dark ${viewMode === 'map' ? 'bg-splat-blue text-white' : 'bg-white text-splat-dark shadow-splat-solid-sm'}`}>
-              {viewMode === 'list' ? <MapIcon size={18} strokeWidth={3} /> : <Camera size={18} strokeWidth={3} />}
-            </motion.button>
-            <motion.button whileTap={{ scale: 0.9 }} onClick={() => { setEditingItem(undefined); setIsEditorOpen(true) }} className="w-9 h-9 rounded-xl bg-splat-green text-white flex items-center justify-center border-2 border-splat-dark shadow-splat-solid-sm"><Plus strokeWidth={3} /></motion.button>
-            <motion.button whileTap={{ scale: 0.9 }} onClick={() => setIsEditMode(!isEditMode)} className={`w-9 h-9 rounded-xl flex items-center justify-center border-2 border-splat-dark ${isEditMode ? 'bg-splat-pink text-white' : 'bg-white text-splat-dark shadow-splat-solid-sm'}`}><Edit3 size={18} strokeWidth={3} /></motion.button>
           </div>
         </div>
 
@@ -1112,16 +1255,16 @@ export const Schedule: FC<{ externalDateIdx?: number }> = ({ externalDateIdx = 0
         )}
 
         {viewMode === 'list' ? (
-          <div className="relative mt-4 space-y-6">
-            <Reorder.Group axis="y" values={dayItems} onReorder={onReorder} className="space-y-4">
-              <AnimatePresence>
-                {dayItems.length === 0 ? (
-                  <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center py-20 bg-white border-[3px] border-dashed border-gray-300 rounded-[40px] text-gray-400 font-black italic">今天還沒有計畫，來點冒險吧！🗺️</motion.div>
-                ) : (
-                  dayItems.map((item, idx) => (
-                    <div key={item.id}>
+          <div className="relative mt-4">
+            <AnimatePresence mode="popLayout">
+              {dayItems.length === 0 ? (
+                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-center py-20 bg-white border-[1px] border-dashed border-gray-300 rounded-[40px] text-gray-400 font-black italic">No plans yet. Adventure awaits! 🗺️</motion.div>
+              ) : (
+                dayItems.map((item, idx) => (
+                  <div key={item.id} data-id={item.id} className="timeline-item">
+                    {item.__type === 'schedule' ? (
                       <ScheduleItemRow
-                        item={item}
+                        item={item as any}
                         idx={idx}
                         isEditMode={isEditMode}
                         dayItems={dayItems}
@@ -1133,30 +1276,30 @@ export const Schedule: FC<{ externalDateIdx?: number }> = ({ externalDateIdx = 0
                         setDetailItem={setDetailItem}
                         timeToMins={timeToMins}
                       />
-                      {/* 🚀 Task 2: 行程間的路徑連接線 */}
-                      {idx < dayItems.length - 1 && (
-                        <div className="flex flex-col items-center py-2 px-10">
-                          <div className="w-[3px] h-8 bg-dashed opacity-20" style={{ backgroundImage: 'linear-gradient(to bottom, #1A1A1A 50%, transparent 50%)', backgroundSize: '1px 8px' }} />
-                          <div className="bg-white border-2 border-splat-dark/10 px-3 py-1 rounded-full -mt-4 mb-2 z-10 flex items-center gap-1.5 shadow-sm">
-                            <Wind size={10} className="text-splat-blue" />
-                            <span className="text-[10px] font-black text-splat-dark/40 uppercase tracking-widest">
-                              {item.transportSuggestion?.split('(')[0] || 'Next Spot'}
-                            </span>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  ))
-                )}
-              </AnimatePresence>
-            </Reorder.Group>
+                    ) : (
+                      item.type === 'flight' ? (
+                        <TimelineFlightCard
+                          item={item as any}
+                          onClick={() => setDetailItem(item as any)}
+                        />
+                      ) : (
+                        <TimelineHotelCard
+                          item={item as any}
+                          onClick={() => setDetailItem(item as any)}
+                        />
+                      )
+                    )}
+                  </div>
+                ))
+              )}
+            </AnimatePresence>
           </div>
         ) : (
           <div className="relative h-[65vh] mt-4 flex flex-col gap-4">
             <ScheduleMapView
-              items={dayItems}
+              items={dayItems as any}
               trip={trip!}
-              setDetailItem={setDetailItem}
+              setDetailItem={setDetailItem as any}
               addScheduleItem={addScheduleItem}
               selectedDateStr={selectedDateStr}
             />
@@ -1166,72 +1309,162 @@ export const Schedule: FC<{ externalDateIdx?: number }> = ({ externalDateIdx = 0
 
       {showFullWeather && <WeatherReportModal onClose={() => setShowFullWeather(false)} todayHourly={todayHourly} getWeatherDesc={getWeatherDesc} />}
 
+      {/* --- 🚀 Command Center (Detail View with Shared Element Transition) --- */}
       <AnimatePresence>
         {detailItem && (
-          <div className="fixed inset-0 bg-splat-dark/60 backdrop-blur-md z-[600] p-4 flex items-center justify-center" onClick={() => setDetailItem(undefined)}>
-            <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }} exit={{ scale: 0.9 }} className="bg-white w-full max-w-sm rounded-[32px] border-[4px] border-splat-dark shadow-splat-solid flex flex-col max-h-[85vh] overflow-hidden" onClick={e => e.stopPropagation()}>
-              <div className="h-56 bg-gray-200 relative shrink-0 border-b-[4px] border-splat-dark">
-                <LazyImage src={detailItem.images?.[0] || ''} containerClassName="w-full h-full" alt="location" />
-                <button onClick={() => setDetailItem(undefined)} className="absolute top-4 right-4 bg-white border-[3px] border-splat-dark p-2 rounded-full"><X size={20} /></button>
-              </div>
-              <div className="p-6 space-y-5 bg-[#F4F5F7] overflow-y-auto">
-                <div className="inline-flex items-center gap-2 text-sm font-black bg-white border-[3px] border-splat-dark px-3 py-1.5 rounded-lg">{detailItem.title}</div>
-                <div className="card-splat p-4 bg-white/50">
-                  <h4 className="text-[10px] font-black uppercase mb-2 flex items-center gap-1.5"><Sparkles size={14} /> AI 景點導覽</h4>
-                  {detailItem.spotGuide ? (
-                    <div className="text-sm font-bold text-gray-700 whitespace-pre-wrap leading-relaxed">{detailItem.spotGuide.background}</div>
-                  ) : spotAiLoading === detailItem.id && completion ? (
-                    <div className="text-sm font-bold text-gray-700 whitespace-pre-wrap leading-relaxed animate-pulse">{completion}</div>
-                  ) : (
-                    <button onClick={() => handleFetchSpotGuide(detailItem)} disabled={!!spotAiLoading} className="w-full py-3 border-2 border-dashed rounded-lg text-xs font-black">
-                      {spotAiLoading === detailItem.id ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />} 取得 AI 景點建議
-                    </button>
-                  )}
-                </div>
-                <div className="card-splat p-4">
-                  <h4 className="text-[10px] font-black uppercase mb-2 flex items-center gap-1.5"><Plane size={14} /> 交通建議</h4>
-                  {detailItem.transportSuggestion ? (
-                    <div className="space-y-3">
-                      <p className="text-[11px] font-bold text-gray-400 leading-snug">
-                        {(() => {
-                          try {
-                            if (!detailItem.transportSuggestion) return "無建議內容";
-                            // 移除可能存在的快取字串並嘗試解析
-                            const raw = detailItem.transportSuggestion.trim();
-                            const parsed = JSON.parse(raw);
-                            return parsed.summary || "查看交通指南";
-                          } catch (e) {
-                            // 如果不是 JSON，則視為舊格式文字
-                            return detailItem.transportSuggestion;
-                          }
-                        })()}
-                      </p>
-                      <button
-                        onClick={() => {
-                          try {
-                            const raw = (detailItem.transportSuggestion || "").trim();
-                            const parsed = JSON.parse(raw);
-                            setSelectedTransportSuggestion(parsed);
-                            setShowTransportModal(true);
-                          } catch (e) {
-                            // 解析失敗則重新觸發製作新格式的 AI 建議
-                            handleTransportAiSuggest(detailItem);
-                          }
-                        }}
-                        className="w-full py-2 bg-splat-yellow/10 border-2 border-splat-yellow rounded-lg text-[10px] font-black text-splat-yellow uppercase"
+          <div
+            className="fixed inset-0 bg-splat-dark/60 backdrop-blur-xl z-[600] flex items-center justify-center p-0 sm:p-4"
+            onClick={() => setDetailItem(undefined)}
+          >
+            <motion.div
+              layoutId={`card-${detailItem.id}`}
+              className="bg-[#F4F5F7] w-full h-full sm:h-auto sm:max-w-md sm:rounded-[40px] border-b-0 sm:border-[4px] border-splat-dark shadow-2xl flex flex-col overflow-hidden relative"
+              onClick={e => e.stopPropagation()}
+            >
+              <button
+                onClick={() => setDetailItem(undefined)}
+                className="absolute top-6 right-6 z-[700] bg-white/80 backdrop-blur-sm border-[3px] border-splat-dark p-2 rounded-full shadow-splat-solid-sm active:scale-90 transition-transform"
+              >
+                <X size={20} strokeWidth={3} />
+              </button>
+
+              <div className="flex-1 overflow-y-auto hide-scrollbar">
+                {/* --- 1. Header (Image or Theme) --- */}
+                {detailItem.__type === 'booking' && detailItem.type === 'flight' ? (
+                  <div className={`${getAirlineTheme(detailItem.airline).bgClass} h-40 flex items-center justify-center border-b-[4px] border-splat-dark relative overflow-hidden`}>
+                    <div className="absolute inset-0 opacity-10 flex flex-wrap gap-4 p-4 pointer-events-none">
+                      {Array.from({ length: 20 }).map((_, i) => <Plane key={i} size={40} className="rotate-45" />)}
+                    </div>
+                    <span className={`text-4xl font-black uppercase tracking-[0.4em] drop-shadow-lg ${getAirlineTheme(detailItem.airline).textClass}`}>
+                      {getAirlineTheme(detailItem.airline).logo}
+                    </span>
+                  </div>
+                ) : (
+                  <div className="h-64 bg-gray-200 relative border-b-[4px] border-splat-dark shrink-0">
+                    <LazyImage
+                      src={detailItem.images?.[0] || ''}
+                      containerClassName="w-full h-full"
+                      alt="hero"
+                    />
+                    {!detailItem.images?.[0] && (
+                      <div className="w-full h-full flex items-center justify-center bg-splat-dark/5">
+                        {detailItem.type === 'hotel' ? <Home size={64} className="text-splat-dark/10" /> : <MapPin size={64} className="text-splat-dark/10" />}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* --- 2. Content Area --- */}
+                <div className="p-8 space-y-6">
+                  {/* Title & Badge */}
+                  <div>
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className={`text-[9px] font-black px-3 py-1 rounded-full border-[2px] border-splat-dark uppercase tracking-widest ${detailItem.__type === 'booking' ? 'bg-splat-yellow text-splat-dark' : 'bg-white text-splat-dark'}`}>
+                        {detailItem.category || detailItem.type}
+                      </span>
+                    </div>
+                    <h2 className="text-3xl font-black text-splat-dark italic tracking-tighter leading-none">{detailItem.title}</h2>
+                  </div>
+
+                  {/* Flight Special Details */}
+                  {detailItem.__type === 'booking' && detailItem.type === 'flight' && (
+                    <div className="space-y-4">
+                      {detailItem.pnr && (
+                        <div className="bg-white border-[3px] border-splat-dark rounded-2xl p-5 shadow-splat-solid-sm flex justify-between items-center group active:scale-[0.98] transition-all" onClick={() => { navigator.clipboard.writeText(detailItem.pnr); triggerHaptic('success'); showToast("PNR 已複製！🦑", "success"); }}>
+                          <div>
+                            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Confirmation PNR</p>
+                            <p className="text-3xl font-black text-splat-dark tracking-[0.2em]">{detailItem.pnr}</p>
+                          </div>
+                          <div className="w-12 h-12 rounded-xl bg-splat-yellow border-[3px] border-splat-dark flex items-center justify-center text-splat-dark group-hover:bg-splat-dark group-hover:text-white transition-colors">
+                            <Copy size={20} />
+                          </div>
+                        </div>
+                      )}
+                      <div className="grid grid-cols-3 gap-3">
+                        <div className="bg-white border-[2px] border-splat-dark/10 rounded-xl p-3 text-center">
+                          <span className="text-[9px] font-black text-gray-400 block uppercase mb-1">Terminal</span>
+                          <span className="text-xl font-black text-splat-dark">{detailItem.terminal || '--'}</span>
+                        </div>
+                        <div className="bg-white border-[2px] border-splat-dark/10 rounded-xl p-3 text-center">
+                          <span className="text-[9px] font-black text-gray-400 block uppercase mb-1">Gate</span>
+                          <span className="text-xl font-black text-splat-dark">{detailItem.gate || '--'}</span>
+                        </div>
+                        <div className="bg-white border-[2px] border-splat-dark/10 rounded-xl p-3 text-center">
+                          <span className="text-[9px] font-black text-gray-400 block uppercase mb-1">Boarding</span>
+                          <span className="text-xl font-black text-splat-pink">{detailItem.boardingTime || '--:--'}</span>
+                        </div>
+                      </div>
+                      <a
+                        href={`https://www.google.com/search?q=Flight+Status+${detailItem.flightNo}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="w-full py-4 bg-splat-dark text-white rounded-2xl font-black uppercase tracking-widest text-center flex items-center justify-center gap-3 shadow-splat-solid active:translate-y-1 transition-all"
                       >
-                        查看圖文導覽 ➔
+                        <Plane size={18} /> Live Status ➔
+                      </a>
+                    </div>
+                  )}
+
+                  {/* Hotel Special Details */}
+                  {detailItem.__type === 'booking' && detailItem.type === 'hotel' && (
+                    <div className="space-y-4">
+                      <div className="bg-white border-[3px] border-splat-dark rounded-2xl p-5 shadow-splat-solid-sm space-y-4">
+                        <div className="flex justify-between border-b-2 border-dashed border-gray-100 pb-4">
+                          <div>
+                            <span className="text-[10px] font-black text-gray-400 uppercase block mb-1">Check-In</span>
+                            <span className="text-xl font-black text-splat-dark">{detailItem.checkInTime || '15:00'}</span>
+                          </div>
+                          <div className="text-right">
+                            <span className="text-[10px] font-black text-gray-400 uppercase block mb-1">Check-Out</span>
+                            <span className="text-xl font-black text-splat-dark">{detailItem.checkOutTime || '11:00'}</span>
+                          </div>
+                        </div>
+                        {detailItem.confirmationNo && (
+                          <div className="flex justify-between items-center bg-gray-50 px-4 py-2 rounded-lg border border-gray-100">
+                            <span className="text-[10px] font-black text-gray-400 uppercase">Room Type</span>
+                            <span className="text-sm font-black text-splat-dark">{detailItem.roomType || 'Standard Room'}</span>
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex gap-3">
+                        <button
+                          className="flex-1 py-4 bg-white border-[3px] border-splat-dark rounded-2xl font-black uppercase text-xs flex items-center justify-center gap-2 shadow-splat-solid-sm active:translate-y-1 transition-all"
+                          onClick={() => window.open(`tel:${detailItem.phone || ''}`)}
+                        >
+                          <Phone size={16} /> Contact
+                        </button>
+                        <button
+                          className="flex-1 py-4 bg-splat-green text-white border-[3px] border-splat-dark rounded-2xl font-black uppercase text-xs flex items-center justify-center gap-2 shadow-splat-solid-sm active:translate-y-1 transition-all"
+                          onClick={() => window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(detailItem.location || "")}`, '_blank')}
+                        >
+                          <MapPin size={16} /> Map
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Regular Schedule Details */}
+                  {detailItem.__type === 'schedule' && (
+                    <div className="space-y-6">
+                      <div className="p-4 bg-white border-[3px] border-splat-dark rounded-2xl shadow-splat-solid-sm">
+                        <h4 className="text-[10px] font-black uppercase mb-2 flex items-center gap-1.5"><Sparkles size={14} className="text-splat-yellow" /> AI Spot Insight</h4>
+                        {detailItem.spotGuide ? (
+                          <div className="text-sm font-bold text-gray-700 whitespace-pre-wrap leading-relaxed">{detailItem.spotGuide.background}</div>
+                        ) : spotAiLoading === detailItem.id && completion ? (
+                          <div className="text-sm font-bold text-gray-700 whitespace-pre-wrap leading-relaxed animate-pulse">{completion}</div>
+                        ) : (
+                          <button onClick={() => handleFetchSpotGuide(detailItem)} disabled={!!spotAiLoading} className="w-full py-4 border-2 border-dashed border-gray-300 rounded-xl text-xs font-black text-gray-400 hover:text-splat-dark transition-colors">
+                            {spotAiLoading === detailItem.id ? <Loader2 size={16} className="animate-spin" /> : '取得 AI 景點智慧導覽'}
+                          </button>
+                        )}
+                      </div>
+
+                      <button onClick={() => window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(detailItem.location || "")}`, '_blank')} className="btn-splat w-full py-5 bg-splat-blue text-white flex items-center justify-center gap-3 text-lg">
+                        <MapPin size={24} strokeWidth={3} /> 開啟 Google Maps
                       </button>
                     </div>
-                  ) : (
-                    <button onClick={() => handleTransportAiSuggest(detailItem)} disabled={!!transportAiLoading} className="w-full py-3 border-2 border-dashed rounded-lg text-xs font-black">
-                      {transportAiLoading === detailItem.id ? <Loader2 size={16} className="animate-spin" /> : <Wand2 size={16} />} 取得交通建議
-                    </button>
                   )}
                 </div>
-                <button onClick={() => window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(detailItem.location || "")}`, '_blank')} className="btn-splat w-full py-4 bg-splat-blue text-white flex items-center justify-center gap-2">
-                  <MapPin size={20} /> 開啟導航
-                </button>
               </div>
             </motion.div>
           </div>

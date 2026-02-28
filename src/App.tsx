@@ -1,20 +1,20 @@
-import { FC, useState, useEffect, Suspense, useMemo, lazy, cloneElement } from 'react';
+import { FC, useState, useEffect, Suspense, useMemo, lazy, cloneElement, memo } from 'react';
 import { useTripStore } from './store/useTripStore';
 import { useFirebaseSync } from './hooks/useFirebaseSync';
 import { usePushNotifications } from './hooks/usePushNotifications';
 import { Onboarding } from './components/Onboarding';
 import {
-  Plus, ChevronDown, Trash2, Calendar, CreditCard, Wallet,
+  Plus, ChevronDown, Trash2, Calendar, CreditCard, Wallet as WalletIcon,
   Utensils, ShoppingBag, Info as InfoIcon, Lock, User,
   Camera, X, Edit3, RefreshCcw, Settings as SettingsIcon,
-  ToggleLeft, ToggleRight, Luggage, PenTool, Sparkles as SparklesIcon, Loader2, MapPinOff
+  ToggleLeft, ToggleRight, Luggage, PenTool, Sparkles as SparklesIcon, Loader2, MapPinOff, Activity, LineChart, Cpu, Zap, Fingerprint, Bell, Cloud
 } from 'lucide-react';
 import { format, addDays, differenceInDays, parseISO } from 'date-fns';
 import { compressImage, uploadImage } from './utils/imageUtils';
 import { auth } from './services/firebase';
 // framer-motion v12: 標準導入（LazyMotion/domAnimation 在 v12 不再支援）
 import { motion, AnimatePresence } from 'framer-motion';
-import { SettingToggle, InkSplat } from './components/Common';
+import { SettingToggle, InkSplat, GridToggle, SystemSlider } from './components/Common';
 import { MemberManagement, ProfileEditor, PersonalSetup } from './components/MemberModals';
 import { Member } from './types';
 import { OfflineStatus } from './components/OfflineStatus';
@@ -26,11 +26,10 @@ import { SplatToast } from './components/ui/SplatToast';
 // 🚀 Lazy Load 各分頁組件，大幅減少首次載入 bundle 體積
 const Schedule = lazy(() => import('./components/Schedule').then(m => ({ default: m.Schedule })));
 const Booking = lazy(() => import('./components/Booking').then(m => ({ default: m.Booking })));
-const Expense = lazy(() => import('./components/Expense').then(m => ({ default: m.Expense })));
-const Journal = lazy(() => import('./components/Journal').then(m => ({ default: m.Journal })));
-const Shopping = lazy(() => import('./components/Shopping').then(m => ({ default: m.Shopping })));
+const Wallet = lazy(() => import('./components/Wallet').then(m => ({ default: m.Wallet })));
+const Memories = lazy(() => import('./components/Memories').then(m => ({ default: m.Memories })));
 const PackingList = lazy(() => import('./components/PackingList').then(m => ({ default: m.PackingList })));
-const Info = lazy(() => import('./components/Info').then(m => ({ default: m.Info })));
+const Vault = lazy(() => import('./components/Vault').then(m => ({ default: m.Vault })));
 
 // --- 常數設定 ---
 const PRESET_AVATARS = [
@@ -46,24 +45,188 @@ const NavIcon = ({ icon, label, id, active, onClick, color }: any) => {
   const isActive = active === id;
   return (
     <motion.button
-      whileTap={{ scale: 0.8, y: 5 }}
+      whileTap={{ scale: 0.85, y: 3 }}
       onClick={() => onClick(id)}
-      className={`flex flex-col items-center gap-1 flex-1 transition-colors duration-300 ${isActive ? `${color} scale-110` : 'text-gray-400'}`}
+      className={`flex flex-col items-center gap-1.5 flex-1 transition-colors duration-300 relative ${isActive ? `${color}` : 'text-gray-400'}`}
     >
-      <div className="relative">
-        {isActive && (
-          <motion.div
-            layoutId="nav-pill"
-            className="absolute -inset-2 bg-gray-100 rounded-full -z-10"
-            transition={{ type: "spring", bounce: 0.4, duration: 0.5 }}
-          />
-        )}
-        {cloneElement(icon, { size: 24, strokeWidth: isActive ? 3 : 2.5 })}
-      </div>
-      <span className="text-[10px] font-black tracking-widest">{label}</span>
+      {cloneElement(icon, { size: 22, strokeWidth: isActive ? 3 : 2 })}
+      <span className={`text-[9px] font-black tracking-widest uppercase transition-opacity ${isActive ? 'opacity-100' : 'opacity-60'}`}>{label}</span>
+      {/* 🪨 墨點指示器 — 極簡墨滴 */}
+      {isActive && (
+        <motion.div
+          layoutId="ink-drop"
+          className="absolute -bottom-2.5 w-1.5 h-1.5 rounded-full"
+          style={{ backgroundColor: 'currentColor' }}
+          transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+        />
+      )}
     </motion.button>
   );
 };
+
+// --- 🔹 裝飾性 Sparkline (SVG) ---
+const Sparkline = memo(() => (
+  <svg width="60" height="20" viewBox="0 0 60 20" className="opacity-30">
+    <path d="M0 15 Q 15 5, 30 12 T 60 8" fill="none" stroke="currentColor" strokeWidth="2" />
+  </svg>
+));
+
+// --- 💊 靈動島適配：AI 同步膠囊 ---
+const AIStatusCapsule: FC<{ syncing: boolean, enableMotion: boolean, springConfig: any }> = memo(({ syncing, enableMotion, springConfig }) => {
+  const animate = enableMotion && syncing;
+  return (
+    <motion.div
+      initial={{ y: -100, opacity: 0 }}
+      animate={{ y: 0, opacity: 1 }}
+      transition={{ type: 'spring', ...springConfig }}
+      style={{ top: 'var(--sat, 12px)' }}
+      className="fixed left-1/2 -translate-x-1/2 z-[3000] pointer-events-none"
+    >
+      <motion.div
+        animate={animate ? { scaleX: [1, 1.15, 1], scaleY: [1, 0.92, 1] } : {}}
+        transition={animate ? { duration: 1.6, repeat: Infinity, ease: 'easeInOut' } : {}}
+        className="bg-splat-dark text-white px-4 py-1.5 rounded-full flex items-center gap-2 border-[2px] border-white/20 shadow-lg min-w-[120px] justify-center origin-center"
+      >
+        <div className={`w-2 h-2 rounded-full ${syncing ? 'bg-splat-green animate-pulse' : 'bg-gray-500'}`} />
+        <span className="text-[10px] font-black tracking-widest uppercase">
+          {syncing ? 'AI Syncing' : 'Ready'}
+        </span>
+      </motion.div>
+    </motion.div>
+  );
+});
+
+// --- ⚙️ UI 設定容器 (Apple Style Redesign) ---
+const UISettingsContainer = memo(({
+  uiSettings,
+  setUISettings,
+  currentTrip,
+  updateTripData,
+  onClose
+}: any) => {
+  return (
+    <motion.div
+      initial={{ scale: 0.9, y: 20 }}
+      animate={{ scale: 1, y: 0 }}
+      exit={{ scale: 0.9, y: 20 }}
+      className="bg-white w-full max-w-sm rounded-[40px] border-[4px] border-splat-dark shadow-2xl p-8 relative z-10 overflow-hidden"
+    >
+      <div className="absolute top-0 right-0 w-32 h-32 bg-splat-dark/5 rounded-full -mr-16 -mt-16 blur-3xl pointer-events-none" />
+
+      <div className="flex justify-between items-center mb-6">
+        <h2 className="text-2xl font-black italic uppercase flex items-center gap-2 tracking-tighter">
+          <SettingsIcon className="text-splat-dark" /> Control HQ
+        </h2>
+        <button onClick={onClose} className="w-10 h-10 rounded-full border-2 border-splat-dark/10 flex items-center justify-center active:scale-90 transition-transform">
+          <X size={20} />
+        </button>
+      </div>
+
+      <div className="space-y-6 max-h-[70vh] overflow-y-auto hide-scrollbar pr-1">
+        {/* --- 💳 Traveler ID Card (Currency) --- */}
+        <div className="bg-splat-dark rounded-[32px] p-6 text-white shadow-splat-solid relative overflow-hidden group">
+          <div className="relative z-10 flex justify-between items-start">
+            <div>
+              <p className="text-[10px] font-black text-white/40 uppercase tracking-[0.2em] mb-1">Traveler ID / Base</p>
+              <h3 className="text-3xl font-black tracking-tighter flex items-center gap-2">
+                {currentTrip.baseCurrency} <Sparkline />
+              </h3>
+            </div>
+            <div className="text-right">
+              <select
+                value={currentTrip.baseCurrency || 'JPY'}
+                onChange={e => updateTripData(currentTrip.id, { baseCurrency: e.target.value as any })}
+                className="bg-white/10 backdrop-blur-md border border-white/20 rounded-xl p-1 px-2 text-[10px] font-black outline-none"
+              >
+                <option value="JPY" className="text-splat-dark">JPY ¥</option>
+                <option value="TWD" className="text-splat-dark">TWD $</option>
+                <option value="USD" className="text-splat-dark">USD $</option>
+                <option value="KRW" className="text-splat-dark">KRW ₩</option>
+              </select>
+            </div>
+          </div>
+          <div className="mt-4 pt-4 border-t border-white/10 flex justify-between items-end">
+            <div className="text-[9px] font-black text-white/60 tracking-widest uppercase">Current Exchange Rate Active</div>
+            <Fingerprint size={16} className="text-splat-yellow opacity-50" />
+          </div>
+        </div>
+
+        {/* --- 🎨 Visual Vibe (2x2 Grid) --- */}
+        <div className="space-y-3">
+          <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest pl-2">Visual Vibe</h4>
+          <div className="grid grid-cols-2 gap-3">
+            <GridToggle
+              label="Liquid Ink"
+              icon={<Zap size={20} strokeWidth={2.5} />}
+              enabled={uiSettings.enableSplatter}
+              onChange={(v) => setUISettings({ enableSplatter: v })}
+            />
+            <GridToggle
+              label="Motion"
+              icon={<Activity size={20} strokeWidth={2.5} />}
+              enabled={uiSettings.enableMotionDepth}
+              onChange={(v) => setUISettings({ enableMotionDepth: v })}
+            />
+            <GridToggle
+              label="Weather FX"
+              icon={<Cloud size={20} strokeWidth={2.5} />}
+              enabled={uiSettings.enableWeatherFX}
+              onChange={(v) => setUISettings({ enableWeatherFX: v })}
+            />
+            <GridToggle
+              label="Glass 2.0"
+              icon={<SparklesIcon size={20} strokeWidth={2.5} />}
+              enabled={uiSettings.enableGlassmorphism}
+              onChange={(v) => setUISettings({ enableGlassmorphism: v })}
+            />
+          </div>
+        </div>
+
+        {/* --- 🧠 Intelligence --- */}
+        <div className="space-y-3">
+          <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest pl-2">Intelligence</h4>
+          <div className="space-y-3">
+            <SettingToggle
+              label="AI Stream"
+              enabled={uiSettings.enableAiStreaming}
+              onChange={(v) => setUISettings({ enableAiStreaming: v })}
+            />
+            <SettingToggle
+              label="3D Maps"
+              enabled={uiSettings.enable3DMap}
+              onChange={(v) => setUISettings({ enable3DMap: v })}
+            />
+          </div>
+        </div>
+
+        {/* --- ⚙️ System --- */}
+        <div className="space-y-3">
+          <h4 className="text-[10px] font-black text-gray-400 uppercase tracking-widest pl-2">System Performance</h4>
+          <SystemSlider
+            label="Haptic"
+            icon={<Cpu size={14} />}
+            value={uiSettings.enableHaptics ? 80 : 0}
+            onChange={(v) => setUISettings({ enableHaptics: v > 30 })}
+          />
+          <SystemSlider
+            label="Budget"
+            icon={<Bell size={14} />}
+            value={uiSettings.showBudgetAlert ? 90 : 0}
+            onChange={(v) => setUISettings({ showBudgetAlert: v > 30 })}
+          />
+        </div>
+      </div>
+
+      <motion.button
+        whileTap={{ scale: 0.95, y: 2 }}
+        onClick={onClose}
+        className="w-full py-4 mt-8 bg-splat-dark text-white font-black uppercase tracking-widest rounded-2xl shadow-splat-solid active:shadow-none transition-all"
+      >
+        Confirm Setup ➔
+      </motion.button>
+    </motion.div>
+  );
+});
 
 // ==========================================
 // 🚀 唯一的主要 App 元件
@@ -165,31 +328,6 @@ const App: FC = () => {
     ? { stiffness: 300, damping: 30 }
     : { stiffness: 500, damping: 50 }; // 省電模式較快
 
-  // 💊 靈動島適配：AI 同步膠囊 (isSyncing 連動呼吸動畫)
-  const AIStatusCapsule: FC = () => {
-    const syncing = isSyncing;
-    const animate = uiSettings.enableMotionDepth && syncing;
-    return (
-      <motion.div
-        initial={{ y: -100, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        transition={{ type: 'spring', ...SPRING_CONFIG }}
-        style={{ top: 'var(--sat, 12px)' }}
-        className="fixed left-1/2 -translate-x-1/2 z-[3000] pointer-events-none"
-      >
-        <motion.div
-          animate={animate ? { scaleX: [1, 1.15, 1], scaleY: [1, 0.92, 1] } : {}}
-          transition={animate ? { duration: 1.6, repeat: Infinity, ease: 'easeInOut' } : {}}
-          className="bg-splat-dark text-white px-4 py-1.5 rounded-full flex items-center gap-2 border-[2px] border-white/20 shadow-lg min-w-[120px] justify-center origin-center"
-        >
-          <div className={`w-2 h-2 rounded-full ${syncing ? 'bg-splat-green animate-pulse' : 'bg-gray-500'}`} />
-          <span className="text-[10px] font-black tracking-widest uppercase">
-            {syncing ? 'AI Syncing' : 'Ready'}
-          </span>
-        </motion.div>
-      </motion.div>
-    );
-  };
 
   // Fix 11/Root Cause of #310: 確保所有 Hooks 都在提早 return 之前執行
   const dateRange = useMemo(() => {
@@ -252,7 +390,7 @@ const App: FC = () => {
         {isSplatting && <InkSplat color={splatColor} />}
       </AnimatePresence>
 
-      {activeTab === 'schedule' && (
+      {activeTab === 'timeline' && (
         <header className="p-4 sticky top-0 z-[100] w-full max-w-md mx-auto animate-fade-in bg-[#F4F5F7]/95 backdrop-blur-sm border-b-[3px] border-splat-dark shadow-sm">
           <div className="bg-splat-yellow border-[3px] border-splat-dark rounded-[24px] shadow-splat-solid p-4 flex justify-between items-center relative z-20">
             <div className="relative text-left min-w-0">
@@ -365,76 +503,74 @@ const App: FC = () => {
       )
       }
 
-      <main className={`flex-1 w-full max-w-md mx-auto overflow-hidden flex flex-col ${activeTab !== 'schedule' ? 'pt-6' : 'pt-2'}`}>
+      <main className={`flex-1 w-full max-w-md mx-auto overflow-hidden flex flex-col ${activeTab !== 'timeline' ? 'pt-6' : 'pt-2'}`}>
         {/*
             React 19 Activity 模式：
             - 取代舊的 display:none 手動控制
             - 優化 React 記憶體回收機制
             - 隱藏分頁的 CPU 佔用率降至最低，且能瞬間恢復捲動深度
           */}
-        {visitedTabs.has('schedule') && (
-          <div hidden={activeTab !== 'schedule'} className="flex-1 overflow-y-auto hide-scrollbar">
+        {/* 🗺 Timeline = Schedule + Booking */}
+        {visitedTabs.has('timeline') && (
+          <div hidden={activeTab !== 'timeline'} className="flex-1 overflow-y-auto hide-scrollbar">
             <Suspense fallback={<div className="flex justify-center items-center h-64"><Loader2 size={32} className="animate-spin text-splat-blue" /></div>}>
               <Schedule externalDateIdx={selectedDateIdx} />
+              <div className="mt-6 px-1">
+                <Booking />
+              </div>
             </Suspense>
           </div>
         )}
-        {visitedTabs.has('booking') && (
-          <div hidden={activeTab !== 'booking'} className="flex-1 overflow-y-auto hide-scrollbar">
+        {/* 🛡 Vault = InfoItems (QR Grid + Docs) */}
+        {visitedTabs.has('vault') && (
+          <div hidden={activeTab !== 'vault'} className="flex-1 overflow-y-auto hide-scrollbar">
             <Suspense fallback={<div className="flex justify-center items-center h-64"><Loader2 size={32} className="animate-spin text-splat-pink" /></div>}>
-              <Booking />
+              <Vault />
             </Suspense>
           </div>
         )}
-        {visitedTabs.has('expense') && (
-          <div hidden={activeTab !== 'expense'} className="flex-1 overflow-y-auto hide-scrollbar">
+        {/* 💳 Wallet = Expenses (Tax-Free + Exchange) */}
+        {visitedTabs.has('wallet') && (
+          <div hidden={activeTab !== 'wallet'} className="flex-1 overflow-y-auto hide-scrollbar">
             <Suspense fallback={<div className="flex justify-center items-center h-64"><Loader2 size={32} className="animate-spin text-splat-yellow" /></div>}>
-              <Expense />
+              <Wallet />
             </Suspense>
           </div>
         )}
-        {visitedTabs.has('food') && (
-          <div hidden={activeTab !== 'food'} className="flex-1 overflow-y-auto hide-scrollbar">
-            <Suspense fallback={<div className="flex justify-center items-center h-64"><Loader2 size={32} className="animate-spin text-splat-orange" /></div>}>
-              <Journal />
-            </Suspense>
-          </div>
-        )}
-        {visitedTabs.has('shop') && (
-          <div hidden={activeTab !== 'shop'} className="flex-1 overflow-y-auto hide-scrollbar">
+        {/* ✨ Memories = Chronological Experience Stream (Journal + Bought Items + Expenses) */}
+        {visitedTabs.has('memories') && (
+          <div hidden={activeTab !== 'memories'} className="flex-1 overflow-y-auto hide-scrollbar">
             <Suspense fallback={<div className="flex justify-center items-center h-64"><Loader2 size={32} className="animate-spin text-splat-green" /></div>}>
-              <Shopping />
-            </Suspense>
-          </div>
-        )}
-        {visitedTabs.has('info') && (
-          <div hidden={activeTab !== 'info'} className="flex-1 overflow-y-auto hide-scrollbar">
-            <Suspense fallback={<div className="flex justify-center items-center h-64"><Loader2 size={32} className="animate-spin text-splat-dark" /></div>}>
-              <Info />
+              <Memories />
             </Suspense>
           </div>
         )}
       </main>
 
-      <nav className="fixed bottom-6 left-1/2 -translate-x-1/2 w-[92%] max-w-md bg-white border-[3px] border-splat-dark rounded-[32px] shadow-splat-solid px-2 py-3 flex justify-between items-center z-50">
-        <NavIcon icon={<Calendar />} label="行程" id="schedule" active={activeTab} onClick={handleTabChange} color="text-splat-blue" />
-        <NavIcon icon={<CreditCard />} label="預訂" id="booking" active={activeTab} onClick={handleTabChange} color="text-splat-pink" />
-        <NavIcon icon={<Wallet />} label="記帳" id="expense" active={activeTab} onClick={handleTabChange} color="text-splat-yellow" />
-        <NavIcon icon={<Utensils />} label="美食" id="food" active={activeTab} onClick={handleTabChange} color="text-splat-orange" />
-        <NavIcon icon={<ShoppingBag />} label="購物" id="shop" active={activeTab} onClick={handleTabChange} color="text-splat-green" />
-        <NavIcon icon={<InfoIcon />} label="資訊" id="info" active={activeTab} onClick={handleTabChange} color="text-splat-dark" />
-        <div className="w-[2px] h-8 bg-gray-200 mx-1 rounded-full" />
-        <motion.button
-          whileTap={{ scale: 0.9 }}
-          onClick={() => openAiAssistant()}
-          className="flex flex-col items-center justify-center min-w-[48px] px-1 text-splat-yellow relative group"
-        >
-          <div className="p-2 bg-splat-dark text-splat-yellow rounded-xl border-[3px] border-splat-dark group-hover:-translate-y-1 transition-transform shadow-sm">
-            <SparklesIcon size={20} strokeWidth={3} />
-          </div>
-          <span className="text-[9px] font-black uppercase mt-1">AI 助手</span>
-        </motion.button>
+      {/* 🧭 Bottom Navigation — 4 Unified Modules */}
+      <nav className="fixed bottom-6 left-1/2 -translate-x-1/2 w-[85%] max-w-sm bg-white/90 backdrop-blur-xl border-[3px] border-splat-dark rounded-[28px] shadow-splat-solid px-4 py-3 flex justify-between items-center z-50">
+        <NavIcon icon={<Calendar />} label="Timeline" id="timeline" active={activeTab} onClick={handleTabChange} color="text-splat-blue" />
+        <NavIcon icon={<Lock />} label="Vault" id="vault" active={activeTab} onClick={handleTabChange} color="text-splat-pink" />
+        <NavIcon icon={<WalletIcon />} label="Wallet" id="wallet" active={activeTab} onClick={handleTabChange} color="text-splat-yellow" />
+        <NavIcon icon={<SparklesIcon />} label="Memories" id="memories" active={activeTab} onClick={handleTabChange} color="text-splat-green" />
       </nav>
+
+      {/* 🤖 AI FAB — Glassmorphism 浮動按鈕 */}
+      <motion.button
+        whileTap={{ scale: 0.85 }}
+        whileHover={{ scale: 1.05 }}
+        onClick={() => openAiAssistant()}
+        className="fixed bottom-[100px] right-5 z-50 w-14 h-14 rounded-full flex items-center justify-center"
+        style={{
+          background: 'rgba(255, 255, 255, 0.7)',
+          backdropFilter: 'blur(16px) saturate(180%)',
+          WebkitBackdropFilter: 'blur(16px) saturate(180%)',
+          border: '2px solid rgba(255, 255, 255, 0.3)',
+          boxShadow: '0 8px 32px rgba(0,0,0,0.12), 0 0 20px rgba(255,192,0,0.3)'
+        }}
+      >
+        <SparklesIcon size={24} strokeWidth={2.5} className="text-splat-yellow drop-shadow-sm" />
+      </motion.button>
 
       {
         lockedTripId && (
@@ -467,41 +603,20 @@ const App: FC = () => {
       <AnimatePresence>
         {showSettings && (
           <div className="fixed inset-0 z-[2000] flex items-center justify-center p-6">
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowSettings(false)} className="absolute inset-0 bg-splat-dark/80 backdrop-blur-sm" />
-            <motion.div initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.9, y: 20 }} className="bg-white w-full max-w-sm rounded-[32px] border-[4px] border-splat-dark shadow-splat-solid p-8 relative z-10">
-              <h2 className="text-2xl font-black italic uppercase mb-8 flex items-center gap-2"><SettingsIcon /> UI SETTINGS</h2>
-              <SettingToggle label="潑墨轉場特效" desc="切換分頁時的噴漆動畫" enabled={uiSettings.showSplash} onChange={(v: boolean) => setUISettings({ showSplash: v })} />
-              <SettingToggle label="觸覺回饋 (Haptic)" desc="按鈕點擊時的輕微震動" enabled={uiSettings.enableHaptics} onChange={(v: boolean) => setUISettings({ enableHaptics: v })} />
-              <SettingToggle label="智慧預算警報" desc="支出超過預算 80% 時顯示提示" enabled={uiSettings.showBudgetAlert} onChange={(v: boolean) => setUISettings({ showBudgetAlert: v })} />
-
-              <hr className="border-gray-100 my-2" />
-
-              <SettingToggle label="噴漆互動特效" desc="點擊畫面時噴灑彩色墨水" enabled={uiSettings.enableSplatter} onChange={(v: boolean) => setUISettings({ enableSplatter: v })} />
-              <SettingToggle label="動態層次感" desc="根據手機傾斜改變 UI 陰影深度" enabled={uiSettings.enableMotionDepth} onChange={(v: boolean) => setUISettings({ enableMotionDepth: v })} />
-              <SettingToggle label="氣候情境特效" desc="下雨時畫面流下墨跡雨滴" enabled={uiSettings.enableWeatherFX} onChange={(v: boolean) => setUISettings({ enableWeatherFX: v })} />
-              <SettingToggle label="退稅目標追蹤" desc="顯示購物免稅 ¥5,000 蓄力槽" enabled={uiSettings.enableTaxTracker} onChange={(v: boolean) => setUISettings({ enableTaxTracker: v })} />
-              <SettingToggle label="AI 串流產出" desc="交通建議以打字機方式即時呈現" enabled={uiSettings.enableAiStreaming} onChange={(v: boolean) => setUISettings({ enableAiStreaming: v })} />
-              <SettingToggle label="3D 空間地圖" desc="顯示建築物立體層次" enabled={uiSettings.enable3DMap} onChange={(v: boolean) => setUISettings({ enable3DMap: v })} />
-              <SettingToggle label="玻璃擬態 2.0" desc="啟用 iOS 風毛玻璃透明效果" enabled={uiSettings.enableGlassmorphism} onChange={(v: boolean) => setUISettings({ enableGlassmorphism: v })} />
-
-              <div className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl border-2 border-dashed border-gray-300 mt-4">
-                <div className="flex-1 pr-4">
-                  <h4 className="font-black text-splat-dark text-sm uppercase">Base Currency 預設幣別</h4>
-                  <p className="text-[10px] font-bold text-gray-400 mt-1">影響全域匯率轉換基礎</p>
-                </div>
-                <select
-                  value={currentTrip.baseCurrency || 'JPY'}
-                  onChange={e => updateTripData(currentTrip.id, { baseCurrency: e.target.value as any })}
-                  className="p-2 border-[3px] border-splat-dark bg-white rounded-xl font-black outline-none"
-                >
-                  <option value="JPY">JPY ¥</option>
-                  <option value="TWD">TWD $</option>
-                  <option value="USD">USD $</option>
-                  <option value="KRW">KRW ₩</option>
-                </select>
-              </div>
-              <button onClick={() => setShowSettings(false)} className="btn-splat w-full py-4 mt-10 bg-splat-dark text-white uppercase">Confirm ➔</button>
-            </motion.div>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowSettings(false)}
+              className="absolute inset-0 bg-splat-dark/80 backdrop-blur-sm"
+            />
+            <UISettingsContainer
+              uiSettings={uiSettings}
+              setUISettings={setUISettings}
+              currentTrip={currentTrip}
+              updateTripData={updateTripData}
+              onClose={() => setShowSettings(false)}
+            />
           </div>
         )}
       </AnimatePresence>
@@ -540,7 +655,7 @@ const App: FC = () => {
           />
         )
       }
-      {isSyncing && <AIStatusCapsule />}
+      {isSyncing && <AIStatusCapsule syncing={isSyncing} enableMotion={uiSettings.enableMotionDepth} springConfig={SPRING_CONFIG} />}
       <AiAssistant />
       <SplatToast />
     </div>

@@ -1,0 +1,279 @@
+import { useState, useEffect, useRef, useMemo, ChangeEvent } from 'react';
+import { useTripStore } from '../store/useTripStore';
+import {
+    Wallet as WalletIcon, Coins, Trash2, Camera, BarChart3, Upload, PenTool,
+    LayoutList, Settings, CheckCircle, Image as ImageIcon,
+    Loader2, Store, Search, X, ChevronRight, Edit3, ArrowLeft,
+    Info, ArrowRight, TrendingDown, Sparkles, AlertTriangle, AlertOctagon,
+    RefreshCw, Repeat, ArrowUpDown, Banknote, CreditCard, PieChart, Plus, Utensils
+} from 'lucide-react';
+import { ExpenseItem, CurrencyCode, Member } from '../types';
+import { triggerHaptic } from '../utils/haptics';
+import { uploadImage } from '../utils/imageUtils';
+import { format } from 'date-fns';
+import { motion, AnimatePresence } from 'framer-motion';
+import { SwipeableItem } from './Common';
+
+// --- 常數配置 ---
+const CURRENCY_SYMBOLS: Record<string, string> = {
+    TWD: 'NT$', JPY: '¥', KRW: '₩', USD: '$', EUR: '€', THB: '฿', GBP: '£', CNY: '¥', HKD: 'HK$', SGD: 'S$', VND: '₫'
+};
+
+const CATEGORIES = ['餐飲', '購物', '交通', '住宿', '娛樂', '藥妝', '便利商店', '超市', '其他'];
+const METHODS = ['現金', '信用卡', '行動支付', 'IC卡', '其他'];
+
+export const Wallet = () => {
+    const { trips, currentTripId, exchangeRate, addExpenseItem, deleteExpenseItem, updateExpenseItem, updateTripData, setExchangeRate, showToast, setActiveTab: setGlobalActiveTab } = useTripStore();
+    const trip = trips.find(t => t.id === currentTripId);
+
+    const [activeTab, setActiveTab] = useState<'record' | 'list' | 'stats'>('record');
+    const [inputMode, setInputMode] = useState<'manual' | 'scan' | 'import'>('manual');
+    const [statsView, setStatsView] = useState<'daily' | 'category' | 'method'>('daily');
+    const [detailItem, setDetailItem] = useState<ExpenseItem | null>(null);
+    const [editingId, setEditingId] = useState<string | null>(null);
+    const [isProcessing, setIsProcessing] = useState(false);
+    const [isUploadingImg, setIsUploadingImg] = useState(false);
+    const [isSuccess, setIsSuccess] = useState(false);
+    const [showFoodiePrompt, setShowFoodiePrompt] = useState(false);
+
+    // 匯率引擎狀態
+    const [converterValue, setConverterValue] = useState<string>('');
+    const [converterMode, setConverterMode] = useState<'JPY2TWD' | 'TWD2JPY'>('JPY2TWD');
+
+    const fileInputRef = useRef<HTMLInputElement>(null);
+
+    const [form, setForm] = useState<Partial<ExpenseItem>>({
+        date: new Date().toISOString().split('T')[0], currency: trip?.baseCurrency || 'JPY',
+        method: '現金', amount: 0, storeName: '', title: '', location: '', images: [], category: '餐飲', items: []
+    });
+
+    if (!trip) return null;
+
+    const expenses = trip.expenses || [];
+    const rate = exchangeRate || 0.21;
+
+    const stats = useMemo(() => {
+        const totalTwd = expenses.reduce((s, e) => s + (e.currency === 'TWD' ? e.amount : e.amount * rate), 0);
+        const totalForeign = expenses.filter(e => e.currency === trip.baseCurrency).reduce((s, e) => s + e.amount, 0);
+        const taxFreeTotal = expenses.filter(e => e.isTaxFree).reduce((s, e) => s + e.amount, 0);
+
+        const catStats = expenses.reduce((acc, curr) => {
+            const val = curr.currency === 'TWD' ? curr.amount : curr.amount * rate;
+            acc[curr.category] = (acc[curr.category] || 0) + val;
+            return acc;
+        }, {} as Record<string, number>);
+
+        const pieData = Object.entries(catStats).map(([label, value], i) => ({
+            label, value, percent: Math.round((value / (totalTwd || 1)) * 100),
+            color: ['#F03C69', '#2932CF', '#FFC000', '#21CC65', '#FF6C00'][i % 5]
+        })).sort((a, b) => b.value - a.value);
+
+        return { totalTwd, totalForeign, taxFreeTotal, pieData };
+    }, [expenses, rate, trip.baseCurrency]);
+
+    const convertedValue = useMemo(() => {
+        const val = parseFloat(converterValue) || 0;
+        if (converterMode === 'JPY2TWD') return (val * rate).toFixed(0);
+        return (val / rate).toFixed(0);
+    }, [converterValue, converterMode, rate]);
+
+    const handleSave = () => {
+        if (!form.amount || !form.title) return showToast("資訊不完整唷！💰", "error");
+        const item: ExpenseItem = {
+            id: editingId || Date.now().toString(), date: form.date!, storeName: form.storeName || '', title: form.title!, amount: Number(form.amount),
+            currency: form.currency as CurrencyCode, method: form.method as any, location: form.location || '',
+            payerId: form.payerId || trip.members?.[0]?.id || 'Admin',
+            splitWith: form.splitWith || [],
+            images: form.images || [], category: form.category as any, items: form.items,
+            isTaxFree: !!form.isTaxFree
+        };
+        if (editingId) updateExpenseItem(trip.id, editingId, item);
+        else addExpenseItem(trip.id, item);
+
+        triggerHaptic('medium');
+        setIsSuccess(true);
+        setTimeout(() => {
+            setIsSuccess(false);
+            setEditingId(null);
+            if (item.category === '餐飲' && !editingId) {
+                setShowFoodiePrompt(true);
+            } else {
+                setActiveTab('list');
+            }
+        }, 800);
+    };
+
+    return (
+        <div className="px-5 space-y-6 pb-32 pt-4 bg-[#F4F5F7] h-full overflow-y-auto hide-scrollbar">
+
+            {/* --- Section 1: Hero Dashboard --- */}
+            <div className="bg-splat-yellow border-[3px] border-splat-dark rounded-[32px] p-6 shadow-splat-solid relative overflow-hidden">
+                <div className="flex justify-between items-start relative z-10">
+                    <div>
+                        <div className="flex items-center gap-2 mb-2">
+                            <Banknote size={16} className="text-splat-dark" />
+                            <p className="text-[10px] font-black uppercase text-splat-dark tracking-widest italic">Current Expenditure</p>
+                        </div>
+                        <h2 className="text-4xl font-black text-splat-dark tracking-tighter">
+                            NT$ {Math.round(stats.totalTwd).toLocaleString()}
+                        </h2>
+                        <div className="flex items-center gap-3 mt-3">
+                            <div className="px-3 py-1 bg-white/40 rounded-full border border-splat-dark/10 text-[10px] font-black text-splat-dark uppercase">
+                                {trip.baseCurrency} {Math.round(stats.totalForeign).toLocaleString()}
+                            </div>
+                            <div className="text-[10px] font-black text-splat-dark/40 italic uppercase tracking-widest">
+                                Rate: {rate.toFixed(4)}
+                            </div>
+                        </div>
+                    </div>
+                    <motion.button
+                        whileTap={{ scale: 0.9 }}
+                        onClick={() => setActiveTab('stats')}
+                        className="w-14 h-14 bg-white border-[3px] border-splat-dark rounded-2xl shadow-splat-solid-sm flex items-center justify-center text-splat-dark"
+                    >
+                        <PieChart size={28} strokeWidth={2.5} />
+                    </motion.button>
+                </div>
+            </div>
+
+            {/* --- Section 2: Tax-Free Battery Bar --- */}
+            <div className="bg-white border-[3px] border-splat-dark rounded-3xl p-5 shadow-splat-solid-sm relative overflow-hidden group">
+                <div className="flex justify-between items-end mb-4">
+                    <div className="space-y-1">
+                        <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-splat-dark/30">Tax-Free Sentinel</h4>
+                        <div className="flex items-center gap-2">
+                            <Sparkles size={16} className="text-splat-yellow" />
+                            <span className="text-xl font-black text-splat-dark italic uppercase">Power Up!</span>
+                        </div>
+                    </div>
+                    <div className="text-right">
+                        <span className="text-[11px] font-black text-splat-dark tabular-nums uppercase">
+                            ¥{Math.round(stats.taxFreeTotal).toLocaleString()} <span className="text-gray-300 mx-1">/</span> ¥5,000
+                        </span>
+                    </div>
+                </div>
+
+                <div className="relative h-10 bg-gray-100 rounded-full border-[3px] border-splat-dark p-1 overflow-hidden">
+                    <motion.div
+                        initial={{ width: 0 }}
+                        animate={{ width: `${Math.min(100, (stats.taxFreeTotal / 5000) * 100)}%` }}
+                        className={`h-full rounded-full border-[2px] border-splat-dark transition-colors relative overflow-hidden ${stats.taxFreeTotal >= 5000 ? 'bg-splat-yellow' : 'bg-splat-green'}`}
+                    >
+                        <motion.div
+                            animate={{ x: ['-100%', '100%'] }}
+                            transition={{ repeat: Infinity, duration: 1.5, ease: "linear" }}
+                            className="absolute inset-0 bg-gradient-to-r from-transparent via-white/40 to-transparent"
+                        />
+                    </motion.div>
+                    <div className="absolute left-[20%] top-0 bottom-0 w-[2px] bg-splat-dark/5" />
+                    <div className="absolute left-[40%] top-0 bottom-0 w-[2px] bg-splat-dark/5" />
+                    <div className="absolute left-[60%] top-0 bottom-0 w-[2px] bg-splat-dark/5" />
+                    <div className="absolute left-[80%] top-0 bottom-0 w-[2px] bg-splat-dark/5" />
+                </div>
+                {stats.taxFreeTotal >= 5000 && (
+                    <motion.p animate={{ opacity: [0.4, 1, 0.4] }} transition={{ repeat: Infinity, duration: 1 }} className="text-center text-[9px] font-black uppercase text-splat-orange mt-3 tracking-widest">✨ Tax-Free Target Achieved! ✨</motion.p>
+                )}
+            </div>
+
+            {/* --- Section 3: Instant Exchange Engine --- */}
+            <div className="bg-splat-dark border-[3px] border-splat-dark rounded-[24px] p-4 shadow-splat-solid relative">
+                <div className="flex items-center gap-4">
+                    <div className="flex-1 relative">
+                        <input type="text" inputMode="decimal" placeholder={converterMode === 'JPY2TWD' ? '¥ JPY AMOUNT' : 'NT$ TWD AMOUNT'} value={converterValue} onChange={(e) => setConverterValue(e.target.value)} className="w-full bg-white/10 border-2 border-white/20 rounded-xl py-3 px-4 text-white font-black placeholder:text-white/20 outline-none focus:border-splat-yellow/50 transition-colors text-sm" />
+                    </div>
+                    <motion.button whileTap={{ rotate: 180 }} onClick={() => { setConverterMode(m => m === 'JPY2TWD' ? 'TWD2JPY' : 'JPY2TWD'); triggerHaptic('light'); }} className="w-10 h-10 rounded-full bg-splat-yellow flex items-center justify-center text-splat-dark border-2 border-splat-dark shadow-sm"><Repeat size={20} strokeWidth={3} /></motion.button>
+                    <div className="flex-1 text-right">
+                        <div className="text-[10px] font-black text-white/40 uppercase tracking-widest mb-1">Result ({converterMode === 'JPY2TWD' ? 'TWD' : 'JPY'})</div>
+                        <div className="text-xl font-black text-splat-yellow tabular-nums">{converterMode === 'JPY2TWD' ? 'NT$ ' : '¥ '}{Math.round(parseFloat(convertedValue) || 0).toLocaleString()}</div>
+                    </div>
+                </div>
+            </div>
+
+            {/* --- Section 4: Grid Analytics --- */}
+            <div className="space-y-4">
+                <h3 className="text-sm font-black text-splat-dark flex items-center gap-2 uppercase tracking-widest pl-2">
+                    <div className="w-2 h-5 bg-splat-blue rounded-full" /> Spend Analytics
+                </h3>
+                <div className="grid grid-cols-2 gap-4">
+                    {stats.pieData.slice(0, 4).map((d) => (
+                        <div key={d.label} className="bg-white border-[3px] border-splat-dark rounded-3xl p-5 shadow-splat-solid-sm relative overflow-hidden group">
+                            <div className={`absolute top-0 right-0 w-12 h-12 -mr-6 -mt-6 rounded-full opacity-20`} style={{ backgroundColor: d.color }} />
+                            <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">{d.label}</div>
+                            <div className="text-lg font-black text-splat-dark tabular-nums">${Math.round(d.value).toLocaleString()}</div>
+                            <div className="flex items-center gap-1.5 mt-4">
+                                <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                                    <motion.div initial={{ width: 0 }} animate={{ width: `${d.percent}%` }} className="h-full rounded-full" style={{ backgroundColor: d.color }} />
+                                </div>
+                                <span className="text-[10px] font-black text-splat-dark">{d.percent}%</span>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </div>
+
+            <button onClick={() => setActiveTab('record')} className="w-full py-5 bg-splat-blue border-[3px] border-splat-dark rounded-[24px] shadow-splat-solid text-white font-black uppercase tracking-[0.2em] flex items-center justify-center gap-3 active:translate-y-1 active:shadow-none transition-all">
+                <Plus size={20} strokeWidth={4} /> Add New Entry
+            </button>
+
+            {/* --- Detail/Record Overlay --- */}
+            <AnimatePresence>
+                {activeTab === 'record' && (
+                    <motion.div
+                        initial={{ y: '100%' }}
+                        animate={{ y: 0 }} exit={{ y: '100%' }}
+                        transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+                        className="fixed inset-0 z-[1100] bg-white flex flex-col"
+                    >
+                        <div className="p-6 flex justify-between items-center border-b-[3px] border-splat-dark">
+                            <h2 className="text-xl font-black italic uppercase tracking-tighter text-splat-dark">Expenditure Entry</h2>
+                            <button onClick={() => setActiveTab('list')} className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-splat-dark"><X size={20} /></button>
+                        </div>
+                        <div className="flex-1 overflow-y-auto p-6 space-y-6 bg-[#F4F5F7]">
+                            <div className="bg-white p-6 rounded-3xl border-[3px] border-splat-dark shadow-splat-solid-sm space-y-4">
+                                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Transaction Details</label>
+                                <input placeholder="STORE NAME / TITLE" value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} className="w-full bg-gray-50 border-[3px] border-splat-dark rounded-xl p-4 font-black outline-none focus:border-splat-blue/50 transition-colors" />
+                                <div className="grid grid-cols-2 gap-4">
+                                    <input type="number" placeholder="AMOUNT" value={form.amount || ''} onChange={e => setForm({ ...form, amount: Number(e.target.value) })} className="bg-gray-50 border-[3px] border-splat-dark rounded-xl p-4 font-black text-2xl outline-none" />
+                                    <div className="flex bg-gray-100 p-1 rounded-xl border-[3px] border-splat-dark">
+                                        <button onClick={() => setForm({ ...form, currency: 'JPY' })} className={`flex-1 rounded-lg font-black text-xs transition-colors ${form.currency === 'JPY' ? 'bg-splat-green text-white shadow-sm' : 'text-gray-400'}`}>JPY</button>
+                                        <button onClick={() => setForm({ ...form, currency: 'TWD' })} className={`flex-1 rounded-lg font-black text-xs transition-colors ${form.currency === 'TWD' ? 'bg-splat-green text-white shadow-sm' : 'text-gray-400'}`}>TWD</button>
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-3 p-4 bg-splat-yellow/10 border-2 border-dashed border-splat-yellow rounded-xl">
+                                    <Sparkles size={18} className="text-splat-yellow" />
+                                    <div className="flex-1 flex items-center justify-between">
+                                        <span className="text-[10px] font-black text-splat-dark uppercase">Apply Tax-Free (5,000¥ Target)</span>
+                                        <input type="checkbox" checked={!!form.isTaxFree} onChange={e => setForm({ ...form, isTaxFree: e.target.checked })} className="w-6 h-6 rounded-lg accent-splat-dark" />
+                                    </div>
+                                </div>
+                            </div>
+                            <button onClick={handleSave} className="w-full py-5 bg-splat-dark text-white rounded-2xl font-black uppercase tracking-widest shadow-splat-solid active:translate-y-1 active:shadow-none transition-all">
+                                Save Transaction ➔
+                            </button>
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* --- Foodie Memory Prompt --- */}
+            <AnimatePresence>
+                {showFoodiePrompt && (
+                    <div className="fixed inset-0 z-[2000] flex items-center justify-center px-6">
+                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-splat-dark/60 backdrop-blur-sm" onClick={() => setShowFoodiePrompt(false)} />
+                        <motion.div initial={{ scale: 0.9, opacity: 0, y: 20 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.9, opacity: 0, y: 20 }} className="bg-white border-[4px] border-splat-dark rounded-[40px] p-8 shadow-2xl relative z-10 w-full max-w-sm text-center">
+                            <div className="w-20 h-20 bg-splat-orange text-white rounded-3xl border-[3px] border-splat-dark shadow-splat-solid-sm flex items-center justify-center mx-auto mb-6 rotate-[-6deg]">
+                                <Utensils size={40} strokeWidth={3} />
+                            </div>
+                            <h3 className="text-2xl font-black text-splat-dark tracking-tighter italic uppercase mb-2">Foodie Alert! 🦑</h3>
+                            <p className="text-gray-500 font-bold leading-tight mb-8">這頓美食看起來很讚唷！<br />要順便寫入回憶日誌嗎？</p>
+                            <div className="space-y-3">
+                                <button onClick={() => { setShowFoodiePrompt(false); setGlobalActiveTab('memories'); triggerHaptic('success'); }} className="w-full py-4 bg-splat-orange text-white rounded-2xl border-[3px] border-splat-dark shadow-splat-solid-sm font-black uppercase tracking-widest active:translate-y-1 active:shadow-none transition-all">Yes, Add Memory!</button>
+                                <button onClick={() => setShowFoodiePrompt(false)} className="w-full py-3 text-gray-400 font-black text-xs uppercase tracking-widest hover:text-splat-dark transition-colors">Maybe Later</button>
+                            </div>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
+        </div>
+    );
+};

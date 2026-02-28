@@ -39,6 +39,7 @@ export interface ScheduleItem extends SyncMetadata {
   };
   lat?: number;                 // 👈 新增：緯度
   lng?: number;                 // 👈 新增：經度
+  cost: number;                 // 👈 新增：預估花費
 }
 
 // --- 2. 預訂 (Booking) 項目 ---
