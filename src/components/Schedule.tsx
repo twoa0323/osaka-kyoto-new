@@ -619,6 +619,7 @@ export const Schedule: FC<{ externalDateIdx?: number }> = ({ externalDateIdx = 0
 
   const [showFullWeather, setShowFullWeather] = useState(false);
   const [isAiLoading, setIsAiLoading] = useState(false);
+  const [isActionMenuOpen, setIsActionMenuOpen] = useState(false);
 
   const [gapAiLoading, setGapAiLoading] = useState<string | null>(null);
   const [transportAiLoading, setTransportAiLoading] = useState<string | null>(null);
@@ -1250,7 +1251,54 @@ export const Schedule: FC<{ externalDateIdx?: number }> = ({ externalDateIdx = 0
               <motion.button whileTap={{ scale: 0.95, transition: { type: 'spring', stiffness: 500, damping: 20 } }} onClick={() => setIsEditMode(!isEditMode)} className={`w-10 h-10 rounded-2xl flex items-center justify-center border-[1px] border-p3-navy/10 ${isEditMode ? 'bg-splat-yellow text-p3-navy' : 'bg-white text-gray-400 shadow-xl shadow-black/5'}`}>
                 <Edit3 size={18} />
               </motion.button>
-              <motion.button whileTap={{ scale: 0.95, transition: { type: 'spring', stiffness: 500, damping: 20 } }} onClick={() => { setEditingItem(undefined); setIsEditorOpen(true) }} className="w-12 h-12 rounded-2xl bg-p3-navy text-white flex items-center justify-center shadow-xl shadow-p3-navy/20 transition-shadow hover:shadow-p3-navy/40"><Plus size={18} strokeWidth={2.5} /></motion.button>
+              <div className="relative">
+                <motion.button
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => setIsActionMenuOpen(!isActionMenuOpen)}
+                  className={`w-12 h-12 rounded-2xl flex items-center justify-center shadow-xl transition-all duration-300 ${isActionMenuOpen ? 'bg-p3-ruby text-white rotate-[135deg]' : 'bg-p3-navy text-white shadow-p3-navy/20'}`}
+                >
+                  <Plus size={18} strokeWidth={2.5} />
+                </motion.button>
+
+                <AnimatePresence>
+                  {isActionMenuOpen && (
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.8, y: 10 }}
+                      animate={{ opacity: 1, scale: 1, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.8, y: 10 }}
+                      className="absolute top-14 right-0 w-48 bg-white/90 backdrop-blur-md border-[0.5px] border-p3-navy rounded-[24px] shadow-glass-deep p-2 z-[60] flex flex-col gap-1"
+                    >
+                      <button
+                        onClick={() => { setEditingItem(undefined); setIsEditorOpen(true); setIsActionMenuOpen(false); }}
+                        className="flex items-center gap-3 p-3 hover:bg-p3-navy/5 rounded-xl transition-colors text-left text-sm font-black text-p3-navy"
+                      >
+                        <div className="w-8 h-8 rounded-lg bg-p3-gold/10 flex items-center justify-center text-p3-gold shrink-0">
+                          <MapPin size={16} strokeWidth={3} />
+                        </div>
+                        📍 新增行程景點
+                      </button>
+                      <button
+                        onClick={() => { showToast("BookingEditor 下一階段對接... ✈️", "info"); setIsActionMenuOpen(false); }}
+                        className="flex items-center gap-3 p-3 hover:bg-p3-navy/5 rounded-xl transition-colors text-left text-sm font-black text-p3-navy"
+                      >
+                        <div className="w-8 h-8 rounded-lg bg-p3-navy/10 flex items-center justify-center text-p3-navy shrink-0">
+                          <Plane size={16} strokeWidth={3} />
+                        </div>
+                        ✈️ 新增航班/飯店
+                      </button>
+                      <button
+                        onClick={() => { showToast("PackingListModal 開發中... 🧳", "info"); setIsActionMenuOpen(false); }}
+                        className="flex items-center gap-3 p-3 hover:bg-p3-navy/5 rounded-xl transition-colors text-left text-sm font-black text-p3-navy"
+                      >
+                        <div className="w-8 h-8 rounded-lg bg-p3-ruby/10 flex items-center justify-center text-p3-ruby shrink-0">
+                          <Luggage size={16} strokeWidth={3} />
+                        </div>
+                        🧳 行李清單
+                      </button>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
             </div>
           </div>
         </div>
@@ -1341,12 +1389,45 @@ export const Schedule: FC<{ externalDateIdx?: number }> = ({ externalDateIdx = 0
               className="bg-[#F4F5F7] w-full h-full sm:h-auto sm:max-w-md sm:rounded-[40px] border-b-0 sm:border-[4px] border-p3-navy shadow-2xl flex flex-col overflow-hidden relative"
               onClick={e => e.stopPropagation()}
             >
-              <button
-                onClick={() => setDetailItem(undefined)}
-                className="absolute top-6 right-6 z-[700] bg-white/80 backdrop-blur-sm border-[0.5px] border-p3-navy p-2 rounded-full shadow-glass-deep-sm active:scale-90 transition-transform"
-              >
-                <X size={20} strokeWidth={3} />
-              </button>
+
+              <div className="absolute top-6 right-6 z-[700] flex gap-2">
+                <button
+                  onClick={() => {
+                    if (detailItem.__type === 'schedule') {
+                      setEditingItem(detailItem);
+                      setIsEditorOpen(true);
+                      setDetailItem(undefined);
+                      triggerHaptic('light');
+                    } else {
+                      showToast("Booking 編輯功能開發中... ✈️", "info");
+                    }
+                  }}
+                  className="bg-white/80 backdrop-blur-sm border-[0.5px] border-p3-navy p-2 rounded-full shadow-glass-deep-sm active:scale-90 transition-transform"
+                >
+                  <Edit3 size={20} strokeWidth={3} />
+                </button>
+                <button
+                  onClick={() => {
+                    if (detailItem.__type === 'schedule') {
+                      deleteScheduleItem(trip!.id, detailItem.id);
+                    } else {
+                      deleteBookingItem(trip!.id, detailItem.id);
+                    }
+                    setDetailItem(undefined);
+                    showToast(detailItem.__type === 'schedule' ? "行程已刪除" : "預訂已刪除", "success");
+                    triggerHaptic('medium');
+                  }}
+                  className="bg-white/80 backdrop-blur-sm border-[0.5px] border-p3-navy p-2 rounded-full shadow-glass-deep-sm active:scale-90 transition-transform text-p3-ruby"
+                >
+                  <Trash2 size={20} strokeWidth={3} />
+                </button>
+                <button
+                  onClick={() => setDetailItem(undefined)}
+                  className="bg-white/80 backdrop-blur-sm border-[0.5px] border-p3-navy p-2 rounded-full shadow-glass-deep-sm active:scale-90 transition-transform"
+                >
+                  <X size={20} strokeWidth={3} />
+                </button>
+              </div>
 
               <div className="flex-1 overflow-y-auto hide-scrollbar">
                 {/* --- 1. Header (Image or Theme) --- */}

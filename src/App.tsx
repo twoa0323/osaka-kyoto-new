@@ -612,12 +612,6 @@ const App: FC = () => {
           <div hidden={activeTab !== 'timeline'} className="flex-1 overflow-y-auto hide-scrollbar">
             <Suspense fallback={<div className="flex justify-center items-center h-64"><Loader2 size={32} className="animate-spin text-splat-blue" /></div>}>
               <Schedule externalDateIdx={selectedDateIdx} />
-              <div className="mt-6 px-1">
-                <Booking />
-              </div>
-              <div className="mt-6 px-1">
-                <PackingList />
-              </div>
             </Suspense>
           </div>
         )}
