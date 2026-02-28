@@ -22,7 +22,7 @@ export const ScheduleEditor: FC<Props> = ({ tripId, date, item, onClose }) => {
   ] as const;
 
   const [form, setForm] = useState<ScheduleItem>(item || {
-    id: Date.now().toString(), date, time: '09:00', endTime: '', title: '', location: '', category: 'sightseeing', note: '', images: []
+    id: Date.now().toString(), date, time: '09:00', endTime: '', title: '', location: '', category: 'sightseeing', note: '', images: [], cost: 0
   });
 
   const handlePhoto = async (e: ChangeEvent<HTMLInputElement>) => {
