@@ -163,7 +163,7 @@ export const SwipeableItem: FC<SwipeableItemProps> = ({ id, children, onDelete, 
     };
 
     return (
-        <div className={`relative overflow-hidden rounded-[24px] ${className} select-none touch-pan-y`}>
+        <div className={`relative overflow-hidden ${className} select-none touch-pan-y`}>
             {/* 底層: 紅色刪除區域 */}
             <div className="absolute inset-y-0 right-0 w-[100px] bg-red-500 flex justify-end items-center pr-8 z-0">
                 <button

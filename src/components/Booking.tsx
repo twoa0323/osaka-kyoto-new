@@ -149,14 +149,14 @@ export const Booking = () => {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
             transition={{ duration: 0.2 }}
-            className="space-y-6"
+            className="flex flex-col gap-6"
           >
             {bookings.length === 0 ? (
               <div className="text-center py-16 bg-white border-[0.5px] border-dashed border-gray-400 glass-card text-gray-500 font-black italic shadow-sm uppercase">
                 {t('booking.emptyPocket')}
               </div>
             ) : (
-              bookings.map(item => (
+              bookings.map((item, index) => (
                 <SwipeableItem
                   key={item.id}
                   id={item.id}
@@ -206,26 +206,28 @@ export const Booking = () => {
                 {detailItem.type === 'flight' && (
                   <div className="relative bg-[#F4F4F4] rounded-[32px] overflow-hidden border-[1px] border-black/5 p-2 mb-8">
                     <div className="bg-white rounded-[24px] overflow-hidden relative shadow-sm h-full flex flex-col">
-                      {/* Header - Dark */}
-                      <div className="bg-[#101424] h-[90px] w-full relative flex items-center justify-center">
-                        <div className="absolute inset-0" style={{ backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.9) 1.5px, transparent 1.5px)', backgroundSize: '24px 24px', opacity: 0.3 }} />
-                        <div className="flex items-center gap-2 z-10 text-[#C9A975] font-serif text-[22px] font-bold tracking-[0.15em] pl-1 relative">
-                          <span className="text-[20px] -mt-1">✦</span> {detailItem.airline || 'STARLUX'}
+                      {/* Header - Dynamic based on airline */}
+                      <div className={`${getTheme(detailItem.airline).bgClass} h-[90px] w-full relative flex items-center justify-center`}>
+                        {detailItem.airline?.toLowerCase().includes('starlux') && (
+                          <div className="absolute inset-0" style={{ backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.9) 1.5px, transparent 1.5px)', backgroundSize: '24px 24px', opacity: 0.3 }} />
+                        )}
+                        <div className="flex items-center gap-2 z-10 pl-1 relative">
+                          {getTheme(detailItem.airline).logoHtml}
                         </div>
                       </div>
 
-                      {/* Overlapping Pill */}
-                      <div className="absolute top-[70px] left-1/2 -translate-x-1/2 bg-white px-8 py-2.5 rounded-[20px] shadow-sm z-20 border-[1px] border-gray-100 min-w-[120px] text-center">
-                        <span className="text-[17px] font-black text-[#A1A5AE] tracking-widest leading-none font-sans uppercase">{detailItem.flightNo || 'JX820'}</span>
+                      {/* Overlapping Pill - Floating Layer shadow */}
+                      <div className="absolute top-[70px] left-1/2 -translate-x-1/2 bg-[#FEE12B] px-8 py-2.5 rounded-[20px] shadow-[0_4px_10px_rgba(0,0,0,0.15)] z-20 border-[1px] border-white/40 min-w-[120px] text-center">
+                        <span className="text-[17px] font-black text-[#8A7909] tracking-widest leading-none font-sans uppercase">{detailItem.flightNo || 'JX820'}</span>
                       </div>
 
                       {/* Main Body */}
-                      <div className="relative pt-12 pb-4 px-4 bg-white flex-1 pl-12 shadow-[inset_0_4px_10px_rgba(0,0,0,0.01)]">
-                        {/* Perforation Line */}
-                        <div className="absolute top-0 bottom-0 left-6 w-[2px] border-l-[3px] border-dotted border-gray-300 z-30 opacity-70" />
+                      <div className="relative pt-16 pb-4 px-4 bg-white flex-1 pl-12 shadow-[inset_0_4px_10px_rgba(0,0,0,0.01)]">
+                        {/* Perforation Line - Reduced overlapping length */}
+                        <div className="absolute top-8 bottom-8 left-6 w-[2px] border-l-[3px] border-dotted border-gray-300 z-30 opacity-70" />
 
                         {/* Time & City Grid */}
-                        <div className="flex justify-between items-center w-full px-2 mb-2">
+                        <div className="flex justify-between items-center w-full px-2 mb-4">
                           {/* Departure */}
                           <div className="flex flex-col items-center w-[30%]">
                             <span className="text-2xl font-black text-[#A1A5AE] tracking-widest mb-1.5 font-sans uppercase">{detailItem.depIata || 'TPE'}</span>
@@ -233,15 +235,13 @@ export const Booking = () => {
                             <div className="bg-[#247F46] text-white text-[13px] font-bold px-4 py-1.5 rounded-full tracking-wider leading-none whitespace-nowrap">{detailItem.depCity || '台北'}</div>
                           </div>
 
-                          {/* Center */}
-                          <div className="flex flex-col items-center justify-center flex-1 -mt-4 mx-2">
-                            <span className="text-[12px] font-bold text-[#868B98] mb-1.5 tracking-wider">{detailItem.duration || '02h 45m'}</span>
-                            <div className="w-full flex items-center justify-center gap-2 mb-1.5">
-                              <div className="h-0 border-t-[2px] border-dashed border-[#DEE1E6] flex-1" />
+                          {/* Center - Raised plane icon to fix overlap */}
+                          <div className="flex flex-col items-center justify-center flex-1 -mt-8 mx-2 relative z-10">
+                            <span className="text-[12px] font-bold text-[#868B98] mb-2 tracking-wider">{detailItem.duration || '02h 45m'}</span>
+                            <div className="w-full flex items-center justify-center gap-2 mb-2">
                               <Plane size={24} className="text-[#3269F5] rotate-90 transform shrink-0 fill-current" />
-                              <div className="h-0 border-t-[2px] border-dashed border-[#DEE1E6] flex-1" />
                             </div>
-                            <span className="text-[12px] font-bold text-[#868B98] tracking-wider">{detailItem.date ? detailItem.date.replace(/-/g, '/') : '2026/04/25'}</span>
+                            <span className="text-[12px] font-bold text-[#868B98] tracking-wider relative -bottom-2">{detailItem.date ? detailItem.date.replace(/-/g, '/') : '2026/04/25'}</span>
                           </div>
 
                           {/* Arrival */}
@@ -445,23 +445,25 @@ const FlightCard = ({ item, t, language, onEdit, onViewDetails, onQrClick }: any
       onClick={handleCardClick}
     >
       <div className="bg-white rounded-[24px] overflow-hidden relative shadow-sm h-full flex flex-col">
-        {/* Header - Dark */}
-        <div className="bg-[#101424] h-[90px] w-full relative flex items-center justify-center">
-          <div className="absolute inset-0" style={{ backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.9) 1.5px, transparent 1.5px)', backgroundSize: '24px 24px', opacity: 0.3 }} />
-          <div className="flex items-center gap-2 z-10 text-[#C9A975] font-serif text-[22px] font-bold tracking-[0.15em] pl-1 relative">
-            <span className="text-[20px] -mt-1">✦</span> STARLUX
+        {/* Header - Dynamic based on airline theme */}
+        <div className={`${getTheme(item.airline).bgClass} h-[90px] w-full relative flex items-center justify-center`}>
+          {item.airline?.toLowerCase().includes('starlux') && (
+            <div className="absolute inset-0" style={{ backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.9) 1.5px, transparent 1.5px)', backgroundSize: '24px 24px', opacity: 0.3 }} />
+          )}
+          <div className="flex items-center gap-2 z-10 pl-1 relative">
+            {getTheme(item.airline).logoHtml}
           </div>
         </div>
 
-        {/* Overlapping Pill */}
-        <div className="absolute top-[70px] left-1/2 -translate-x-1/2 bg-white px-8 py-2.5 rounded-[20px] shadow-sm z-20 border-[1px] border-gray-100 min-w-[120px] text-center">
-          <span className="text-[17px] font-black text-[#A1A5AE] tracking-widest leading-none font-sans uppercase">{item.flightNo || 'JX820'}</span>
+        {/* Overlapping Pill - Floating layer style */}
+        <div className="absolute top-[70px] left-1/2 -translate-x-1/2 bg-[#FEE12B] px-8 py-2.5 rounded-[20px] shadow-[0_4px_10px_rgba(0,0,0,0.15)] z-20 border-[1px] border-white/40 min-w-[120px] text-center">
+          <span className="text-[17px] font-black text-[#8A7909] tracking-widest leading-none font-sans uppercase">{item.flightNo || 'JX820'}</span>
         </div>
 
         {/* Main Body */}
-        <div className="relative pt-12 pb-4 px-4 bg-white flex-1 pl-12 shadow-[inset_0_4px_10px_rgba(0,0,0,0.01)]">
+        <div className="relative pt-16 pb-4 px-4 bg-white flex-1 pl-12 shadow-[inset_0_4px_10px_rgba(0,0,0,0.01)]">
           {/* Perforation Line */}
-          <div className="absolute top-0 bottom-0 left-6 w-[2px] border-l-[3px] border-dotted border-gray-300 z-30 opacity-70" />
+          <div className="absolute top-8 bottom-8 left-6 w-[2px] border-l-[3px] border-dotted border-gray-300 z-30 opacity-70" />
 
           {/* Time & City Grid */}
           <div className="flex justify-between items-center w-full px-2 mb-2">
@@ -472,15 +474,13 @@ const FlightCard = ({ item, t, language, onEdit, onViewDetails, onQrClick }: any
               <div className="bg-[#247F46] text-white text-[13px] font-bold px-4 py-1.5 rounded-full tracking-wider leading-none whitespace-nowrap">{item.depCity || '台北'}</div>
             </div>
 
-            {/* Center */}
-            <div className="flex flex-col items-center justify-center flex-1 -mt-4 mx-2">
-              <span className="text-[12px] font-bold text-[#868B98] mb-1.5 tracking-wider">{item.duration || '02h 45m'}</span>
-              <div className="w-full flex items-center justify-center gap-2 mb-1.5">
-                <div className="h-0 border-t-[2px] border-dashed border-[#DEE1E6] flex-1" />
+            {/* Center - Raised plane icon to fix overlap */}
+            <div className="flex flex-col items-center justify-center flex-1 -mt-8 mx-2 relative z-10">
+              <span className="text-[12px] font-bold text-[#868B98] mb-2 tracking-wider">{item.duration || '02h 45m'}</span>
+              <div className="w-full flex items-center justify-center gap-2 mb-2">
                 <Plane size={24} className="text-[#3269F5] rotate-90 transform shrink-0 fill-current" />
-                <div className="h-0 border-t-[2px] border-dashed border-[#DEE1E6] flex-1" />
               </div>
-              <span className="text-[12px] font-bold text-[#868B98] tracking-wider">{item.date ? item.date.replace(/-/g, '/') : '2026/04/25'}</span>
+              <span className="text-[12px] font-bold text-[#868B98] tracking-wider relative -bottom-2">{item.date ? item.date.replace(/-/g, '/') : '2026/04/25'}</span>
             </div>
 
             {/* Arrival */}
@@ -493,7 +493,7 @@ const FlightCard = ({ item, t, language, onEdit, onViewDetails, onQrClick }: any
         </div>
 
         {/* Footer Info Box */}
-        <div className="mx-4 mb-4 bg-[#F8F9FB] rounded-[20px] p-4 flex items-center justify-between border-[1px] border-gray-100 z-10 relative">
+        <div className="mx-4 mb-4 bg-[#FEE12B]/10 rounded-[20px] p-4 flex items-center justify-between border-[1px] border-[#FEE12B]/40 shadow-inner z-10 relative">
           <div className="flex flex-col flex-1 items-center justify-center w-[33%]">
             <span className="text-[10px] font-black text-[#A1A5AE] tracking-[0.15em] mb-1.5 font-sans">BAGGAGE</span>
             <div className="flex items-center gap-1.5 overflow-hidden w-full justify-center">
@@ -501,14 +501,14 @@ const FlightCard = ({ item, t, language, onEdit, onViewDetails, onQrClick }: any
               <span className="text-[14px] font-[900] text-[#161C2C] tracking-tight truncate">{item.baggage || item.baggageAllowance || '23kg'}</span>
             </div>
           </div>
-          <div className="w-[1.5px] h-8 bg-[#EAECEF] shrink-0" />
+          <div className="w-[1.5px] h-8 bg-gray-200 shrink-0" />
           <div className="flex flex-col flex-1 items-center justify-center w-[33%]">
             <span className="text-[10px] font-black text-[#A1A5AE] tracking-[0.15em] mb-1.5 font-sans">SEAT</span>
             <div className="flex items-center gap-1 overflow-hidden w-full justify-center">
               <span className="text-[14px] font-[900] text-[#161C2C] tracking-tight truncate">{item.seat || '14F'}</span>
             </div>
           </div>
-          <div className="w-[1.5px] h-8 bg-[#EAECEF] shrink-0" />
+          <div className="w-[1.5px] h-8 bg-gray-200 shrink-0" />
           <div className="flex flex-col flex-1 items-center justify-center w-[33%]">
             <span className="text-[10px] font-black text-[#A1A5AE] tracking-[0.15em] mb-1.5 font-sans">AIRCRAFT</span>
             <div className="flex items-center gap-1.5 overflow-hidden w-full justify-center">
@@ -544,7 +544,7 @@ const HotelCard = ({ item, t, language, onEdit, onViewDetails, onQrClick, onCopy
   return (
     <motion.div
       whileTap={{ scale: 0.98 }}
-      className="relative bg-[#0A142E] rounded-[2.5rem] shadow-glass-deep overflow-hidden cursor-pointer aspect-[3/4.2] group flex flex-col no-border"
+      className="relative bg-[#0A142E] rounded-[2.5rem] shadow-glass-deep overflow-hidden cursor-pointer group flex flex-col no-border min-h-[420px]"
       onClick={handleCardClick}
     >
       {/* 編輯按鈕 */}
