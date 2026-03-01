@@ -1,10 +1,13 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useTripStore } from '../store/useTripStore';
 import {
-  Plane, Home, MapPin, Plus, Edit3, Globe, QrCode,
-  ArrowRight, X, Luggage, Phone, Camera, Ticket, Download, CheckCircle2, Calendar, Clock, Trash2,
-  ChevronDown
+  Plus, Map as MapIcon, Edit3, Trash2, X, Clock, MapPin, Camera,
+  Utensils, Plane, Home, ChevronRight, ChevronDown, Copy,
+  ExternalLink, Phone, Sparkles, Loader2, Luggage, Wind, CloudRain,
+  Check, Star, QrCode, Ticket, Globe, ArrowRight, Download, CheckCircle2, Calendar,
+  Ticket as TicketIcon
 } from 'lucide-react';
+import { triggerHaptic } from '../utils/haptics';
 import { cacheAsset, isAssetCached } from '../utils/offlineCache';
 import { downloadIcs } from '../utils/icsGenerator';
 import { formatDistanceToNow, parseISO, isPast, isToday, differenceInMinutes } from 'date-fns';
@@ -15,9 +18,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { LazyImage } from './LazyImage';
 import { useTranslation } from '../hooks/useTranslation';
 import { getAirlineTheme } from './schedule/ScheduleConstants';
-import { triggerHaptic } from '../utils/haptics';
 import { SwipeableItem, InkSplat } from './Common';
-import { Copy } from 'lucide-react';
 
 // Removed local AIRLINE_THEMES in favor of getAirlineTheme from ScheduleConstants
 
@@ -427,6 +428,8 @@ const CopyableField = ({ label, value, onCopy }: any) => {
 
 const FlightCard = ({ item, t, language, onEdit, onViewDetails, onQrClick }: any) => {
   if (!item) return null;
+  const [showActions, setShowActions] = useState(false);
+  const { deleteBookingItem, currentTripId } = useTripStore();
 
   return (
     <motion.div
@@ -435,12 +438,56 @@ const FlightCard = ({ item, t, language, onEdit, onViewDetails, onQrClick }: any
       onClick={() => onViewDetails()}
     >
       <div className="bg-white rounded-[24px] overflow-hidden relative shadow-sm h-full flex flex-col">
+
+        {/* --- Hidden Action Buttons (Revealed on Header Click) --- */}
+        <div className={`absolute top-4 left-4 right-4 z-[60] flex justify-between transition-all duration-300 ${showActions ? 'opacity-100 pointer-events-auto translate-y-0' : 'opacity-0 pointer-events-none -translate-y-2'}`}>
+          <div className="flex gap-2">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onEdit(item);
+                triggerHaptic('light');
+              }}
+              className="bg-white/80 backdrop-blur-sm border-[0.5px] border-p3-navy p-2 rounded-full shadow-glass-deep-sm active:scale-90 transition-transform"
+            >
+              <Edit3 size={18} strokeWidth={3} className="text-p3-navy" />
+            </button>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                if (currentTripId) {
+                  deleteBookingItem(currentTripId, item.id);
+                  triggerHaptic('heavy');
+                }
+              }}
+              className="bg-white/80 backdrop-blur-sm border-[0.5px] border-p3-navy p-2 rounded-full shadow-glass-deep-sm active:scale-90 transition-transform"
+            >
+              <Trash2 size={18} strokeWidth={3} className="text-p3-ruby" />
+            </button>
+          </div>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setShowActions(false);
+            }}
+            className="bg-white/80 backdrop-blur-sm border-[0.5px] border-p3-navy p-2 rounded-full shadow-glass-deep-sm active:scale-90 transition-transform"
+          >
+            <X size={18} strokeWidth={3} className="text-p3-navy" />
+          </button>
+        </div>
+
         {/* Header - Dynamic based on airline theme */}
-        <div className={`${getAirlineTheme(item.airline).bgClass} h-[90px] w-full relative flex items-center justify-center`}>
+        <div
+          onClick={(e) => {
+            e.stopPropagation();
+            setShowActions(!showActions);
+          }}
+          className={`${getAirlineTheme(item.airline).bgClass} h-[90px] w-full relative flex items-center justify-center cursor-pointer`}
+        >
           {item.airline?.toLowerCase().includes('starlux') && (
             <div className="absolute inset-0" style={{ backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.9) 1.5px, transparent 1.5px)', backgroundSize: '24px 24px', opacity: 0.3 }} />
           )}
-          <div className="flex items-center gap-2 z-10 pl-1 relative">
+          <div className={`flex items-center gap-2 z-10 pl-1 relative transition-opacity duration-300 ${showActions ? 'opacity-0' : 'opacity-100'}`}>
             {getAirlineTheme(item.airline).logoHtml}
           </div>
         </div>

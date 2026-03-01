@@ -1,6 +1,7 @@
 import { FC, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plane, Home, Clock, ChevronRight, ChevronDown, Copy, ExternalLink, MapPin, Phone } from 'lucide-react';
+import { Plane, Home, Clock, ChevronRight, ChevronDown, Copy, ExternalLink, MapPin, Phone, Trash2, Edit3, X, Luggage } from 'lucide-react';
+import { useTripStore } from '../../store/useTripStore';
 import { BookingItem } from '../../types';
 import { getAirlineTheme } from './ScheduleConstants';
 import { parseISO, differenceInDays, format } from 'date-fns';
@@ -17,14 +18,14 @@ export const TimelineFlightCard: FC<{
     return (
         <div className="relative ml-10 mb-8 cursor-pointer group" onClick={onClick}>
             <motion.div
-                layoutId={`card-${item.id}`}
+                layoutId={`card - ${item.id} `}
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
                 className="relative bg-[#F4F4F4] rounded-[32px] overflow-hidden border-[1px] border-black/5 p-2 shadow-sm"
             >
                 <div className="bg-white rounded-[24px] overflow-hidden relative shadow-sm h-full flex flex-col">
                     {/* Header - Dynamic based on airline */}
-                    <div className={`${getAirlineTheme(item.airline).bgClass} h-[90px] w-full relative flex items-center justify-center`}>
+                    <div className={`${getAirlineTheme(item.airline).bgClass} h - [90px] w - full relative flex items - center justify - center`}>
                         {item.airline?.toLowerCase().includes('starlux') && (
                             <div className="absolute inset-0" style={{ backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.9) 1.5px, transparent 1.5px)', backgroundSize: '24px 24px', opacity: 0.3 }} />
                         )}
@@ -109,7 +110,7 @@ export const TimelineHotelCard: FC<{
 
     return (
         <motion.div
-            layoutId={`card-${item.id}`}
+            layoutId={`card - ${item.id} `}
             onClick={onClick}
             initial={{ scale: 0.95, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
@@ -169,9 +170,9 @@ export const TimelineHotelCard: FC<{
 };
 
 export const InfoBlock = ({ label, value, highlight }: any) => (
-    <div className={`bg-white border-[0.5px] ${highlight ? 'border-splat-pink' : 'border-p3-navy/10'} rounded-2xl p-4 flex flex-col justify-center items-center shadow-sm`}>
+    <div className={`bg - white border - [0.5px] ${highlight ? 'border-splat-pink' : 'border-p3-navy/10'} rounded - 2xl p - 4 flex flex - col justify - center items - center shadow - sm`}>
         <span className="text-[9px] font-black text-gray-400 block uppercase tracking-widest mb-1 text-center">{label}</span>
-        <span className={`text-lg font-black ${highlight ? 'text-splat-pink' : 'text-p3-navy'} text-center truncate w-full`}>{value}</span>
+        <span className={`text - lg font - black ${highlight ? 'text-splat-pink' : 'text-p3-navy'} text - center truncate w - full`}>{value}</span>
     </div>
 );
 
@@ -249,18 +250,72 @@ export const AirlineHeaderPattern = ({ airline }: { airline: string }) => {
     return <div className="absolute right-0 top-0 bottom-0 w-32 bg-gradient-to-l from-black/10 to-transparent pointer-events-none"></div>;
 };
 
-export const FlightDetailModalContent = ({ item, t, showToast }: any) => {
+export const FlightDetailModalContent = ({ item, t, showToast, setDetailItem, onEdit }: any) => {
+    const [showActions, setShowActions] = useState(false);
+    const { deleteBookingItem, trips, currentTripId } = useTripStore();
+    // Use an empty function for edit if not passed, or it should probably open the booking editor
+    // but the Schedule.tsx logic doesn't cleanly pass down the full editor dispatch to sub-flights.
+    // For now we will just show the buttons as requested.
+
     return (
         <div className="flex-1 overflow-y-auto hide-scrollbar bg-[#F4F5F7]">
             <div className="p-2 sm:p-4 flex flex-col h-full">
                 <div className="relative bg-[#F4F4F4] rounded-[36px] overflow-hidden border-[1px] border-black/5 p-2 shadow-sm flex-1">
                     <div className="bg-white rounded-[24px] overflow-hidden relative shadow-sm h-full flex flex-col">
-                        {/* Header - Dynamic based on airline */}
-                        <div className={`${getAirlineTheme(item.airline).bgClass} h-[90px] w-full relative flex items-center justify-center`}>
+
+                        {/* --- Hidden Action Buttons (Revealed on Header Click) --- */}
+                        <div className={`absolute top-4 left-4 right-4 z-[60] flex justify-between transition-all duration-300 ${showActions ? 'opacity-100 pointer-events-auto translate-y-0' : 'opacity-0 pointer-events-none -translate-y-2'} `}>
+                            <div className="flex gap-2">
+                                <button onClick={() => {
+                                    onEdit?.(item);
+                                    triggerHaptic('light');
+                                }} className="bg-white/80 backdrop-blur-sm border-[0.5px] border-p3-navy p-2 rounded-full shadow-glass-deep-sm active:scale-90 transition-transform">
+                                    <Edit3 size={18} strokeWidth={3} className="text-p3-navy" />
+                                </button>
+                                <button onClick={() => {
+                                    if (currentTripId) {
+                                        deleteBookingItem(currentTripId, item.id);
+                                        showToast("預訂已刪除", "success");
+                                        setDetailItem(undefined);
+                                        triggerHaptic('heavy');
+                                    }
+                                }} className="bg-white/80 backdrop-blur-sm border-[0.5px] border-p3-navy p-2 rounded-full shadow-glass-deep-sm active:scale-90 transition-transform">
+                                    <Trash2 size={18} strokeWidth={3} className="text-p3-ruby" />
+                                </button>
+                            </div>
+                            <button
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    setShowActions(false);
+                                }}
+                                className="bg-white/80 backdrop-blur-sm border-[0.5px] border-p3-navy p-2 rounded-full shadow-glass-deep-sm active:scale-90 transition-transform"
+                            >
+                                <X size={18} strokeWidth={3} className="text-p3-navy" />
+                            </button>
+                        </div>
+
+                        {/* --- Optional "Close Product" Button (Only if showActions is false) --- */}
+                        {/* The user specifically mentioned "Close" button should show in the revealed hidden actions. 
+                            If it's for closing the modal, we can add it there. */}
+                        <div className={`absolute top-4 right-4 z-[50] transition-opacity duration-300 ${showActions ? 'opacity-0' : 'opacity-100'}`}>
+                            <button onClick={() => setDetailItem(undefined)} className="bg-white/20 backdrop-blur-md p-2 rounded-full border border-white/30 text-white shadow-lg active:scale-90">
+                                <X size={16} strokeWidth={3} />
+                            </button>
+                        </div>
+
+                        {/* Header - Dynamic based on airline theme */}
+                        <div
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                setShowActions(!showActions);
+                                triggerHaptic('light');
+                            }}
+                            className={`${getAirlineTheme(item.airline).bgClass} h-[90px] w-full relative flex items-center justify-center cursor-pointer`}
+                        >
                             {item.airline?.toLowerCase().includes('starlux') && (
                                 <div className="absolute inset-0" style={{ backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.9) 1.5px, transparent 1.5px)', backgroundSize: '24px 24px', opacity: 0.3 }} />
                             )}
-                            <div className="flex items-center gap-2 z-10 pl-1 relative">
+                            <div className={`flex items-center gap-2 z-10 pl-1 relative transition-opacity duration-300 ${showActions ? 'opacity-0' : 'opacity-100'}`}>
                                 {getAirlineTheme(item.airline).logoHtml}
                             </div>
                         </div>
@@ -305,7 +360,8 @@ export const FlightDetailModalContent = ({ item, t, showToast }: any) => {
                             <div className="flex flex-col flex-1 items-center justify-center w-[33%]">
                                 <span className="text-[10px] font-black text-[#A1A5AE] tracking-[0.15em] mb-1.5 font-sans">BAGGAGE</span>
                                 <div className="flex items-center gap-1.5 overflow-hidden w-full justify-center">
-                                    <span className="text-[14px] font-[900] text-[#161C2C] tracking-tight truncate flex items-center gap-1.5"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-[#64A999] shrink-0"><rect x="5" y="6" width="14" height="16" rx="2" /><path d="M8 6V4c0-1.1.9-2 2-2h4c1.1 0 2 .9 2 2v2" /><line x1="12" y1="11" x2="12" y2="17" /></svg>{item.baggage || item.baggageAllowance || '23kg'}</span>
+                                    <Luggage size={14} className="text-[#64A999] shrink-0" strokeWidth={2.5} />
+                                    <span className="text-[14px] font-[900] text-[#161C2C] tracking-tight truncate">{item.baggage || item.baggageAllowance || '23kg'}</span>
                                 </div>
                             </div>
                             <div className="w-[1.5px] h-8 bg-[#EAECEF] shrink-0" />
@@ -370,7 +426,7 @@ export const HotelDetailModalContent = ({ item, t, showToast }: any) => {
                             </div>
                         </div>
                         <div className="flex justify-center">
-                            <ChevronDown size={18} className={`text-gray-300 transition-transform duration-300 ${expanded ? 'rotate-180' : ''}`} />
+                            <ChevronDown size={18} className={`text - gray - 300 transition - transform duration - 300 ${expanded ? 'rotate-180' : ''} `} />
                         </div>
                     </div>
                 </motion.div>
@@ -388,18 +444,20 @@ export const HotelDetailModalContent = ({ item, t, showToast }: any) => {
                                 <div className="flex items-start gap-4 border-t border-gray-100 pt-4"><Home size={20} className="text-p3-navy shrink-0 mt-0.5" /><div><p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">{t('schedule.roomType')}</p><p className="text-sm font-bold text-p3-navy">{item.roomType || 'Standard Room'}</p></div></div>
                             </div>
                             <div className="flex gap-3 mt-4">
-                                <button className="flex-1 py-4 bg-white border-[0.5px] border-p3-navy rounded-2xl font-black uppercase tracking-widest text-[11px] flex items-center justify-center gap-2 shadow-glass-deep-sm active:translate-y-1 transition-all text-p3-navy" onClick={() => window.open(`tel:${item.contactPhone || item.phone || ''}`)}><Phone size={16} /> {t('schedule.contact')}</button>
+                                <button className="flex-1 py-4 bg-white border-[0.5px] border-p3-navy rounded-2xl font-black uppercase tracking-widest text-[11px] flex items-center justify-center gap-2 shadow-glass-deep-sm active:translate-y-1 transition-all text-p3-navy" onClick={() => window.open(`tel:${item.contactPhone || item.phone || ''} `)}><Phone size={16} /> {t('schedule.contact')}</button>
                                 <button className="flex-[2] py-4 bg-p3-navy text-white border-[0.5px] border-p3-navy rounded-2xl font-black uppercase tracking-widest text-[11px] flex items-center justify-center gap-2 shadow-glass-deep-sm active:translate-y-1 transition-all" onClick={() => window.open(`http://googleusercontent.com/maps.google.com/?q=${encodeURIComponent(item.location || item.title)}`, '_blank')}><MapPin size={16} /> {t('schedule.openGoogleMaps')}</button>
-                            </div>
-                            {item.url && (
-                                <button onClick={() => { window.open(item.url, '_blank'); triggerHaptic('success'); }} className="w-full py-5 bg-gradient-to-r from-p3-gold to-splat-orange text-white rounded-2xl font-black uppercase tracking-widest shadow-glass-deep flex items-center justify-center gap-3 active:scale-95 transition-all mt-2 border-[0.5px] border-white/20">
-                                    <ExternalLink size={18} /> {item.url.includes('agoda') ? '打開 Agoda 查看' : item.url.includes('booking') ? '打開 Booking.com 查看' : item.url.includes('airbnb') ? '打開 Airbnb 查看' : '開啟外部連結 / App'}
-                                </button>
-                            )}
-                        </motion.div>
+                            </div >
+                            {
+                                item.url && (
+                                    <button onClick={() => { window.open(item.url, '_blank'); triggerHaptic('success'); }} className="w-full py-5 bg-gradient-to-r from-p3-gold to-splat-orange text-white rounded-2xl font-black uppercase tracking-widest shadow-glass-deep flex items-center justify-center gap-3 active:scale-95 transition-all mt-2 border-[0.5px] border-white/20">
+                                        <ExternalLink size={18} /> {item.url.includes('agoda') ? '打開 Agoda 查看' : item.url.includes('booking') ? '打開 Booking.com 查看' : item.url.includes('airbnb') ? '打開 Airbnb 查看' : '開啟外部連結 / App'}
+                                    </button>
+                                )
+                            }
+                        </motion.div >
                     )}
-                </AnimatePresence>
-            </div>
-        </div>
+                </AnimatePresence >
+            </div >
+        </div >
     );
 };

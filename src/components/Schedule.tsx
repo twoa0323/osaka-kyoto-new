@@ -501,7 +501,7 @@ export const Schedule: FC<{ externalDateIdx?: number }> = ({ externalDateIdx = 0
     });
   }, [trip, selectedDateStr]);
 
-  const { actionBookings, activeHotel, activeFlight } = useMemo(() => {
+  const { actionBookings, activeHotel, activeFlights } = useMemo(() => {
     const bookings = dayItems.filter(i => i.__type === 'booking');
 
     // B: 靈動膠囊 (只在 Check-in, Check-out, Flight 當天顯示)
@@ -518,10 +518,10 @@ export const Schedule: FC<{ externalDateIdx?: number }> = ({ externalDateIdx = 0
       return b.type === 'hotel' && bDate <= selectedDateStr && (!bEndDate || bEndDate >= selectedDateStr);
     });
 
-    // C: 當日航班
-    const flight = bookings.find(b => b.type === 'flight' && (b as any).date === selectedDateStr);
+    // C: 當日航班 Array
+    const flights = bookings.filter(b => b.type === 'flight' && (b as any).date === selectedDateStr);
 
-    return { actionBookings: actions, activeHotel: hotel, activeFlight: flight };
+    return { actionBookings: actions, activeHotel: hotel, activeFlights: flights };
   }, [dayItems, selectedDateStr]);
 
   // 🚀 IntersectionObserver 用於空間地圖隨動
@@ -1149,8 +1149,54 @@ export const Schedule: FC<{ externalDateIdx?: number }> = ({ externalDateIdx = 0
 
         {/* 🌤️ 強化擴大的天氣模板 */}
         <div onClick={() => setShowFullWeather(true)} className="w-full bg-gradient-to-br from-white to-blue-50/60 border-[0.5px] border-blue-200/50 shadow-glass-soft rounded-[32px] p-5 cursor-pointer active:scale-95 transition-all flex justify-between items-center relative overflow-hidden group">
+
+          {/* 🚀 Weather FX (Restrained to Widget Bounds) */}
+          {uiSettings.enableWeatherFX && (todayWeather.rain > 30 || weatherInfo.e.includes('🌧️') || weatherInfo.e.includes('☔️')) && (
+            <div className="absolute inset-0 pointer-events-none z-0 overflow-hidden">
+              {[...Array(8)].map((_, i) => (
+                <motion.div key={i} initial={{ y: -50, x: Math.random() * 200, opacity: 0 }} animate={{ y: 150, opacity: [0, 0.5, 0] }} transition={{ duration: 1.5 + Math.random() * 1.5, repeat: Infinity, delay: Math.random() * 2 }} className="absolute">
+                  <svg width="20" height="30" viewBox="0 0 40 60" fill="none"><path d="M20 0C20 0 0 25 0 40C0 51.0457 8.9543 60 20 60C31.0457 60 40 51.0457 40 40C40 25 20 0 20 0Z" fill="currentColor" className="text-splat-blue/20" /></svg>
+                </motion.div>
+              ))}
+            </div>
+          )}
+          {/* Snow FX */}
+          {uiSettings.enableWeatherFX && (weatherInfo.e.includes('❄️') || weatherInfo.e.includes('⛄️')) && (
+            <div className="absolute inset-0 pointer-events-none z-0 overflow-hidden">
+              {[...Array(10)].map((_, i) => (
+                <motion.div key={`snow-${i}`} initial={{ y: -20, x: Math.random() * 300, opacity: 0 }} animate={{ y: 200, x: `+=${Math.random() * 20 - 10}`, opacity: [0, 0.8, 0], rotate: 360 }} transition={{ duration: 3 + Math.random() * 2, repeat: Infinity, delay: Math.random() * 3 }} className="absolute blur-[0.5px]">
+                  <span className="text-white text-opacity-80 text-xl font-sans">❄</span>
+                </motion.div>
+              ))}
+            </div>
+          )}
+          {/* Sunny Shimmer FX */}
+          {uiSettings.enableWeatherFX && (weatherInfo.e.includes('☀️') || weatherInfo.e.includes('🌤️')) && (
+            <div className="absolute inset-0 pointer-events-none z-0 overflow-hidden">
+              {[...Array(5)].map((_, i) => (
+                <motion.div key={`sunny-${i}`} animate={{ opacity: [0, 0.4, 0], scale: [0.8, 1.2, 0.8] }} transition={{ duration: 3 + Math.random() * 2, repeat: Infinity, delay: Math.random() * 2 }} className="absolute" style={{ left: Math.random() * 100 + '%', top: Math.random() * 100 + '%' }}>
+                  <div className="w-8 h-8 bg-yellow-400/20 blur-xl rounded-full" />
+                </motion.div>
+              ))}
+            </div>
+          )}
+          {/* Thunder FX */}
+          {uiSettings.enableWeatherFX && (weatherInfo.e.includes('⛈️') || weatherInfo.e.includes('⚡')) && (
+            <motion.div animate={{ opacity: [0, 0, 0.4, 0, 0.2, 0, 0] }} transition={{ duration: 4, repeat: Infinity, times: [0, 0.8, 0.82, 0.84, 0.86, 0.88, 1] }} className="absolute inset-0 bg-white pointer-events-none z-10" />
+          )}
+          {/* Cloudy/Foggy Mist FX */}
+          {uiSettings.enableWeatherFX && (weatherInfo.e.includes('☁️') || weatherInfo.e.includes('🌫️') || weatherInfo.e.includes('⛅')) && (
+            <div className="absolute inset-0 pointer-events-none z-0 overflow-hidden">
+              {[...Array(3)].map((_, i) => (
+                <motion.div key={`cloud-${i}`} animate={{ x: [-100, 300] }} transition={{ duration: 15 + i * 5, repeat: Infinity, ease: "linear" }} className="absolute top-1/2 -translate-y-1/2 opacity-20">
+                  <div className="w-64 h-32 bg-white blur-3xl rounded-full" />
+                </motion.div>
+              ))}
+            </div>
+          )}
+
           {/* 背景裝飾浮水印 */}
-          <div className="absolute -right-4 -top-6 text-8xl opacity-[0.03] group-hover:scale-110 transition-transform pointer-events-none">
+          <div className="absolute -right-4 -top-6 text-8xl opacity-[0.03] group-hover:scale-110 transition-transform pointer-events-none z-0">
             {weatherInfo.e}
           </div>
 
@@ -1195,9 +1241,9 @@ export const Schedule: FC<{ externalDateIdx?: number }> = ({ externalDateIdx = 0
 
           {/* 左側：當日狀態 (移除景點數量文字，改為純圖示) */}
           <div className="flex items-center gap-2">
-            {activeFlight && (
+            {activeFlights.length > 0 && (
               <button
-                onClick={() => setDetailItem(activeFlight)}
+                onClick={() => setDetailItem({ __type: 'multi-flight', flights: activeFlights })}
                 className="w-9 h-9 rounded-full bg-white border-[0.5px] border-blue-200 flex items-center justify-center shadow-sm active:scale-95 transition-all text-p3-navy"
               >
                 <Plane size={16} strokeWidth={2.5} />
@@ -1270,19 +1316,6 @@ export const Schedule: FC<{ externalDateIdx?: number }> = ({ externalDateIdx = 0
 
       {/* ═ 可滾動內容區塊 ═ */}
       <div ref={scrollContainerRef} className="flex-1 overflow-y-auto hide-scrollbar px-4 pt-4 space-y-4 pb-32">
-
-
-        {/* 🚀 Task 2: 雨滴墨水動畫 (受 enableWeatherFX 控制) */}
-        {uiSettings.enableWeatherFX && todayWeather.rain > 30 && (
-          <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
-            {[...Array(10)].map((_, i) => (
-              <motion.div key={i} initial={{ y: -100, x: Math.random() * 400, opacity: 0 }} animate={{ y: window.innerHeight + 100, opacity: [0, 0.3, 0] }} transition={{ duration: 3 + Math.random() * 2, repeat: Infinity, delay: Math.random() * 5 }} className="absolute">
-                <svg width="40" height="60" viewBox="0 0 40 60" fill="none"><path d="M20 0C20 0 0 25 0 40C0 51.0457 8.9543 60 20 60C31.0457 60 40 51.0457 40 40C40 25 20 0 20 0Z" fill="currentColor" className="text-splat-blue/10" /></svg>
-              </motion.div>
-            ))}
-          </div>
-        )}
-
         {viewMode === 'list' ? (
           <div className="relative mt-2">
             {/* 💡 方案 B：靈動膠囊 (Action Capsules) */}
@@ -1422,8 +1455,36 @@ export const Schedule: FC<{ externalDateIdx?: number }> = ({ externalDateIdx = 0
                 </div>
               )}
 
-              {detailItem.__type === 'booking' && detailItem.type === 'flight' ? (
-                <FlightDetailModalContent item={detailItem} t={t} showToast={showToast} />
+              {detailItem.__type === 'multi-flight' ? (
+                <div className="flex-1 overflow-y-auto hide-scrollbar bg-[#F4F5F7]">
+                  {detailItem.flights.map((flight: any, idx: number) => (
+                    <div key={flight.id} className={`${idx > 0 ? 'mt-4 border-t-[0.5px] border-p3-navy/10 pt-4' : ''}`}>
+                      <FlightDetailModalContent
+                        item={flight}
+                        t={t}
+                        showToast={showToast}
+                        setDetailItem={setDetailItem}
+                        onEdit={(item: any) => {
+                          setEditingBooking(item);
+                          setIsBookingEditorOpen(true);
+                          setDetailItem(undefined);
+                        }}
+                      />
+                    </div>
+                  ))}
+                </div>
+              ) : detailItem.__type === 'booking' && detailItem.type === 'flight' ? (
+                <FlightDetailModalContent
+                  item={detailItem}
+                  t={t}
+                  showToast={showToast}
+                  setDetailItem={setDetailItem}
+                  onEdit={(item: any) => {
+                    setEditingBooking(item);
+                    setIsBookingEditorOpen(true);
+                    setDetailItem(undefined);
+                  }}
+                />
               ) : detailItem.__type === 'booking' && detailItem.type === 'hotel' ? (
                 <HotelDetailModalContent item={detailItem} t={t} showToast={showToast} />
               ) : (
