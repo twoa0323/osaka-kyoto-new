@@ -204,84 +204,78 @@ export const Booking = () => {
 
                 {/* ✈️ FLIGHT MODAL (使用 FlightCard 相同設計語言) */}
                 {detailItem.type === 'flight' && (
-                  <div className="bg-white rounded-[2rem] shadow-sm border border-gray-100 overflow-hidden relative">
-                    {/* Header */}
-                    <div className="h-20 bg-[#181B26] px-6 flex justify-between items-center relative overflow-hidden"
-                      style={{
-                        backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.15) 1.2px, transparent 1.2px)',
-                        backgroundSize: '16px 16px'
-                      }}>
-                      {/* Logo (Top Left) */}
-                      <div className="scale-75 origin-left">
-                         {getTheme(detailItem.airline).logoHtml}
-                      </div>
-                      
-                      {/* Date (Top Right) */}
-                      <span className="text-white/60 text-[10px] font-bold tracking-widest uppercase relative z-10">
-                        {detailItem.date}
-                      </span>
-                    </div>
-
-                    {/* Flight No Pill */}
-                    <div className="absolute top-[65px] left-1/2 -translate-x-1/2 bg-white px-8 py-1.5 rounded-full border-[0.5px] border-black/5 shadow-md z-20">
-                      <span className="text-sm font-black text-gray-400 tracking-[0.1em] uppercase">{detailItem.flightNo || '---'}</span>
-                    </div>
-
-                    {/* Main Body */}
-                    <div className="p-6 pt-12 text-center">
-                      <div className="flex justify-between items-center mb-6">
-                        <div className="flex flex-col items-center">
-                          <span className="text-4xl font-black text-[#1A1A1A] tracking-tighter">{detailItem.depIata || 'TPE'}</span>
-                          <span className="text-sm font-black mt-1">{detailItem.depTime || '08:30'}</span>
+                  <div className="relative bg-[#F4F4F4] rounded-[32px] overflow-hidden border-[1px] border-black/5 p-2 mb-8">
+                    <div className="bg-white rounded-[24px] overflow-hidden relative shadow-sm h-full flex flex-col">
+                      {/* Header - Dark */}
+                      <div className="bg-[#101424] h-[90px] w-full relative flex items-center justify-center">
+                        <div className="absolute inset-0" style={{ backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.9) 1.5px, transparent 1.5px)', backgroundSize: '24px 24px', opacity: 0.3 }} />
+                        <div className="flex items-center gap-2 z-10 text-[#C9A975] font-serif text-[22px] font-bold tracking-[0.15em] pl-1 relative">
+                          <span className="text-[20px] -mt-1">✦</span> {detailItem.airline || 'STARLUX'}
                         </div>
-                        <div className="flex-1 px-4 flex flex-col items-center relative">
-                          <span className="text-[10px] font-black text-gray-400 tracking-widest mb-1">{detailItem.flightNo}</span>
-                          <div className="w-full flex items-center text-[#2D32CF]">
-                            <div className="h-[2px] flex-1 border-t-[2px] border-dashed border-gray-300"></div>
-                            <Plane size={18} className="mx-2 text-[#2D32CF] rotate-45 shrink-0 fill-current" />
-                            <div className="h-[2px] flex-1 border-t-[2px] border-dashed border-gray-300"></div>
+                      </div>
+
+                      {/* Overlapping Pill */}
+                      <div className="absolute top-[70px] left-1/2 -translate-x-1/2 bg-white px-8 py-2.5 rounded-[20px] shadow-sm z-20 border-[1px] border-gray-100 min-w-[120px] text-center">
+                        <span className="text-[17px] font-black text-[#A1A5AE] tracking-widest leading-none font-sans uppercase">{detailItem.flightNo || 'JX820'}</span>
+                      </div>
+
+                      {/* Main Body */}
+                      <div className="relative pt-12 pb-4 px-4 bg-white flex-1 pl-12 shadow-[inset_0_4px_10px_rgba(0,0,0,0.01)]">
+                        {/* Perforation Line */}
+                        <div className="absolute top-0 bottom-0 left-6 w-[2px] border-l-[3px] border-dotted border-gray-300 z-30 opacity-70" />
+
+                        {/* Time & City Grid */}
+                        <div className="flex justify-between items-center w-full px-2 mb-2">
+                          {/* Departure */}
+                          <div className="flex flex-col items-center w-[30%]">
+                            <span className="text-2xl font-black text-[#A1A5AE] tracking-widest mb-1.5 font-sans uppercase">{detailItem.depIata || 'TPE'}</span>
+                            <span className="text-[44px] font-[900] text-[#161C2C] leading-none tracking-tight mb-3 font-sans -ml-1">{detailItem.depTime || '08:30'}</span>
+                            <div className="bg-[#247F46] text-white text-[13px] font-bold px-4 py-1.5 rounded-full tracking-wider leading-none whitespace-nowrap">{detailItem.depCity || '台北'}</div>
+                          </div>
+
+                          {/* Center */}
+                          <div className="flex flex-col items-center justify-center flex-1 -mt-4 mx-2">
+                            <span className="text-[12px] font-bold text-[#868B98] mb-1.5 tracking-wider">{detailItem.duration || '02h 45m'}</span>
+                            <div className="w-full flex items-center justify-center gap-2 mb-1.5">
+                              <div className="h-0 border-t-[2px] border-dashed border-[#DEE1E6] flex-1" />
+                              <Plane size={24} className="text-[#3269F5] rotate-90 transform shrink-0 fill-current" />
+                              <div className="h-0 border-t-[2px] border-dashed border-[#DEE1E6] flex-1" />
+                            </div>
+                            <span className="text-[12px] font-bold text-[#868B98] tracking-wider">{detailItem.date ? detailItem.date.replace(/-/g, '/') : '2026/04/25'}</span>
+                          </div>
+
+                          {/* Arrival */}
+                          <div className="flex flex-col items-center w-[30%]">
+                            <span className="text-2xl font-black text-[#A1A5AE] tracking-widest mb-1.5 font-sans uppercase">{detailItem.arrIata || 'KIX'}</span>
+                            <span className="text-[44px] font-[900] text-[#161C2C] leading-none tracking-tight mb-3 font-sans -ml-1">{detailItem.arrTime || '12:15'}</span>
+                            <div className="bg-[#BB966A] text-white text-[13px] font-bold px-4 py-1.5 rounded-full tracking-wider leading-none whitespace-nowrap">{detailItem.arrCity || '大阪'}</div>
                           </div>
                         </div>
-                        <div className="flex flex-col items-center">
-                          <span className="text-4xl font-black text-[#1A1A1A] tracking-tighter">{detailItem.arrIata || 'KIX'}</span>
-                          <span className="text-sm font-black mt-1">{detailItem.arrTime || '12:15'}</span>
-                        </div>
                       </div>
 
-                      {/* Perforated Divider */}
-                      <div className="relative flex items-center justify-center py-4">
-                        <div className="absolute left-[-32px] w-6 h-6 bg-[#F8F9FA] rounded-full border-r border-gray-100"></div>
-                        <div className="w-full border-t-[2px] border-dashed border-gray-200"></div>
-                        <div className="absolute right-[-32px] w-6 h-6 bg-[#F8F9FA] rounded-full border-l border-gray-100"></div>
-                      </div>
-
-                      <div className="text-[10px] font-black text-gray-400 tracking-widest uppercase mb-4 cursor-pointer" onClick={() => setDetailItem(undefined)}>TAP TO EXPAND DETAILS v</div>
-
-                      {/* Detailed Grid */}
-                      <div className="grid grid-cols-3 gap-3 text-center">
-                        <div className="bg-white border border-gray-200 rounded-2xl p-3 flex flex-col items-center justify-center">
-                          <span className="text-[9px] font-black text-gray-400 tracking-widest mb-1">TERMINAL</span>
-                          <span className="font-black text-p3-navy text-lg">{detailItem.terminal || '--'}</span>
+                      {/* Footer Info Box */}
+                      <div className="mx-4 mb-4 bg-[#F8F9FB] rounded-[20px] p-4 flex items-center justify-between border-[1px] border-gray-100 z-10 relative">
+                        <div className="flex flex-col flex-1 items-center justify-center w-[33%]">
+                          <span className="text-[10px] font-black text-[#A1A5AE] tracking-[0.15em] mb-1.5 font-sans">BAGGAGE</span>
+                          <div className="flex items-center gap-1.5 overflow-hidden w-full justify-center">
+                            <Luggage size={14} className="text-[#64A999] shrink-0" strokeWidth={2.5} />
+                            <span className="text-[14px] font-[900] text-[#161C2C] tracking-tight truncate">{detailItem.baggage || detailItem.baggageAllowance || '23kg'}</span>
+                          </div>
                         </div>
-                        <div className="bg-white border border-gray-200 rounded-2xl p-3 flex flex-col items-center justify-center">
-                          <span className="text-[9px] font-black text-gray-400 tracking-widest mb-1">GATE</span>
-                          <span className="font-black text-p3-navy text-lg">{detailItem.gate || '--'}</span>
+                        <div className="w-[1.5px] h-8 bg-[#EAECEF] shrink-0" />
+                        <div className="flex flex-col flex-1 items-center justify-center w-[33%]">
+                          <span className="text-[10px] font-black text-[#A1A5AE] tracking-[0.15em] mb-1.5 font-sans">SEAT</span>
+                          <div className="flex items-center gap-1 overflow-hidden w-full justify-center">
+                            <span className="text-[14px] font-[900] text-[#161C2C] tracking-tight truncate">{detailItem.seat || '14F'}</span>
+                          </div>
                         </div>
-                        <div className="bg-white border border-p3-ruby/30 rounded-2xl p-3 flex flex-col items-center justify-center">
-                          <span className="text-[9px] font-black text-p3-ruby tracking-widest mb-1">BOARDING</span>
-                          <span className="font-black text-p3-ruby text-lg">{detailItem.boardingTime || '--:--'}</span>
-                        </div>
-                        <div className="bg-white border border-gray-200 rounded-2xl p-3 flex flex-col items-center justify-center">
-                          <span className="text-[9px] font-black text-gray-400 tracking-widest mb-1">SEAT</span>
-                          <span className="font-black text-p3-navy text-lg">{detailItem.seat || '--'}</span>
-                        </div>
-                        <div className="bg-white border border-gray-200 rounded-2xl p-3 flex flex-col items-center justify-center">
-                          <span className="text-[9px] font-black text-gray-400 tracking-widest mb-1">BAGGAGE</span>
-                          <span className="font-black text-p3-navy text-lg">{detailItem.baggage || '--'}</span>
-                        </div>
-                        <div className="bg-white border border-gray-200 rounded-2xl p-3 flex flex-col items-center justify-center">
-                          <span className="text-[9px] font-black text-gray-400 tracking-widest mb-1">DURATION</span>
-                          <span className="font-black text-p3-navy text-sm">{detailItem.duration || '--'}</span>
+                        <div className="w-[1.5px] h-8 bg-[#EAECEF] shrink-0" />
+                        <div className="flex flex-col flex-1 items-center justify-center w-[33%]">
+                          <span className="text-[10px] font-black text-[#A1A5AE] tracking-[0.15em] mb-1.5 font-sans">AIRCRAFT</span>
+                          <div className="flex items-center gap-1.5 overflow-hidden w-full justify-center">
+                            <Plane size={14} className="text-[#C19163] -rotate-45 transform fill-current shrink-0" />
+                            <span className="text-[14px] font-[900] text-[#161C2C] tracking-tight truncate">{detailItem.aircraft || 'A350-900'}</span>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -432,7 +426,6 @@ const CopyableField = ({ label, value, onCopy }: any) => {
 // ============================================================================
 
 const FlightCard = ({ item, t, language, onEdit, onViewDetails, onQrClick }: any) => {
-  const theme = getTheme(item.airline);
   const [showActions, setShowActions] = useState(false);
 
   const handleCardClick = () => {
@@ -445,106 +438,92 @@ const FlightCard = ({ item, t, language, onEdit, onViewDetails, onQrClick }: any
     }
   };
 
-  const formatDurationDisplay = (dur: string) => {
-    if (!dur) return '00h 00m';
-    return dur.replace(/(\d+h)\s*(\d+m)/, '$1 $2');
-  };
-
   return (
     <motion.div
       whileTap={{ scale: 0.98 }}
-      className="relative bg-white rounded-[2.5rem] shadow-glass-deep overflow-hidden group cursor-pointer border-none"
+      className="relative bg-[#F4F4F4] rounded-[32px] overflow-hidden group cursor-pointer border-[1px] border-black/5 p-2"
       onClick={handleCardClick}
     >
+      <div className="bg-white rounded-[24px] overflow-hidden relative shadow-sm h-full flex flex-col">
+        {/* Header - Dark */}
+        <div className="bg-[#101424] h-[90px] w-full relative flex items-center justify-center">
+          <div className="absolute inset-0" style={{ backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.9) 1.5px, transparent 1.5px)', backgroundSize: '24px 24px', opacity: 0.3 }} />
+          <div className="flex items-center gap-2 z-10 text-[#C9A975] font-serif text-[22px] font-bold tracking-[0.15em] pl-1 relative">
+            <span className="text-[20px] -mt-1">✦</span> STARLUX
+          </div>
+        </div>
+
+        {/* Overlapping Pill */}
+        <div className="absolute top-[70px] left-1/2 -translate-x-1/2 bg-white px-8 py-2.5 rounded-[20px] shadow-sm z-20 border-[1px] border-gray-100 min-w-[120px] text-center">
+          <span className="text-[17px] font-black text-[#A1A5AE] tracking-widest leading-none font-sans uppercase">{item.flightNo || 'JX820'}</span>
+        </div>
+
+        {/* Main Body */}
+        <div className="relative pt-12 pb-4 px-4 bg-white flex-1 pl-12 shadow-[inset_0_4px_10px_rgba(0,0,0,0.01)]">
+          {/* Perforation Line */}
+          <div className="absolute top-0 bottom-0 left-6 w-[2px] border-l-[3px] border-dotted border-gray-300 z-30 opacity-70" />
+
+          {/* Time & City Grid */}
+          <div className="flex justify-between items-center w-full px-2 mb-2">
+            {/* Departure */}
+            <div className="flex flex-col items-center w-[30%]">
+              <span className="text-2xl font-black text-[#A1A5AE] tracking-widest mb-1.5 font-sans uppercase">{item.depIata || 'TPE'}</span>
+              <span className="text-[44px] font-[900] text-[#161C2C] leading-none tracking-tight mb-3 font-sans -ml-1">{item.depTime || '08:30'}</span>
+              <div className="bg-[#247F46] text-white text-[13px] font-bold px-4 py-1.5 rounded-full tracking-wider leading-none whitespace-nowrap">{item.depCity || '台北'}</div>
+            </div>
+
+            {/* Center */}
+            <div className="flex flex-col items-center justify-center flex-1 -mt-4 mx-2">
+              <span className="text-[12px] font-bold text-[#868B98] mb-1.5 tracking-wider">{item.duration || '02h 45m'}</span>
+              <div className="w-full flex items-center justify-center gap-2 mb-1.5">
+                <div className="h-0 border-t-[2px] border-dashed border-[#DEE1E6] flex-1" />
+                <Plane size={24} className="text-[#3269F5] rotate-90 transform shrink-0 fill-current" />
+                <div className="h-0 border-t-[2px] border-dashed border-[#DEE1E6] flex-1" />
+              </div>
+              <span className="text-[12px] font-bold text-[#868B98] tracking-wider">{item.date ? item.date.replace(/-/g, '/') : '2026/04/25'}</span>
+            </div>
+
+            {/* Arrival */}
+            <div className="flex flex-col items-center w-[30%]">
+              <span className="text-2xl font-black text-[#A1A5AE] tracking-widest mb-1.5 font-sans uppercase">{item.arrIata || 'KIX'}</span>
+              <span className="text-[44px] font-[900] text-[#161C2C] leading-none tracking-tight mb-3 font-sans -ml-1">{item.arrTime || '12:15'}</span>
+              <div className="bg-[#BB966A] text-white text-[13px] font-bold px-4 py-1.5 rounded-full tracking-wider leading-none whitespace-nowrap">{item.arrCity || '大阪'}</div>
+            </div>
+          </div>
+        </div>
+
+        {/* Footer Info Box */}
+        <div className="mx-4 mb-4 bg-[#F8F9FB] rounded-[20px] p-4 flex items-center justify-between border-[1px] border-gray-100 z-10 relative">
+          <div className="flex flex-col flex-1 items-center justify-center w-[33%]">
+            <span className="text-[10px] font-black text-[#A1A5AE] tracking-[0.15em] mb-1.5 font-sans">BAGGAGE</span>
+            <div className="flex items-center gap-1.5 overflow-hidden w-full justify-center">
+              <Luggage size={14} className="text-[#64A999] shrink-0" strokeWidth={2.5} />
+              <span className="text-[14px] font-[900] text-[#161C2C] tracking-tight truncate">{item.baggage || item.baggageAllowance || '23kg'}</span>
+            </div>
+          </div>
+          <div className="w-[1.5px] h-8 bg-[#EAECEF] shrink-0" />
+          <div className="flex flex-col flex-1 items-center justify-center w-[33%]">
+            <span className="text-[10px] font-black text-[#A1A5AE] tracking-[0.15em] mb-1.5 font-sans">SEAT</span>
+            <div className="flex items-center gap-1 overflow-hidden w-full justify-center">
+              <span className="text-[14px] font-[900] text-[#161C2C] tracking-tight truncate">{item.seat || '14F'}</span>
+            </div>
+          </div>
+          <div className="w-[1.5px] h-8 bg-[#EAECEF] shrink-0" />
+          <div className="flex flex-col flex-1 items-center justify-center w-[33%]">
+            <span className="text-[10px] font-black text-[#A1A5AE] tracking-[0.15em] mb-1.5 font-sans">AIRCRAFT</span>
+            <div className="flex items-center gap-1.5 overflow-hidden w-full justify-center">
+              <Plane size={14} className="text-[#C19163] -rotate-45 transform fill-current shrink-0" />
+              <span className="text-[14px] font-[900] text-[#161C2C] tracking-tight truncate">{item.aircraft || 'A350-900'}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* 編輯按鈕 */}
-      <div className={`absolute top-4 right-4 z-40 transition-opacity duration-300 ${showActions ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
-        <button onClick={(e) => { e.stopPropagation(); onEdit(e); }} className="p-2.5 bg-p3-gold border-[0.5px] border-white/20 rounded-full text-white shadow-glass-soft hover:scale-110 transition-transform">
+      <div className={`absolute top-6 right-6 z-40 transition-opacity duration-300 ${showActions ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
+        <button onClick={(e) => { e.stopPropagation(); onEdit(e); }} className="p-2.5 bg-white/20 backdrop-blur-md border-[1px] border-white/20 rounded-full text-white shadow-lg active:scale-90 transition-transform">
           <Edit3 size={18} strokeWidth={3} />
         </button>
-      </div>
-
-      {/* 1. Header (Dark Section) - Strict IMG_6113 Match */}
-      <div
-        className="h-[100px] w-full flex items-center justify-center relative overflow-hidden bg-[#181B26]"
-        style={{
-          backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.15) 1.2px, transparent 1.2px)',
-          backgroundSize: '16px 16px'
-        }}
-      >
-        <div className="drop-shadow-sm scale-110 mb-2">
-          {/* Always use the serif gold style for visual consistency with IMG_6113 */}
-          {theme.logoHtml}
-        </div>
-      </div>
-
-      {/* 2. Overlapping Flight Number Pill - Exact Position */}
-      <div className="absolute top-[82px] left-1/2 -translate-x-1/2 bg-white px-8 py-1.5 rounded-full border-[0.5px] border-black/5 shadow-sm z-30 flex items-center justify-center min-w-[120px]">
-        <span className="text-sm font-black text-gray-400 tracking-[0.1em] uppercase">{item.flightNo || '---'}</span>
-      </div>
-
-      {/* 3. Body Content */}
-      <div className="relative p-5 pt-12 pb-4">
-        {/* Left Perforation Line */}
-        <div className="absolute top-4 bottom-4 left-6 w-0 border-l-[3px] border-dashed border-gray-200" />
-
-        <div className="grid grid-cols-3 gap-0 mb-6 items-center pl-6">
-          {/* Departure */}
-          <div className="flex flex-col items-center gap-1">
-            <span className="text-3xl font-black text-gray-400 tracking-widest uppercase leading-none">{item.depIata || 'TPE'}</span>
-            <span className="text-[3.5rem] font-black text-[#1A1A1A] tabular-nums leading-none tracking-tight">{item.depTime || '08:30'}</span>
-            <div className="bg-[#2D7A4D] text-white px-6 py-1.5 rounded-full text-xs font-bold tracking-widest uppercase mt-1">
-              {item.depCity || 'Taipei'}
-            </div>
-          </div>
-
-          {/* Center Flight Art */}
-          <div className="flex flex-col items-center justify-center px-1 pb-4">
-            <span className="text-[11px] font-bold text-gray-400 mb-1 tabular-nums tracking-widest">
-              {formatDurationDisplay(item.duration)}
-            </span>
-            <div className="w-full flex items-center justify-center text-[#2D32CF] my-1">
-              <div className="h-[2px] w-6 border-t-[2px] border-dashed border-gray-300"></div>
-              <Plane size={22} className="mx-1.5 fill-current rotate-45 shrink-0" />
-              <div className="h-[2px] w-6 border-t-[2px] border-dashed border-gray-300"></div>
-            </div>
-            <span className="text-[11px] font-bold text-gray-400 mt-1 tracking-widest uppercase">
-              {item.date?.replace(/-/g, '/')}
-            </span>
-          </div>
-
-          {/* Arrival */}
-          <div className="flex flex-col items-center gap-1">
-            <span className="text-3xl font-black text-gray-400 tracking-widest uppercase leading-none">{item.arrIata || 'KIX'}</span>
-            <span className="text-[3.5rem] font-black text-[#1A1A1A] tabular-nums leading-none tracking-tight">{item.arrTime || '12:15'}</span>
-            <div className="bg-[#B3936E] text-white px-6 py-1.5 rounded-full text-xs font-bold tracking-widest uppercase mt-1">
-              {item.arrCity || 'Osaka'}
-            </div>
-          </div>
-        </div>
-
-        {/* 4. Footer (Three Equal Columns with Dividers) */}
-        <div className="bg-[#F8F9FA] rounded-[1.5rem] p-4 grid grid-cols-3 divide-x divide-gray-200 mt-4 mx-2">
-          <div className="flex flex-col items-center">
-            <span className="text-[9px] font-black text-gray-400 uppercase tracking-[0.2em] mb-1.5">BAGGAGE</span>
-            <div className="flex items-center gap-1.5 font-black text-[#1A1A1A] text-sm">
-              <Luggage size={14} className="text-[#2D7A4D]" strokeWidth={2.5} />
-              {item.baggage || '23kg'}
-            </div>
-          </div>
-          <div className="flex flex-col items-center">
-            <span className="text-[9px] font-black text-gray-400 uppercase tracking-[0.2em] mb-1.5">SEAT</span>
-            <div className="flex items-center gap-1.5 font-black text-[#1A1A1A] text-sm">
-              {item.seat || '14F'}
-            </div>
-          </div>
-          <div className="flex flex-col items-center">
-            <span className="text-[9px] font-black text-gray-400 uppercase tracking-[0.2em] mb-1.5">AIRCRAFT</span>
-            <div className="flex items-center gap-1.5 font-black text-[#1A1A1A] text-sm truncate w-full justify-center">
-              <Plane size={14} className="text-[#B3936E] rotate-[-45deg]" strokeWidth={2.5} />
-              <span className="truncate">{item.aircraft || 'A350-900'}</span>
-            </div>
-          </div>
-        </div>
       </div>
     </motion.div>
   );
