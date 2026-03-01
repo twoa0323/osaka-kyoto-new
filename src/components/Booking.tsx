@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useTripStore } from '../store/useTripStore';
 import {
   Plane, Home, MapPin, Plus, Edit3, Globe, QrCode,
@@ -105,7 +105,11 @@ export const Booking = () => {
   };
 
   if (!trip) return null;
-  const bookings = (trip.bookings || []).filter(b => b.type === activeSubTab);
+  const bookings = useMemo(() => {
+    return (trip.bookings || [])
+      .filter(b => b.type === activeSubTab)
+      .sort((a, b) => new Date(a.date || 0).getTime() - new Date(b.date || 0).getTime());
+  }, [trip.bookings, activeSubTab]);
 
   return (
     <div className="px-4 space-y-6 animate-fade-in pb-28 text-left h-full">
@@ -156,19 +160,28 @@ export const Booking = () => {
                 {t('booking.emptyPocket')}
               </div>
             ) : (
-              bookings.map((item, index) => (
-                <SwipeableItem
-                  key={item.id}
-                  id={item.id}
-                  onDelete={() => deleteBookingItem(trip.id, item.id)}
-                  className="rounded-[2.5rem]"
-                >
-                  {item.type === 'flight' && <FlightCard item={item} t={t} language={language} onEdit={(e: any) => { e.stopPropagation(); setEditingItem(item); setIsEditorOpen(true); }} onViewDetails={() => setDetailItem(item)} onQrClick={setFocusedQr} onCopy={(color: string) => { setSplatColor(color); setTimeout(() => setSplatColor(null), 1000); triggerHaptic('success'); }} />}
-                  {item.type === 'hotel' && <HotelCard item={item} t={t} language={language} onEdit={(e: any) => { e.stopPropagation(); setEditingItem(item); setIsEditorOpen(true); }} onViewDetails={() => setDetailItem(item)} onQrClick={setFocusedQr} onCopy={(color: string) => { setSplatColor(color); setTimeout(() => setSplatColor(null), 1000); triggerHaptic('success'); }} />}
-                  {item.type === 'spot' && <SpotCard item={item} t={t} language={language} onEdit={(e: any) => { e.stopPropagation(); setEditingItem(item); setIsEditorOpen(true); }} onViewDetails={() => setDetailItem(item)} onQrClick={setFocusedQr} onCopy={(color: string) => { setSplatColor(color); setTimeout(() => setSplatColor(null), 1000); triggerHaptic('success'); }} />}
-                  {item.type === 'voucher' && <VoucherCard item={item} t={t} language={language} onEdit={(e: any) => { e.stopPropagation(); setEditingItem(item); setIsEditorOpen(true); }} onViewDetails={() => setDetailItem(item)} onQrClick={setFocusedQr} onCopy={(color: string) => { setSplatColor(color); setTimeout(() => setSplatColor(null), 1000); triggerHaptic('success'); }} />}
-                </SwipeableItem>
-              ))
+              <AnimatePresence mode="popLayout">
+                {bookings.map((item) => (
+                  <motion.div
+                    key={item.id}
+                    layout
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.9, transition: { duration: 0.2 } }}
+                  >
+                    <SwipeableItem
+                      id={item.id}
+                      onDelete={() => deleteBookingItem(trip.id, item.id)}
+                      className="rounded-[2.5rem]"
+                    >
+                      {item.type === 'flight' && <FlightCard item={item} t={t} language={language} onEdit={(e: any) => { e.stopPropagation(); setEditingItem(item); setIsEditorOpen(true); }} onViewDetails={() => setDetailItem(item)} onQrClick={setFocusedQr} onCopy={(color: string) => { setSplatColor(color); setTimeout(() => setSplatColor(null), 1000); triggerHaptic('success'); }} />}
+                      {item.type === 'hotel' && <HotelCard item={item} t={t} language={language} onEdit={(e: any) => { e.stopPropagation(); setEditingItem(item); setIsEditorOpen(true); }} onViewDetails={() => setDetailItem(item)} onQrClick={setFocusedQr} onCopy={(color: string) => { setSplatColor(color); setTimeout(() => setSplatColor(null), 1000); triggerHaptic('success'); }} />}
+                      {item.type === 'spot' && <SpotCard item={item} t={t} language={language} onEdit={(e: any) => { e.stopPropagation(); setEditingItem(item); setIsEditorOpen(true); }} onViewDetails={() => setDetailItem(item)} onQrClick={setFocusedQr} onCopy={(color: string) => { setSplatColor(color); setTimeout(() => setSplatColor(null), 1000); triggerHaptic('success'); }} />}
+                      {item.type === 'voucher' && <VoucherCard item={item} t={t} language={language} onEdit={(e: any) => { e.stopPropagation(); setEditingItem(item); setIsEditorOpen(true); }} onViewDetails={() => setDetailItem(item)} onQrClick={setFocusedQr} onCopy={(color: string) => { setSplatColor(color); setTimeout(() => setSplatColor(null), 1000); triggerHaptic('success'); }} />}
+                    </SwipeableItem>
+                  </motion.div>
+                ))}
+              </AnimatePresence>
             )}
           </motion.div>
         </AnimatePresence>
@@ -435,6 +448,8 @@ const CopyableField = ({ label, value, onCopy }: any) => {
 
 const FlightCard = ({ item, t, language, onEdit, onViewDetails, onQrClick }: any) => {
   const [showActions, setShowActions] = useState(false);
+
+  if (!item) return null;
 
   const handleCardClick = () => {
     if (!showActions) {
