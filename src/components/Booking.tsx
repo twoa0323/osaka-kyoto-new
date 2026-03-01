@@ -465,15 +465,7 @@ const FlightCard = ({ item, t, language, onEdit, onViewDetails, onQrClick }: any
               <Trash2 size={18} strokeWidth={3} className="text-p3-ruby" />
             </button>
           </div>
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              setShowActions(false);
-            }}
-            className="bg-white/80 backdrop-blur-sm border-[0.5px] border-p3-navy p-2 rounded-full shadow-glass-deep-sm active:scale-90 transition-transform"
-          >
-            <X size={18} strokeWidth={3} className="text-p3-navy" />
-          </button>
+
         </div>
 
         {/* Header - Dynamic based on airline theme */}

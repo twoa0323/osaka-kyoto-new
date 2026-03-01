@@ -1241,9 +1241,13 @@ export const Schedule: FC<{ externalDateIdx?: number }> = ({ externalDateIdx = 0
 
           {/* 左側：當日狀態 (移除景點數量文字，改為純圖示) */}
           <div className="flex items-center gap-2">
-            {activeFlights.length > 0 && (
+            {(trip?.bookings || []).some(b => b.type === 'flight') && (
               <button
-                onClick={() => setDetailItem({ __type: 'multi-flight', flights: activeFlights })}
+                onClick={() => {
+                  const allFlights = (trip?.bookings || []).filter(b => b.type === 'flight');
+                  setDetailItem({ __type: 'multi-flight', flights: allFlights });
+                  triggerHaptic('medium');
+                }}
                 className="w-9 h-9 rounded-full bg-white border-[0.5px] border-blue-200 flex items-center justify-center shadow-sm active:scale-95 transition-all text-p3-navy"
               >
                 <Plane size={16} strokeWidth={2.5} />
