@@ -1,10 +1,10 @@
 import { FC, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Plane, Home, Clock, ChevronRight, ChevronDown, Copy, ExternalLink, MapPin, Phone } from 'lucide-react';
-import { BookingItem } from '../types/trip';
+import { BookingItem } from '../../types';
 import { getAirlineTheme } from './ScheduleConstants';
 import { parseISO, differenceInDays } from 'date-fns';
-import { triggerHaptic } from '../utils/haptic';
+import { triggerHaptic } from '../../utils/haptics';
 
 // --- 🔹 專用航班卡片 (時間軸版) ---
 export const TimelineFlightCard: FC<{

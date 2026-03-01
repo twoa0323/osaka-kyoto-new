@@ -85,6 +85,7 @@ export interface BookingItem extends SyncMetadata {
   roomType?: string;      // 👈 新增：房型
   contactPhone?: string;  // 👈 新增：飯店電話
   checkInTime?: string;   // 👈 新增：入住時間
+  checkOutTime?: string;  // 👈 新增：退房時間
   mapUrl?: string;        // 👈 新增：地圖連結
 
   // 景點/憑證專用欄位

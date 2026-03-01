@@ -10,16 +10,14 @@ import {
   Check, Star
 } from 'lucide-react';
 import { motion, AnimatePresence, Reorder } from 'framer-motion';
-import { ScheduleItem, BookingItem, Trip } from '../types/trip';
-import { triggerHaptic } from '../utils/haptic';
+import { ScheduleItem, BookingItem, Trip } from '../types';
+import { triggerHaptic } from '../utils/haptics';
 import { useNetworkStatus } from '../hooks/useNetworkStatus';
 import { ScheduleEditor } from './ScheduleEditor';
 import { BookingEditor } from './BookingEditor';
 import { LazyImage } from './LazyImage';
-import { SwipeableItem } from './ui/SwipeableItem';
 import { WeatherReportModal, TransportAiModal } from './ScheduleModals';
-import { useAI } from '../hooks/useAi'; // 假設有一個 useAI hook，如果沒有則手動實作抽離的 AI fetch
-import Map, { Marker, Popup as MapPopup, NavigationControl, FullscreenControl, GeolocateControl, Source, Layer } from 'react-map-gl/maplibre';
+import { Map, MapMarker, MarkerContent, MapPopup, MapControls, MapRoute, Map3DBuildings } from './ui/map';
 import { ICON_MAP, CATEGORY_STYLE, CITY_DB, getAirlineTheme } from './schedule/ScheduleConstants';
 import {
   TimelineFlightCard,
@@ -63,7 +61,7 @@ const getWindLevel = (speed: number, t: (key: string) => string) => {
 
 // CITY_DB moved to ScheduleConstants.tsx
 
-import type * as MapLibreGLType from 'maplibre-gl';
+import * as MapLibreGL from 'maplibre-gl';
 
 
 // --- 🔹 極簡空間 Timeline 組件 ---
@@ -167,7 +165,7 @@ const ScheduleMapView: FC<{
 }> = ({ items, trip, setDetailItem, addScheduleItem, selectedDateStr, t }) => {
   const { showToast } = useTripStore();
   const MAPTILER_KEY = (import.meta as any).env.VITE_MAPTILER_API_KEY;
-  const mapRef = useRef<MapLibreGLType.Map | null>(null);
+  const mapRef = useRef<MapLibreGL.Map | null>(null);
   const activeCardIdRef = useRef<string | null>(null);
   const activeTab = useTripStore(s => s.activeTab);
   const isMountedRef = useRef(true);
@@ -208,9 +206,9 @@ const ScheduleMapView: FC<{
   useEffect(() => {
     if (!mapRef.current || points.length === 0 || !isMountedRef.current) return;
     try {
-      const bounds = new LngLatBounds();
+      const bounds = new MapLibreGL.LngLatBounds();
       points.forEach(p => bounds.extend(p));
-      mapRef.current.fitBounds(bounds, { padding: 80, duration: 0, maxZoom: 16 });
+      mapRef.current.fitBounds(bounds as any, { padding: 80, duration: 0, maxZoom: 16 });
     } catch (e) {
       console.warn('[Map] fitBounds skipped (context lost):', e);
     }
@@ -1316,27 +1314,25 @@ export const Schedule: FC<{ externalDateIdx?: number }> = ({ externalDateIdx = 0
                   }
                   return daySchedules.map((item: any, idx: number) => (
                     <div key={item.id} data-id={item.id} className="timeline-item">
-                      <SwipeableItem id={item.id} onDelete={() => deleteScheduleItem(trip!.id, item.id)}>
-                        <ScheduleItemRow
-                          item={item as any}
-                          idx={idx}
-                          isEditMode={isEditMode}
-                          dayItems={dayItems}
-                          tripId={trip!.id}
-                          updateScheduleItem={updateScheduleItem}
-                          deleteScheduleItem={deleteScheduleItem}
-                          setEditingItem={setEditingItem}
-                          setIsEditorOpen={setIsEditorOpen}
-                          setDetailItem={(it: any) => {
-                            const element = document.querySelector(`[data-id="${it.id}"]`);
-                            if (element) {
-                              element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                            }
-                            setDetailItem(it);
-                          }}
-                          timeToMins={timeToMins}
-                        />
-                      </SwipeableItem>
+                      <ScheduleItemRow
+                        item={item as any}
+                        idx={idx}
+                        isEditMode={isEditMode}
+                        dayItems={dayItems}
+                        tripId={trip!.id}
+                        updateScheduleItem={updateScheduleItem}
+                        deleteScheduleItem={deleteScheduleItem}
+                        setEditingItem={setEditingItem}
+                        setIsEditorOpen={setIsEditorOpen}
+                        setDetailItem={(it: any) => {
+                          const element = document.querySelector(`[data-id="${it.id}"]`);
+                          if (element) {
+                            element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                          }
+                          setDetailItem(it);
+                        }}
+                        timeToMins={timeToMins}
+                      />
                     </div>
                   ));
                 })()}
