@@ -266,14 +266,12 @@ export const FlightDetailModalContent = ({ item, t, showToast }: any) => {
                         </div>
 
                         {/* Overlapping Pill */}
-                        <div className="absolute top-[70px] left-1/2 -translate-x-1/2 bg-[#FEE12B] px-8 py-2.5 rounded-[20px] shadow-[0_4px_10px_rgba(0,0,0,0.15)] z-20 border-[1px] border-white/40 min-w-[120px] text-center">
-                            <span className="text-[17px] font-black text-[#8A7909] tracking-widest leading-none font-sans uppercase">{item.flightNo || 'JX820'}</span>
+                        <div className="absolute top-[70px] left-1/2 -translate-x-1/2 bg-white px-8 py-2.5 rounded-[20px] shadow-md border border-gray-100 z-20 min-w-[120px] text-center">
+                            <span className="text-[17px] font-black text-gray-500 tracking-widest leading-none font-sans uppercase">{item.flightNo || 'JX820'}</span>
                         </div>
 
                         {/* Main Body */}
-                        <div className="relative pt-16 pb-4 px-4 bg-white flex-1 pl-12 shadow-[inset_0_4px_10px_rgba(0,0,0,0.01)]">
-                            {/* Perforation Line - Reduced overlapping length */}
-                            <div className="absolute top-8 bottom-8 left-6 w-[2px] border-l-[3px] border-dotted border-gray-300 z-30 opacity-70" />
+                        <div className="relative pt-16 pb-4 px-6 bg-white flex-1 shadow-[inset_0_4px_10px_rgba(0,0,0,0.01)]">
 
                             {/* Time & City Grid */}
                             <div className="flex justify-between items-center w-full px-2 mb-2">
@@ -303,21 +301,21 @@ export const FlightDetailModalContent = ({ item, t, showToast }: any) => {
                         </div>
 
                         {/* Footer Info Box */}
-                        <div className="mx-4 mb-4 bg-[#FEE12B]/10 rounded-[20px] p-4 flex items-center justify-between border-[1px] border-[#FEE12B]/40 shadow-inner z-10 relative">
+                        <div className="mx-4 mb-4 bg-[#F8F9FA] rounded-[20px] p-4 flex items-center justify-between border-t border-gray-100 z-10 relative">
                             <div className="flex flex-col flex-1 items-center justify-center w-[33%]">
                                 <span className="text-[10px] font-black text-[#A1A5AE] tracking-[0.15em] mb-1.5 font-sans">BAGGAGE</span>
                                 <div className="flex items-center gap-1.5 overflow-hidden w-full justify-center">
                                     <span className="text-[14px] font-[900] text-[#161C2C] tracking-tight truncate flex items-center gap-1.5"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-[#64A999] shrink-0"><rect x="5" y="6" width="14" height="16" rx="2" /><path d="M8 6V4c0-1.1.9-2 2-2h4c1.1 0 2 .9 2 2v2" /><line x1="12" y1="11" x2="12" y2="17" /></svg>{item.baggage || item.baggageAllowance || '23kg'}</span>
                                 </div>
                             </div>
-                            <div className="w-[1.5px] h-8 bg-gray-200 shrink-0" />
+                            <div className="w-[1.5px] h-8 bg-[#EAECEF] shrink-0" />
                             <div className="flex flex-col flex-1 items-center justify-center w-[33%]">
                                 <span className="text-[10px] font-black text-[#A1A5AE] tracking-[0.15em] mb-1.5 font-sans">SEAT</span>
                                 <div className="flex items-center gap-1 overflow-hidden w-full justify-center">
                                     <span className="text-[14px] font-[900] text-[#161C2C] tracking-tight truncate">{item.seat || '14F'}</span>
                                 </div>
                             </div>
-                            <div className="w-[1.5px] h-8 bg-gray-200 shrink-0" />
+                            <div className="w-[1.5px] h-8 bg-[#EAECEF] shrink-0" />
                             <div className="flex flex-col flex-1 items-center justify-center w-[33%]">
                                 <span className="text-[10px] font-black text-[#A1A5AE] tracking-[0.15em] mb-1.5 font-sans">AIRCRAFT</span>
                                 <div className="flex items-center gap-1.5 overflow-hidden w-full justify-center">

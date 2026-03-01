@@ -14,27 +14,12 @@ import { BookingEditor } from './BookingEditor';
 import { motion, AnimatePresence } from 'framer-motion';
 import { LazyImage } from './LazyImage';
 import { useTranslation } from '../hooks/useTranslation';
+import { getAirlineTheme } from './schedule/ScheduleConstants';
 import { triggerHaptic } from '../utils/haptics';
 import { SwipeableItem, InkSplat } from './Common';
 import { Copy } from 'lucide-react';
 
-// --- 航空公司主題配色 (保留邏輯，視覺以 IMG_6113 為主) ---
-const AIRLINE_THEMES: Record<string, any> = {
-  tigerair: { bgClass: 'bg-[#F49818]', textClass: 'text-white', logoHtml: <span className="font-black text-white text-xl tracking-tight">tiger<span className="font-medium">air</span> <span className="text-sm font-normal">Taiwan</span></span>, },
-  starlux: { bgClass: 'bg-[#181B26]', textClass: 'text-[#C4A97A]', logoHtml: <span className="font-serif text-[#C4A97A] text-2xl font-bold tracking-widest flex items-center gap-2"><span className="text-3xl rotate-45 text-[#E6C998]">✦</span> STARLUX</span>, },
-  cathay: { bgClass: 'bg-[#006564]', textClass: 'text-white', logoHtml: <span className="font-sans text-white text-xl font-bold tracking-widest flex items-center gap-2"><span className="text-3xl font-light scale-y-75 -scale-x-100">✔</span> CATHAY PACIFIC</span>, },
-  china: { bgClass: 'bg-[#002855]', textClass: 'text-[#FFB6C1]', logoHtml: <span className="font-serif text-[#FFB6C1] text-lg font-black tracking-widest flex items-center gap-2"><span className="text-2xl">🌸</span> CHINA AIRLINES</span>, },
-  eva: { bgClass: 'bg-[#007A53]', textClass: 'text-[#F2A900]', logoHtml: <span className="font-sans text-white text-2xl font-bold tracking-widest flex items-center gap-2"><span className="text-[#F2A900] text-3xl">⊕</span> EVA AIR</span>, },
-  peach: { bgClass: 'bg-[#D93B8B]', textClass: 'text-white', logoHtml: <span className="font-sans text-white text-4xl font-black tracking-tighter lowercase pr-2">peach</span>, },
-  ana: { bgClass: 'bg-[#133261]', textClass: 'text-white', logoHtml: <span className="font-sans text-white text-3xl font-black italic tracking-widest flex gap-1 items-center">ANA</span>, },
-  other: { bgClass: 'bg-[#101424]', textClass: 'text-white', logoHtml: <span className="font-sans text-white text-xl font-black tracking-[0.2em]">BOARDING PASS</span>, }
-};
-
-const getTheme = (airline?: string) => {
-  if (!airline) return AIRLINE_THEMES.other;
-  const key = Object.keys(AIRLINE_THEMES).find(k => airline.toLowerCase().includes(k));
-  return key ? AIRLINE_THEMES[key] : AIRLINE_THEMES.other;
-};
+// Removed local AIRLINE_THEMES in favor of getAirlineTheme from ScheduleConstants
 
 // 子分頁顏色
 const SUBTAB_COLORS: Record<string, string> = {
@@ -469,12 +454,12 @@ const FlightCard = ({ item, t, language, onEdit, onViewDetails, onQrClick }: any
     >
       <div className="bg-white rounded-[24px] overflow-hidden relative shadow-sm h-full flex flex-col">
         {/* Header - Dynamic based on airline theme */}
-        <div className={`${getTheme(item.airline).bgClass} h-[90px] w-full relative flex items-center justify-center`}>
+        <div className={`${getAirlineTheme(item.airline).bgClass} h-[90px] w-full relative flex items-center justify-center`}>
           {item.airline?.toLowerCase().includes('starlux') && (
             <div className="absolute inset-0" style={{ backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.9) 1.5px, transparent 1.5px)', backgroundSize: '24px 24px', opacity: 0.3 }} />
           )}
           <div className="flex items-center gap-2 z-10 pl-1 relative">
-            {getTheme(item.airline).logoHtml}
+            {getAirlineTheme(item.airline).logoHtml}
           </div>
         </div>
 
