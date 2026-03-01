@@ -6,66 +6,109 @@ import { getAirlineTheme } from './ScheduleConstants';
 import { parseISO, differenceInDays, format } from 'date-fns';
 import { triggerHaptic } from '../../utils/haptics';
 
-// --- 🔹 專用航班卡片 (時間軸版) ---
+// --- 🔹 專用航班卡片 (時間軸版 - 完美複製 FlightCard) ---
 export const TimelineFlightCard: FC<{
     item: BookingItem;
     onClick: () => void;
 }> = ({ item, onClick }) => {
-    const theme = getAirlineTheme(item.airline);
+    // 日期格式化: 2026/04/25
+    const dateStr = item.date ? format(parseISO(item.date), 'yyyy/MM/dd') : '----/--/--';
 
     return (
         <motion.div
             layoutId={`card-${item.id}`}
             onClick={onClick}
-            initial={{ scale: 0.95, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
-            className="relative ml-14 mb-10 cursor-pointer group"
+            className="relative ml-10 mb-8 cursor-pointer group rounded-[32px] overflow-hidden bg-white shadow-xl shadow-black/5"
         >
-            <div className="bg-white rounded-[32px] overflow-hidden shadow-xl border-[0.5px] border-black/5 relative">
-                <div className="absolute left-0 top-[22%] -translate-x-1/2 w-8 h-8 rounded-full bg-[#F4F5F7] z-20" />
-                <div className="absolute right-0 top-[22%] translate-x-1/2 w-8 h-8 rounded-full bg-[#F4F5F7] z-20" />
+            {/* 左側長切鋸齒線條模擬 (票根邊緣) */}
+            <div className="absolute left-6 top-0 bottom-0 w-0 border-l-[3px] border-dotted border-gray-300 pointer-events-none z-30" />
 
-                <div className={`${theme.bgClass} h-16 flex items-center justify-center relative`}>
-                    <div className="absolute inset-0 opacity-10 pointer-events-none" style={{ backgroundImage: 'radial-gradient(circle, white 1px, transparent 1px)', backgroundSize: '12px 12px' }} />
-                    <span className={`boutique-tag ${theme.textClass} opacity-90 tracking-[0.3em] z-10 font-black text-xs uppercase`}>{theme.logo}</span>
+            {/* 頂部：STARLUX 深藍底色與星空 Pattern */}
+            <div className="bg-[#121623] h-[100px] w-full relative flex items-center justify-center overflow-hidden">
+                <div className="absolute inset-0 opacity-40 pointer-events-none" style={{ backgroundImage: 'radial-gradient(circle, white 1px, transparent 1px)', backgroundSize: '16px 16px', backgroundPosition: '50% 50%' }} />
+
+                {/* 航空名稱與特殊 Logo */}
+                <div className="flex items-center gap-2 z-10 -mt-2">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M12 2C12.5 7.5 16.5 11.5 22 12C16.5 12.5 12.5 16.5 12 22C11.5 16.5 7.5 12.5 2 12C7.5 11.5 11.5 7.5 12 2Z" fill="#D4B57E" />
+                    </svg>
+                    <span className="text-xl font-serif text-[#D4B57E] tracking-[0.2em] font-bold uppercase">{item.airline || 'STARLUX'}</span>
                 </div>
+            </div>
 
-                <div className="absolute top-14 left-1/2 -translate-x-1/2 bg-white px-6 py-1.5 rounded-full border-[0.5px] border-black/10 shadow-sm z-30">
-                    <span className="text-[10px] font-black text-p3-navy/40 tracking-widest">{item.flightNo || 'FLIGHT'}</span>
-                </div>
+            {/* 跨越交界的半圓形航班號背景 */}
+            <div className="absolute top-[86px] left-1/2 -translate-x-1/2 bg-white px-8 py-2 rounded-full shadow-sm z-20 border-[0.5px] border-black/5">
+                <span className="text-sm font-black text-[#A4A9B3] tracking-widest leading-none pt-0.5 inline-block">{item.flightNo || 'JX820'}</span>
+            </div>
 
-                <div className="p-8 pt-12 flex justify-between items-center bg-white">
-                    <div className="flex flex-col items-center">
-                        <span className="text-sm font-black text-gray-400 mb-1 uppercase tracking-widest">{item.depCity || 'TAIPEI'}</span>
-                        <span className="text-4xl font-black text-p3-navy tracking-tighter leading-none">{item.depIata || 'TPE'}</span>
-                        <span className="text-base font-black text-p3-navy mt-2">{item.depTime || '--:--'}</span>
+            {/* 中段：起降與時間資訊 */}
+            <div className="bg-white pt-16 pb-8 px-8 pl-14">
+                <div className="flex justify-between items-center w-full">
+                    {/* 左側起飛 */}
+                    <div className="flex flex-col items-center w-[30%]">
+                        <span className="text-2xl font-black text-[#A4A9B3] mb-1">{item.depIata || 'TPE'}</span>
+                        <span className="text-[44px] font-black text-[#1A1F36] leading-none tracking-tight mb-3 font-sans -ml-1">{item.depTime || '08:30'}</span>
+                        <div className="bg-[#1E7B44] text-white text-[11px] font-bold px-4 py-1.5 rounded-full tracking-widest">{item.depCity || '台北'}</div>
                     </div>
 
-                    <div className="flex-1 flex flex-col items-center px-4">
-                        <div className="w-full flex items-center gap-2 mb-2">
-                            <div className="h-[1px] flex-1 border-t border-dashed border-gray-300" />
-                            <Plane size={16} strokeWidth={3} className="text-p3-ruby rotate-45" />
-                            <div className="h-[1px] flex-1 border-t border-dashed border-gray-300" />
+                    {/* 中間飛行時長與日期 */}
+                    <div className="flex-1 flex flex-col items-center justify-center -mt-4">
+                        <span className="text-[11px] font-bold text-[#8E94A4] mb-2">{item.duration || '02h 45m'}</span>
+                        <div className="w-full flex items-center justify-center gap-1.5 mb-2 relative">
+                            <div className="h-0 border-t-2 border-dashed border-[#DEE1E6] w-12" />
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" className="text-[#346DF8] rotate-90 transform shrink-0">
+                                <path d="M21 16v-2l-8-5V3.5c0-.83-.67-1.5-1.5-1.5S10 2.67 10 3.5V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5l8 2.5z" fill="currentColor" />
+                            </svg>
+                            <div className="h-0 border-t-2 border-dashed border-[#DEE1E6] w-12" />
                         </div>
-                        <span className="text-[10px] font-black text-gray-300 italic">{item.duration || '02h 45m'}</span>
+                        <span className="text-[11px] font-bold text-[#8E94A4]">{dateStr}</span>
                     </div>
 
-                    <div className="flex flex-col items-center">
-                        <span className="text-sm font-black text-gray-400 mb-1 uppercase tracking-widest">{item.arrCity || 'OSAKA'}</span>
-                        <span className="text-4xl font-black text-p3-navy tracking-tighter leading-none">{item.arrIata || 'KIX'}</span>
-                        <span className="text-base font-black text-p3-navy mt-2">{item.arrTime || '--:--'}</span>
+                    {/* 右側抵達 */}
+                    <div className="flex flex-col items-center w-[30%]">
+                        <span className="text-2xl font-black text-[#A4A9B3] mb-1">{item.arrIata || 'KIX'}</span>
+                        <span className="text-[44px] font-black text-[#1A1F36] leading-none tracking-tight mb-3 font-sans -ml-1">{item.arrTime || '12:15'}</span>
+                        <div className="bg-[#B8936D] text-white text-[11px] font-bold px-4 py-1.5 rounded-full tracking-widest">{item.arrCity || '大阪'}</div>
                     </div>
                 </div>
 
-                <div className="bg-gray-50/50 p-4 border-t border-dashed border-gray-200 flex flex-col items-center">
-                    <div className="text-4xl font-mono tracking-widest text-black/20 overflow-hidden h-8 select-none">|||| |||| | || ||| || ||| |||| || |||</div>
-                    <div className="text-[8px] font-mono text-black/10 mt-1"> boarding pass security id: {item.id} </div>
-                </div>
+                {/* 底部附屬資訊區塊 */}
+                <div className="mt-8 bg-[#F9F9FB] rounded-[20px] p-4 flex items-center justify-between border-[0.5px] border-black/5">
+                    {/* BAGGAGE */}
+                    <div className="flex flex-col flex-1 items-center justify-center">
+                        <span className="text-[9px] font-black text-[#A4A9B3] tracking-widest mb-1.5">BAGGAGE</span>
+                        <div className="flex items-center gap-1.5">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-[#66A89B]">
+                                <rect x="5" y="6" width="14" height="16" rx="2" />
+                                <path d="M8 6V4c0-1.1.9-2 2-2h4c1.1 0 2 .9 2 2v2" />
+                                <line x1="12" y1="11" x2="12" y2="17" />
+                            </svg>
+                            <span className="text-sm font-black text-[#1A1F36]">{item.baggageAllowance || '23kg'}</span>
+                        </div>
+                    </div>
+                    <div className="w-[1px] h-8 bg-gray-200" />
 
-                <div className="absolute right-4 top-20 w-10 h-10 rounded-full bg-p3-navy text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all shadow-lg scale-75 group-hover:scale-100 z-30">
-                    <ChevronRight size={20} strokeWidth={2.5} />
+                    {/* SEAT */}
+                    <div className="flex flex-col flex-1 items-center justify-center">
+                        <span className="text-[9px] font-black text-[#A4A9B3] tracking-widest mb-1.5">SEAT</span>
+                        <div className="flex items-center gap-1">
+                            <span className="text-sm font-black text-[#1A1F36]">{item.seat || '14F'}</span>
+                        </div>
+                    </div>
+                    <div className="w-[1px] h-8 bg-gray-200" />
+
+                    {/* AIRCRAFT */}
+                    <div className="flex flex-col flex-1 items-center justify-center">
+                        <span className="text-[9px] font-black text-[#A4A9B3] tracking-widest mb-1.5">AIRCRAFT</span>
+                        <div className="flex items-center gap-1.5">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" className="text-[#C99464] -rotate-45 transform">
+                                <path d="M21 16v-2l-8-5V3.5c0-.83-.67-1.5-1.5-1.5S10 2.67 10 3.5V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5l8 2.5z" fill="currentColor" />
+                            </svg>
+                            <span className="text-sm font-black text-[#1A1F36]">{item.aircraft || 'A350-900'}</span>
+                        </div>
+                    </div>
                 </div>
             </div>
         </motion.div>

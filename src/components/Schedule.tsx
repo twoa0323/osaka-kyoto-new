@@ -1242,11 +1242,23 @@ export const Schedule: FC<{ externalDateIdx?: number }> = ({ externalDateIdx = 0
                     <button onClick={() => { setEditingItem(undefined); setIsEditorOpen(true); setShowAddMenu(false); }} className="flex items-center gap-3 p-3 hover:bg-p3-navy/5 rounded-xl transition-colors text-left text-sm font-black text-p3-navy">
                       <div className="w-8 h-8 rounded-lg bg-p3-gold/10 flex items-center justify-center text-p3-gold shrink-0"><MapPin size={16} strokeWidth={3} /></div>📍 新增行程景點
                     </button>
-                    <button onClick={() => { showToast("BookingEditor 下一階段對接... ✈️", "info"); setShowAddMenu(false); }} className="flex items-center gap-3 p-3 hover:bg-p3-navy/5 rounded-xl transition-colors text-left text-sm font-black text-p3-navy">
+                    <button onClick={() => {
+                      setEditingBooking({
+                        id: `add-${Date.now()}`,
+                        type: 'flight',
+                        title: '新航班',
+                        date: selectedDateStr
+                      } as any);
+                      setIsBookingEditorOpen(true);
+                      setShowAddMenu(false);
+                    }} className="flex items-center gap-3 p-3 hover:bg-p3-navy/5 rounded-xl transition-colors text-left text-sm font-black text-p3-navy">
                       <div className="w-8 h-8 rounded-lg bg-p3-navy/10 flex items-center justify-center text-p3-navy shrink-0"><Plane size={16} strokeWidth={3} /></div>✈️ 新增航班/飯店
                     </button>
-                    <button onClick={() => { showToast("PackingListModal 開發中... 🧳", "info"); setShowAddMenu(false); }} className="flex items-center gap-3 p-3 hover:bg-p3-navy/5 rounded-xl transition-colors text-left text-sm font-black text-p3-navy">
-                      <div className="w-8 h-8 rounded-lg bg-p3-ruby/10 flex items-center justify-center text-p3-ruby shrink-0"><Luggage size={16} strokeWidth={3} /></div>🧳 行李清單
+                    <button onClick={() => {
+                      showToast("BookingEditor 開發中... 🧳", "info");
+                      setShowAddMenu(false);
+                    }} className="flex items-center gap-3 p-3 hover:bg-p3-navy/5 rounded-xl transition-colors text-left text-sm font-black text-p3-navy">
+                      <div className="w-8 h-8 rounded-lg bg-p3-ruby/10 flex items-center justify-center text-p3-ruby shrink-0"><Luggage size={16} strokeWidth={3} /></div>🧳 新增行李清單
                     </button>
                   </motion.div>
                 )}
