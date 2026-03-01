@@ -461,7 +461,7 @@ const FlightCard = ({ item, t, language, onEdit, onViewDetails, onQrClick }: any
       {/* 3. Body Content */}
       <div className="relative p-5 pt-10 pb-4">
         {/* Left Perforation Line */}
-        <div className="absolute top-0 bottom-0 left-0 w-0 border-l-[2.5px] border-dashed border-gray-100" />
+        <div className="absolute top-0 bottom-0 left-0 w-0 border-l-[2.5px] border-dashed border-gray-200" />
 
         <div className="grid grid-cols-3 gap-0 mb-6 items-center">
           {/* Departure */}
@@ -555,7 +555,7 @@ const HotelCard = ({ item, t, language, onEdit, onViewDetails, onQrClick, onCopy
   return (
     <motion.div
       whileTap={{ scale: 0.98 }}
-      className="relative bg-[#0A142E] rounded-[2.5rem] shadow-glass-deep overflow-hidden cursor-pointer aspect-[3/4] group flex flex-col"
+      className="relative bg-[#0A142E] rounded-[2.5rem] shadow-glass-deep overflow-hidden cursor-pointer aspect-[3/4.2] group flex flex-col no-border"
       onClick={handleCardClick}
     >
       {/* 編輯按鈕 */}
@@ -565,92 +565,86 @@ const HotelCard = ({ item, t, language, onEdit, onViewDetails, onQrClick, onCopy
         </button>
       </div>
 
-      {/* 1. Full-Bleed Hero Image */}
-      <div className="absolute inset-0 z-0">
+      {/* 1. Hero Background (70% Height) */}
+      <div className="relative h-[70%] w-full overflow-hidden">
         {item.images?.[0] ? (
-          <LazyImage src={item.images[0]} containerClassName="w-full h-full object-cover" />
+          <LazyImage src={item.images[0]} containerClassName="w-full h-full object-cover scale-105 group-hover:scale-100 transition-transform duration-700" />
         ) : (
-          <div className="w-full h-full flex items-center justify-center bg-p3-navy">
-            <Home size={64} className="text-white/10" />
+          <div className="w-full h-full flex items-center justify-center bg-[#0d1b3a]">
+            <Home size={64} className="text-white/5" />
           </div>
         )}
-        {/* Apple-style Vertical Gradient Overlay */}
-        <div className="absolute inset-0 bg-gradient-to-t from-[#0A142E] via-[#0A142E]/70 to-transparent z-10" />
-      </div>
+        {/* Deep Shadow Gradient Overlay */}
+        <div className="absolute inset-0 bg-gradient-to-t from-[#0A142E] via-[#0A142E]/40 to-transparent z-10" />
 
-      {/* 2. Top Branding / Status */}
-      <div className="relative z-20 p-8 flex justify-between items-start">
-        <div className="flex flex-col">
-          <span className="text-[10px] font-black tracking-[0.3em] text-white/60 uppercase">Digital Key</span>
-          <div className="flex items-center gap-2 mt-1">
-            <div className="w-2 h-2 rounded-full bg-splat-green animate-pulse" />
-            <span className="text-[11px] font-bold text-white uppercase tracking-widest leading-none">Verified Stay</span>
-          </div>
-        </div>
-        {/* 倒數計時 */}
-        {(() => {
-          const cd = getCountdown(item.date, undefined, t, language);
-          return cd && (
-            <div className={`px-3 py-1 rounded-xl border border-white/30 text-[9px] font-black text-white shadow-lg backdrop-blur-md ${cd.color} opacity-90`}>
-              {cd.text}
-            </div>
-          );
-        })()}
-      </div>
-
-      {/* 3. Middle Section: Title & Content */}
-      <div className="relative z-20 flex-1 flex flex-col justify-end px-8 pb-4">
-        <div className="flex items-center gap-3 mb-2">
-          <h3 className="font-extrabold text-3xl text-white leading-tight font-['Barlow'] tracking-tight drop-shadow-md">
-            {item.title}
-          </h3>
-          <div className="bg-white/10 backdrop-blur-md border border-white/20 px-3 py-1 rounded-full shrink-0">
-            <span className="text-[10px] font-black text-white uppercase tracking-widest tabular-nums">
-              {item.nights || 1} {t('booking.nights')}
-            </span>
-          </div>
-        </div>
-        <div className="flex items-center gap-2 opacity-70">
-          <MapPin size={12} className="text-white shrink-0" />
-          <span className="text-xs font-medium text-white/90 truncate max-w-[200px]">{item.location || t('booking.addressTbc')}</span>
-        </div>
-      </div>
-
-      {/* 4. The "Check-in" Console (Bottom Frosted Glass) */}
-      <div className="relative z-30 m-4 p-5 bg-white/10 backdrop-blur-2xl border border-white/20 rounded-[2rem] shadow-2xl flex flex-col gap-4">
-        <div className="flex justify-between items-center relative">
-          <div className="flex flex-col">
-            <span className="text-[8px] font-black text-white/40 uppercase tracking-[0.2em] mb-1">Check-in</span>
-            <div className="text-xl font-extrabold text-white tabular-nums tracking-tight">{item.checkInTime || '15:00'}</div>
-            <div className="text-[9px] font-bold text-white/60 mt-0.5">{item.date?.replace(/-/g, '/')}</div>
-          </div>
-
-          {/* Subtle separator */}
-          <div className="h-8 w-[1px] bg-white/10 rounded-full" />
-
-          <div className="flex flex-col items-end text-right">
-            <span className="text-[8px] font-black text-white/40 uppercase tracking-[0.2em] mb-1">Check-out</span>
-            <div className="text-xl font-extrabold text-white tabular-nums tracking-tight">{item.checkOutTime || '11:00'}</div>
-            <div className="text-[9px] font-bold text-white/60 mt-0.5">{item.checkOutDate?.replace(/-/g, '/') || '---'}</div>
-          </div>
-        </div>
-
-        {/* Action / QR Indicator */}
-        <div className="flex items-center justify-between pt-1 border-t border-white/5">
-          <div className="flex items-center gap-3">
-            <div onClick={(e) => { e.stopPropagation(); onCopy('#FFFFFF'); }} className="p-2 bg-white/5 rounded-xl border border-white/10 active:scale-90 transition-transform">
-              <Copy size={14} className="text-white/80" />
-            </div>
-            {item.qrCode && (
-              <div onClick={(e) => { e.stopPropagation(); onQrClick(item.qrCode!); }} className="p-2 bg-white/5 rounded-xl border border-white/10 active:scale-90 transition-transform">
-                <QrCode size={14} className="text-white/80" />
+        {/* 2. Overlapping Typography Layer */}
+        <div className="absolute bottom-6 left-8 right-8 z-20">
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center gap-3">
+              <span className="text-[10px] font-black tracking-[0.4em] text-white/50 uppercase">Reserved</span>
+              <div className="bg-white/10 backdrop-blur-xl border border-white/20 px-3 py-0.5 rounded-full shrink-0">
+                <span className="text-[9px] font-black text-white uppercase tracking-widest tabular-nums">
+                  {item.nights || 1} {t('booking.nights')}
+                </span>
               </div>
-            )}
-          </div>
-          <div className="flex flex-col items-center opacity-40">
-            <ChevronDown size={18} className="text-white animate-bounce" />
+            </div>
+            <h3 className="font-black text-[28px] text-white leading-tight font-['Barlow'] tracking-tight drop-shadow-2xl">
+              {item.title}
+            </h3>
           </div>
         </div>
+      </div>
+
+      {/* 3. The "Glass Console" Section */}
+      <div className="relative flex-1 p-6 flex flex-col justify-between z-30">
+        {/* Subtle Watermark Watermark Logo Area */}
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-[0.03] pointer-events-none z-0 scale-[3]">
+          <Home size={60} strokeWidth={1} />
+        </div>
+
+        <div className="flex justify-between items-center relative z-10">
+          <div className="flex flex-col">
+            <span className="text-[9px] font-black text-white/40 uppercase tracking-[0.2em] mb-1">Stay Duration</span>
+            <div className="flex items-center gap-2 text-white">
+              <span className="text-lg font-black tabular-nums">{item.checkInTime || '15:00'}</span>
+              <span className="text-white/30 truncate mx-1">—</span>
+              <span className="text-lg font-black tabular-nums">{item.checkOutTime || '11:00'}</span>
+            </div>
+            <div className="text-[10px] font-bold text-white/60 mt-0.5 tracking-tight">
+              {item.date?.replace(/-/g, '/')} — {item.checkOutDate?.replace(/-/g, '/') || '---'}
+            </div>
+          </div>
+        </div>
+
+        {/* 4. Interactive Buttons Group */}
+        <div className="flex items-center gap-3 relative z-10 mt-2">
+          {/* Contact: Minimalist Glass Button */}
+          <a
+            href={`tel:${item.phone || ''}`}
+            onClick={(e) => e.stopPropagation()}
+            className="flex-1 py-3.5 bg-white/5 backdrop-blur-md border border-white/10 rounded-2xl flex items-center justify-center gap-2 group/btn active:scale-95 transition-all"
+          >
+            <Phone size={16} className="text-white/70 group-hover/btn:text-white" />
+            <span className="text-xs font-black text-white/80 uppercase tracking-widest group-hover/btn:text-white">Contact</span>
+          </a>
+
+          {/* Maps: Solid High-Gloss Navy Button */}
+          <a
+            href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(item.location || item.title)}`}
+            onClick={(e) => e.stopPropagation()}
+            target="_blank"
+            rel="noreferrer"
+            className="flex-1 py-3.5 bg-[#1E2A5E] hover:bg-[#25357a] border-t border-white/20 rounded-2xl flex items-center justify-center gap-2 shadow-lg shadow-black/20 group/map active:scale-95 transition-all"
+          >
+            <MapPin size={16} className="text-white" />
+            <span className="text-xs font-black text-white uppercase tracking-widest">Open Maps</span>
+          </a>
+        </div>
+      </div>
+
+      {/* Floating Action Indicator */}
+      <div className="absolute bottom-2 left-1/2 -translate-x-1/2 opacity-20 pointer-events-none">
+        <ChevronDown size={20} className="text-white animate-pulse" />
       </div>
     </motion.div>
   );
