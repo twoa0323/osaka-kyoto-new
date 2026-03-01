@@ -186,7 +186,7 @@ export const BookingEditor: FC<Props> = ({ tripId, type, item, onClose }) => {
     }
 
     if (item) updateBookingItem(tripId, item.id, finalForm);
-    else addBookingItem(tripId, { ...finalForm, id: Date.now().toString() });
+    else addBookingItem(tripId, { ...finalForm, id: Date.now().toString() + '-' + Math.random().toString(36).substring(2, 9) });
     onClose();
   };
 

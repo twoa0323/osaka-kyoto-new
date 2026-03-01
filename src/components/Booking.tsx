@@ -215,7 +215,7 @@ export const Booking = () => {
                       </div>
 
                       {/* Overlapping Pill - White layer style */}
-                      <div className="absolute top-[70px] left-1/2 -translate-x-1/2 bg-white px-8 py-2.5 rounded-[20px] shadow-md border border-gray-100 z-20 min-w-[120px] text-center">
+                      <div className="absolute top-[80px] left-1/2 -translate-x-1/2 bg-white px-8 py-2.5 rounded-[20px] shadow-md border border-gray-100 z-20 min-w-[120px] text-center">
                         <span className="text-[17px] font-black text-gray-500 tracking-widest leading-none font-sans uppercase">{detailItem.flightNo || 'JX820'}</span>
                       </div>
 
@@ -426,25 +426,13 @@ const CopyableField = ({ label, value, onCopy }: any) => {
 // ============================================================================
 
 const FlightCard = ({ item, t, language, onEdit, onViewDetails, onQrClick }: any) => {
-  const [showActions, setShowActions] = useState(false);
-
   if (!item) return null;
-
-  const handleCardClick = () => {
-    if (!showActions) {
-      setShowActions(true);
-      setTimeout(() => setShowActions(false), 3000);
-    } else {
-      onViewDetails();
-      setShowActions(false);
-    }
-  };
 
   return (
     <motion.div
       whileTap={{ scale: 0.98 }}
       className="relative bg-[#F4F4F4] rounded-[32px] overflow-hidden group cursor-pointer border-[1px] border-black/5 p-2"
-      onClick={handleCardClick}
+      onClick={() => onViewDetails()}
     >
       <div className="bg-white rounded-[24px] overflow-hidden relative shadow-sm h-full flex flex-col">
         {/* Header - Dynamic based on airline theme */}
@@ -458,7 +446,7 @@ const FlightCard = ({ item, t, language, onEdit, onViewDetails, onQrClick }: any
         </div>
 
         {/* Overlapping Pill - White layer style */}
-        <div className="absolute top-[70px] left-1/2 -translate-x-1/2 bg-white px-8 py-2.5 rounded-[20px] shadow-md border border-gray-100 z-20 min-w-[120px] text-center">
+        <div className="absolute top-[80px] left-1/2 -translate-x-1/2 bg-white px-8 py-2.5 rounded-[20px] shadow-md border border-gray-100 z-20 min-w-[120px] text-center">
           <span className="text-[17px] font-black text-gray-500 tracking-widest leading-none font-sans uppercase">{item.flightNo || 'JX820'}</span>
         </div>
 
@@ -519,12 +507,7 @@ const FlightCard = ({ item, t, language, onEdit, onViewDetails, onQrClick }: any
         </div>
       </div>
 
-      {/* 編輯按鈕 */}
-      <div className={`absolute top-6 right-6 z-40 transition-opacity duration-300 ${showActions ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
-        <button onClick={(e) => { e.stopPropagation(); onEdit(e); }} className="p-2.5 bg-white/20 backdrop-blur-md border-[1px] border-white/20 rounded-full text-white shadow-lg active:scale-90 transition-transform">
-          <Edit3 size={18} strokeWidth={3} />
-        </button>
-      </div>
+
     </motion.div>
   );
 };

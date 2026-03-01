@@ -34,7 +34,7 @@ export const TimelineFlightCard: FC<{
                     </div>
 
                     {/* Overlapping Pill */}
-                    <div className="absolute top-[70px] left-1/2 -translate-x-1/2 bg-white px-8 py-2.5 rounded-[20px] shadow-md border border-gray-100 z-20 min-w-[120px] text-center">
+                    <div className="absolute top-[80px] left-1/2 -translate-x-1/2 bg-white px-8 py-2.5 rounded-[20px] shadow-md border border-gray-100 z-20 min-w-[120px] text-center">
                         <span className="text-[17px] font-black text-gray-500 tracking-widest leading-none font-sans uppercase">{item.flightNo || 'JX820'}</span>
                     </div>
 
@@ -266,7 +266,7 @@ export const FlightDetailModalContent = ({ item, t, showToast }: any) => {
                         </div>
 
                         {/* Overlapping Pill */}
-                        <div className="absolute top-[70px] left-1/2 -translate-x-1/2 bg-white px-8 py-2.5 rounded-[20px] shadow-md border border-gray-100 z-20 min-w-[120px] text-center">
+                        <div className="absolute top-[80px] left-1/2 -translate-x-1/2 bg-white px-8 py-2.5 rounded-[20px] shadow-md border border-gray-100 z-20 min-w-[120px] text-center">
                             <span className="text-[17px] font-black text-gray-500 tracking-widest leading-none font-sans uppercase">{item.flightNo || 'JX820'}</span>
                         </div>
 
