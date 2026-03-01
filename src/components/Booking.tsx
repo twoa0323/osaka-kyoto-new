@@ -198,25 +198,19 @@ export const Booking = () => {
                 <button onClick={() => setDetailItem(undefined)} className="w-10 h-10 bg-white rounded-full border-[1.5px] border-p3-navy flex items-center justify-center text-p3-navy shadow-sm active:scale-90"><X size={20} strokeWidth={2.5} /></button>
               </div>
 
-              <div className="p-2 pt-6 overflow-y-auto hide-scrollbar flex-1 flex flex-col">
+              <div className="p-2 sm:p-4 overflow-y-auto hide-scrollbar flex-1 flex flex-col h-full">
 
                 {/* ✈️ FLIGHT MODAL (使用 FlightCard 相同設計語言) */}
                 {detailItem.type === 'flight' && (
-                  <div className="relative bg-[#F4F4F4] rounded-[32px] overflow-hidden border-[1px] border-black/5 p-2 mb-8">
-                    <div className="bg-white rounded-[24px] overflow-hidden relative shadow-sm h-full flex flex-col group/modalcard">
+                  <div className="relative bg-[#F4F4F4] rounded-[36px] flex flex-col flex-1 overflow-hidden border-[1px] border-black/5 p-2 mb-2">
+                    <div className="bg-white rounded-[24px] overflow-hidden relative shadow-sm h-full flex flex-col group/modalcard flex-1">
                       {/* Header - Dynamic based on airline */}
-                      <div className={`${getTheme(detailItem.airline).bgClass} h-[90px] w-full relative flex items-center justify-center`}>
+                      <div className={`${getAirlineTheme(detailItem.airline).bgClass} h-[90px] w-full relative flex items-center justify-center`}>
                         {detailItem.airline?.toLowerCase().includes('starlux') && (
                           <div className="absolute inset-0" style={{ backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.9) 1.5px, transparent 1.5px)', backgroundSize: '24px 24px', opacity: 0.3 }} />
                         )}
                         <div className="flex items-center gap-2 z-10 pl-1 relative">
-                          {getTheme(detailItem.airline).logoHtml}
-                        </div>
-                        {/* Subtle Edit Icon inside header */}
-                        <div className="absolute top-4 right-4 z-20 opacity-0 group-hover/modalcard:opacity-100 transition-opacity">
-                          <button onClick={(e) => { e.stopPropagation(); setEditingItem(detailItem); setIsEditorOpen(true); }} className="p-2 bg-white/20 backdrop-blur-md border border-white/20 rounded-full text-white hover:bg-white/30 active:scale-90 transition-all">
-                            <Edit3 size={16} strokeWidth={2.5} />
-                          </button>
+                          {getAirlineTheme(detailItem.airline).logoHtml}
                         </div>
                       </div>
 

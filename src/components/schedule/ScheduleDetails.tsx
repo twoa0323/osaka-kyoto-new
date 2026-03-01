@@ -252,8 +252,8 @@ export const AirlineHeaderPattern = ({ airline }: { airline: string }) => {
 export const FlightDetailModalContent = ({ item, t, showToast }: any) => {
     return (
         <div className="flex-1 overflow-y-auto hide-scrollbar bg-[#F4F5F7]">
-            <div className="p-6 pt-20 space-y-6 pb-32">
-                <div className="relative bg-[#F4F4F4] rounded-[32px] overflow-hidden border-[1px] border-black/5 p-2 shadow-sm">
+            <div className="p-2 sm:p-4 flex flex-col h-full">
+                <div className="relative bg-[#F4F4F4] rounded-[36px] overflow-hidden border-[1px] border-black/5 p-2 shadow-sm flex-1">
                     <div className="bg-white rounded-[24px] overflow-hidden relative shadow-sm h-full flex flex-col">
                         {/* Header - Dynamic based on airline */}
                         <div className={`${getAirlineTheme(item.airline).bgClass} h-[90px] w-full relative flex items-center justify-center`}>

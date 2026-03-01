@@ -1379,46 +1379,48 @@ export const Schedule: FC<{ externalDateIdx?: number }> = ({ externalDateIdx = 0
               className="bg-[#F4F5F7] w-[92%] max-h-[85vh] sm:max-w-md rounded-[40px] border-[4px] border-p3-navy shadow-2xl flex flex-col overflow-hidden relative"
               onClick={e => e.stopPropagation()}
             >
-
-              <div className="absolute top-6 right-6 z-[700] flex gap-2">
-                <button
-                  onClick={() => {
-                    if (detailItem.__type === 'schedule') {
-                      setEditingItem(detailItem);
-                      setIsEditorOpen(true);
-                    } else {
-                      setEditingBooking(detailItem);
-                      setIsBookingEditorOpen(true);
-                    }
-                    setDetailItem(undefined);
-                    triggerHaptic('light');
-                  }}
-                  className="bg-white/80 backdrop-blur-sm border-[0.5px] border-p3-navy p-2 rounded-full shadow-glass-deep-sm active:scale-90 transition-transform"
-                >
-                  <Edit3 size={20} strokeWidth={3} />
-                </button>
-                <button
-                  onClick={() => {
-                    if (detailItem.__type === 'schedule') {
-                      deleteScheduleItem(trip!.id, detailItem.id);
-                    } else {
-                      deleteBookingItem(trip!.id, detailItem.id);
-                    }
-                    setDetailItem(undefined);
-                    showToast(detailItem.__type === 'schedule' ? "行程已刪除" : "預訂已刪除", "success");
-                    triggerHaptic('medium');
-                  }}
-                  className="bg-white/80 backdrop-blur-sm border-[0.5px] border-p3-navy p-2 rounded-full shadow-glass-deep-sm active:scale-90 transition-transform text-p3-ruby"
-                >
-                  <Trash2 size={20} strokeWidth={3} />
-                </button>
-                <button
-                  onClick={() => setDetailItem(undefined)}
-                  className="bg-white/80 backdrop-blur-sm border-[0.5px] border-p3-navy p-2 rounded-full shadow-glass-deep-sm active:scale-90 transition-transform"
-                >
-                  <X size={20} strokeWidth={3} />
-                </button>
-              </div>
+              {/* --- Modal Actions --- */}
+              {!(detailItem.__type === 'booking' && detailItem.type === 'flight') && (
+                <div className="absolute top-4 left-4 z-50 flex gap-2">
+                  <button
+                    onClick={() => {
+                      if (detailItem.__type === 'schedule') {
+                        setEditingItem(detailItem);
+                        setIsEditorOpen(true);
+                      } else {
+                        setEditingBooking(detailItem);
+                        setIsBookingEditorOpen(true);
+                      }
+                      setDetailItem(undefined);
+                      triggerHaptic('light');
+                    }}
+                    className="bg-white/80 backdrop-blur-sm border-[0.5px] border-p3-navy p-2 rounded-full shadow-glass-deep-sm active:scale-90 transition-transform"
+                  >
+                    <Edit3 size={20} strokeWidth={3} />
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (detailItem.__type === 'schedule') {
+                        deleteScheduleItem(trip!.id, detailItem.id);
+                      } else {
+                        deleteBookingItem(trip!.id, detailItem.id);
+                      }
+                      setDetailItem(undefined);
+                      showToast(detailItem.__type === 'schedule' ? "行程已刪除" : "預訂已刪除", "success");
+                      triggerHaptic('medium');
+                    }}
+                    className="bg-white/80 backdrop-blur-sm border-[0.5px] border-p3-navy p-2 rounded-full shadow-glass-deep-sm active:scale-90 transition-transform text-p3-ruby"
+                  >
+                    <Trash2 size={20} strokeWidth={3} />
+                  </button>
+                  <button
+                    onClick={() => setDetailItem(undefined)}
+                    className="bg-white/80 backdrop-blur-sm border-[0.5px] border-p3-navy p-2 rounded-full shadow-glass-deep-sm active:scale-90 transition-transform"
+                  >
+                    <X size={20} strokeWidth={3} />
+                  </button>
+                </div>
+              )}
 
               {detailItem.__type === 'booking' && detailItem.type === 'flight' ? (
                 <FlightDetailModalContent item={detailItem} t={t} showToast={showToast} />
@@ -1480,25 +1482,30 @@ export const Schedule: FC<{ externalDateIdx?: number }> = ({ externalDateIdx = 0
               )}
             </motion.div>
           </div>
-        )}
-      </AnimatePresence>
+        )
+        }
+      </AnimatePresence >
 
       {isEditorOpen && <ScheduleEditor tripId={trip!.id} date={selectedDateStr} item={editingItem} onClose={() => setIsEditorOpen(false)} />}
-      {isBookingEditorOpen && editingBooking && (
-        <BookingEditor
-          tripId={trip!.id}
-          type={editingBooking.type}
-          item={editingBooking}
-          onClose={() => setIsBookingEditorOpen(false)}
-        />
-      )}
+      {
+        isBookingEditorOpen && editingBooking && (
+          <BookingEditor
+            tripId={trip!.id}
+            type={editingBooking.type}
+            item={editingBooking}
+            onClose={() => setIsBookingEditorOpen(false)}
+          />
+        )
+      }
 
-      {showTransportModal && selectedTransportSuggestion && (
-        <TransportAiModal
-          suggestion={selectedTransportSuggestion}
-          onClose={() => setShowTransportModal(false)}
-        />
-      )}
-    </div>
+      {
+        showTransportModal && selectedTransportSuggestion && (
+          <TransportAiModal
+            suggestion={selectedTransportSuggestion}
+            onClose={() => setShowTransportModal(false)}
+          />
+        )
+      }
+    </div >
   );
 };
