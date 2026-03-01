@@ -320,13 +320,13 @@ export const Booking = () => {
                         {/* Check-in Console (Glassmorphism) */}
                         <div className="flex justify-between items-center bg-white/5 backdrop-blur-xl rounded-[1.5rem] p-4 border border-white/10 mb-4">
                           <div>
-                            <span className="text-[9px] font-black text-white/40 tracking-widest uppercase">CHECK-IN</span>
+                            <span className="text-[9px] font-black text-white/40 tracking-widest uppercase">{t('schedule.checkIn') || 'CHECK-IN'}</span>
                             <div className="font-black text-2xl text-white tabular-nums">{detailItem.checkInTime || '15:00'}</div>
                             <div className="text-[10px] font-bold text-white/60">{detailItem.date}</div>
                           </div>
                           <div className="text-white/20">➔</div>
                           <div className="text-right">
-                            <span className="text-[9px] font-black text-white/40 tracking-widest uppercase">CHECK-OUT</span>
+                            <span className="text-[9px] font-black text-white/40 tracking-widest uppercase">{t('schedule.checkOut') || 'CHECK-OUT'}</span>
                             <div className="font-black text-2xl text-white tabular-nums">{detailItem.checkOutTime || '11:00'}</div>
                             <div className="text-[10px] font-bold text-white/60">{detailItem.endDate || detailItem.date}</div>
                           </div>
@@ -336,7 +336,7 @@ export const Booking = () => {
                           <div className="flex items-start gap-3">
                             <MapPin size={16} className="text-p3-gold mt-0.5" />
                             <div>
-                              <div className="text-[9px] font-black text-white/40 tracking-widest uppercase">ADDRESS</div>
+                              <div className="text-[9px] font-black text-white/40 tracking-widest uppercase">{t('booking.editor.location') || 'ADDRESS'}</div>
                               <div className="text-sm font-bold text-white leading-snug">{detailItem.location || 'See map for details'}</div>
                             </div>
                           </div>
@@ -344,7 +344,7 @@ export const Booking = () => {
                           <div className="flex items-start gap-3">
                             <Home size={16} className="text-white mt-0.5" />
                             <div>
-                              <div className="text-[9px] font-black text-white/40 tracking-widest uppercase">ROOM TYPE</div>
+                              <div className="text-[9px] font-black text-white/40 tracking-widest uppercase">{t('schedule.roomType') || 'ROOM TYPE'}</div>
                               <div className="text-sm font-bold text-white leading-snug">{detailItem.roomType || 'Standard Room'}</div>
                             </div>
                           </div>
@@ -353,8 +353,8 @@ export const Booking = () => {
                     </div>
 
                     <div className="grid grid-cols-3 gap-3">
-                      <button className="col-span-1 py-4 bg-white border border-gray-200 rounded-2xl font-black text-xs text-p3-navy shadow-sm flex items-center justify-center gap-2"><Phone size={14} /> CONTACT</button>
-                      <button onClick={() => window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(detailItem.location || detailItem.title)}`, '_blank')} className="col-span-2 py-4 bg-[#1E2A5E] text-white rounded-2xl font-black text-xs shadow-glass-deep flex items-center justify-center gap-2 tracking-widest"><MapPin size={14} /> OPEN MAPS</button>
+                      <button className="col-span-1 py-4 bg-white border border-gray-200 rounded-2xl font-black text-xs text-p3-navy shadow-sm flex items-center justify-center gap-2"><Phone size={14} /> {t('schedule.contact') || 'CONTACT'}</button>
+                      <button onClick={() => window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(detailItem.location || detailItem.title)}`, '_blank')} className="col-span-2 py-4 bg-[#1E2A5E] text-white rounded-2xl font-black text-xs shadow-glass-deep flex items-center justify-center gap-2 tracking-widest"><MapPin size={14} /> {t('schedule.openGoogleMaps') || 'OPEN MAPS'}</button>
                     </div>
                   </div>
                 )}

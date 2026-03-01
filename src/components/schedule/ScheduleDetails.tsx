@@ -5,12 +5,15 @@ import { BookingItem } from '../../types';
 import { getAirlineTheme } from './ScheduleConstants';
 import { parseISO, differenceInDays, format } from 'date-fns';
 import { triggerHaptic } from '../../utils/haptics';
+import { useTranslation } from '../../hooks/useTranslation';
 
 // --- 🔹 專用航班卡片 (時間軸版 - 完美複製 FlightCard) ---
 export const TimelineFlightCard: FC<{
     item: BookingItem;
     onClick: () => void;
 }> = ({ item, onClick }) => {
+    const { t } = useTranslation();
+    const [expanded, setExpanded] = useState(false);
     return (
         <div className="relative ml-10 mb-8 cursor-pointer group" onClick={onClick}>
             <motion.div
@@ -68,21 +71,21 @@ export const TimelineFlightCard: FC<{
                     {/* Footer Info Box */}
                     <div className="mx-4 mb-4 bg-[#F8F9FA] rounded-[20px] p-4 flex items-center justify-between border-t border-gray-100 z-10 relative">
                         <div className="flex flex-col flex-1 items-center justify-center w-[33%]">
-                            <span className="text-[10px] font-black text-[#A1A5AE] tracking-[0.15em] mb-1.5 font-sans">BAGGAGE</span>
+                            <span className="text-[10px] font-black text-[#A1A5AE] tracking-[0.15em] mb-1.5 font-sans">{t('booking.editor.baggage') || 'BAGGAGE'}</span>
                             <div className="flex items-center gap-1.5 overflow-hidden w-full justify-center">
                                 <span className="text-[14px] font-[900] text-[#161C2C] tracking-tight truncate flex items-center gap-1.5"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-[#64A999] shrink-0"><rect x="5" y="6" width="14" height="16" rx="2" /><path d="M8 6V4c0-1.1.9-2 2-2h4c1.1 0 2 .9 2 2v2" /><line x1="12" y1="11" x2="12" y2="17" /></svg>{item.baggage || item.baggageAllowance || '23kg'}</span>
                             </div>
                         </div>
                         <div className="w-[1.5px] h-8 bg-[#EAECEF] shrink-0" />
                         <div className="flex flex-col flex-1 items-center justify-center w-[33%]">
-                            <span className="text-[10px] font-black text-[#A1A5AE] tracking-[0.15em] mb-1.5 font-sans">SEAT</span>
+                            <span className="text-[10px] font-black text-[#A1A5AE] tracking-[0.15em] mb-1.5 font-sans">{t('booking.editor.seat') || 'SEAT'}</span>
                             <div className="flex items-center gap-1 overflow-hidden w-full justify-center">
                                 <span className="text-[14px] font-[900] text-[#161C2C] tracking-tight truncate">{item.seat || '14F'}</span>
                             </div>
                         </div>
                         <div className="w-[1.5px] h-8 bg-[#EAECEF] shrink-0" />
                         <div className="flex flex-col flex-1 items-center justify-center w-[33%]">
-                            <span className="text-[10px] font-black text-[#A1A5AE] tracking-[0.15em] mb-1.5 font-sans">AIRCRAFT</span>
+                            <span className="text-[10px] font-black text-[#A1A5AE] tracking-[0.15em] mb-1.5 font-sans">{t('booking.editor.aircraft') || 'AIRCRAFT'}</span>
                             <div className="flex items-center gap-1.5 overflow-hidden w-full justify-center">
                                 <span className="text-[14px] font-[900] text-[#161C2C] tracking-tight truncate flex items-center gap-1.5"><Plane size={14} className="text-[#C19163] -rotate-45 transform fill-current shrink-0" />{item.aircraft || 'A350-900'}</span>
                             </div>
@@ -378,17 +381,17 @@ export const HotelDetailModalContent = ({ item, t, showToast }: any) => {
                         <motion.div initial={{ opacity: 0, height: 0, y: -20 }} animate={{ opacity: 1, height: 'auto', y: 0 }} exit={{ opacity: 0, height: 0, y: -20 }} className="space-y-4 overflow-hidden pt-2">
                             {item.confirmationNo && (
                                 <div className="bg-white border-[0.5px] border-p3-navy rounded-[24px] p-6 shadow-sm flex justify-between items-center active:scale-[0.98] transition-transform cursor-pointer" onClick={() => { navigator.clipboard.writeText(item.confirmationNo); triggerHaptic('success'); showToast("Booking Ref 已複製！", "success"); }}>
-                                    <div><p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Confirmation No.</p><p className="text-2xl font-black text-p3-navy tracking-[0.1em]">{item.confirmationNo}</p></div>
+                                    <div><p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">{t('schedule.pnr')}</p><p className="text-2xl font-black text-p3-navy tracking-[0.1em]">{item.confirmationNo}</p></div>
                                     <div className="w-12 h-12 rounded-xl bg-p3-navy/10 border-[0.5px] border-p3-navy/20 flex items-center justify-center text-p3-navy"><Copy size={20} /></div>
                                 </div>
                             )}
                             <div className="bg-white border-[0.5px] border-p3-navy rounded-[24px] p-6 shadow-sm space-y-4">
-                                <div className="flex items-start gap-4"><MapPin size={20} className="text-p3-gold shrink-0 mt-0.5" /><div><p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Address</p><p className="text-sm font-bold text-p3-navy">{item.location || 'See map for details'}</p></div></div>
-                                <div className="flex items-start gap-4 border-t border-gray-100 pt-4"><Home size={20} className="text-p3-navy shrink-0 mt-0.5" /><div><p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Room Type</p><p className="text-sm font-bold text-p3-navy">{item.roomType || 'Standard Room'}</p></div></div>
+                                <div className="flex items-start gap-4"><MapPin size={20} className="text-p3-gold shrink-0 mt-0.5" /><div><p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">{t('booking.editor.location') || 'Address'}</p><p className="text-sm font-bold text-p3-navy">{item.location || 'See map for details'}</p></div></div>
+                                <div className="flex items-start gap-4 border-t border-gray-100 pt-4"><Home size={20} className="text-p3-navy shrink-0 mt-0.5" /><div><p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">{t('schedule.roomType')}</p><p className="text-sm font-bold text-p3-navy">{item.roomType || 'Standard Room'}</p></div></div>
                             </div>
                             <div className="flex gap-3 mt-4">
-                                <button className="flex-1 py-4 bg-white border-[0.5px] border-p3-navy rounded-2xl font-black uppercase tracking-widest text-[11px] flex items-center justify-center gap-2 shadow-glass-deep-sm active:translate-y-1 transition-all text-p3-navy" onClick={() => window.open(`tel:${item.contactPhone || item.phone || ''}`)}><Phone size={16} /> Contact</button>
-                                <button className="flex-[2] py-4 bg-p3-navy text-white border-[0.5px] border-p3-navy rounded-2xl font-black uppercase tracking-widest text-[11px] flex items-center justify-center gap-2 shadow-glass-deep-sm active:translate-y-1 transition-all" onClick={() => window.open(`http://googleusercontent.com/maps.google.com/?q=${encodeURIComponent(item.location || item.title)}`, '_blank')}><MapPin size={16} /> Open Maps</button>
+                                <button className="flex-1 py-4 bg-white border-[0.5px] border-p3-navy rounded-2xl font-black uppercase tracking-widest text-[11px] flex items-center justify-center gap-2 shadow-glass-deep-sm active:translate-y-1 transition-all text-p3-navy" onClick={() => window.open(`tel:${item.contactPhone || item.phone || ''}`)}><Phone size={16} /> {t('schedule.contact')}</button>
+                                <button className="flex-[2] py-4 bg-p3-navy text-white border-[0.5px] border-p3-navy rounded-2xl font-black uppercase tracking-widest text-[11px] flex items-center justify-center gap-2 shadow-glass-deep-sm active:translate-y-1 transition-all" onClick={() => window.open(`http://googleusercontent.com/maps.google.com/?q=${encodeURIComponent(item.location || item.title)}`, '_blank')}><MapPin size={16} /> {t('schedule.openGoogleMaps')}</button>
                             </div>
                             {item.url && (
                                 <button onClick={() => { window.open(item.url, '_blank'); triggerHaptic('success'); }} className="w-full py-5 bg-gradient-to-r from-p3-gold to-splat-orange text-white rounded-2xl font-black uppercase tracking-widest shadow-glass-deep flex items-center justify-center gap-3 active:scale-95 transition-all mt-2 border-[0.5px] border-white/20">

@@ -300,7 +300,7 @@ export const BookingEditor: FC<Props> = ({ tripId, type, item, onClose }) => {
               <div className="bg-ac-green/5 p-4 rounded-3xl border-2 border-ac-green/20 space-y-4">
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1.5">
-                    <label className="text-[9px] font-black text-ac-green uppercase ml-1 tracking-widest">PNR / 訂位代碼</label>
+                    <label className="text-[9px] font-black text-ac-green uppercase ml-1 tracking-widest">{t('booking.pnrLabel')}</label>
                     <input placeholder="6位大寫字母" className="w-full h-12 px-3 bg-white border-2 border-ac-green/30 rounded-xl font-black text-ac-green text-sm outline-none focus:border-ac-green" value={form.pnr || ''} onChange={e => setForm({ ...form, pnr: e.target.value.toUpperCase() })} />
                   </div>
                   <div className="space-y-1.5">
@@ -311,11 +311,11 @@ export const BookingEditor: FC<Props> = ({ tripId, type, item, onClose }) => {
 
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1.5">
-                    <label className="text-[9px] font-black text-ac-brown/40 uppercase ml-1 tracking-widest">航廈 (Terminal)</label>
+                    <label className="text-[9px] font-black text-ac-brown/40 uppercase ml-1 tracking-widest">{t('booking.terminal')}</label>
                     <input placeholder="如: T1" className="w-full h-12 px-3 bg-white border-2 border-ac-border rounded-xl font-bold text-sm outline-none" value={form.terminal || ''} onChange={e => setForm({ ...form, terminal: e.target.value })} />
                   </div>
                   <div className="space-y-1.5">
-                    <label className="text-[9px] font-black text-ac-brown/40 uppercase ml-1 tracking-widest">登機門 (Gate)</label>
+                    <label className="text-[9px] font-black text-ac-brown/40 uppercase ml-1 tracking-widest">{t('booking.gate')}</label>
                     <input placeholder="如: 52" className="w-full h-12 px-3 bg-white border-2 border-ac-border rounded-xl font-bold text-sm outline-none" value={form.gate || ''} onChange={e => setForm({ ...form, gate: e.target.value })} />
                   </div>
                 </div>
@@ -357,23 +357,23 @@ export const BookingEditor: FC<Props> = ({ tripId, type, item, onClose }) => {
               {type === 'hotel' && (
                 <div className="space-y-4 animate-in slide-in-from-bottom-2">
                   <div className="bg-white p-5 rounded-[2.5rem] border-2 border-ac-border space-y-5 shadow-sm">
-                    <div className="space-y-1.5"><label className="text-[10px] font-black text-ac-brown/40 uppercase tracking-widest ml-1">Check-in / Check-out</label>
+                    <div className="space-y-1.5"><label className="text-[10px] font-black text-ac-brown/40 uppercase tracking-widest ml-1">{t('schedule.checkIn')} / {t('schedule.checkOut')}</label>
                       <div className="grid grid-cols-2 gap-3">
                         <input type="date" value={form.date} onChange={e => setForm({ ...form, date: e.target.value })} className="w-full h-12 px-3 bg-[#F5F6F8] border border-ac-border/30 rounded-xl font-black text-sm outline-none focus:border-ac-green focus:bg-white transition-colors" />
                         <input type="date" value={form.endDate || ''} onChange={e => setForm({ ...form, endDate: e.target.value })} className="w-full h-12 px-3 bg-[#F5F6F8] border border-ac-border/30 rounded-xl font-black text-sm outline-none focus:border-ac-green focus:bg-white transition-colors" />
                       </div>
                     </div>
                     <div className="grid grid-cols-2 gap-3">
-                      <div className="space-y-1.5"><label className="text-[10px] font-black text-ac-brown/40 uppercase tracking-widest ml-1">Room Type</label><input placeholder="房型 (如：雙人房)" value={form.roomType || ''} onChange={e => setForm({ ...form, roomType: e.target.value })} className="w-full h-12 px-3 bg-[#F5F6F8] border border-ac-border/30 rounded-xl font-black text-sm outline-none focus:border-ac-green focus:bg-white transition-colors" /></div>
-                      <div className="space-y-1.5"><label className="text-[10px] font-black text-ac-brown/40 uppercase tracking-widest ml-1">Conf. No.</label><input placeholder="訂單編號" value={form.confirmationNo} onChange={e => setForm({ ...form, confirmationNo: e.target.value })} className="w-full h-12 px-3 bg-[#F5F6F8] border border-ac-border/30 rounded-xl font-black text-sm text-ac-green outline-none focus:border-ac-green focus:bg-white transition-colors" /></div>
+                      <div className="space-y-1.5"><label className="text-[10px] font-black text-ac-brown/40 uppercase tracking-widest ml-1">{t('schedule.roomType')}</label><input placeholder="房型 (如：雙人房)" value={form.roomType || ''} onChange={e => setForm({ ...form, roomType: e.target.value })} className="w-full h-12 px-3 bg-[#F5F6F8] border border-ac-border/30 rounded-xl font-black text-sm outline-none focus:border-ac-green focus:bg-white transition-colors" /></div>
+                      <div className="space-y-1.5"><label className="text-[10px] font-black text-ac-brown/40 uppercase tracking-widest ml-1">{t('schedule.pnr')}</label><input placeholder="訂單編號" value={form.confirmationNo} onChange={e => setForm({ ...form, confirmationNo: e.target.value })} className="w-full h-12 px-3 bg-[#F5F6F8] border border-ac-border/30 rounded-xl font-black text-sm text-ac-green outline-none focus:border-ac-green focus:bg-white transition-colors" /></div>
                     </div>
                     <div className="grid grid-cols-2 gap-3">
                       <div className="space-y-1.5">
-                        <label className="text-[10px] font-black text-ac-brown/40 uppercase tracking-widest ml-1">Contact Phone</label>
+                        <label className="text-[10px] font-black text-ac-brown/40 uppercase tracking-widest ml-1">{t('schedule.contact')}</label>
                         <input placeholder="連絡電話" value={form.contactPhone || ''} onChange={e => setForm({ ...form, contactPhone: e.target.value })} className="w-full h-12 px-3 bg-[#F5F6F8] border border-ac-border/30 rounded-xl font-black text-sm outline-none focus:border-ac-green focus:bg-white transition-colors" />
                       </div>
                       <div className="space-y-1.5">
-                        <label className="text-[10px] font-black text-ac-brown/40 uppercase tracking-widest ml-1">Check-in Time</label>
+                        <label className="text-[10px] font-black text-ac-brown/40 uppercase tracking-widest ml-1">{t('schedule.checkIn')}</label>
                         <input type="time" value={form.checkInTime || '15:00'} onChange={e => setForm({ ...form, checkInTime: e.target.value })} className="w-full h-12 px-3 bg-[#F5F6F8] border border-ac-border/30 rounded-xl font-black text-sm outline-none focus:border-ac-green focus:bg-white transition-colors" />
                       </div>
                     </div>

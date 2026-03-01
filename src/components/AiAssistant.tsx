@@ -801,7 +801,7 @@ export const AiAssistant: FC = () => {
                                     {/* 明細 (如果有) */}
                                     {receiptPreview.data.items && receiptPreview.data.items.length > 0 && (
                                         <div className="space-y-3">
-                                            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">Assign Items 品項與分帳成員</p>
+                                            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">{t('ai.assignItems')}</p>
                                             <div className="space-y-2">
                                                 {receiptPreview.data.items.map((it: any, idx: number) => (
                                                     <div key={idx} className="bg-white border-2 border-splat-dark rounded-2xl p-3 shadow-splat-solid-xs">
@@ -841,7 +841,7 @@ export const AiAssistant: FC = () => {
                                                                 }}
                                                                 className="text-[8px] font-black uppercase text-splat-blue bg-splat-blue/5 border border-splat-blue/20 px-2 rounded-full"
                                                             >
-                                                                Split All
+                                                                {t('ai.splitAll')}
                                                             </button>
                                                         </div>
                                                     </div>
@@ -856,14 +856,14 @@ export const AiAssistant: FC = () => {
                                         onClick={() => setReceiptPreview(null)}
                                         className="flex-1 py-4 px-4 bg-gray-100 text-gray-500 rounded-2xl font-black text-sm uppercase transition-all active:scale-95"
                                     >
-                                        Discard
+                                        {t('ai.discard')}
                                     </button>
                                     <button
                                         onClick={handleSaveReceipt}
                                         className="flex-[2] py-4 px-4 bg-splat-pink text-white rounded-2xl font-black text-sm uppercase shadow-splat-solid-sm flex items-center justify-center gap-2 active:translate-y-1 active:shadow-none transition-all"
                                     >
                                         <Check size={20} strokeWidth={3} />
-                                        Confirm & Save
+                                        {t('ai.confirmSave')}
                                     </button>
                                 </div>
                             </motion.div>
@@ -872,8 +872,7 @@ export const AiAssistant: FC = () => {
 
                     {/* Footer / Tip */}
                     <div className="pt-2">
-                        <p className="text-[9px] font-bold text-gray-400 text-center uppercase tracking-widest leading-tight">
-                            AI Magic Assistant is here to make your trip <br /> smoother than a fresh coat of ink! 🦑
+                        <p className="text-[9px] font-bold text-gray-400 text-center uppercase tracking-widest leading-tight" dangerouslySetInnerHTML={{ __html: t('ai.footerText') }}>
                         </p>
                     </div>
                 </div>
